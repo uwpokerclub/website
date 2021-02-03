@@ -12,16 +12,16 @@ export default function Home() {
 
       <h1>UW Poker Studies Club</h1>
       <p>Welcome to The Admin Interface</p>
-      
+
       <div className="btn-group">
         <Link to="/events" className="btn btn-primary">Manage Events</Link>
         <Link to="/members" className="btn btn-success">Manage Members</Link>
       </div>
-      
+
       <div className="btn-group-sub">
         <Link to="/semesters/create" className="btn btn-primary">Create Semester</Link>
         <Link to="/events/create" className="btn btn-primary">Create Event</Link>
-        <Link to="/members/create" className="btn btn-primary">Create User</Link>
+        <Link to="/members/new" className="btn btn-primary">Create User</Link>
       </div>
 
       <div className="blog">
@@ -30,7 +30,7 @@ export default function Home() {
             <h3 className="blog-title">Winter 2020 Update</h3>
             <p className="blog-subheader">January 4th, 2020</p>
           </div>
-          
+
           <div className="blog-body">
             <p>
               This is the first of many app development update posts. In this section you will find a

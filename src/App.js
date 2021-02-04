@@ -14,7 +14,7 @@ import EventsIndex from "./pages/events/EventsIndex"
 import Home from "./pages/home/Home"
 import MembersIndex from "./pages/members/MembersIndex"
 import SemestersIndex from "./pages/semesters/SemestersIndex"
-
+import RankingsIndex from "./pages/rankings/RankingsIndex"
 
 export default function App() {
   return (
@@ -37,8 +37,8 @@ export default function App() {
             <Route path="/semesters">
               <SemestersIndex />
             </Route>
-            <Route exact path="/rankings">
-              {/* TODO: Add rankings page */}
+            <Route path="/rankings">
+              <RankingsIndex />
             </Route>
           </Switch>
         </div>

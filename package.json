@@ -1,0 +1,47 @@
+{
+  "private": true,
+  "name": "api",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache --fix .",
+    "start:prod": "node ./src/index.js",
+    "start:dev": "npx nodemon -L ./src/index.js",
+    "migrate": "node-pg-migrate",
+    "test": "jest --cache",
+    "test:coverage": "jest --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uwpokerclub/api.git"
+  },
+  "author": "University of Waterloo Poker Studies Club",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/uwpokerclub/api/issues"
+  },
+  "homepage": "https://github.com/uwpokerclub/api#readme",
+  "engines": {
+    "node": "14.x",
+    "npm": "6.x"
+  },
+  "dependencies": {
+    "bcrypt": "^5.0.0",
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.5",
+    "debug": "^4.3.1",
+    "express": "^4.17.1",
+    "express-promise-router": "^4.0.1",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.10.0",
+    "node-pg-migrate": "^5.9.0",
+    "pg": "^8.5.1",
+    "postgres-driver-service": "^1.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^7.19.0",
+    "jest": "^26.6.3"
+  }
+}

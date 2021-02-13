@@ -11,18 +11,18 @@ exports.requireAuthentication = (req, res, next) => {
       if (err) {
         res.status(CODES.FORBIDDEN)
           .json({
-            status: "Failed",
-            message: "Bad token."
+            error: "TOKEN_ERROR",
+            message: "Bad token"
           });
       } else {
         next();
       }
     });
   } else {
-    return res.status(CODES.FORBIDDEN)
+    return res.status(CODES.UNAUTHORIZED)
       .json({
-        status: "Failed",
-        message: "Authentication required."
+        error: "UNAUTHORIZED",
+        message: "Authentication required"
       });
   }
 };

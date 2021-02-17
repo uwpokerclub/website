@@ -19,7 +19,7 @@ function validateCreateReq(body) {
   }
 
   if (stringValues.some((v) => v === "")) {
-    throw new Error("Required fields cannot be empty: username, password");
+    throw new Error("Required fields cannot be empty: id, firstName, lastName, email, faculty, questId, semesterId");
   }
 }
 
@@ -37,7 +37,7 @@ function validateUpdateReq(body) {
   }
 
   if (stringValues.some((v) => v === "")) {
-    throw new Error("Required fields cannot be empty: username, password");
+    throw new Error("Required fields cannot be empty: firstName, lastName, faculty, semesterId");
   }
 }
 

@@ -73,7 +73,7 @@ class ParticipantsRouteHandler extends RouteHandler {
         });
       }
 
-      const signedInUsersIds = await this.db
+      const signedInUsers = await this.db
         .table("participants")
         .select()
         .where("event_id = ?", eventId)
@@ -85,9 +85,9 @@ class ParticipantsRouteHandler extends RouteHandler {
           });
 
           next(err);
-        })
-        .map((p) => p.id);
+        });
 
+      const signedInUsersIds = signedInUsers.map((p) => p.user_id);
       const errors = [];
 
       for (const p of participants) {

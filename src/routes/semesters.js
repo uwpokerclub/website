@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES, EVENT_STATE } = require("../models/constants");
+const { CODES } = require("../models/constants");
 
 function validateCreateReq(body) {
   const { name, startDate, endDate, meta } = body;
@@ -8,34 +8,34 @@ function validateCreateReq(body) {
   const nonNullValues = [name, startDate, endDate];
 
   if (nonNullValues.some((v) => v === undefined)) {
-      throw new Error("Missing required fields: name, startDate, format, semesterId");
+    throw new Error("Missing required fields: name, startDate, endDate");
   }
 
   if (typeof(name) !== "string") {
-      throw new Error("Required fields have incorrect type: name");
+    throw new Error("Required fields have incorrect type: name");
   }
-  
+
   if (meta !== undefined && typeof(meta) !== "string") {
     throw new Error("Optional fields have incorrect type: meta");
   }
 
   if (Number.isNaN(Date.parse(startDate))) {
-      throw new Error("Required date fields cannot be parsed: startDate");
+    throw new Error("Required date fields cannot be parsed: startDate");
   }
 
   if (Number.isNaN(Date.parse(endDate))) {
-      throw new Error("Required date fields cannot be parsed: endDate");
+    throw new Error("Required date fields cannot be parsed: endDate");
   }
 
   if (name === "") {
-      throw new Error("Required fields cannot be empty: name");
+    throw new Error("Required fields cannot be empty: name");
   }
 }
 
 class SemestersRouteHandler extends RouteHandler {
   handler() {
     this.router.get("/", async (req, res, next) => {
-      
+
       const semesters = await this.db
         .table("semesters")
         .select()
@@ -91,7 +91,7 @@ class SemestersRouteHandler extends RouteHandler {
 
       const { name, startDate, endDate, meta } = req.body;
 
-      const semester = await this.db
+      await this.db
         .table("semesters")
         .create({
           name,
@@ -109,7 +109,7 @@ class SemestersRouteHandler extends RouteHandler {
           next(err);
         });
 
-      return res.status(CODES.CREATED).json({ semester });
+      return res.status(CODES.CREATED).json({ semester: req.body });
     });
 
     this.router.get("/:id/rankings", async (req, res, next) => {

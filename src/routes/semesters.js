@@ -112,6 +112,33 @@ class SemestersRouteHandler extends RouteHandler {
       return res.status(CODES.CREATED).json({ semester });
     });
 
+    this.router.get("/:id/rankings", async (req, res, next) => {
+      const { id } = req.params;
+
+      const rankings = await this.db
+        .table("rankings")
+        .select()
+        .where("semester_id = ?", id)
+        .execute()
+        .catch((err) => {
+          res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            error: "DATABASE_ERROR",
+            message: "A lookup error occurred"
+          });
+
+          next(err);
+        });
+
+      if (rankings === undefined) {
+        return res.status(CODES.NOT_FOUND).json({
+          error: "NOT_FOUND",
+          message: "That semester could not be found"
+        });
+      }
+
+      return res.status(CODES.OK).json({ rankings });
+    });
+
     return this.router;
   }
 }

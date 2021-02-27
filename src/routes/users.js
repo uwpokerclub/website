@@ -213,7 +213,7 @@ class UsersRouteHandler extends RouteHandler {
       return res.status(CODES.OK).end();
     });
 
-    this.router.get("/export", async (req, res, next) => {
+    this.router.post("/export", async (req, res, next) => {
       const { semesterId } = req.query;
 
       let filename = "";
@@ -279,7 +279,7 @@ class UsersRouteHandler extends RouteHandler {
 
           next(err);
         } else {
-          fs.rm(`tmp/${filename}`);
+          fs.rm(`tmp/${filename}`, () => true);
         }
       });
     });

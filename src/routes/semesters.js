@@ -39,6 +39,7 @@ class SemestersRouteHandler extends RouteHandler {
       const semesters = await this.db
         .table("semesters")
         .select()
+        .orderBy("DESC", "start_date")
         .execute()
         .catch((err) => {
           res.status(CODES.INTERNAL_SERVER_ERROR).json({

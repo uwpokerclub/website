@@ -1,0 +1,7 @@
+{
+  "required": [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "PORT"
+  ]
+}

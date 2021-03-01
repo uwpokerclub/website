@@ -1,0 +1,5 @@
+**/*.min*
+public/**/*.js
+test/**
+migrations/**
+**/*.test.*

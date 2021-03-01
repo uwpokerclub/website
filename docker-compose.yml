@@ -1,0 +1,40 @@
+version: '3.7'
+services:
+  api:
+    build: .
+    command: start
+    volumes:
+      - .:/usr/app
+      - mods:/usr/app/node_modules
+    ports:
+      - 5000:5000
+    depends_on:
+      - db
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgres://docker:password@db:5432/pokerclub_development
+      - JWT_SECRET=POKERCLUB-DEV-SECRET
+      - NODE_ENV=development
+    networks:
+      - services
+  db:
+    image: postgres:12.2-alpine
+    volumes:
+      - ./scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
+      - postgres-data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=password
+      - DATABASES=pokerclub
+      - DATABASE_ENVS=development,test
+    ports:
+      - 5432:5432
+    networks:
+      - services
+volumes:
+  postgres-data:
+  mods:
+networks:
+  services:
+    external:
+      name: pokerclub_services_network

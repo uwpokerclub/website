@@ -21,19 +21,36 @@ class ParticipantsRouteHandler extends RouteHandler {
     this.router.get("/", async (req, res, next) => {
       const { eventId } = req.query;
 
-      let participantsQuery = this.db.table("participants").select();
+      let participants = [];
       if (eventId !== undefined && eventId !== "") {
-        participantsQuery = participantsQuery.where("event_id = ?", eventId);
+        participants = await this.db
+          .query(`SELECT participants.user_id as id, users.first_name, users.last_name,
+                  participants.signed_out_at, participants.placement
+                  FROM participants LEFT JOIN users ON users.id = participants.user_id
+                  WHERE participants.event_id = $1 ORDER BY participants.placement ASC;`, eventId)
+          .catch((err) => {
+            res.status(CODES.INTERNAL_SERVER_ERROR).json({
+              error: "DATABASE_ERROR",
+              message: "A lookup error occurred"
+            });
+  
+            next(err);
+          });
+      } else {
+        participants = await this.db
+          .query(`SELECT participants.user_id as id, users.first_name, users.last_name,
+                  participants.signed_out_at, participants.placement
+                  FROM participants LEFT JOIN users ON users.id = participants.user_id
+                  ORDER BY participants.placement ASC;`)
+          .catch((err) => {
+            res.status(CODES.INTERNAL_SERVER_ERROR).json({
+              error: "DATABASE_ERROR",
+              message: "A lookup error occurred"
+            });
+  
+            next(err);
+          });
       }
-
-      const participants = await participantsQuery.execute().catch((err) => {
-        res.status(CODES.INTERNAL_SERVER_ERROR).json({
-          error: "DATABASE_ERROR",
-          message: "A lookup error occurred"
-        });
-
-        next(err);
-      });
 
       return res.status(CODES.OK).json({
         participants
@@ -134,7 +151,7 @@ class ParticipantsRouteHandler extends RouteHandler {
       } else if (eventId === undefined || eventId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
           error: "INVALID_REQUEST",
-          message: "Required fields are missing: userId"
+          message: "Required fields are missing: eventId"
         });
       }
 
@@ -193,7 +210,7 @@ class ParticipantsRouteHandler extends RouteHandler {
       } else if (eventId === undefined || eventId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
           error: "INVALID_REQUEST",
-          message: "Required fields are missing: userId"
+          message: "Required fields are missing: eventId"
         });
       }
 
@@ -250,7 +267,7 @@ class ParticipantsRouteHandler extends RouteHandler {
       } else if (eventId === undefined || eventId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
           error: "INVALID_REQUEST",
-          message: "Required fields are missing: userId"
+          message: "Required fields are missing: eventId"
         });
       }
 

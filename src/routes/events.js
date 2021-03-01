@@ -211,7 +211,7 @@ class EventsRouteHandler extends RouteHandler {
 
       // Reject request if all users are not signed out.
       const unsignedOutEntries = entries.filter((e) => e.signed_out_at === null);
-      if (unsignedOutEntries.size === 0) {
+      if (unsignedOutEntries.size !== 0) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"

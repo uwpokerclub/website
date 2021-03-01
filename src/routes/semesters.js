@@ -118,7 +118,7 @@ class SemestersRouteHandler extends RouteHandler {
 
       const rankings = await this.db
         .query(`SELECT users.id, users.first_name, users.last_name, rankings.points
-                FROM users RIGHT JOIN rankings ON users.id = rankings.user_id
+                FROM rankings LEFT JOIN users ON users.id = rankings.user_id
                 WHERE rankings.semester_id = $1 ORDER BY rankings.points DESC;`, id)
         .catch((err) => {
           res.status(CODES.INTERNAL_SERVER_ERROR).json({

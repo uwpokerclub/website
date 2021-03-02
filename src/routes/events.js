@@ -185,20 +185,19 @@ class EventsRouteHandler extends RouteHandler {
       if (event === undefined) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
-          message: "You cannot perform this action"
+          message: "You cannot perform this action. Event is undefined."
         });
       }
 
       if (event.state === EVENT_STATE.ENDED) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
-          message: "You cannot perform this action"
+          message: "You cannot perform this action. Event has already ended."
         });
       }
 
       const entries = await this.db
         .query(`SELECT * FROM participants
-      INNER JOIN users ON (participants.user_id = users.id)
       WHERE event_id = $1 ORDER BY signed_out_at DESC;`, event.id)
         .catch((err) => {
           res.status(CODES.INTERNAL_SERVER_ERROR).json({
@@ -211,10 +210,10 @@ class EventsRouteHandler extends RouteHandler {
 
       // Reject request if all users are not signed out.
       const unsignedOutEntries = entries.filter((e) => e.signed_out_at === null);
-      if (unsignedOutEntries.size === 0) {
+      if (unsignedOutEntries.length !== 0) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
-          message: "You cannot perform this action"
+          message: "You cannot perform this action. There are still users that haven't been signed out."
         });
       }
 

@@ -185,7 +185,7 @@ class EventsRouteHandler extends RouteHandler {
       if (event === undefined) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
-          message: "You cannot perform this action. Event is undefined."
+          message: "You cannot perform this action"
         });
       }
 

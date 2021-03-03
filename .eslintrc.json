@@ -1,15 +1,31 @@
 {
+  "root": true,
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 6,
     "ecmaFeatures": {
       "jsx": true
     }
   },
+  "plugins": ["@typescript-eslint"],
   "extends": [
+    "eslint:recommended",
     "react-app",
-    "react-app/jest"
+    "react-app/jest",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
   ],
   "rules": {
-    "semi": "error"
-  }
+    "no-use-before-define": "off",
+    "@typescript-eslint/no-use-before-define": ["warn"]
+  },
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "rules": {
+        "no-use-before-define": "off",
+        "@typescript-eslint/no-use-before-define": ["error"]
+      }
+    }
+  ]
 }

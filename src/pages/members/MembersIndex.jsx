@@ -17,10 +17,12 @@ export default function MembersIndex() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const onSelectTerm = (semesterId) => {
-    if (semesterId === 'All') {
+    if (semesterId === "All") {
       setFilteredMembers(members);
     } else {
-      setFilteredMembers(members.filter((member) => member.semester_id === semesterId));
+      setFilteredMembers(
+        members.filter((member) => member.semester_id === semesterId)
+      );
     }
   };
 
@@ -44,7 +46,11 @@ export default function MembersIndex() {
       return;
     }
 
-    setFilteredMembers(members.filter((m) => RegExp(e.target.value, 'i').test(`${m.first_name} ${m.last_name}`)));
+    setFilteredMembers(
+      members.filter((m) =>
+        RegExp(e.target.value, "i").test(`${m.first_name} ${m.last_name}`)
+      )
+    );
   };
 
   useEffect(() => {
@@ -59,7 +65,6 @@ export default function MembersIndex() {
       setSemesters(semesterData.semesters);
       setIsLoading(false);
     });
-
   }, []);
 
   return (
@@ -75,23 +80,42 @@ export default function MembersIndex() {
             </div>
             <div className="row">
               <div className="col-lg-6 col-md-6 col-sm-6">
-                <Link to={`${url}/new`} className="btn btn-primary btn-responsive">Add Members</Link>
+                <Link
+                  to={`${url}/new`}
+                  className="btn btn-primary btn-responsive"
+                >
+                  Add Members
+                </Link>
 
                 <form className="form-inline">
                   <div className="form-group">
                     <input type="hidden" className="form-control"></input>
                   </div>
 
-                  <button type="button" className="btn btn-success" onClick={(e) => handleExport(e)}>Export</button>
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={(e) => handleExport(e)}
+                  >
+                    Export
+                  </button>
                 </form>
               </div>
               <div className="col-lg-6 col-md-6 col-sm-6">
                 <div className="input-group">
                   <span className="input-group-btn">
-                    <button type="search" className="btn btn-default">Search</button>
+                    <button type="search" className="btn btn-default">
+                      Search
+                    </button>
                   </span>
 
-                  <input type="text" placeholder="Search..." className="form-control search" value={searchQuery} onChange={(e) => handleSearch(e)}></input>
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="form-control search"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e)}
+                  ></input>
                 </div>
               </div>
             </div>
@@ -116,12 +140,24 @@ function MembersTable({ url, members }) {
       <table className="table table-hover">
         <thead>
           <tr>
-            <th data-sort="studentno" className="sort">Student Number</th>
-            <th data-sort="fname" className="sort">First Name</th>
-            <th data-sort="lname" className="sort">Last Name</th>
-            <th data-sort="email" className="sort">Email</th>
-            <th data-sort="questid" className="sort">Quest ID</th>
-            <th data-sort="paid" className="sort">Paid</th>
+            <th data-sort="studentno" className="sort">
+              Student Number
+            </th>
+            <th data-sort="fname" className="sort">
+              First Name
+            </th>
+            <th data-sort="lname" className="sort">
+              Last Name
+            </th>
+            <th data-sort="email" className="sort">
+              Email
+            </th>
+            <th data-sort="questid" className="sort">
+              Quest ID
+            </th>
+            <th data-sort="paid" className="sort">
+              Paid
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -134,7 +170,7 @@ function MembersTable({ url, members }) {
               <td className="lname">{m.last_name}</td>
               <td className="email">{m.email}</td>
               <td className="questid">{m.quest_id}</td>
-              <td className="paid">{m.paid ? 'Yes' : 'No'}</td>
+              <td className="paid">{m.paid ? "Yes" : "No"}</td>
             </tr>
           ))}
         </tbody>

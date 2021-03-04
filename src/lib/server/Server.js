@@ -1,10 +1,10 @@
-const express = require("express");
-const path = require("path");
-const logger = require("morgan");
-const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
+import express, { static } from "express";
+import { join } from "path";
+import logger from "morgan";
+import cookieParser from "cookie-parser";
+import { json } from "body-parser";
 
-const APIRouteHandler = require("../../routes/api")
+import APIRouteHandler from "../../routes/api";
 
 class Server {
   constructor(db) {
@@ -18,35 +18,20 @@ class Server {
       this.app.use(logger("common"));
     }
 
-    this.app.use(bodyParser.json());
+    this.app.use(json());
     this.app.use(cookieParser());
 
-    this.app.use(express.static(path.join(__dirname, "../../../build")))
+    this.app.use(static(join(__dirname, "../../../build")));
 
-    const apiRoute = new APIRouteHandler("/api", this.db)
+    const apiRoute = new APIRouteHandler("/api", this.db);
 
-    this.app.get("/healthz", (req, res) => {
-      return res.json({ status: "ok" })
-    });
+    this.app.get("/healthz", (req, res) => res.json({ status: "ok" }));
 
-    this.app.use(apiRoute.path, apiRoute.handler())
+    this.app.use(apiRoute.path, apiRoute.handler());
 
     this.app.get("/*", (req, res) => {
-      res.sendFile(path.join(__dirname, "../../../build", "index.html"))
-    })
-
-    // TODO: This probably isn't needed anymore
-    if (this.app.get("env") === "development") {
-      this.app.use((err, req, res) => {
-        // TODO: ERROR HANDLER
-      });
-    } else {
-      // production error handler
-      // no stacktraces leaked to user
-      this.app.use((err, req, res) => {
-        // TODO: ERROR HANDLER
-      });
-    }
+      res.sendFile(join(__dirname, "../../../build", "index.html"));
+    });
   }
 
   run() {
@@ -57,4 +42,4 @@ class Server {
   }
 }
 
-module.exports = Server;
+export default Server;

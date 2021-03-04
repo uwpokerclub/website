@@ -1,4 +1,4 @@
-const Router = require("express-promise-router");
+import Router from "express-promise-router";
 
 class RouteHandler {
   constructor(path, db) {
@@ -16,4 +16,4 @@ class RouteHandler {
   }
 }
 
-module.exports = RouteHandler;
+export default RouteHandler;

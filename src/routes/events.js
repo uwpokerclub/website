@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const PointsService = require("../lib/services/points_service/PointsService");
-const { CODES, EVENT_STATE } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import PointsService from "../lib/services/points_service/PointsService";
+import { CODES, EVENT_STATE } from "../models/constants";
 
 function validateCreateReq(body) {
   const { name, startDate, format, notes, semesterId } = body;
@@ -9,14 +9,22 @@ function validateCreateReq(body) {
   const nonNullValues = [name, startDate, format, semesterId];
 
   if (nonNullValues.some((v) => v === undefined)) {
-    throw new Error("Missing required fields: name, startDate, format, semesterId");
+    throw new Error(
+      "Missing required fields: name, startDate, format, semesterId"
+    );
   }
 
-  if (typeof(name) !== "string" || typeof(format) !== "string" || typeof(semesterId) !== "string") {
-    throw new Error("Required fields have incorrect type: name, format, semesterId");
+  if (
+    typeof name !== "string" ||
+    typeof format !== "string" ||
+    typeof semesterId !== "string"
+  ) {
+    throw new Error(
+      "Required fields have incorrect type: name, format, semesterId"
+    );
   }
 
-  if (notes !== undefined && typeof(notes) !== "string") {
+  if (notes !== undefined && typeof notes !== "string") {
     throw new Error("Optional fields have incorrect type: notes");
   }
 
@@ -25,7 +33,9 @@ function validateCreateReq(body) {
   }
 
   if (name === "" || format === "" || semesterId === "") {
-    throw new Error("Required fields cannot be empty: name, format, semesterId");
+    throw new Error(
+      "Required fields cannot be empty: name, format, semesterId"
+    );
   }
 }
 
@@ -38,7 +48,7 @@ async function updateRankings(db, entry, points, placement, semesterId) {
     .where("user_id = ? AND event_id = ?", entry.user_id, entry.event_id)
     .execute();
 
-  const [ ranking ] = await db
+  const [ranking] = await db
     .table("rankings")
     .select()
     .where("user_id = ? AND semester_id = ?", entry.user_id, semesterId)
@@ -72,10 +82,13 @@ class EventsRouteHandler extends RouteHandler {
       let events;
       if (semesterId !== undefined) {
         events = await this.db
-          .query(`SELECT * FROM events LEFT JOIN
+          .query(
+            `SELECT * FROM events LEFT JOIN
         (SELECT event_id, COUNT(*) FROM participants GROUP BY event_id)
         AS entries ON events.id = entries.event_id WHERE events.semester_id = $1
-        ORDER BY events.start_date DESC;`, semesterId)
+        ORDER BY events.start_date DESC;`,
+            semesterId
+          )
           .catch((err) => {
             res.status(CODES.INTERNAL_SERVER_ERROR).json({
               error: "DATABASE_ERROR",
@@ -86,9 +99,11 @@ class EventsRouteHandler extends RouteHandler {
           });
       } else {
         events = await this.db
-          .query(`SELECT * FROM events LEFT JOIN
+          .query(
+            `SELECT * FROM events LEFT JOIN
         (SELECT event_id, COUNT(*) FROM participants GROUP BY event_id)
-        AS entries ON events.id = entries.event_id ORDER BY events.start_date DESC;`)
+        AS entries ON events.id = entries.event_id ORDER BY events.start_date DESC;`
+          )
           .catch((err) => {
             res.status(CODES.INTERNAL_SERVER_ERROR).json({
               error: "DATABASE_ERROR",
@@ -105,7 +120,7 @@ class EventsRouteHandler extends RouteHandler {
     this.router.get("/:id", async (req, res, next) => {
       const { id } = req.params;
 
-      const [ event ] = await this.db
+      const [event] = await this.db
         .table("events")
         .select()
         .where("id = ?", id)
@@ -168,7 +183,7 @@ class EventsRouteHandler extends RouteHandler {
     this.router.post("/:id/end", async (req, res, next) => {
       const { id } = req.params;
 
-      const [ event ] = await this.db
+      const [event] = await this.db
         .table("events")
         .select()
         .where("id = ?", id)
@@ -197,8 +212,11 @@ class EventsRouteHandler extends RouteHandler {
       }
 
       const entries = await this.db
-        .query(`SELECT * FROM participants
-      WHERE event_id = $1 ORDER BY signed_out_at DESC;`, event.id)
+        .query(
+          `SELECT * FROM participants
+      WHERE event_id = $1 ORDER BY signed_out_at DESC;`,
+          event.id
+        )
         .catch((err) => {
           res.status(CODES.INTERNAL_SERVER_ERROR).json({
             error: "INTERNAL_ERROR",
@@ -209,11 +227,14 @@ class EventsRouteHandler extends RouteHandler {
         });
 
       // Reject request if all users are not signed out.
-      const unsignedOutEntries = entries.filter((e) => e.signed_out_at === null);
+      const unsignedOutEntries = entries.filter(
+        (e) => e.signed_out_at === null
+      );
       if (unsignedOutEntries.length !== 0) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
-          message: "You cannot perform this action. There are still users that haven't been signed out."
+          message:
+            "You cannot perform this action. There are still users that haven't been signed out."
         });
       }
 
@@ -238,7 +259,13 @@ class EventsRouteHandler extends RouteHandler {
       for (const [i, entry] of entries.entries()) {
         const points = ps.calculatePoints(i + 1);
 
-        await updateRankings(this.db, entry, points, i + 1, event.semester_id).catch((err) => {
+        await updateRankings(
+          this.db,
+          entry,
+          points,
+          i + 1,
+          event.semester_id
+        ).catch((err) => {
           res.status(CODES.INTERNAL_SERVER_ERROR).json({
             error: "DATABASE_ERROR",
             message: "An update error occurred"
@@ -255,4 +282,4 @@ class EventsRouteHandler extends RouteHandler {
   }
 }
 
-module.exports = EventsRouteHandler;
+export default EventsRouteHandler;

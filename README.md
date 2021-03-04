@@ -18,7 +18,7 @@ To check the status of the container, run:
 docker-compose ps
 ```
 
-To stop the container, run: 
+To stop the container, run:
 
 ```bash
 docker-compose down

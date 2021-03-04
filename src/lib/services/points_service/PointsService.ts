@@ -1,9 +1,11 @@
-const pointsTable = require("./point_lookup_table.json");
+import * as pointsTable from "./point_lookup_table.json";
 
 const SIZE_FACTOR = 50;
 
 class PointsService {
-  constructor(size) {
+  private size: number;
+
+  constructor(size: number) {
     this.size = size;
   }
 

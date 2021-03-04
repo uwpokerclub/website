@@ -1,8 +1,10 @@
 /* eslint-disable no-console */
-const { Pool } = require("pg");
+import { Pool } from "pg";
 
 if (process.env.DATABASE_URL === undefined) {
-  console.error("Environment variable DATABASE_URL is not set. Please set it and run this task again.");
+  console.error(
+    "Environment variable DATABASE_URL is not set. Please set it and run this task again."
+  );
   process.exit(1);
 }
 

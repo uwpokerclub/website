@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES, EVENT_STATE } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES, EVENT_STATE } from "../models/constants";
 
 const NOT_FOUND = -1;
 
@@ -12,7 +12,9 @@ function validateCreateReq(body) {
   }
 
   if (participants.some((p) => p === undefined || p === "")) {
-    throw Error("Required fields cannot be empty: participants must contain valid users");
+    throw Error(
+      "Required fields cannot be empty: participants must contain valid users"
+    );
   }
 }
 
@@ -24,30 +26,35 @@ class ParticipantsRouteHandler extends RouteHandler {
       let participants = [];
       if (eventId !== undefined && eventId !== "") {
         participants = await this.db
-          .query(`SELECT participants.user_id as id, users.first_name, users.last_name,
+          .query(
+            `SELECT participants.user_id as id, users.first_name, users.last_name,
                   participants.signed_out_at, participants.placement
                   FROM participants LEFT JOIN users ON users.id = participants.user_id
-                  WHERE participants.event_id = $1 ORDER BY participants.placement ASC;`, eventId)
+                  WHERE participants.event_id = $1 ORDER BY participants.placement ASC;`,
+            eventId
+          )
           .catch((err) => {
             res.status(CODES.INTERNAL_SERVER_ERROR).json({
               error: "DATABASE_ERROR",
               message: "A lookup error occurred"
             });
-  
+
             next(err);
           });
       } else {
         participants = await this.db
-          .query(`SELECT participants.user_id as id, users.first_name, users.last_name,
+          .query(
+            `SELECT participants.user_id as id, users.first_name, users.last_name,
                   participants.signed_out_at, participants.placement
                   FROM participants LEFT JOIN users ON users.id = participants.user_id
-                  ORDER BY participants.placement ASC;`)
+                  ORDER BY participants.placement ASC;`
+          )
           .catch((err) => {
             res.status(CODES.INTERNAL_SERVER_ERROR).json({
               error: "DATABASE_ERROR",
               message: "A lookup error occurred"
             });
-  
+
             next(err);
           });
       }
@@ -69,7 +76,7 @@ class ParticipantsRouteHandler extends RouteHandler {
 
       const { eventId, participants } = req.body;
 
-      const [ event ] = await this.db
+      const [event] = await this.db
         .table("events")
         .select()
         .where("id = ?", eventId)
@@ -157,7 +164,7 @@ class ParticipantsRouteHandler extends RouteHandler {
 
       const now = new Date();
 
-      const [ event ] = await this.db
+      const [event] = await this.db
         .table("events")
         .select()
         .where("id = ?", eventId)
@@ -214,7 +221,7 @@ class ParticipantsRouteHandler extends RouteHandler {
         });
       }
 
-      const [ event ] = await this.db
+      const [event] = await this.db
         .table("events")
         .select()
         .where("id = ?", eventId)
@@ -271,7 +278,7 @@ class ParticipantsRouteHandler extends RouteHandler {
         });
       }
 
-      const [ event ] = await this.db
+      const [event] = await this.db
         .table("events")
         .select()
         .where("id = ?", eventId)
@@ -313,4 +320,4 @@ class ParticipantsRouteHandler extends RouteHandler {
   }
 }
 
-module.exports = ParticipantsRouteHandler;
+export default ParticipantsRouteHandler;

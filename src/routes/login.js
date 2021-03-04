@@ -1,8 +1,8 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+import { hash as _hash, compare } from "bcrypt";
+import { sign } from "jsonwebtoken";
 
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES } from "../models/constants";
 
 const SALT_ROUNDS = 10;
 const DAY_IN_SECONDS = 86400;
@@ -12,7 +12,7 @@ function validateCreateRequest(username, password) {
     throw new Error("Missing required fields: username, password");
   }
 
-  if (typeof(username) !== "string" || typeof(password) !== "string") {
+  if (typeof username !== "string" || typeof password !== "string") {
     throw new Error("Required fields have incorrect type: username, password");
   }
 
@@ -26,11 +26,10 @@ function validateSessionRequest(username, password) {
     throw new Error("Missing required fields: username, password");
   }
 
-  if (typeof(username) !== "string" || typeof(password) !== "string") {
+  if (typeof username !== "string" || typeof password !== "string") {
     throw new Error("Required fields have incorrect type: username, password");
   }
 }
-
 
 class LoginRouteHandler extends RouteHandler {
   handler() {
@@ -54,7 +53,7 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const hash = await bcrypt.hash(password, SALT_ROUNDS).catch((err) => {
+      const hash = await _hash(password, SALT_ROUNDS).catch((err) => {
         res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "Error occurred creating the login"
@@ -82,7 +81,6 @@ class LoginRouteHandler extends RouteHandler {
       return res.status(CODES.CREATED).end();
     });
 
-
     this.router.post("/session", async (req, res, next) => {
       const { username, password } = req.body;
 
@@ -95,7 +93,7 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const [ login ] = await this.db
+      const [login] = await this.db
         .table("logins")
         .select()
         .where("username = ?", username)
@@ -116,7 +114,7 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const match = await bcrypt.compare(password, login.password).catch((err) => {
+      const match = await compare(password, login.password).catch((err) => {
         res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "An unknown error occurred"
@@ -132,17 +130,15 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const token = jwt.sign(login, process.env.JWT_SECRET, { expiresIn: DAY_IN_SECONDS });
+      const token = sign(login, process.env.JWT_SECRET, {
+        expiresIn: DAY_IN_SECONDS
+      });
 
-      return res
-        .cookie("pctoken", token)
-        .status(CODES.CREATED)
-        .end();
+      return res.cookie("pctoken", token).status(CODES.CREATED).end();
     });
 
     return this.router;
   }
 }
 
-
-module.exports = LoginRouteHandler;
+export default LoginRouteHandler;

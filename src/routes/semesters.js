@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES } from "../models/constants";
 
 function validateCreateReq(body) {
   const { name, startDate, endDate, meta } = body;
@@ -11,11 +11,11 @@ function validateCreateReq(body) {
     throw new Error("Missing required fields: name, startDate, endDate");
   }
 
-  if (typeof(name) !== "string") {
+  if (typeof name !== "string") {
     throw new Error("Required fields have incorrect type: name");
   }
 
-  if (meta !== undefined && typeof(meta) !== "string") {
+  if (meta !== undefined && typeof meta !== "string") {
     throw new Error("Optional fields have incorrect type: meta");
   }
 
@@ -35,7 +35,6 @@ function validateCreateReq(body) {
 class SemestersRouteHandler extends RouteHandler {
   handler() {
     this.router.get("/", async (req, res, next) => {
-
       const semesters = await this.db
         .table("semesters")
         .select()
@@ -56,7 +55,7 @@ class SemestersRouteHandler extends RouteHandler {
     this.router.get("/:id", async (req, res, next) => {
       const { id } = req.params;
 
-      const [ semester ] = await this.db
+      const [semester] = await this.db
         .table("semesters")
         .select()
         .where("id = ?", id)
@@ -117,9 +116,12 @@ class SemestersRouteHandler extends RouteHandler {
       const { id } = req.params;
 
       const rankings = await this.db
-        .query(`SELECT users.id, users.first_name, users.last_name, rankings.points
+        .query(
+          `SELECT users.id, users.first_name, users.last_name, rankings.points
                 FROM rankings LEFT JOIN users ON users.id = rankings.user_id
-                WHERE rankings.semester_id = $1 ORDER BY rankings.points DESC;`, id)
+                WHERE rankings.semester_id = $1 ORDER BY rankings.points DESC;`,
+          id
+        )
         .catch((err) => {
           res.status(CODES.INTERNAL_SERVER_ERROR).json({
             error: "DATABASE_ERROR",
@@ -143,4 +145,4 @@ class SemestersRouteHandler extends RouteHandler {
   }
 }
 
-module.exports = SemestersRouteHandler;
+export default SemestersRouteHandler;

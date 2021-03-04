@@ -1,25 +1,51 @@
 /* eslint-disable camelcase */
-const fs = require("fs");
-const fsPromises = fs.promises;
+import { promises, rm } from "fs";
+const fsPromises = promises;
 
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES } from "../models/constants";
 
 function validateCreateReq(body) {
-  const { id, firstName, lastName, email, faculty, questId, paid, semesterId } = body;
+  const {
+    id,
+    firstName,
+    lastName,
+    email,
+    faculty,
+    questId,
+    paid,
+    semesterId
+  } = body;
 
-  const stringValues = [id, firstName, lastName, email, faculty, questId, semesterId];
+  const stringValues = [
+    id,
+    firstName,
+    lastName,
+    email,
+    faculty,
+    questId,
+    semesterId
+  ];
 
   if (stringValues.some((v) => v === undefined) || paid === undefined) {
-    throw new Error("Missing required fields: id, firstName, lastName, email, faculty, questId, paid, semesterId");
+    throw new Error(
+      "Missing required fields: id, firstName, lastName, email, faculty, questId, paid, semesterId"
+    );
   }
 
-  if (stringValues.some((v) => typeof(v) !== "string") || typeof(paid) !== "boolean") {
-    throw new Error("Required fields have incorrect type: id, firstName, lastName, email, faculty, questId, paid, semesterId");
+  if (
+    stringValues.some((v) => typeof v !== "string") ||
+    typeof paid !== "boolean"
+  ) {
+    throw new Error(
+      "Required fields have incorrect type: id, firstName, lastName, email, faculty, questId, paid, semesterId"
+    );
   }
 
   if (stringValues.some((v) => v === "")) {
-    throw new Error("Required fields cannot be empty: id, firstName, lastName, email, faculty, questId, semesterId");
+    throw new Error(
+      "Required fields cannot be empty: id, firstName, lastName, email, faculty, questId, semesterId"
+    );
   }
 }
 
@@ -29,15 +55,24 @@ function validateUpdateReq(body) {
   const stringValues = [firstName, lastName, faculty, semesterId];
 
   if (stringValues.some((v) => v === undefined) || paid === undefined) {
-    throw new Error("Missing required fields: firstName, lastName, faculty, paid, semesterId");
+    throw new Error(
+      "Missing required fields: firstName, lastName, faculty, paid, semesterId"
+    );
   }
 
-  if (stringValues.some((v) => typeof(v) !== "string") || typeof(paid) !== "boolean") {
-    throw new Error("Required fields have incorrect type: firstName, lastName, faculty, paid, semesterId");
+  if (
+    stringValues.some((v) => typeof v !== "string") ||
+    typeof paid !== "boolean"
+  ) {
+    throw new Error(
+      "Required fields have incorrect type: firstName, lastName, faculty, paid, semesterId"
+    );
   }
 
   if (stringValues.some((v) => v === "")) {
-    throw new Error("Required fields cannot be empty: firstName, lastName, faculty, semesterId");
+    throw new Error(
+      "Required fields cannot be empty: firstName, lastName, faculty, semesterId"
+    );
   }
 }
 
@@ -83,7 +118,7 @@ class UsersRouteHandler extends RouteHandler {
     this.router.get("/:id", async (req, res, next) => {
       const { id } = req.params;
 
-      const [ user ] = await this.db
+      const [user] = await this.db
         .table("users")
         .select()
         .where("id = ?", id)
@@ -119,7 +154,16 @@ class UsersRouteHandler extends RouteHandler {
         });
       }
 
-      const { id, firstName, lastName, email, faculty, questId, paid, semesterId } = req.body;
+      const {
+        id,
+        firstName,
+        lastName,
+        email,
+        faculty,
+        questId,
+        paid,
+        semesterId
+      } = req.body;
 
       await this.db
         .table("users")
@@ -249,7 +293,7 @@ class UsersRouteHandler extends RouteHandler {
             next(err);
           });
 
-        const [ semester ] = await this.db
+        const [semester] = await this.db
           .table("semesters")
           .select()
           .where("id = ?", semesterId)
@@ -270,22 +314,24 @@ class UsersRouteHandler extends RouteHandler {
 
       await fsPromises.writeFile(`tmp/${filename}`, data, "utf8");
 
-      return res.status(CODES.OK).download(`tmp/${filename}`, filename, (err) => {
-        if (err) {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "INTERNAL_ERROR",
-            message: "An error occurred during download"
-          });
+      return res
+        .status(CODES.OK)
+        .download(`tmp/${filename}`, filename, (err) => {
+          if (err) {
+            res.status(CODES.INTERNAL_SERVER_ERROR).json({
+              error: "INTERNAL_ERROR",
+              message: "An error occurred during download"
+            });
 
-          next(err);
-        } else {
-          fs.rm(`tmp/${filename}`, () => true);
-        }
-      });
+            next(err);
+          } else {
+            rm(`tmp/${filename}`, () => true);
+          }
+        });
     });
 
     return this.router;
   }
 }
 
-module.exports = UsersRouteHandler;
+export default UsersRouteHandler;

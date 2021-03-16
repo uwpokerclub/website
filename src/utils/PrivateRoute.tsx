@@ -1,9 +1,16 @@
-import React from "react";
-import { Route, Redirect } from "react-router-dom";
+import React, { ReactNode, ReactElement } from "react";
+import { Route, Redirect, RouteProps } from "react-router-dom";
 
 import { useAuth } from "./ProvideAuth";
 
-export default function PrivateRoute({ children, ...rest }) {
+export interface Props {
+  children: ReactNode;
+}
+
+export default function PrivateRoute({
+  children,
+  ...rest
+}: Props & RouteProps): ReactElement {
   const auth = useAuth();
 
   return (
@@ -16,7 +23,7 @@ export default function PrivateRoute({ children, ...rest }) {
           <Redirect
             to={{
               pathname: "/login",
-              state: { from: location }
+              state: { from: location },
             }}
           />
         )

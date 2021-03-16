@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, ReactElement, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
+import { faculties } from "../../constants";
+import { Semester } from "../../types";
 
-export default function MemberNew() {
+export default function MemberNew(): ReactElement {
   const history = useHistory();
 
-  const faculties = ["AHS", "Arts", "Engineering", "Environment", "Math", "Science"];
-
-  const [semesters, setSemesters] = useState([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,13 +22,13 @@ export default function MemberNew() {
       .then((data) => setSemesters(data.semesters));
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     const res = await fetch("/api/users", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         id,
@@ -38,8 +38,8 @@ export default function MemberNew() {
         faculty,
         paid,
         questId,
-        semesterId
-      })
+        semesterId,
+      }),
     });
 
     if (res.status === 201) {
@@ -62,8 +62,8 @@ export default function MemberNew() {
                 name="first_name"
                 className="form-control"
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}>
-              </input>
+                onChange={(e) => setFirstName(e.target.value)}
+              ></input>
             </div>
 
             <div className="form-group">
@@ -74,8 +74,8 @@ export default function MemberNew() {
                 name="last_name"
                 className="form-control"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}>
-              </input>
+                onChange={(e) => setLastName(e.target.value)}
+              ></input>
             </div>
 
             <div className="form-group">
@@ -86,8 +86,8 @@ export default function MemberNew() {
                 name="email"
                 className="form-control"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}>
-              </input>
+                onChange={(e) => setEmail(e.target.value)}
+              ></input>
             </div>
 
             <div className="form-group">
@@ -96,11 +96,14 @@ export default function MemberNew() {
                 name="faculty"
                 className="form-control"
                 value={faculty}
-                onChange={(e) => setFaculty(e.target.value)}>
-                  <option>Choose one</option>
-                  {faculties.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
+                onChange={(e) => setFaculty(e.target.value)}
+              >
+                <option>Choose one</option>
+                {faculties.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -110,8 +113,9 @@ export default function MemberNew() {
                 type="checkbox"
                 name="paid"
                 className="form-control"
-                value={paid}
-                onChange={() => setPaid(!paid)}></input>
+                defaultChecked={paid}
+                onChange={() => setPaid(!paid)}
+              ></input>
             </div>
 
             <div className="form-group">
@@ -122,8 +126,8 @@ export default function MemberNew() {
                 name="quest_id"
                 className="form-control"
                 value={questId}
-                onChange={(e) => setQuestId(e.target.value)}>
-              </input>
+                onChange={(e) => setQuestId(e.target.value)}
+              ></input>
             </div>
 
             <div className="form-group">
@@ -134,8 +138,8 @@ export default function MemberNew() {
                 name="id"
                 className="form-control"
                 value={id}
-                onChange={(e) => setId(e.target.value)}>
-              </input>
+                onChange={(e) => setId(e.target.value)}
+              ></input>
             </div>
 
             <div className="form-group">
@@ -144,17 +148,26 @@ export default function MemberNew() {
                 name="semester_id"
                 className="form-control"
                 value={semesterId}
-                onChange={(e) => setSemesterId(e.target.value)}>
+                onChange={(e) => setSemesterId(e.target.value)}
+              >
                 <option>Choose Semester</option>
                 {semesters.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="row">
               <div className="mx-auto">
-                <button type="submit" value="Submit" className="btn btn-success btn-responsive">Submit</button>
+                <button
+                  type="submit"
+                  value="Submit"
+                  className="btn btn-success btn-responsive"
+                >
+                  Submit
+                </button>
               </div>
             </div>
           </form>

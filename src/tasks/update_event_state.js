@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { Pool } from "pg";
+const { Pool } = require("pg");
 
 if (process.env.DATABASE_URL === undefined) {
   console.error(

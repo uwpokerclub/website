@@ -21,6 +21,7 @@
     "ecmaVersion": 2018
   },
   "rules": {
+    "@typescript-eslint/no-var-requires": "off",
     "no-console": "error",
     "curly": ["error", "all"],
     "default-case": "error",

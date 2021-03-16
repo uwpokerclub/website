@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
-import RouteHandler from "../lib/route_handler/RouteHandler";
-import { CODES } from "../models/constants";
+const RouteHandler = require("../lib/route_handler/RouteHandler");
+const { CODES } = require("../models/constants");
 
 function validateCreateReq(body) {
   const { name, startDate, endDate, meta } = body;
@@ -145,4 +145,4 @@ class SemestersRouteHandler extends RouteHandler {
   }
 }
 
-export default SemestersRouteHandler;
+module.exports = SemestersRouteHandler;

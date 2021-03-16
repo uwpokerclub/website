@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
-import RouteHandler from "../lib/route_handler/RouteHandler";
-import { CODES, EVENT_STATE } from "../models/constants";
+const RouteHandler = require("../lib/route_handler/RouteHandler");
+const { CODES, EVENT_STATE } = require("../models/constants");
 
 const NOT_FOUND = -1;
 
@@ -320,4 +320,4 @@ class ParticipantsRouteHandler extends RouteHandler {
   }
 }
 
-export default ParticipantsRouteHandler;
+module.exports = ParticipantsRouteHandler;

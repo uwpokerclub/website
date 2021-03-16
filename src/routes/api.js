@@ -1,12 +1,12 @@
-import RouteHandler from "../lib/route_handler/RouteHandler";
+const RouteHandler = require("../lib/route_handler/RouteHandler");
 
-import LoginRouteHandler from "./login";
-import UsersRouteHandler from "./users";
-import EventsRouteHandler from "./events";
-import SemestersRouteHandler from "./semesters";
-import ParticipantsRouteHandler from "./participants";
+const LoginRouteHandler = require("./login");
+const UsersRouteHandler = require("./users");
+const EventsRouteHandler = require("./events");
+const SemestersRouteHandler = require("./semesters");
+const ParticipantsRouteHandler = require("./participants");
 
-import { requireAuthentication } from "../middleware/authenticate";
+const { requireAuthentication } = require("../middleware/authenticate");
 
 class APIRouteHandler extends RouteHandler {
   handler() {
@@ -45,4 +45,4 @@ class APIRouteHandler extends RouteHandler {
   }
 }
 
-export default APIRouteHandler;
+module.exports = APIRouteHandler;

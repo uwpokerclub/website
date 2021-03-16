@@ -1,9 +1,9 @@
 /* eslint-disable camelcase */
-import { promises, rm } from "fs";
+const { promises, rm } = require("fs");
 const fsPromises = promises;
 
-import RouteHandler from "../lib/route_handler/RouteHandler";
-import { CODES } from "../models/constants";
+const RouteHandler = require("../lib/route_handler/RouteHandler");
+const { CODES } = require("../models/constants");
 
 function validateCreateReq(body) {
   const {
@@ -334,4 +334,4 @@ class UsersRouteHandler extends RouteHandler {
   }
 }
 
-export default UsersRouteHandler;
+module.exports = UsersRouteHandler;

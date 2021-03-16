@@ -1,10 +1,10 @@
-import { verify } from "jsonwebtoken";
+const { verify } = require("jsonwebtoken");
 
-import { CODES } from "../models/constants";
+const { CODES } = require("../models/constants");
 
 const SECRET = process.env.JWT_SECRET;
 
-export function requireAuthentication(req, res, next) {
+exports.requireAuthentication = function requireAuthentication(req, res, next) {
   const token =
     req.body.token ||
     req.query.token ||
@@ -27,4 +27,4 @@ export function requireAuthentication(req, res, next) {
       message: "Authentication required"
     });
   }
-}
+};

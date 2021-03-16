@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
-import RouteHandler from "../lib/route_handler/RouteHandler";
-import PointsService from "../lib/services/points_service/PointsService";
-import { CODES, EVENT_STATE } from "../models/constants";
+const RouteHandler = require("../lib/route_handler/RouteHandler");
+const PointsService = require("../lib/services/points_service/PointsService");
+const { CODES, EVENT_STATE } = require("../models/constants");
 
 function validateCreateReq(body) {
   const { name, startDate, format, notes, semesterId } = body;
@@ -282,4 +282,4 @@ class EventsRouteHandler extends RouteHandler {
   }
 }
 
-export default EventsRouteHandler;
+module.exports = EventsRouteHandler;

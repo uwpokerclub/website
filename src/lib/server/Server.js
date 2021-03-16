@@ -1,10 +1,10 @@
-import express, { static } from "express";
-import { join } from "path";
-import logger from "morgan";
-import cookieParser from "cookie-parser";
-import { json } from "body-parser";
+const express = require("express");
+const { join } = require("path");
+const logger = require("morgan");
+const cookieParser = require("cookie-parser");
+const { json } = require("body-parser");
 
-import APIRouteHandler from "../../routes/api";
+const APIRouteHandler = require("../../routes/api");
 
 class Server {
   constructor(db) {
@@ -21,7 +21,7 @@ class Server {
     this.app.use(json());
     this.app.use(cookieParser());
 
-    this.app.use(static(join(__dirname, "../../../build")));
+    this.app.use(express.static(join(__dirname, "../../../build")));
 
     const apiRoute = new APIRouteHandler("/api", this.db);
 
@@ -42,4 +42,4 @@ class Server {
   }
 }
 
-export default Server;
+module.exports = Server;

@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
-import { Pool } from "pg";
-import { DriverService } from "postgres-driver-service";
+const { Pool } = require("pg");
+const { DriverService } = require("postgres-driver-service");
 
-import EnvironmentChecker from "./lib/environment/EnvironmentChecker";
-import Server from "./lib/server/Server";
+const EnvironmentChecker = require("./lib/environment/EnvironmentChecker");
+const Server = require("./lib/server/Server");
 
-import environmentConfig from "../config/environment.json";
+const environmentConfig = require("../config/environment.json");
 
 // Initialize an environment checker and verify all variables are present
 const ec = new EnvironmentChecker(environmentConfig);

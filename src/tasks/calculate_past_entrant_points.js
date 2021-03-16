@@ -1,9 +1,9 @@
 /* eslint-disable max-len */
 /* eslint-disable camelcase */
 /* eslint-disable no-console */
-import { Pool } from "pg";
+const { Pool } = require("pg");
 
-import PointsService from "../lib/services/points_service/PointsService";
+const PointsService = require("../lib/services/points_service/PointsService");
 
 if (process.env.DATABASE_URL === undefined) {
   console.error(

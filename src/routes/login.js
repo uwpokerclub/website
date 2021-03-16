@@ -1,8 +1,8 @@
-import { hash as _hash, compare } from "bcrypt";
-import { sign } from "jsonwebtoken";
+const { hash, compare } = require("bcrypt");
+const { sign } = require("jsonwebtoken");
 
-import RouteHandler from "../lib/route_handler/RouteHandler";
-import { CODES } from "../models/constants";
+const RouteHandler = require("../lib/route_handler/RouteHandler");
+const { CODES } = require("../models/constants");
 
 const SALT_ROUNDS = 10;
 const DAY_IN_SECONDS = 86400;
@@ -53,7 +53,7 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const hash = await _hash(password, SALT_ROUNDS).catch((err) => {
+      const passwordHash = await hash(password, SALT_ROUNDS).catch((err) => {
         res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "Error occurred creating the login"
@@ -66,7 +66,7 @@ class LoginRouteHandler extends RouteHandler {
         .table("logins")
         .create({
           username: req.body.username,
-          password: hash
+          password: passwordHash
         })
         .execute()
         .catch((err) => {
@@ -141,4 +141,4 @@ class LoginRouteHandler extends RouteHandler {
   }
 }
 
-export default LoginRouteHandler;
+module.exports = LoginRouteHandler;

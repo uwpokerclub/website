@@ -1,13 +1,18 @@
-const express = require("express");
-const { join } = require("path");
-const logger = require("morgan");
-const cookieParser = require("cookie-parser");
-const { json } = require("body-parser");
+import { ConnectionPool } from "postgres-driver-service";
+import express, { Express } from "express";
+import { join } from "path";
+import logger from "morgan";
+import cookieParser from "cookie-parser";
+import { json } from "body-parser";
 
-const APIRouteHandler = require("../../routes/api");
+import APIRouteHandler from "../../routes/api";
 
-class Server {
-  constructor(db) {
+export default class Server {
+  public db: ConnectionPool;
+
+  private app: Express;
+
+  public constructor(db: ConnectionPool) {
     this.db = db;
 
     this.app = express();
@@ -34,12 +39,10 @@ class Server {
     });
   }
 
-  run() {
+  public run(): void {
     this.app.listen(process.env.PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`App listenting at http://0.0.0.0:${process.env.PORT}`);
     });
   }
 }
-
-module.exports = Server;

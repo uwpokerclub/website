@@ -1,9 +1,9 @@
 /* eslint-disable max-len */
 /* eslint-disable camelcase */
 /* eslint-disable no-console */
-const { Pool } = require("pg");
+import { Pool } from "pg";
 
-const PointsService = require("../lib/services/points_service/PointsService");
+import PointsService from "../lib/services/points_service/PointsService";
 
 if (process.env.DATABASE_URL === undefined) {
   console.error(
@@ -137,7 +137,7 @@ async function run() {
     client.release();
   }
 
-  const end = new Date() - start;
+  const end = new Date().valueOf() - start.valueOf();
   console.log(`Task Successfully completed in ${end}ms`);
 }
 

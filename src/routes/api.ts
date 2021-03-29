@@ -1,15 +1,16 @@
-const RouteHandler = require("../lib/route_handler/RouteHandler");
+import { Router } from "express";
+import RouteHandler from "../lib/route_handler/RouteHandler";
 
-const LoginRouteHandler = require("./login");
-const UsersRouteHandler = require("./users");
-const EventsRouteHandler = require("./events");
-const SemestersRouteHandler = require("./semesters");
-const ParticipantsRouteHandler = require("./participants");
+import LoginRouteHandler from "./login";
+import UsersRouteHandler from "./users";
+import EventsRouteHandler from "./events";
+import SemestersRouteHandler from "./semesters";
+import ParticipantsRouteHandler from "./participants";
 
-const { requireAuthentication } = require("../middleware/authenticate");
+import requireAuthentication from "../middleware/authenticate";
 
-class APIRouteHandler extends RouteHandler {
-  handler() {
+export default class APIRouteHandler extends RouteHandler {
+  public handler(): Router {
     const loginRoute = new LoginRouteHandler("/login", this.db);
     const usersRoute = new UsersRouteHandler("/users", this.db);
     const eventsRoute = new EventsRouteHandler("/events", this.db);
@@ -44,5 +45,3 @@ class APIRouteHandler extends RouteHandler {
     return this.router;
   }
 }
-
-module.exports = APIRouteHandler;

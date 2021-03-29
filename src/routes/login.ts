@@ -1,13 +1,21 @@
-const { hash, compare } = require("bcrypt");
-const { sign } = require("jsonwebtoken");
+import { hash, compare } from "bcrypt";
+import { Router } from "express";
+import { sign } from "jsonwebtoken";
+import { Query } from "postgres-driver-service";
 
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES } from "../models/constants";
+import { Login } from "../types";
 
 const SALT_ROUNDS = 10;
 const DAY_IN_SECONDS = 86400;
 
-function validateCreateRequest(username, password) {
+type LoginBody = {
+  username: string;
+  password: string;
+};
+
+function validateCreateRequest(username: string, password: string): void {
   if (username === undefined || password === undefined) {
     throw new Error("Missing required fields: username, password");
   }
@@ -21,7 +29,7 @@ function validateCreateRequest(username, password) {
   }
 }
 
-function validateSessionRequest(username, password) {
+function validateSessionRequest(username: string, password: string): void {
   if (username === undefined || password === undefined) {
     throw new Error("Missing required fields: username, password");
   }
@@ -31,10 +39,10 @@ function validateSessionRequest(username, password) {
   }
 }
 
-class LoginRouteHandler extends RouteHandler {
-  handler() {
+export default class LoginRouteHandler extends RouteHandler {
+  handler(): Router {
     this.router.post("/", async (req, res, next) => {
-      const { username, password } = req.body;
+      const { username, password }: LoginBody = req.body;
 
       try {
         validateCreateRequest(username, password);
@@ -45,7 +53,17 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const loginCount = await this.db.table("logins").count();
+      const client = await this.db.getConnection();
+      const query = new Query("logins", client);
+
+      const loginCount = await query.count([]).catch((err) => next(err));
+      if (loginCount === undefined) {
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "INTERAL_SERVER_ERROR",
+          message: "A lookup error occurred"
+        });
+      }
+
       if (loginCount > 0) {
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
@@ -53,36 +71,37 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const passwordHash = await hash(password, SALT_ROUNDS).catch((err) => {
-        res.status(CODES.INTERNAL_SERVER_ERROR).json({
+      const passwordHash = await hash(password, SALT_ROUNDS).catch((err) =>
+        next(err)
+      );
+      if (passwordHash === undefined) {
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "Error occurred creating the login"
         });
+      }
 
-        next(err);
-      });
-
-      await this.db
-        .table("logins")
-        .create({
+      try {
+        await query.insert({
           username: req.body.username,
           password: passwordHash
-        })
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "INTERNAL_ERROR",
-            message: "Error occurred creating the login"
-          });
-
-          next(err);
         });
+      } catch (err) {
+        next(err);
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "INTERNAL_ERROR",
+          message: "Error occurred creating the login"
+        });
+      }
+
+      client.release();
 
       return res.status(CODES.CREATED).end();
     });
 
     this.router.post("/session", async (req, res, next) => {
-      const { username, password } = req.body;
+      const { username, password }: LoginBody = req.body;
 
       try {
         validateSessionRequest(username, password);
@@ -93,19 +112,12 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const [login] = await this.db
-        .table("logins")
-        .select()
-        .where("username = ?", username)
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "INTERNAL_ERROR",
-            message: "An database error occurred"
-          });
+      const client = await this.db.getConnection();
+      const query = new Query("logins", client);
 
-          next(err);
-        });
+      const login = await query
+        .find<Login>("username", username)
+        .catch((err) => next(err));
 
       if (login === undefined) {
         return res.status(CODES.UNAUTHORIZED).json({
@@ -114,14 +126,15 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const match = await compare(password, login.password).catch((err) => {
-        res.status(CODES.INTERNAL_SERVER_ERROR).json({
+      const match = await compare(password, login.password).catch((err) =>
+        next(err)
+      );
+      if (match === undefined) {
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "An unknown error occurred"
         });
-
-        next(err);
-      });
+      }
 
       if (!match) {
         return res.status(CODES.UNAUTHORIZED).json({
@@ -130,9 +143,11 @@ class LoginRouteHandler extends RouteHandler {
         });
       }
 
-      const token = sign(login, process.env.JWT_SECRET, {
+      const token = sign(login, process.env.JWT_SECRET as string, {
         expiresIn: DAY_IN_SECONDS
       });
+
+      client.release();
 
       return res.cookie("pctoken", token).status(CODES.CREATED).end();
     });
@@ -140,5 +155,3 @@ class LoginRouteHandler extends RouteHandler {
     return this.router;
   }
 }
-
-module.exports = LoginRouteHandler;

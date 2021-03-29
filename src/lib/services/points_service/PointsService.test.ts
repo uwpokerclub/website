@@ -1,4 +1,4 @@
-const PointsService = require("./PointsService");
+import PointsService from "./PointsService";
 
 describe("PointsService", () => {
   it("should calculate correct points for 64 players", () => {

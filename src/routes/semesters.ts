@@ -1,8 +1,18 @@
 /* eslint-disable camelcase */
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES } = require("../models/constants");
+import { Router } from "express";
+import { orderBy, Query } from "postgres-driver-service";
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES } from "../models/constants";
+import { Semester } from "../types";
 
-function validateCreateReq(body) {
+type SemesterBody = {
+  name: string;
+  startDate: string;
+  endDate: string;
+  meta: string;
+};
+
+function validateCreateReq(body: SemesterBody) {
   const { name, startDate, endDate, meta } = body;
 
   const nonNullValues = [name, startDate, endDate];
@@ -32,22 +42,24 @@ function validateCreateReq(body) {
   }
 }
 
-class SemestersRouteHandler extends RouteHandler {
-  handler() {
+export default class SemestersRouteHandler extends RouteHandler {
+  handler(): Router {
     this.router.get("/", async (req, res, next) => {
-      const semesters = await this.db
-        .table("semesters")
-        .select()
-        .orderBy("DESC", "start_date")
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
+      const client = await this.db.getConnection();
+      const query = new Query("semesters", client);
 
-          next(err);
+      const semesters = await query
+        .all([orderBy("start_date", "DESC")])
+        .catch((err) => next(err));
+
+      if (semesters === undefined) {
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "A lookup error occurred"
         });
+      }
+
+      client.release();
 
       return res.status(CODES.OK).json({ semesters });
     });
@@ -55,19 +67,10 @@ class SemestersRouteHandler extends RouteHandler {
     this.router.get("/:id", async (req, res, next) => {
       const { id } = req.params;
 
-      const [semester] = await this.db
-        .table("semesters")
-        .select()
-        .where("id = ?", id)
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
+      const client = await this.db.getConnection();
+      const query = new Query("semesters", client);
 
-          next(err);
-        });
+      const semester = await query.find("id", id).catch((err) => next(err));
 
       if (semester === undefined) {
         return res.status(CODES.NOT_FOUND).json({
@@ -75,6 +78,8 @@ class SemestersRouteHandler extends RouteHandler {
           message: "That semester could not be found"
         });
       }
+
+      client.release();
 
       return res.status(CODES.OK).json({ semester });
     });
@@ -89,25 +94,28 @@ class SemestersRouteHandler extends RouteHandler {
         });
       }
 
-      const { name, startDate, endDate, meta } = req.body;
+      const client = await this.db.getConnection();
+      const query = new Query("semesters", client);
 
-      await this.db
-        .table("semesters")
-        .create({
+      const { name, startDate, endDate, meta }: SemesterBody = req.body;
+
+      try {
+        await query.insert<Semester>({
           name,
-          start_date: startDate,
-          end_date: endDate,
-          meta: meta
-        })
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "An insertion error occurred"
-          });
-
-          next(err);
+          start_date: new Date(startDate),
+          end_date: new Date(endDate),
+          meta
         });
+      } catch (err) {
+        next(err);
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An insertion error occurred"
+        });
+      }
+
+      client.release();
 
       return res.status(CODES.CREATED).json({ semester: req.body });
     });
@@ -115,21 +123,17 @@ class SemestersRouteHandler extends RouteHandler {
     this.router.get("/:id/rankings", async (req, res, next) => {
       const { id } = req.params;
 
-      const rankings = await this.db
+      const client = await this.db.getConnection();
+      const query = new Query("rankings", client);
+
+      const rankings = await query
         .query(
           `SELECT users.id, users.first_name, users.last_name, rankings.points
                 FROM rankings LEFT JOIN users ON users.id = rankings.user_id
                 WHERE rankings.semester_id = $1 ORDER BY rankings.points DESC;`,
-          id
+          [id]
         )
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
-
-          next(err);
-        });
+        .catch((err) => next(err));
 
       if (rankings === undefined) {
         return res.status(CODES.NOT_FOUND).json({
@@ -138,11 +142,11 @@ class SemestersRouteHandler extends RouteHandler {
         });
       }
 
+      client.release();
+
       return res.status(CODES.OK).json({ rankings });
     });
 
     return this.router;
   }
 }
-
-module.exports = SemestersRouteHandler;

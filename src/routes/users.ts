@@ -1,11 +1,25 @@
 /* eslint-disable camelcase */
-const { promises, rm } = require("fs");
-const fsPromises = promises;
+import { promises, rm } from "fs";
+import fsPromises = promises;
 
-const RouteHandler = require("../lib/route_handler/RouteHandler");
-const { CODES } = require("../models/constants");
+import RouteHandler from "../lib/route_handler/RouteHandler";
+import { CODES } from "../models/constants";
+import { Semester, User } from "../types";
+import { Router } from "express";
+import { orderBy, Query, where } from "postgres-driver-service";
 
-function validateCreateReq(body) {
+type CreateUserBody = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  faculty: string;
+  questId: string;
+  paid: boolean;
+  semesterId: string;
+};
+
+function validateCreateReq(body: CreateUserBody) {
   const {
     id,
     firstName,
@@ -49,7 +63,15 @@ function validateCreateReq(body) {
   }
 }
 
-function validateUpdateReq(body) {
+type UpdateUserBody = {
+  firstName: string;
+  lastName: string;
+  faculty: string;
+  paid: boolean;
+  semesterId: string;
+};
+
+function validateUpdateReq(body: UpdateUserBody) {
   const { firstName, lastName, faculty, paid, semesterId } = body;
 
   const stringValues = [firstName, lastName, faculty, semesterId];
@@ -76,7 +98,7 @@ function validateUpdateReq(body) {
   }
 }
 
-function convertJSONToCSV(data) {
+function convertJSONToCSV(data: User[]) {
   if (data.length === 0) {
     return "";
   }
@@ -86,51 +108,44 @@ function convertJSONToCSV(data) {
   return csvString;
 }
 
-class UsersRouteHandler extends RouteHandler {
-  handler() {
+export default class UsersRouteHandler extends RouteHandler {
+  handler(): Router {
     this.router.get("/", async (req, res, next) => {
       // only support semesterId filter for now
       const { semesterId } = req.query;
 
-      let membersQuery = this.db.table("users").select();
+      const client = await this.db.getConnection();
+      const query = new Query("users", client);
+
+      const mods = [orderBy("created_at", "DESC")];
 
       if (semesterId !== undefined && semesterId !== "") {
-        membersQuery = membersQuery.where("semester_id = ?", semesterId);
+        mods.push(where("semester_id = ?", [semesterId]));
       }
 
-      const users = await membersQuery
-        .orderBy("DESC", "created_at")
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "INTERNAL_ERROR",
-            message: "An unknown error occured"
-          });
+      const users = await query.all<User>(mods).catch((err) => next(err));
 
-          next(err);
+      if (users === undefined) {
+        res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "INTERNAL_ERROR",
+          message: "An unknown error occured"
         });
+      }
 
-      res.status(CODES.OK).json({
-        users: users
+      client.release();
+
+      return res.status(CODES.OK).json({
+        users
       });
     });
 
     this.router.get("/:id", async (req, res, next) => {
       const { id } = req.params;
 
-      const [user] = await this.db
-        .table("users")
-        .select()
-        .where("id = ?", id)
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
+      const client = await this.db.getConnection();
+      const query = new Query("users", client);
 
-          next(err);
-        });
+      const user = await query.find<User>("id", id).catch((err) => next(err));
 
       if (user === undefined) {
         return res.status(CODES.NOT_FOUND).json({
@@ -139,8 +154,10 @@ class UsersRouteHandler extends RouteHandler {
         });
       }
 
+      client.release();
+
       return res.status(CODES.OK).json({
-        user: user
+        user
       });
     });
 
@@ -163,11 +180,13 @@ class UsersRouteHandler extends RouteHandler {
         questId,
         paid,
         semesterId
-      } = req.body;
+      }: CreateUserBody = req.body;
 
-      await this.db
-        .table("users")
-        .create({
+      const client = await this.db.getConnection();
+      const query = new Query("users", client);
+
+      try {
+        await query.insert<User>({
           id,
           first_name: firstName,
           last_name: lastName,
@@ -176,16 +195,17 @@ class UsersRouteHandler extends RouteHandler {
           quest_id: questId,
           paid,
           semester_id: semesterId
-        })
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "An insertion error occurred"
-          });
-
-          next(err);
         });
+      } catch (err) {
+        next(err);
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An insertion error occurred"
+        });
+      }
+
+      client.release();
 
       return res.status(CODES.CREATED).json({
         user: req.body
@@ -202,28 +222,36 @@ class UsersRouteHandler extends RouteHandler {
         });
       }
 
-      const { firstName, lastName, faculty, paid, semesterId } = req.body;
+      const client = await this.db.getConnection();
+      const query = new Query("users", client);
+
+      const {
+        firstName,
+        lastName,
+        faculty,
+        paid,
+        semesterId
+      }: UpdateUserBody = req.body;
       const { id } = req.params;
 
-      await this.db
-        .table("users")
-        .update({
+      try {
+        await query.update<User>([where("id = ?", [id])], {
           first_name: firstName,
           last_name: lastName,
           faculty,
           paid,
           semester_id: semesterId
-        })
-        .where("id = ?", id)
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "An update error occurred"
-          });
-
-          next(err);
         });
+      } catch (err) {
+        next(err);
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An update error occurred"
+        });
+      }
+
+      client.release();
 
       return res.status(CODES.OK).json({
         user: {
@@ -240,19 +268,21 @@ class UsersRouteHandler extends RouteHandler {
     this.router.delete("/:id", async (req, res, next) => {
       const { id } = req.params;
 
-      await this.db
-        .table("users")
-        .delete()
-        .where("id = ?", id)
-        .execute()
-        .catch((err) => {
-          res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "An error occurred during deletion"
-          });
+      const client = await this.db.getConnection();
+      const query = new Query("users", client);
 
-          next(err);
+      try {
+        await query.delete([where("id = ?", [id])]);
+      } catch (err) {
+        next(err);
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An error occurred during deletion"
         });
+      }
+
+      client.release();
 
       return res.status(CODES.OK).end();
     });
@@ -261,51 +291,46 @@ class UsersRouteHandler extends RouteHandler {
       const { semesterId } = req.query;
 
       let filename = "";
-      let users = null;
+      let users: User[] | void;
+
+      const client = await this.db.getConnection();
+      const query = new Query("users", client);
 
       if (semesterId === undefined) {
-        users = await this.db
-          .table("users")
-          .select()
-          .execute()
-          .catch((err) => {
-            res.status(CODES.INTERNAL_SERVER_ERROR).json({
-              error: "DATABASE_ERROR",
-              message: "A lookup error occurred"
-            });
+        users = await query.all<User>([]).catch((err) => next(err));
 
-            next(err);
+        if (users === undefined) {
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            error: "DATABASE_ERROR",
+            message: "A lookup error occurred"
           });
+        }
 
         filename = "users.csv";
       } else {
-        users = await this.db
-          .table("users")
-          .select()
-          .where("semester_id = ?", semesterId)
-          .execute()
-          .catch((err) => {
-            res.status(CODES.INTERNAL_SERVER_ERROR).json({
-              error: "DATABASE_ERROR",
-              message: "A lookup error occurred"
-            });
+        users = await query
+          .all<User>([where("semester_id = ?", [semesterId])])
+          .catch((err) => next(err));
 
-            next(err);
+        if (users === undefined) {
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            error: "DATABASE_ERROR",
+            message: "A lookup error occurred"
           });
+        }
 
-        const [semester] = await this.db
-          .table("semesters")
-          .select()
-          .where("id = ?", semesterId)
-          .execute()
-          .catch((err) => {
-            res.status(CODES.INTERNAL_SERVER_ERROR).json({
-              error: "DATABASE_ERROR",
-              message: "A lookup error occurred"
-            });
+        const sQuery = new Query("semesters", client);
 
-            next(err);
+        const semester = await sQuery
+          .find<Semester>("id", semesterId)
+          .catch((err) => next(err));
+
+        if (semester === undefined) {
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            error: "DATABASE_ERROR",
+            message: "A lookup error occurred"
           });
+        }
 
         filename = `users_${semester.id}.csv`;
       }
@@ -313,6 +338,8 @@ class UsersRouteHandler extends RouteHandler {
       const data = convertJSONToCSV(users);
 
       await fsPromises.writeFile(`tmp/${filename}`, data, "utf8");
+
+      client.release();
 
       return res
         .status(CODES.OK)
@@ -333,5 +360,3 @@ class UsersRouteHandler extends RouteHandler {
     return this.router;
   }
 }
-
-module.exports = UsersRouteHandler;

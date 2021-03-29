@@ -29,31 +29,36 @@
     "npm": "6.x"
   },
   "dependencies": {
-    "bcrypt": "^5.0.0",
+    "bcrypt": "^5.0.1",
     "body-parser": "^1.19.0",
     "cookie-parser": "^1.4.5",
     "debug": "^4.3.1",
     "express": "^4.17.1",
-    "express-promise-router": "^4.0.1",
+    "express-promise-router": "^4.1.0",
     "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0",
     "node-pg-migrate": "^5.9.0",
-    "pg": "^8.5.1",
-    "postgres-driver-service": "^1.0.3"
+    "postgres-driver-service": "^2.0.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^3.0.0",
+    "@types/body-parser": "^1.19.0",
+    "@types/cookie-parser": "^1.4.2",
     "@types/express": "^4.17.11",
-    "@types/jest": "^26.0.20",
-    "@types/jsonwebtoken": "^8.5.0",
+    "@types/express-serve-static-core": "^4.17.19",
+    "@types/jest": "^26.0.22",
+    "@types/jsonwebtoken": "^8.5.1",
     "@types/morgan": "^1.9.2",
-    "@types/node": "^14.14.31",
-    "@typescript-eslint/eslint-plugin": "^4.16.1",
-    "@typescript-eslint/parser": "^4.16.1",
-    "eslint": "^7.19.0",
+    "@types/node": "^14.14.36",
+    "@types/qs": "^6.9.6",
+    "@types/serve-static": "^1.13.9",
+    "@typescript-eslint/eslint-plugin": "^4.19.0",
+    "@typescript-eslint/parser": "^4.19.0",
+    "eslint": "^7.22.0",
     "eslint-config-prettier": "^8.1.0",
+    "eslint-plugin-prettier": "^3.3.1",
     "jest": "^26.6.3",
     "prettier": "2.2.1",
-    "typescript": "^4.2.2"
+    "typescript": "^4.2.3"
   }
 }

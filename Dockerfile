@@ -1,10 +1,7 @@
-FROM node:12.16.2-alpine3.11 AS node_stage
+FROM node:14.16.0-alpine3.11 AS node_stage
 
 # Set work dir
 WORKDIR /usr/app
-
-# Install build tools for node-gyp
-RUN apk add --no-cache --virtual .gyp python make g++
 
 COPY . .
 

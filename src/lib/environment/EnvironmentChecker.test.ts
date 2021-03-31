@@ -1,4 +1,4 @@
-const EnvironmentChecker = require("./EnvironmentChecker");
+import EnvironmentChecker from "./EnvironmentChecker";
 
 describe("EnvironmentChecker", () => {
   test("calling verify() should not throw an error if all vars are set", () => {

@@ -105,6 +105,3 @@ dist
 
 # Export CSV
 tmp/old_export.csv
-
-# Frontend build
-build

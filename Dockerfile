@@ -1,21 +1,16 @@
-FROM node:lts-alpine
+FROM uwpokerclub/app:latest AS app
 
-WORKDIR /usr/app
+FROM node:14.16.0-alpine3.11
 
-# Install build tools for node-gyp
-RUN apk add --no-cache --virtual .gyp python make g++
-
-COPY package*.json ./
-
-COPY ./scripts/entrypoint.sh /entrypoint.sh
-
-# Install dependencies
-RUN npm install
+WORKDIR /usr/api
 
 COPY . .
 
-EXPOSE 5000
+RUN apk add --no-cache --virtual .gyp python make g++ \
+    && npm install \
+    && npm run build
 
-ENTRYPOINT ["/entrypoint.sh"]
+COPY --from=app /usr/app/build ./dist/build/
 
-CMD ["start"]
+CMD npm run migrate up \
+    && npm run start:prod

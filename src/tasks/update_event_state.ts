@@ -1,8 +1,10 @@
 /* eslint-disable no-console */
-const { Pool } = require("pg");
+import { Pool } from "pg";
 
 if (process.env.DATABASE_URL === undefined) {
-  console.error("Environment variable DATABASE_URL is not set. Please set it and run this task again.");
+  console.error(
+    "Environment variable DATABASE_URL is not set. Please set it and run this task again."
+  );
   process.exit(1);
 }
 
@@ -17,7 +19,7 @@ async function run() {
   console.log("Updating all events...");
   await pool.query(updateAllEventStatesQuery, []);
 
-  const end = new Date() - start;
+  const end = new Date().valueOf() - start.valueOf();
   console.log(`Task Successfully completed in ${end}ms`);
 }
 

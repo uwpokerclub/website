@@ -3,3 +3,6 @@ public/**/*.js
 test/**
 migrations/**
 **/*.test.*
+dist
+node_modules
+coverage

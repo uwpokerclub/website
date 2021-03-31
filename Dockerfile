@@ -12,5 +12,4 @@ RUN apk add --no-cache --virtual .gyp python make g++ \
 
 COPY --from=app /usr/app/build ./dist/build/
 
-CMD npm run migrate up \
-    && npm run start:prod
+CMD npm run start:prod

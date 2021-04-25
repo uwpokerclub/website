@@ -4,8 +4,8 @@ services:
     build: .
     command: sh -c "npm run migrate up && npm run start:dev"
     volumes:
-      - .:/usr/app
-      - mods:/usr/app/node_modules
+      - .:/usr/api
+      - mods:/usr/api/node_modules
     ports:
       - 5000:5000
     depends_on:

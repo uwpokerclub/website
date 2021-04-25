@@ -37,19 +37,32 @@ export default class ParticipantsRouteHandler extends RouteHandler {
 
       try {
         if (eventId !== undefined && eventId !== "") {
-          participants = await query.query(
-            `SELECT participants.user_id as id, users.first_name, users.last_name,
-                    participants.signed_out_at, participants.placement
-                    FROM participants LEFT JOIN users ON users.id = participants.user_id
-                    WHERE participants.event_id = $1 ORDER BY participants.placement ASC;`,
-            [eventId]
-          );
+          const eventQuery = new Query("events", client);
+
+          const event = await eventQuery.find<Event>("id", eventId);
+
+          if (event.state === EVENT_STATE.ENDED) {
+            participants = await query.query(
+              `SELECT participants.user_id as id, users.first_name, users.last_name,
+                      participants.signed_out_at, participants.placement
+                      FROM participants LEFT JOIN users ON users.id = participants.user_id
+                      WHERE participants.event_id = $1 ORDER BY participants.placement ASC;`,
+              [eventId]
+            );
+          } else {
+            participants = await query.query(
+              `SELECT participants.user_id as id, users.first_name, users.last_name,
+                      participants.signed_out_at, participants.placement
+                      FROM participants LEFT JOIN users ON users.id = participants.user_id
+                      WHERE participants.event_id = $1 ORDER BY participants.signed_out_at DESC;`,
+              [eventId]
+            );
+          }
         } else {
           participants = await query.query(
             `SELECT participants.user_id as id, users.first_name, users.last_name,
                     participants.signed_out_at, participants.placement
-                    FROM participants LEFT JOIN users ON users.id = participants.user_id
-                    ORDER BY participants.placement ASC;`,
+                    FROM participants LEFT JOIN users ON users.id = participants.user_id;`,
             []
           );
         }

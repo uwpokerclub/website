@@ -17,7 +17,8 @@ try {
 
 // Initalize new Postgres pool.
 const dbs = new ConnectionPool(
-  (process.env.DATABASE_URL as string) + "?sslmode=require"
+  (process.env.DATABASE_URL as string) +
+    (process.env.NODE_ENV === "production" ? "?sslmode=require" : "")
 );
 
 // Initalize server

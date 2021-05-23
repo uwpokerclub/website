@@ -55,31 +55,33 @@ async function updateRankings(
   rQuery: Query,
   entry: Entry,
   points: number,
-  placement: number,
-  semesterId: string
+  placement: number
 ): Promise<void> {
   await pQuery.update<Entry>(
-    [where("user_id = ? AND event_id = ?", [entry.user_id, entry.event_id])],
+    [
+      where("membership_id = ? AND event_id = ?", [
+        entry.membership_id,
+        entry.event_id
+      ])
+    ],
     {
       placement
     }
   );
 
   const [ranking] = await rQuery.all<Ranking>([
-    where("user_id = ? AND semester_id = ?", [entry.user_id, semesterId])
+    where("membership_id = ?", [entry.membership_id])
   ]);
 
   if (ranking === undefined) {
     await rQuery.insert<Ranking>({
-      user_id: entry.user_id,
-      semester_id: semesterId,
+      membership_id: entry.membership_id,
       points
     });
   } else {
-    await rQuery.update(
-      [where("user_id = ? AND semester_id = ?", [entry.user_id, semesterId])],
-      { points: ranking.points + points }
-    );
+    await rQuery.update([where("membership_id = ?", [entry.membership_id])], {
+      points: ranking.points + points
+    });
   }
 }
 
@@ -268,14 +270,7 @@ export default class EventsRouteHandler extends RouteHandler {
         const points = ps.calculatePoints(i + 1);
 
         try {
-          await updateRankings(
-            pQuery,
-            rQuery,
-            entry,
-            points,
-            i + 1,
-            event.semester_id
-          );
+          await updateRankings(pQuery, rQuery, entry, points, i + 1);
         } catch (err) {
           next(err);
 

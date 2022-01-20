@@ -35,12 +35,6 @@ export default class Server {
     this.app.get("/healthz", (req, res) => res.json({ status: "ok" }));
 
     this.app.use(apiRoute.path, apiRoute.handler());
-
-    if (process.env.NODE_ENV !== "development") {
-      this.app.get("/*", (req, res) => {
-        res.sendFile(join(__dirname, "../../../build", "index.html"));
-      });
-    }
   }
 
   public run(): void {

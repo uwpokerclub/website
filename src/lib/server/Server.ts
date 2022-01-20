@@ -44,9 +44,5 @@ export default class Server {
   }
 
   public run(): void {
-    this.app.listen(process.env.PORT, () => {
-      // eslint-disable-next-line no-console
-      console.log(`App listenting at http://0.0.0.0:${process.env.PORT}`);
-    });
   }
 }

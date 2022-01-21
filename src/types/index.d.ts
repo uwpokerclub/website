@@ -4,3 +4,4 @@ export * from "./login";
 export * from "./ranking";
 export * from "./semester";
 export * from "./user";
+export * from "./membership";

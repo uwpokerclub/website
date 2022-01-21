@@ -5,7 +5,5 @@ export type User = {
   email: string;
   faculty: string;
   quest_id: string;
-  paid: boolean;
-  semester_id: string;
   created_at: string;
 };

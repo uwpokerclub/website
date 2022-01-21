@@ -8,6 +8,7 @@ import SemestersRouteHandler from "./semesters";
 import ParticipantsRouteHandler from "./participants";
 
 import requireAuthentication from "../middleware/authenticate";
+import MembershipsRouteHandler from "./memberships";
 
 export default class APIRouteHandler extends RouteHandler {
   public handler(): Router {
@@ -17,6 +18,10 @@ export default class APIRouteHandler extends RouteHandler {
     const semestersRoute = new SemestersRouteHandler("/semesters", this.db);
     const participantsRoute = new ParticipantsRouteHandler(
       "/participants",
+      this.db
+    );
+    const membershipsRoute = new MembershipsRouteHandler(
+      "/memberships",
       this.db
     );
 
@@ -40,6 +45,11 @@ export default class APIRouteHandler extends RouteHandler {
       participantsRoute.path,
       requireAuthentication,
       participantsRoute.handler()
+    );
+    this.router.use(
+      membershipsRoute.path,
+      requireAuthentication,
+      membershipsRoute.handler()
     );
 
     return this.router;

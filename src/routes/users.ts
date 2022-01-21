@@ -4,7 +4,7 @@ import fsPromises = promises;
 
 import RouteHandler from "../lib/route_handler/RouteHandler";
 import { CODES } from "../models/constants";
-import { Semester, User } from "../types";
+import { User } from "../types";
 import { Router } from "express";
 import { orderBy, Query, where } from "postgres-driver-service";
 
@@ -15,50 +15,28 @@ type CreateUserBody = {
   email: string;
   faculty: string;
   questId: string;
-  paid: boolean;
-  semesterId: string;
 };
 
 function validateCreateReq(body: CreateUserBody) {
-  const {
-    id,
-    firstName,
-    lastName,
-    email,
-    faculty,
-    questId,
-    paid,
-    semesterId
-  } = body;
+  const { id, firstName, lastName, email, faculty, questId } = body;
 
-  const stringValues = [
-    id,
-    firstName,
-    lastName,
-    email,
-    faculty,
-    questId,
-    semesterId
-  ];
+  const stringValues = [id, firstName, lastName, email, faculty, questId];
 
-  if (stringValues.some((v) => v === undefined) || paid === undefined) {
+  if (stringValues.some((v) => v === undefined)) {
     throw new Error(
-      "Missing required fields: id, firstName, lastName, email, faculty, questId, paid, semesterId"
+      "Missing required fields: id, firstName, lastName, email, faculty, questId"
     );
   }
 
-  if (
-    stringValues.some((v) => typeof v !== "string") ||
-    typeof paid !== "boolean"
-  ) {
+  if (stringValues.some((v) => typeof v !== "string")) {
     throw new Error(
-      "Required fields have incorrect type: id, firstName, lastName, email, faculty, questId, paid, semesterId"
+      "Required fields have incorrect type: id, firstName, lastName, email, faculty, questId"
     );
   }
 
   if (stringValues.some((v) => v === "")) {
     throw new Error(
-      "Required fields cannot be empty: id, firstName, lastName, email, faculty, questId, semesterId"
+      "Required fields cannot be empty: id, firstName, lastName, email, faculty, questId"
     );
   }
 }
@@ -67,33 +45,26 @@ type UpdateUserBody = {
   firstName: string;
   lastName: string;
   faculty: string;
-  paid: boolean;
-  semesterId: string;
 };
 
 function validateUpdateReq(body: UpdateUserBody) {
-  const { firstName, lastName, faculty, paid, semesterId } = body;
+  const { firstName, lastName, faculty } = body;
 
-  const stringValues = [firstName, lastName, faculty, semesterId];
+  const stringValues = [firstName, lastName, faculty];
 
-  if (stringValues.some((v) => v === undefined) || paid === undefined) {
-    throw new Error(
-      "Missing required fields: firstName, lastName, faculty, paid, semesterId"
-    );
+  if (stringValues.some((v) => v === undefined)) {
+    throw new Error("Missing required fields: firstName, lastName, faculty");
   }
 
-  if (
-    stringValues.some((v) => typeof v !== "string") ||
-    typeof paid !== "boolean"
-  ) {
+  if (stringValues.some((v) => typeof v !== "string")) {
     throw new Error(
-      "Required fields have incorrect type: firstName, lastName, faculty, paid, semesterId"
+      "Required fields have incorrect type: firstName, lastName, faculty"
     );
   }
 
   if (stringValues.some((v) => v === "")) {
     throw new Error(
-      "Required fields cannot be empty: firstName, lastName, faculty, semesterId"
+      "Required fields cannot be empty: firstName, lastName, faculty"
     );
   }
 }
@@ -111,17 +82,10 @@ function convertJSONToCSV(data: User[]) {
 export default class UsersRouteHandler extends RouteHandler {
   handler(): Router {
     this.router.get("/", async (req, res, next) => {
-      // only support semesterId filter for now
-      const { semesterId } = req.query;
-
       const client = await this.db.getConnection();
       const query = new Query("users", client);
 
       const mods = [orderBy("created_at", "DESC")];
-
-      if (semesterId !== undefined && semesterId !== "") {
-        mods.push(where("semester_id = ?", [semesterId]));
-      }
 
       const users = await query.all<User>(mods).catch((err) => next(err));
 
@@ -177,9 +141,7 @@ export default class UsersRouteHandler extends RouteHandler {
         lastName,
         email,
         faculty,
-        questId,
-        paid,
-        semesterId
+        questId
       }: CreateUserBody = req.body;
 
       const client = await this.db.getConnection();
@@ -192,9 +154,7 @@ export default class UsersRouteHandler extends RouteHandler {
           last_name: lastName,
           email,
           faculty,
-          quest_id: questId,
-          paid,
-          semester_id: semesterId
+          quest_id: questId
         });
       } catch (err) {
         next(err);
@@ -225,22 +185,14 @@ export default class UsersRouteHandler extends RouteHandler {
       const client = await this.db.getConnection();
       const query = new Query("users", client);
 
-      const {
-        firstName,
-        lastName,
-        faculty,
-        paid,
-        semesterId
-      }: UpdateUserBody = req.body;
+      const { firstName, lastName, faculty }: UpdateUserBody = req.body;
       const { id } = req.params;
 
       try {
         await query.update<User>([where("id = ?", [id])], {
           first_name: firstName,
           last_name: lastName,
-          faculty,
-          paid,
-          semester_id: semesterId
+          faculty
         });
       } catch (err) {
         next(err);
@@ -258,9 +210,7 @@ export default class UsersRouteHandler extends RouteHandler {
           id,
           firstName,
           lastName,
-          faculty,
-          paid,
-          semesterId
+          faculty
         }
       });
     });
@@ -288,52 +238,19 @@ export default class UsersRouteHandler extends RouteHandler {
     });
 
     this.router.post("/export", async (req, res, next) => {
-      const { semesterId } = req.query;
-
-      let filename = "";
-      let users: User[] | void;
-
       const client = await this.db.getConnection();
       const query = new Query("users", client);
 
-      if (semesterId === undefined) {
-        users = await query.all<User>([]).catch((err) => next(err));
+      const users = await query.all<User>([]).catch((err) => next(err));
 
-        if (users === undefined) {
-          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
-        }
-
-        filename = "users.csv";
-      } else {
-        users = await query
-          .all<User>([where("semester_id = ?", [semesterId])])
-          .catch((err) => next(err));
-
-        if (users === undefined) {
-          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
-        }
-
-        const sQuery = new Query("semesters", client);
-
-        const semester = await sQuery
-          .find<Semester>("id", semesterId)
-          .catch((err) => next(err));
-
-        if (semester === undefined) {
-          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
-            error: "DATABASE_ERROR",
-            message: "A lookup error occurred"
-          });
-        }
-
-        filename = `users_${semester.id}.csv`;
+      if (users === undefined) {
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "A lookup error occurred"
+        });
       }
+
+      const filename = "users.csv";
 
       const data = convertJSONToCSV(users);
 

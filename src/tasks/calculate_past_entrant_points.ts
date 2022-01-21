@@ -126,6 +126,8 @@ async function run() {
 
     await client.query("COMMIT");
   } catch (err) {
+    console.error("Task encountered an error: ", err);
+
     await client
       .query("ROLLBACK")
       .then(() => console.error("Rollback was successful."))

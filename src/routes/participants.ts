@@ -43,26 +43,29 @@ export default class ParticipantsRouteHandler extends RouteHandler {
 
           if (event.state === EVENT_STATE.ENDED) {
             participants = await query.query(
-              `SELECT participants.user_id as id, users.first_name, users.last_name,
-                      participants.signed_out_at, participants.placement
-                      FROM participants LEFT JOIN users ON users.id = participants.user_id
-                      WHERE participants.event_id = $1 ORDER BY participants.placement ASC;`,
+              `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id AS membership_id
+                FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement
+                FROM participants INNER JOIN memberships ON memberships.id = participants.membership_id
+                WHERE participants.event_id = $1) AS entries INNER JOIN users ON users.id = entries.user_id
+                ORDER BY entries.placement ASC;`,
               [eventId]
             );
           } else {
             participants = await query.query(
-              `SELECT participants.user_id as id, users.first_name, users.last_name,
-                      participants.signed_out_at, participants.placement
-                      FROM participants LEFT JOIN users ON users.id = participants.user_id
-                      WHERE participants.event_id = $1 ORDER BY participants.signed_out_at DESC;`,
+              `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id AS membership_id
+                FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement
+                FROM participants INNER JOIN memberships ON memberships.id = participants.membership_id
+                WHERE participants.event_id = $1) AS entries INNER JOIN users ON users.id = entries.user_id
+                ORDER BY entries.signed_out_at DESC;`,
               [eventId]
             );
           }
         } else {
           participants = await query.query(
-            `SELECT participants.user_id as id, users.first_name, users.last_name,
-                    participants.signed_out_at, participants.placement
-                    FROM participants LEFT JOIN users ON users.id = participants.user_id;`,
+            `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id AS membership_id
+            FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement
+            FROM participants INNER JOIN memberships ON memberships.id = participants.membership_id
+            WHERE participants.event_id = $1) AS entries INNER JOIN users ON users.id = entries.user_id;`,
             []
           );
         }
@@ -119,13 +122,13 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         });
       }
 
-      const signedInUsersIds = signedInUsers.map((p) => p.user_id);
-      const errors: { userId: string; message: string }[] = [];
+      const signedInUsersIds = signedInUsers.map((p) => p.membership_id);
+      const errors: { membershipId: string; message: string }[] = [];
 
       for (const p of participants) {
         if (signedInUsersIds.indexOf(p) !== NOT_FOUND) {
           errors.push({
-            userId: p,
+            membershipId: p,
             message: "This user is already registered for this event"
           });
 
@@ -133,7 +136,7 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         } else {
           try {
             await query.insert<Entry>({
-              user_id: p,
+              membership_id: p,
               event_id: eventId
             });
           } catch (err) {
@@ -156,12 +159,12 @@ export default class ParticipantsRouteHandler extends RouteHandler {
     });
 
     this.router.post("/sign-out", async (req, res, next) => {
-      const { userId, eventId } = req.body;
+      const { membershipId, eventId } = req.body;
 
-      if (userId === undefined || userId === "") {
+      if (membershipId === undefined || membershipId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
           error: "INVALID_REQUEST",
-          message: "Required fields are missing: userId"
+          message: "Required fields are missing: membershipId"
         });
       } else if (eventId === undefined || eventId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
@@ -189,7 +192,9 @@ export default class ParticipantsRouteHandler extends RouteHandler {
       query = new Query("participants", client);
       try {
         await query.update<Entry>(
-          [where("user_id = ? AND event_id = ?", [userId, eventId])],
+          [
+            where("membership_id = ? AND event_id = ?", [membershipId, eventId])
+          ],
           { signed_out_at: now }
         );
       } catch (err) {
@@ -204,19 +209,19 @@ export default class ParticipantsRouteHandler extends RouteHandler {
       client.release();
 
       return res.status(CODES.OK).json({
-        userId,
+        membershipId,
         eventId,
         signedOutAt: now
       });
     });
 
     this.router.post("/sign-in", async (req, res, next) => {
-      const { userId, eventId } = req.body;
+      const { membershipId, eventId } = req.body;
 
-      if (userId === undefined || userId === "") {
+      if (membershipId === undefined || membershipId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
           error: "INVALID_REQUEST",
-          message: "Required fields are missing: userId"
+          message: "Required fields are missing: membershipId"
         });
       } else if (eventId === undefined || eventId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
@@ -242,7 +247,9 @@ export default class ParticipantsRouteHandler extends RouteHandler {
       query = new Query("participants", client);
       try {
         await query.update<Entry>(
-          [where("user_id = ? AND event_id = ?", [userId, eventId])],
+          [
+            where("membership_id = ? AND event_id = ?", [membershipId, eventId])
+          ],
           { signed_out_at: null }
         );
       } catch (err) {
@@ -257,19 +264,19 @@ export default class ParticipantsRouteHandler extends RouteHandler {
       client.release();
 
       return res.status(CODES.OK).json({
-        userId,
+        membershipId,
         eventId,
         signedOutAt: null
       });
     });
 
     this.router.delete("/", async (req, res, next) => {
-      const { userId, eventId } = req.body;
+      const { membershipId, eventId } = req.body;
 
-      if (userId === undefined || userId === "") {
+      if (membershipId === undefined || membershipId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
           error: "INVALID_REQUEST",
-          message: "Required fields are missing: userId"
+          message: "Required fields are missing: membershipId"
         });
       } else if (eventId === undefined || eventId === "") {
         return res.status(CODES.INVALID_REQUEST).json({
@@ -295,7 +302,7 @@ export default class ParticipantsRouteHandler extends RouteHandler {
       query = new Query("participants", client);
       try {
         await query.delete([
-          where("user_id = ? AND event_id = ?", [userId, eventId])
+          where("membership_id = ? AND event_id = ?", [membershipId, eventId])
         ]);
       } catch (err) {
         next(err);

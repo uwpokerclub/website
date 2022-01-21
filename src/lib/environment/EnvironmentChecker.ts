@@ -1,9 +1,9 @@
 type EnvironmentConfig = {
   required: string[];
-}
+};
 
 export default class EnvironmentChecker {
-  private environmentConfig: EnvironmentConfig
+  private environmentConfig: EnvironmentConfig;
 
   public constructor(environmentConfig: EnvironmentConfig) {
     this.environmentConfig = environmentConfig;

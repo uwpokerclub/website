@@ -1,5 +1,4 @@
 export type Ranking = {
-  user_id: string;
-  semester_id: string;
+  membership_id: string;
   points: number;
 };

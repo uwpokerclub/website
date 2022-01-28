@@ -78,11 +78,14 @@ export default function EventShow(): ReactElement {
 
     requests.push(fetch(`/api/events/${eventId}`).then((res) => res.json()));
     requests.push(
-      fetch(`/api/participants/?eventId=${eventId}`).then((res) => res.json())
+      fetch(`/api/participants?eventId=${eventId}`).then((res) => res.json())
     );
 
     Promise.all(requests).then(
-      ([eventData, participantsData]: [{ event: Event }, any]) => {
+      ([eventData, participantsData]: [
+        { event: Event },
+        { participants: Entry[] }
+      ]) => {
         setEvent({
           id: eventData.event.id,
           name: eventData.event.name,

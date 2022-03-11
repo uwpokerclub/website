@@ -127,10 +127,10 @@ export default class SemestersRouteHandler extends RouteHandler {
       const query = new Query("rankings", client);
 
       const rankings = await query
-        .query(
-          `SELECT users.id, users.first_name, users.last_name, rankings.points
-                FROM rankings LEFT JOIN users ON users.id = rankings.user_id
-                WHERE rankings.semester_id = $1 ORDER BY rankings.points DESC;`,
+        .query(`select users.id, users.first_name, users.last_name, rankings.points from memberships m 
+        inner join users on m.user_id = users.id 
+        inner join rankings on m.id = rankings.membership_id 
+        where m.semester_id = $1 order by rankings.points desc;;`,
           [id]
         )
         .catch((err) => next(err));

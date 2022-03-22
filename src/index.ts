@@ -23,7 +23,7 @@ const clientOptions =
     ? {
         ssl: {
           rejectUnauthorized: false,
-          ca: fs.readFileSync("/usr/api/server-ca.pem").toString()
+          ca: fs.readFileSync("/usr/api/postgres-ca/server-ca.pem").toString()
         }
       }
     : {};

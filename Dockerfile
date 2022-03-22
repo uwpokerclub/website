@@ -16,4 +16,6 @@ RUN npm run build
 
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
+RUN mkdir postgres-ca
+
 CMD npm run start:prod

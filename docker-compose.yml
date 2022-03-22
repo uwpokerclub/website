@@ -2,7 +2,7 @@ version: "3.7"
 services:
   api:
     build: .
-    command: sh -c "npm run migrate up && npm run start:dev"
+    command: sh -c "npm run migrate up && npm run start:prod"
     volumes:
       - .:/usr/api
       - mods:/usr/api/node_modules

@@ -67,7 +67,7 @@ async function run() {
           const points = pointsService.calculatePoints(
             unsignedOutUsersPlacements[i]
           );
-          
+
           i++;
 
           console.log(`Calculating points for user ${entry.user_id}...`);

@@ -38,7 +38,7 @@
     "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0",
     "node-pg-migrate": "^6.2.1",
-    "postgres-driver-service": "^2.0.3"
+    "postgres-driver-service": "^2.1.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^3.0.1",
@@ -56,7 +56,7 @@
     "@typescript-eslint/parser": "^4.29.1",
     "eslint": "^7.31.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-prettier": "^3.4.1",
     "jest": "^26.6.3",
     "prettier": "2.2.1",
     "ts-jest": "^26.5.6",

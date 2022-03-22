@@ -54,7 +54,8 @@ async function run() {
         .filter((e) => e.placement === null)
         .map((_, i) => i + 1);
 
-      for (const [i, entry] of entries.entries()) {
+      let i = 0;
+      for (const entry of entries) {
         if (entry.placement === null) {
           console.log(`Updating un-signed out user ${entry.user_id}...`);
           await client.query(updateUserPlacementQuery, [
@@ -66,6 +67,8 @@ async function run() {
           const points = pointsService.calculatePoints(
             unsignedOutUsersPlacements[i]
           );
+          
+          i++;
 
           console.log(`Calculating points for user ${entry.user_id}...`);
           const { rows: rankings } = await client.query(findUserRankingQuery, [

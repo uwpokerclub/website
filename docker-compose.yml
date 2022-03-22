@@ -51,5 +51,4 @@ volumes:
   pgadmin:
 networks:
   services:
-    external:
-      name: pokerclub_services_network
+    name: pokerclub_services_network

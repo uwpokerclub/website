@@ -22,6 +22,7 @@ jobs:
         run: docker push uwpokerclub/api:latest
   update_gke_cluster:
     name: Update the kubernetes cluster in GKE
+    needs: push_to_registry
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Stage

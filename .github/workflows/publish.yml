@@ -32,6 +32,6 @@ jobs:
           url: 'https://api.github.com/repos/uwpokerclub/charts/dispatches'
           method: 'POST'
           customHeaders: '{"Accept": "application/vnd.github.v3+json", "Authorization": "token ${{ secrets.DEPLOY_USER_TOKEN }}"}'
-          data: '{"client_payload": {"api": "${GITHUB_REF##*/}"}, "event_type": "update"}'
+          data: '{"client_payload": {"api": "${{GITHUB_REF##*/}}"}, "event_type": "update"}'
       - name: Show Response
         run: echo ${{ steps.deploy.outputs.response }}

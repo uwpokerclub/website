@@ -24,8 +24,6 @@ const clientOptions =
         ssl: {
           rejectUnauthorized: false,
           ca: fs.readFileSync("/usr/api/postgres-ca/server-ca.pem").toString(),
-          key: fs.readFileSync("/usr/api/postgres-ca/client-key").toString(),
-          cert: fs.readFileSync("/usr/api/postgres-ca/client-cert").toString()
         }
       }
     : {};

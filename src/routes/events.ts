@@ -195,7 +195,7 @@ export default class EventsRouteHandler extends RouteHandler {
       client.release();
 
       return res.status(CODES.CREATED).json({
-        user: req.body
+        event: req.body
       });
     });
 

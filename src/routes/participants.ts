@@ -43,8 +43,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
 
           if (event.state === EVENT_STATE.ENDED) {
             participants = await query.query(
-              `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id AS membership_id
-                FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement
+              `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.rebuys, entries.id AS membership_id
+                FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement, participants.rebuys
                 FROM participants INNER JOIN memberships ON memberships.id = participants.membership_id
                 WHERE participants.event_id = $1) AS entries INNER JOIN users ON users.id = entries.user_id
                 ORDER BY entries.placement ASC;`,
@@ -52,8 +52,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
             );
           } else {
             participants = await query.query(
-              `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id AS membership_id
-                FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement
+              `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.rebuys, entries.id AS membership_id
+                FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement, participants.rebuys
                 FROM participants INNER JOIN memberships ON memberships.id = participants.membership_id
                 WHERE participants.event_id = $1) AS entries INNER JOIN users ON users.id = entries.user_id
                 ORDER BY entries.signed_out_at DESC;`,
@@ -62,8 +62,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
           }
         } else {
           participants = await query.query(
-            `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id AS membership_id
-            FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement
+            `SELECT users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.rebuys, entries.id AS membership_id
+            FROM (SELECT memberships.id, memberships.user_id, participants.signed_out_at, participants.placement, participants.rebuys
             FROM participants INNER JOIN memberships ON memberships.id = participants.membership_id
             WHERE participants.event_id = $1) AS entries INNER JOIN users ON users.id = entries.user_id;`,
             []
@@ -267,6 +267,80 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         membershipId,
         eventId,
         signedOutAt: null
+      });
+    });
+
+    this.router.post("/rebuy", async (req, res, next) => {
+      const { membershipId, eventId } = req.body;
+
+      if (membershipId === undefined || membershipId === "") {
+        return res.status(CODES.INVALID_REQUEST).json({
+          error: "INVALID_REQUEST",
+          message: "Required fields are missing: membershipId"
+        });
+      } else if (eventId === undefined || eventId === "") {
+        return res.status(CODES.INVALID_REQUEST).json({
+          error: "INVALID_REQUEST",
+          message: "Required fields are missing: eventId"
+        });
+      }
+
+      const client = await this.db.getConnection();
+      let query = new Query("events", client);
+
+      const event = await query
+        .find<Event>("id", eventId)
+        .catch((err) => next(err));
+
+      if (event === undefined || event.state === EVENT_STATE.ENDED) {
+        return res.status(CODES.FORBIDDEN).json({
+          error: "FORBIDDEN",
+          message: "You cannot perform this action"
+        });
+      }
+
+      query = new Query("participants", client);
+
+      const participants = await query
+        .all<Entry>([
+          where("membership_id = ? AND event_id = ?", [membershipId, eventId])
+        ])
+        .catch((err) => next(err));
+
+      if (!participants) {
+        client.release();
+
+        return res.status(CODES.NOT_FOUND).json({
+          err: "NOT_FOUND",
+          message: "Participant not found"
+        });
+      }
+
+      try {
+        await query.update<Entry>(
+          [
+            where("membership_id = ? AND event_id = ?", [membershipId, eventId])
+          ],
+          { rebuys: participants[0].rebuys + 1 }
+        );
+      } catch (err) {
+        next(err);
+
+        client.release();
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An update error occurred"
+        });
+      }
+
+      client.release();
+
+      return res.status(CODES.OK).json({
+        participant: {
+          ...participants[0],
+          rebuys: participants[0].rebuys + 1
+        }
       });
     });
 

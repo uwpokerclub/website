@@ -1,9 +1,9 @@
 /* eslint-disable camelcase */
 import { Router } from "express";
-import { orderBy, Query } from "postgres-driver-service";
+import { orderBy, Query, where } from "postgres-driver-service";
 import RouteHandler from "../lib/route_handler/RouteHandler";
 import { CODES } from "../models/constants";
-import { Semester } from "../types";
+import { Semester, Transaction } from "../types";
 
 type SemesterBody = {
   name: string;
@@ -147,6 +147,160 @@ export default class SemestersRouteHandler extends RouteHandler {
 
       return res.status(CODES.OK).json({ rankings });
     });
+
+    // ================
+    // Transactions API
+    // ================
+    this.router.post("/:id/transactions", async (req, res, next) => {
+      const { id: semester_id } = req.params;
+
+      const client = await this.db.getConnection();
+      let query = new Query("semesters", client);
+
+      // Check if semester exists
+      const semester = await query
+        .find("id", semester_id)
+        .catch((err) => next(err));
+      if (!semester) {
+        return res.status(CODES.NOT_FOUND).json({
+          error: "NOT_FOUND",
+          message: "That semester could not be found"
+        });
+      }
+
+      query = new Query("transactions", client);
+
+      const {
+        amount,
+        description
+      }: { amount: number; description: string } = req.body;
+
+      try {
+        await query.insert<Transaction>({
+          amount,
+          description,
+          semester_id
+        });
+      } catch (err) {
+        next(err);
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An error occurred creating the transaction."
+        });
+      }
+
+      client.release();
+
+      return res.status(CODES.CREATED).end();
+    });
+
+    this.router.get("/:id/transactions", async (req, res, next) => {
+      const { id: semester_id } = req.params;
+
+      const client = await this.db.getConnection();
+      const query = new Query("transactions", client);
+
+      const transactions = await query
+        .all([where("semester_id = ?", [semester_id])])
+        .catch((err) => next(err));
+
+      client.release();
+
+      return res.status(CODES.OK).json({ transactions });
+    });
+
+    this.router.get("/:semesterId/transactions/:id", async (req, res, next) => {
+      const { semesterId, id } = req.params;
+
+      const client = await this.db.getConnection();
+      const query = new Query("transactions", client);
+
+      const transactions = await query
+        .all<Transaction>([
+          where("id = ?", [id]),
+          where("semester_id = ?", [semesterId])
+        ])
+        .catch((err) => next(err));
+
+      if (!transactions) {
+        return res.status(CODES.NOT_FOUND).json({
+          err: "NOT_FOUND",
+          message: "Could not find this transaction"
+        });
+      }
+
+      client.release();
+
+      return res.status(CODES.OK).json({ transaction: transactions[0] });
+    });
+
+    this.router.patch(
+      "/:semesterId/transactions/:id",
+      async (req, res, next) => {
+        const { semesterId, id } = req.params;
+        const { amount, description } = req.body;
+
+        const client = await this.db.getConnection();
+        const query = new Query("transactions", client);
+
+        try {
+          await query.update(
+            [where("id = ?", [id]), where("semester_id = ?", [semesterId])],
+            {
+              amount,
+              description
+            }
+          );
+        } catch (err) {
+          next(err);
+
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            err: "INTERNAL_ERROR",
+            message: "Failed to update the transaction"
+          });
+        }
+
+        client.release();
+
+        return res.status(CODES.OK).json({
+          transaction: {
+            id,
+            semesterId,
+            amount,
+            description
+          }
+        });
+      }
+    );
+
+    this.router.delete(
+      "/:semesterId/transactions/:id",
+      async (req, res, next) => {
+        const { semesterId, id } = req.params;
+
+        const client = await this.db.getConnection();
+        const query = new Query("transactions", client);
+
+        try {
+          await query.delete([
+            where("id = ?", [id]),
+            where("semester_id = ?", [semesterId])
+          ]);
+        } catch (err) {
+          next(err);
+
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            err: "INTERNAL_ERROR",
+            message: "Could not delete this transaction"
+          });
+        }
+
+        client.release();
+
+        return res.status(CODES.OK).end();
+      }
+    );
 
     return this.router;
   }

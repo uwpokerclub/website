@@ -76,9 +76,9 @@ export default class ParticipantsRouteHandler extends RouteHandler {
           error: "DATABASE_ERROR",
           message: "A lookup error occurred"
         });
+      } finally {
+        client.release();
       }
-
-      client.release();
 
       return res.status(CODES.OK).json({
         participants
@@ -105,6 +105,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (event === undefined || event.state === EVENT_STATE.ENDED) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"
@@ -116,6 +118,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         .all<Entry>([where("event_id = ?", [eventId])])
         .catch((err) => next(err));
       if (signedInUsers === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "A lookup error occurred"
@@ -141,6 +145,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
             });
           } catch (err) {
             next(err);
+
+            client.release();
 
             return res.status(CODES.INTERNAL_SERVER_ERROR).json({
               error: "DATABASE_ERROR",
@@ -183,6 +189,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (event === undefined || event.state === EVENT_STATE.ENDED) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"
@@ -199,6 +207,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         );
       } catch (err) {
         next(err);
+
+        client.release();
 
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
@@ -238,6 +248,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (event === undefined || event.state === EVENT_STATE.ENDED) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"
@@ -254,6 +266,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         );
       } catch (err) {
         next(err);
+
+        client.release();
 
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
@@ -293,6 +307,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (event === undefined || event.state === EVENT_STATE.ENDED) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"
@@ -306,6 +322,8 @@ export default class ParticipantsRouteHandler extends RouteHandler {
         ]);
       } catch (err) {
         next(err);
+
+        client.release();
 
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",

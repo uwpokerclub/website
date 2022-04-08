@@ -90,7 +90,9 @@ export default class UsersRouteHandler extends RouteHandler {
       const users = await query.all<User>(mods).catch((err) => next(err));
 
       if (users === undefined) {
-        res.status(CODES.INTERNAL_SERVER_ERROR).json({
+        client.release();
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "An unknown error occured"
         });
@@ -112,6 +114,8 @@ export default class UsersRouteHandler extends RouteHandler {
       const user = await query.find<User>("id", id).catch((err) => next(err));
 
       if (user === undefined) {
+        client.release();
+
         return res.status(CODES.NOT_FOUND).json({
           error: "NOT_FOUND",
           message: "That user could not be found"
@@ -159,6 +163,8 @@ export default class UsersRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "An insertion error occurred"
@@ -197,6 +203,8 @@ export default class UsersRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "An update error occurred"
@@ -226,6 +234,8 @@ export default class UsersRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "An error occurred during deletion"
@@ -244,19 +254,21 @@ export default class UsersRouteHandler extends RouteHandler {
       const users = await query.all<User>([]).catch((err) => next(err));
 
       if (users === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "A lookup error occurred"
         });
       }
 
+      client.release();
+
       const filename = "users.csv";
 
       const data = convertJSONToCSV(users);
 
       await fsPromises.writeFile(`tmp/${filename}`, data, "utf8");
-
-      client.release();
 
       return res
         .status(CODES.OK)

@@ -53,6 +53,8 @@ export default class SemestersRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (semesters === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "A lookup error occurred"
@@ -73,6 +75,8 @@ export default class SemestersRouteHandler extends RouteHandler {
       const semester = await query.find("id", id).catch((err) => next(err));
 
       if (semester === undefined) {
+        client.release();
+
         return res.status(CODES.NOT_FOUND).json({
           error: "NOT_FOUND",
           message: "That semester could not be found"
@@ -109,6 +113,8 @@ export default class SemestersRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "An insertion error occurred"
@@ -137,6 +143,8 @@ export default class SemestersRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (rankings === undefined) {
+        client.release();
+
         return res.status(CODES.NOT_FOUND).json({
           error: "NOT_FOUND",
           message: "That semester could not be found"

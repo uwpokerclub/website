@@ -58,6 +58,8 @@ export default class LoginRouteHandler extends RouteHandler {
 
       const loginCount = await query.count([]).catch((err) => next(err));
       if (loginCount === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERAL_SERVER_ERROR",
           message: "A lookup error occurred"
@@ -65,6 +67,8 @@ export default class LoginRouteHandler extends RouteHandler {
       }
 
       if (loginCount > 0) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"
@@ -75,6 +79,8 @@ export default class LoginRouteHandler extends RouteHandler {
         next(err)
       );
       if (passwordHash === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "Error occurred creating the login"
@@ -88,6 +94,8 @@ export default class LoginRouteHandler extends RouteHandler {
         });
       } catch (err) {
         next(err);
+
+        client.release();
 
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
@@ -120,6 +128,8 @@ export default class LoginRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (login === undefined) {
+        client.release();
+
         return res.status(CODES.UNAUTHORIZED).json({
           error: "UNAUTHORIZED",
           message: "Invalid username or password"
@@ -130,6 +140,8 @@ export default class LoginRouteHandler extends RouteHandler {
         next(err)
       );
       if (match === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "An unknown error occurred"
@@ -137,6 +149,8 @@ export default class LoginRouteHandler extends RouteHandler {
       }
 
       if (!match) {
+        client.release();
+
         return res.status(CODES.UNAUTHORIZED).json({
           error: "UNAUTHORIZED",
           message: "Invalid username or password"

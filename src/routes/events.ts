@@ -114,6 +114,8 @@ export default class EventsRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "A lookup error occurred"
@@ -186,6 +188,8 @@ export default class EventsRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "An insertion error occurred"
@@ -208,6 +212,8 @@ export default class EventsRouteHandler extends RouteHandler {
       const event = await query.find<Event>("id", id).catch((err) => next(err));
 
       if (event === undefined) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action"
@@ -215,6 +221,8 @@ export default class EventsRouteHandler extends RouteHandler {
       }
 
       if (event.state === EVENT_STATE.ENDED) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message: "You cannot perform this action. Event has already ended."
@@ -231,6 +239,8 @@ export default class EventsRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (entries === undefined) {
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "INTERNAL_ERROR",
           message: "A lookup error occurred"
@@ -242,6 +252,8 @@ export default class EventsRouteHandler extends RouteHandler {
         (e) => e.signed_out_at === null
       );
       if (unsignedOutEntries.length !== 0) {
+        client.release();
+
         return res.status(CODES.FORBIDDEN).json({
           error: "FORBIDDEN",
           message:
@@ -256,6 +268,8 @@ export default class EventsRouteHandler extends RouteHandler {
         });
       } catch (err) {
         next(err);
+
+        client.release();
 
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
@@ -273,6 +287,8 @@ export default class EventsRouteHandler extends RouteHandler {
           await updateRankings(pQuery, rQuery, entry, points, i + 1);
         } catch (err) {
           next(err);
+
+          client.release();
 
           return res.status(CODES.INTERNAL_SERVER_ERROR).json({
             error: "DATABASE_ERROR",

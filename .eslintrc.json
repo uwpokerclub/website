@@ -111,7 +111,6 @@
     "no-unneeded-ternary": "error",
     "object-curly-spacing": ["error", "always"],
     "operator-assignment": ["error", "always"],
-    "operator-linebreak": ["error", "after"],
     "prefer-object-spread": "error",
     "quotes": [
       "error",

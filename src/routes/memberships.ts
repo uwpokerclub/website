@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Query, where } from "postgres-driver-service";
 import RouteHandler from "../lib/route_handler/RouteHandler";
 import { CODES } from "../models/constants";
-import { Membership } from "../types";
+import { Membership, Semester } from "../types";
 
 type CreateMembershipParams = {
   userId: string;
@@ -117,6 +117,19 @@ export default class MembershipsRouteHandler extends RouteHandler {
           discounted
         });
 
+        // Pull semester and update the current budget if membership is paid.
+        if (paid) {
+          const semesterQuery = new Query("semesters", client);
+          const semester = await semesterQuery.find<Semester>("id", semesterId);
+
+          await semesterQuery.update([where("id = ?", [semesterId])], {
+            current_budget: discounted
+              ? Number(semester.current_budget) +
+                semester.membership_discount_fee
+              : Number(semester.current_budget) + semester.membership_fee
+          });
+        }
+
         return res.status(CODES.CREATED).json({
           membership: req.body
         });
@@ -182,10 +195,31 @@ export default class MembershipsRouteHandler extends RouteHandler {
       const query = new Query("memberships", client);
 
       try {
+        const membership = await query.find<Membership>("id", id);
+
         await query.update<Membership>([where("id = ?", [id])], {
           paid,
           discounted
         });
+
+        // Update current semester budget if membership is being paid for
+        if (paid && !membership.paid) {
+          const semesterQuery = new Query("semesters", client);
+          const semester = await semesterQuery.find<Semester>(
+            "id",
+            membership.semester_id
+          );
+
+          await semesterQuery.update(
+            [where("id = ?", [membership.semester_id])],
+            {
+              current_budget: discounted
+                ? Number(semester.current_budget) +
+                  semester.membership_discount_fee
+                : Number(semester.current_budget) + semester.membership_fee
+            }
+          );
+        }
 
         return res.status(CODES.OK).end();
       } catch (err) {

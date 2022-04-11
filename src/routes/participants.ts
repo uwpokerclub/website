@@ -3,7 +3,7 @@ import { Router } from "express";
 import { Query, where } from "postgres-driver-service";
 import RouteHandler from "../lib/route_handler/RouteHandler";
 import { CODES, EVENT_STATE } from "../models/constants";
-import { Entry, Event } from "../types";
+import { Entry, Event, Semester } from "../types";
 
 const NOT_FOUND = -1;
 
@@ -323,6 +323,16 @@ export default class ParticipantsRouteHandler extends RouteHandler {
           ],
           { rebuys: participants[0].rebuys + 1 }
         );
+
+        const semesterQuery = new Query("semesters", client);
+        const semester = await semesterQuery.find<Semester>(
+          "id",
+          event.semester_id
+        );
+
+        await semesterQuery.update([where("id = ?", [event.semester_id])], {
+          current_budget: Number(semester.current_budget) + semester.rebuy_fee
+        });
       } catch (err) {
         next(err);
 

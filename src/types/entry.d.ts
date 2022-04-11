@@ -4,4 +4,5 @@ export type Entry = {
   event_id: string;
   placement: number;
   signed_out_at: Date | null;
+  rebuys: number;
 };

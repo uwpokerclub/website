@@ -5,3 +5,4 @@ export * from "./ranking";
 export * from "./semester";
 export * from "./user";
 export * from "./membership";
+export * from "./transaction";

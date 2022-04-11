@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
 import { Router } from "express";
 import { orderBy, Query, where } from "postgres-driver-service";
+import { start } from "repl";
 import RouteHandler from "../lib/route_handler/RouteHandler";
 import { CODES } from "../models/constants";
 import { Semester, Transaction } from "../types";
@@ -10,12 +11,33 @@ type SemesterBody = {
   startDate: string;
   endDate: string;
   meta: string;
+  startingBudget: number;
+  membershipFee: number;
+  discountedMembershipFee: number;
+  rebuyFee: number;
 };
 
 function validateCreateReq(body: SemesterBody) {
-  const { name, startDate, endDate, meta } = body;
+  const {
+    name,
+    startDate,
+    endDate,
+    meta,
+    startingBudget,
+    membershipFee,
+    discountedMembershipFee,
+    rebuyFee
+  } = body;
 
-  const nonNullValues = [name, startDate, endDate];
+  const nonNullValues = [
+    name,
+    startDate,
+    endDate,
+    startingBudget,
+    membershipFee,
+    discountedMembershipFee,
+    rebuyFee
+  ];
 
   if (nonNullValues.some((v) => v === undefined)) {
     throw new Error("Missing required fields: name, startDate, endDate");
@@ -37,6 +59,16 @@ function validateCreateReq(body: SemesterBody) {
     throw new Error("Required date fields cannot be parsed: endDate");
   }
 
+  if (
+    typeof startingBudget !== "number" ||
+    typeof membershipFee !== "number" ||
+    typeof discountedMembershipFee !== "number" ||
+    typeof rebuyFee !== "number"
+  ) {
+    throw new Error(
+      "Required fields are not numbers: startingBudget, membershipFee, discountedMembershipFee, rebuyFee"
+    );
+  }
   if (name === "") {
     throw new Error("Required fields cannot be empty: name");
   }
@@ -97,14 +129,28 @@ export default class SemestersRouteHandler extends RouteHandler {
       const client = await this.db.getConnection();
       const query = new Query("semesters", client);
 
-      const { name, startDate, endDate, meta }: SemesterBody = req.body;
+      const {
+        name,
+        startDate,
+        endDate,
+        meta,
+        startingBudget,
+        membershipFee,
+        discountedMembershipFee,
+        rebuyFee
+      }: SemesterBody = req.body;
 
       try {
         await query.insert<Semester>({
           name,
           start_date: new Date(startDate),
           end_date: new Date(endDate),
-          meta
+          meta,
+          starting_budget: startingBudget,
+          current_budget: startingBudget,
+          membership_fee: membershipFee,
+          membership_discount_fee: discountedMembershipFee,
+          rebuy_fee: rebuyFee
         });
       } catch (err) {
         next(err);

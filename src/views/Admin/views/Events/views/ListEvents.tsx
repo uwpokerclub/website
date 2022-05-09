@@ -45,7 +45,7 @@ function ListEvents(): ReactElement {
           <div className="row">
             <div className="col-md-6">
               <Link
-                to={`create`}
+                to={`new`}
                 className="btn btn-primary btn-responsive"
               >
                 Create an Event

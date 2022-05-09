@@ -199,17 +199,31 @@ export default class MembershipsRouteHandler extends RouteHandler {
 
         await query.update<Membership>([where("id = ?", [id])], {
           paid,
-          discounted
+          discounted: !paid ? false : discounted
         });
 
-        // Update current semester budget if membership is being paid for
-        if (paid && !membership.paid) {
-          const semesterQuery = new Query("semesters", client);
-          const semester = await semesterQuery.find<Semester>(
-            "id",
-            membership.semester_id
-          );
+        const semesterQuery = new Query("semesters", client);
+        const semester = await semesterQuery.find<Semester>(
+          "id",
+          membership.semester_id
+        );
 
+        // Updating only the discounted status, add or subtract the difference in discounts
+        if (paid === membership.paid && discounted !== membership.discounted) {
+          await semesterQuery.update(
+            [where("id = ?", [membership.semester_id])],
+            {
+              current_budget: discounted
+                ? Number(semester.current_budget) -
+                  (Number(semester.membership_fee) -
+                    Number(semester.membership_discount_fee))
+                : Number(semester.current_budget) +
+                  (Number(semester.membership_fee) -
+                    Number(semester.membership_discount_fee))
+            }
+          );
+        } else if (paid && !membership.paid) {
+          // Update current semester budget if membership is being paid for
           await semesterQuery.update(
             [where("id = ?", [membership.semester_id])],
             {
@@ -217,6 +231,18 @@ export default class MembershipsRouteHandler extends RouteHandler {
                 ? Number(semester.current_budget) +
                   semester.membership_discount_fee
                 : Number(semester.current_budget) + semester.membership_fee
+            }
+          );
+        } else if (!paid && membership.paid) {
+          // Membership is being updated to not paid
+          await semesterQuery.update(
+            [where("id = ?", [membership.semester_id])],
+            {
+              current_budget: membership.discounted
+                ? Number(semester.current_budget) -
+                  Number(semester.membership_discount_fee)
+                : Number(semester.current_budget) -
+                  Number(semester.membership_fee)
             }
           );
         }

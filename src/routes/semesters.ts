@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 import { Router } from "express";
 import { orderBy, Query, where } from "postgres-driver-service";
-import { start } from "repl";
 import RouteHandler from "../lib/route_handler/RouteHandler";
 import { CODES } from "../models/constants";
 import { Semester, Transaction } from "../types";
@@ -213,9 +212,11 @@ export default class SemestersRouteHandler extends RouteHandler {
 
       // Check if semester exists
       const semester = await query
-        .find("id", semester_id)
+        .find<Semester>("id", semester_id)
         .catch((err) => next(err));
       if (!semester) {
+        client.release();
+
         return res.status(CODES.NOT_FOUND).json({
           error: "NOT_FOUND",
           message: "That semester could not be found"
@@ -238,9 +239,29 @@ export default class SemestersRouteHandler extends RouteHandler {
       } catch (err) {
         next(err);
 
+        client.release();
+
         return res.status(CODES.INTERNAL_SERVER_ERROR).json({
           error: "DATABASE_ERROR",
           message: "An error occurred creating the transaction."
+        });
+      }
+
+      // Update the semesters budget for a new transaction
+      query = new Query("semesters", client);
+
+      try {
+        await query.update([where("id = ?", [semester_id])], {
+          current_budget: Number(semester.current_budget) + Number(amount)
+        });
+      } catch (err) {
+        next(err);
+
+        client.release();
+
+        return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+          error: "DATABASE_ERROR",
+          message: "An error occurred updating the budget."
         });
       }
 
@@ -278,6 +299,8 @@ export default class SemestersRouteHandler extends RouteHandler {
         .catch((err) => next(err));
 
       if (!transactions) {
+        client.release();
+
         return res.status(CODES.NOT_FOUND).json({
           err: "NOT_FOUND",
           message: "Could not find this transaction"
@@ -296,7 +319,21 @@ export default class SemestersRouteHandler extends RouteHandler {
         const { amount, description } = req.body;
 
         const client = await this.db.getConnection();
-        const query = new Query("transactions", client);
+        let query = new Query("transactions", client);
+
+        // Fetch the old transaction
+        const oldTransaction = await query
+          .find<Transaction>("id", id)
+          .catch((err) => next(err));
+
+        if (!oldTransaction) {
+          client.release();
+
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            error: "INTERNAL_ERROR",
+            message: "Could not find that transaction"
+          });
+        }
 
         try {
           await query.update(
@@ -309,9 +346,36 @@ export default class SemestersRouteHandler extends RouteHandler {
         } catch (err) {
           next(err);
 
+          client.release();
+
           return res.status(CODES.INTERNAL_SERVER_ERROR).json({
             err: "INTERNAL_ERROR",
             message: "Failed to update the transaction"
+          });
+        }
+
+        // Update semester budget accordingly
+        query = new Query("semesters", client);
+
+        try {
+          const semester = await query.find<Semester>("id", semesterId);
+
+          await query.update(
+            where("id = ? AND semester_id = ?", [id, semesterId]),
+            {
+              current_budget:
+                Number(semester.current_budget) +
+                (Number(amount) - Number(oldTransaction.amount))
+            }
+          );
+        } catch (err) {
+          next(err);
+
+          client.release();
+
+          return res.status(CODES.INTERNAL_SERVER_ERROR).json({
+            error: "INTERNAL_ERROR",
+            message: "Failed to update the current budget"
           });
         }
 
@@ -334,15 +398,28 @@ export default class SemestersRouteHandler extends RouteHandler {
         const { semesterId, id } = req.params;
 
         const client = await this.db.getConnection();
-        const query = new Query("transactions", client);
+        let query = new Query("transactions", client);
 
         try {
+          const oldTransaction = await query.find<Transaction>("id", id);
+
           await query.delete([
             where("id = ?", [id]),
             where("semester_id = ?", [semesterId])
           ]);
+
+          query = new Query("semesters", client);
+
+          const semester = await query.find<Semester>("id", semesterId);
+
+          await query.update([where("id = ?", [semesterId])], {
+            current_budget:
+              Number(semester.current_budget) - Number(oldTransaction.amount)
+          });
         } catch (err) {
           next(err);
+
+          client.release();
 
           return res.status(CODES.INTERNAL_SERVER_ERROR).json({
             err: "INTERNAL_ERROR",

@@ -5,7 +5,7 @@ WORKDIR /usr/app
 COPY . .
 
 # Install system dependencies
-RUN apk add --no-cache --virtual .gyp python make g++
+RUN apk add --no-cache --virtual .gyp python3 make g++
 
 # Install Node dependencies
 RUN yarn install --frozen-lockfile

@@ -32,5 +32,5 @@ jobs:
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ secrets.DEPLOY_USER_TOKEN }}" \
-            -d "{\"client_payload\": {\"api\": \"$tag\"}, \"event_type\": \"update\"}" \
+            -d "{\"client_payload\": {\"webapp\": \"$tag\"}, \"event_type\": \"update\"}" \
             https://api.github.com/repos/uwpokerclub/charts/dispatches

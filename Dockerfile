@@ -2,7 +2,6 @@ FROM golang:1.18.3-stretch
 
 # Set Golang build environment variables
 ENV GO111MODULE=on
-ENV GOFLAGS=-mod=vendor
 
 # Set directory to run app in
 WORKDIR /usr/app
@@ -13,6 +12,10 @@ COPY go.sum ./
 
 # Download dependencies
 RUN go mod download
+
+# Install development dependencies
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.6.1
+
 RUN go mod verify
 RUN go mod vendor
 
@@ -20,6 +23,6 @@ RUN go mod vendor
 COPY . .
 
 # Build executable
-RUN go build -o api .
+RUN go build -mod=vendor -o api .
 
 CMD [ "./api" ]

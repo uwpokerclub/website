@@ -7,7 +7,7 @@ services:
       - .:/usr/api
     ports:
       - 5000:5000
-    depends_on:
-      - db
+    # depends_on:
+    #   - db
     environment:
       - PORT=5000

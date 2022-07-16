@@ -23,6 +23,6 @@ RUN go mod vendor
 COPY . .
 
 # Build executable
-RUN go build -mod=vendor -o api .
+RUN go build -mod=vendor -o /tmp/api .
 
-CMD [ "./api" ]
+CMD [ "/tmp/api" ]

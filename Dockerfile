@@ -17,12 +17,11 @@ RUN go mod download
 RUN go install github.com/pressly/goose/v3/cmd/goose@v3.6.1
 
 RUN go mod verify
-RUN go mod vendor
 
 # Copy all other files
 COPY . .
 
 # Build executable
-RUN go build -mod=vendor -o /tmp/api .
+RUN go build -o /tmp/api .
 
-CMD [ "/tmp/api" ]
+CMD [ "/tmp/api", "start" ]

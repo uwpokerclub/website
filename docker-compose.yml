@@ -2,7 +2,7 @@ version: "3.9"
 services:
   server:
     build: .
-    command: /tmp/api
+    command: /tmp/api start
     volumes:
       - .:/usr/app
     ports:

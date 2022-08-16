@@ -82,4 +82,22 @@ CREATE TABLE transactions (
 -- +goose Down
 -- +goose StatementBegin
 
+DROP TABLE transactions;
+
+DROP TABLE rankings;
+
+DROP TABLE participants;
+
+DROP TABLE events;
+
+DROP TABLE memberships;
+
+DROP TABLE semesters;
+
+DROP TABLE users;
+
+DROP TABLE logins;
+
+DROP EXTENSION "uuid-ossp";
+
 -- +goose StatementEnd

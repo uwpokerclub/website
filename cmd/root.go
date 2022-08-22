@@ -21,4 +21,6 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+
+	startCmd.Flags().StringVarP(&PORT, "port", "p", "5000", "The port number for the server to run on.")
 }

@@ -1,9 +1,11 @@
 package database
 
 import (
+	"api/internal/models"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -42,4 +44,36 @@ func OpenConnection() (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+func OpenTestConnection() (*gorm.DB, error) {
+	connectionUrl := os.Getenv("TEST_DATABASE_URL")
+	if connectionUrl == "" {
+		return nil, errors.New("environment variable 'TEST_DATABASE_URL' has not been set")
+	}
+
+	db, err := gorm.Open(postgres.Open(connectionUrl))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open connection to database: %s", err.Error())
+	}
+
+	return db, nil
+}
+
+// WipeDB completely clears the database of all models. This function should
+// not be called in a non-testing environment.
+func WipeDB(db *gorm.DB) error {
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) != "test" {
+		return errors.New("cannot wipe the database in a non-test environment")
+	}
+
+	db = db.Session(&gorm.Session{AllowGlobalUpdate: true})
+
+	// Wipe each model
+	res := db.Delete(&models.User{})
+	if err := res.Error; err != nil {
+		return err
+	}
+
+	return nil
 }

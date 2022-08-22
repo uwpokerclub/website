@@ -2,43 +2,44 @@ package cmd
 
 import (
 	"api/internal/database"
+	"api/internal/server"
 	"fmt"
-	"net/http"
 	"os"
+	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
 
-type Login struct {
-	Username string
-	Password string
-}
+var PORT string
 
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Starts the UWPSC Admin API server",
 	Run: func(cmd *cobra.Command, args []string) {
-		r := gin.Default()
-
+		// Establish connection to the database
 		db, err := database.OpenConnection()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to open connection to the database: %s", err.Error())
 			os.Exit(1)
 		}
 
-		res := db.Create(Login{Username: "adam", Password: "password"})
-		if err := res.Error; err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to create the login: %s", err.Error())
-			os.Exit(1)
+		// Turn on gorm debug mode to print SQL queries to the console in local development.
+		if strings.ToLower(os.Getenv("ENVIRONMENT")) == "development" {
+			db.Debug()
 		}
 
-		r.GET("/ping", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, gin.H{
-				"message": "pong",
-			})
-		})
+		// Initialize the server
+		serv := server.NewAPIServer(db)
 
-		r.Run()
+		// Determine the port to run the server on. If only the PORT environment
+		// variable is set, use that as the port. If a port is provided via a
+		// a command flag, use this value instead
+		port := os.Getenv("PORT")
+		if port == "" {
+			// Use command flag value instead
+			port = PORT
+		}
+
+		serv.Run(port)
 	},
 }

@@ -1,0 +1,13 @@
+package models
+
+type Ranking struct {
+	MembershipID string `gorm:"type:uuid"`
+	Points       int32
+}
+
+type RankingResponse struct {
+	ID        uint64 `json:"id"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Points    int32  `json:"points"`
+}

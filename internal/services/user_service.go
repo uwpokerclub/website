@@ -98,7 +98,6 @@ func (u *userService) UpdateUser(id uint64, req *models.UpdateUserRequest) (*mod
 	}
 
 	res = u.db.Save(&user)
-
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}

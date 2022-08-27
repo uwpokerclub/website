@@ -70,7 +70,23 @@ func WipeDB(db *gorm.DB) error {
 	db = db.Session(&gorm.Session{AllowGlobalUpdate: true})
 
 	// Wipe each model
-	res := db.Delete(&models.User{})
+	res := db.Delete(&models.Ranking{})
+	if err := res.Error; err != nil {
+		return err
+	}
+	res = db.Delete(&models.Membership{})
+	if err := res.Error; err != nil {
+		return err
+	}
+	res = db.Delete(&models.User{})
+	if err := res.Error; err != nil {
+		return err
+	}
+	res = db.Delete(&models.Transaction{})
+	if err := res.Error; err != nil {
+		return err
+	}
+	res = db.Delete(&models.Semester{})
 	if err := res.Error; err != nil {
 		return err
 	}

@@ -44,6 +44,7 @@ CREATE TABLE events (
   id SERIAL PRIMARY KEY,
   name VARCHAR,
   format VARCHAR,
+  notes VARCHAR,
   semester_id uuid,
   start_date TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   state SMALLINT DEFAULT 0,

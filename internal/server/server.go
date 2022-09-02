@@ -317,3 +317,70 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.String(http.StatusNoContent, "")
 	})
 }
+
+func (s *apiServer) SetupEventsRoute() {
+	eventsRoute := s.r.Group("/events")
+
+	es := services.NewEventService(s.db)
+
+	eventsRoute.GET("/", func(ctx *gin.Context) {
+		semesterId := ctx.Query("semesterId")
+
+		events, err := es.ListEvents(semesterId)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, events)
+	})
+
+	eventsRoute.POST("/", func(ctx *gin.Context) {
+		var req models.CreateEventRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		event, err := es.CreateEvent(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, event)
+	})
+
+	eventsRoute.GET("/:eventId", func(ctx *gin.Context) {
+		eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
+			return
+		}
+
+		event, err := es.GetEvent(eventId)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, event)
+	})
+
+	eventsRoute.GET("/:eventId/end", func(ctx *gin.Context) {
+		eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
+			return
+		}
+
+		err = es.EndEvent(eventId)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.String(http.StatusNoContent, "")
+	})
+}

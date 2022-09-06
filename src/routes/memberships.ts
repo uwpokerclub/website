@@ -67,14 +67,14 @@ export default class MembershipsRouteHandler extends RouteHandler {
           memberships = await query.query(
             `SELECT memberships.id, users.id AS user_id, users.first_name, users.last_name, memberships.paid, memberships.discounted FROM users
           INNER JOIN memberships ON users.id = memberships.user_id
-          WHERE memberships.semester_id = $1;`,
+          WHERE memberships.semester_id = $1 ORDER BY users.first_name ASC, users.last_name ASC;`,
             [semesterId]
           );
         } else if (userId && typeof userId === "string") {
           memberships = await query.query(
             `SELECT memberships.id, semesters.id AS semester_id, semesters.name, memberships.paid, memberships.discounted FROM semesters
           INNER JOIN memberships ON semesters.id = memberships.semester_id
-          WHERE memberships.user_id = $1;`,
+          WHERE memberships.user_id = $1 ORDER BY users.first_name ASC, users.last_name ASC;`,
             [userId]
           );
         }

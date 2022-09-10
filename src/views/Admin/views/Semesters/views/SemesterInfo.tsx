@@ -1,7 +1,8 @@
 import React, { ReactElement, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
-import { Membership, Semester, Transaction } from "../../../../../types";
+import { Membership, Semester, Transaction, User } from "../../../../../types";
+import NewMembershipModal from "../components/NewMembershipModal";
 import NewTransactionModal from "../components/NewTransactionModal";
 
 import "./style.scss";
@@ -28,7 +29,8 @@ function SemesterInfo(): ReactElement {
     );
   }
 
-  const [showModal, setShowModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
 
   useEffect(() => {
     fetch(`/api/semesters/${semesterId}`)
@@ -88,7 +90,7 @@ function SemesterInfo(): ReactElement {
     );
   };
 
-  const onSubmit = (description: string, amount: number): void => {
+  const onTransactionSubmit = (description: string, amount: number): void => {
     fetch(`/api/semesters/${semesterId}/transactions`, {
       method: "POST",
       headers: {
@@ -108,7 +110,60 @@ function SemesterInfo(): ReactElement {
       }
     });
 
-    setShowModal(false);
+    setShowTransactionModal(false);
+  }
+
+  const onMembershipSubmit = (userId: string, paid: boolean, discounted: boolean): void => {
+    fetch(`/api/memberships`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        semesterId,
+        userId,
+        paid,
+        discounted
+      }),
+    }).then((res) => setShowMembershipModal(false));
+  };
+
+  const onUserSubmit = (user: Partial<User>, paid: boolean, discounted: boolean): Promise<boolean> => {
+    // Create user first
+    return fetch("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        faculty: user.faculty,
+        questId: user.quest_id
+      }),
+    }).then((res) => {
+      if (res.status !== 201) {
+        return false;
+      }
+
+      fetch(`/api/memberships`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          semesterId,
+          userId: user.id,
+          paid,
+          discounted
+        }),
+      }).then((res) => setShowMembershipModal(false));
+
+      return true;
+    });
+
   }
 
   const handleDelete = (id: number): void => {
@@ -187,9 +242,7 @@ function SemesterInfo(): ReactElement {
             value={query}
             onChange={(e) => handleSearch(e.target.value)}
           ></input>
-          <Link to={`new-member`} className="btn btn-primary Memberships__header__search-button">
-            Add member
-          </Link>
+          <button type="button" className="btn btn-primary" onClick={() => setShowMembershipModal(true)}>New member</button>
         </div>
       </div>
 
@@ -245,7 +298,7 @@ function SemesterInfo(): ReactElement {
 
       <div className="Transactions__header">
         <h3>Transactions</h3>
-        <button type="button" className="btn btn-primary" onClick={() => setShowModal(true)}>New transaction</button>
+        <button type="button" className="btn btn-primary" onClick={() => setShowTransactionModal(true)}>New transaction</button>
       </div>
       <table className="table">
         <thead>
@@ -276,9 +329,16 @@ function SemesterInfo(): ReactElement {
       </table>
 
       <NewTransactionModal 
-        show={showModal} 
-        onClose={() => setShowModal(false)} 
-        onSubmit={onSubmit} 
+        show={showTransactionModal} 
+        onClose={() => setShowTransactionModal(false)} 
+        onSubmit={onTransactionSubmit} 
+      />
+
+      <NewMembershipModal
+        show={showMembershipModal}
+        onClose={() => setShowMembershipModal(false)}
+        onMemberSubmit={onMembershipSubmit}
+        onUserSubmit={onUserSubmit}
       />
     </div>
   );

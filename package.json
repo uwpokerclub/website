@@ -33,7 +33,7 @@
     "express-promise-router": "^4.1.1",
     "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0",
-    "node-pg-migrate": "^6.2.1",
+    "node-pg-migrate": "^6.2.2",
     "postgres-driver-service": "^2.1.1"
   },
   "devDependencies": {

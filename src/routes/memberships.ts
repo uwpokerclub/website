@@ -65,8 +65,9 @@ export default class MembershipsRouteHandler extends RouteHandler {
       try {
         if (semesterId && typeof semesterId === "string") {
           memberships = await query.query(
-            `SELECT m.id, users.id AS user_id, users.first_name, users.last_name, m.paid, m.discounted, m.attendance 
-              FROM (SELECT * FROM (SELECT p.membership_id, COUNT(*) AS attendance FROM participants p, events e WHERE e.semester_id = $1 and p.event_id = e.id GROUP BY p.membership_id) as attend inner join memberships on memberships.id = attend.membership_id) as m inner join users on m.user_id = users.id ORDER BY users.first_name ASC, users.last_name ASC;`,
+            `SELECT memberships.id, users.id AS user_id, users.first_name, users.last_name, memberships.paid, memberships.discounted FROM users
+          INNER JOIN memberships ON users.id = memberships.user_id
+          WHERE memberships.semester_id = $1 ORDER BY users.first_name ASC, users.last_name ASC;`,
             [semesterId]
           );
         } else if (userId && typeof userId === "string") {

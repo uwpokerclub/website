@@ -34,6 +34,8 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	// Initialize all routes
 	s.SetupUsersRoute()
 	s.SetupSemestersRoute()
+	s.SetupEventsRoute()
+	s.SetupMembershipRoutes()
 
 	return s
 }
@@ -382,5 +384,83 @@ func (s *apiServer) SetupEventsRoute() {
 		}
 
 		ctx.String(http.StatusNoContent, "")
+	})
+}
+
+func (s *apiServer) SetupMembershipRoutes() {
+	membershipRoutes := s.r.Group("/memberships")
+
+	ms := services.NewMembershipService(s.db)
+
+	membershipRoutes.GET("/", func(ctx *gin.Context) {
+		semesterId, err := uuid.Parse(ctx.Query("semesterId"))
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester UUID specified in query."))
+		}
+
+		memberships, err := ms.ListMemberships(semesterId)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, memberships)
+	})
+
+	membershipRoutes.POST("/", func(ctx *gin.Context) {
+		var req models.CreateMembershipRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		membership, err := ms.CreateMembership(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, membership)
+	})
+
+	membershipRoutes.GET("/:id", func(ctx *gin.Context) {
+		id, err := uuid.Parse(ctx.Param("id"))
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid membership UUID specified in request."))
+			return
+		}
+
+		membership, err := ms.GetMembership(id)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, membership)
+	})
+
+	membershipRoutes.PATCH("/:id", func(ctx *gin.Context) {
+		id, err := uuid.Parse(ctx.Param("id"))
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid membership UUID specified in request."))
+			return
+		}
+
+		var req models.UpdateMembershipRequest
+		err = ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+		req.ID = id
+
+		membership, err := ms.UpdateMembership(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, membership)
 	})
 }

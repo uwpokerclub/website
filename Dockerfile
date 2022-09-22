@@ -15,6 +15,7 @@ RUN go mod download
 
 # Install development dependencies
 RUN go install github.com/pressly/goose/v3/cmd/goose@v3.6.1
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 RUN go mod verify
 

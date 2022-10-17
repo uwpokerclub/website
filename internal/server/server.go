@@ -2,6 +2,7 @@ package server
 
 import (
 	e "api/internal/errors"
+	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
 	"fmt"
@@ -32,6 +33,7 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	s := &apiServer{r: r, db: db}
 
 	// Initialize all routes
+	s.SetupAuthenticationRoute()
 	s.SetupUsersRoute()
 	s.SetupSemestersRoute()
 	s.SetupEventsRoute()
@@ -46,8 +48,53 @@ func (s *apiServer) Run(port string) {
 	s.r.Run(fmt.Sprintf(":%s", port))
 }
 
+func (s *apiServer) SetupAuthenticationRoute() {
+	loginRoute := s.r.Group("/login")
+
+	svc := services.NewLoginService(s.db)
+
+	loginRoute.POST("/", func(ctx *gin.Context) {
+		var req models.Login
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		err = svc.CreateLogin(req.Username, req.Password)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, "")
+	})
+
+	loginRoute.POST("/session", func(ctx *gin.Context) {
+		var req models.Login
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		token, err := svc.ValidateCredentials(req.Username, req.Password)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		// Set cookie
+		oneDayInSeconds := 86400
+		ctx.SetCookie("pctoken", token, oneDayInSeconds, "/", "", true, false)
+
+		// Return empty created response
+		ctx.JSON(http.StatusCreated, "")
+	})
+}
+
 func (s *apiServer) SetupUsersRoute() {
-	usersRoute := s.r.Group("/users")
+	usersRoute := s.r.Group("/users", middleware.UseAuthentication)
 
 	us := services.NewUserService(s.db)
 
@@ -135,7 +182,7 @@ func (s *apiServer) SetupUsersRoute() {
 }
 
 func (s *apiServer) SetupSemestersRoute() {
-	semestersRoute := s.r.Group("/semesters")
+	semestersRoute := s.r.Group("/semesters", middleware.UseAuthentication)
 
 	semesterService := services.NewSemesterService(s.db)
 	transactionService := services.NewTransactionService(s.db)
@@ -322,7 +369,7 @@ func (s *apiServer) SetupSemestersRoute() {
 }
 
 func (s *apiServer) SetupEventsRoute() {
-	eventsRoute := s.r.Group("/events")
+	eventsRoute := s.r.Group("/events", middleware.UseAuthentication)
 
 	es := services.NewEventService(s.db)
 
@@ -389,7 +436,7 @@ func (s *apiServer) SetupEventsRoute() {
 }
 
 func (s *apiServer) SetupMembershipRoutes() {
-	membershipRoutes := s.r.Group("/memberships")
+	membershipRoutes := s.r.Group("/memberships", middleware.UseAuthentication)
 
 	ms := services.NewMembershipService(s.db)
 
@@ -467,7 +514,7 @@ func (s *apiServer) SetupMembershipRoutes() {
 }
 
 func (s *apiServer) SetupParticipantRoutes() {
-	participantRoute := s.r.Group("/participants")
+	participantRoute := s.r.Group("/participants", middleware.UseAuthentication)
 
 	svc := services.NewParticipantsService(s.db)
 

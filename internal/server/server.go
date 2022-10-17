@@ -36,6 +36,7 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	s.SetupSemestersRoute()
 	s.SetupEventsRoute()
 	s.SetupMembershipRoutes()
+	s.SetupParticipantRoutes()
 
 	return s
 }
@@ -462,5 +463,115 @@ func (s *apiServer) SetupMembershipRoutes() {
 		}
 
 		ctx.JSON(http.StatusOK, membership)
+	})
+}
+
+func (s *apiServer) SetupParticipantRoutes() {
+	participantRoute := s.r.Group("/participants")
+
+	svc := services.NewParticipantsService(s.db)
+
+	participantRoute.GET("/", func(ctx *gin.Context) {
+		eventId, err := strconv.Atoi(ctx.Query("eventId"))
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID in query"))
+			return
+		}
+
+		participants, err := svc.ListParticipants(uint64(eventId))
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, participants)
+	})
+
+	participantRoute.POST("/", func(ctx *gin.Context) {
+		var req models.CreateParticipantRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		participant, err := svc.CreateParticipant(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, participant)
+	})
+
+	participantRoute.POST("/sign-out", func(ctx *gin.Context) {
+		var req models.UpdateParticipantRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+		req.SignOut = true
+
+		participant, err := svc.UpdateParticipant(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, participant)
+	})
+
+	participantRoute.POST("/sign-in", func(ctx *gin.Context) {
+		var req models.UpdateParticipantRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+		req.SignIn = true
+
+		participant, err := svc.UpdateParticipant(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, participant)
+	})
+
+	participantRoute.POST("/rebuy", func(ctx *gin.Context) {
+		var req models.UpdateParticipantRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+		req.Rebuy = true
+
+		participant, err := svc.UpdateParticipant(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, participant)
+	})
+
+	participantRoute.DELETE("/", func(ctx *gin.Context) {
+		var req models.DeleteParticipantRequest
+		err := ctx.ShouldBindJSON(&req)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+			return
+		}
+
+		err = svc.DeleteParticipant(&req)
+		if err != nil {
+			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
+		}
+
+		ctx.String(http.StatusNoContent, "")
 	})
 }

@@ -107,8 +107,19 @@ func (es *eventService) EndEvent(eventId uint64) error {
 		return e.Forbidden("This event has already ended, it cannot be ended again.")
 	}
 
-	// TODO: Retrieve list of entries for the event
+	// Retrieve list of entries for the event
 	// Reject request with 403 if all entries are not signed out
+	entries := []models.Participant{}
+	res = es.db.Where("event_id = ?", eventId).Order("signed_out_at DESC").Find(&entries)
+	if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	for _, entry := range entries {
+		if entry.SignedOutAt == nil {
+			return e.Forbidden("Event cannot be ended while there are still unsigned out entries.")
+		}
+	}
 
 	// Start transaction for the event update and ranking update process
 	tx := es.db.Begin()
@@ -119,8 +130,31 @@ func (es *eventService) EndEvent(eventId uint64) error {
 	// Update events state
 	event.State = models.EventStateEnded
 	tx.Save(&event)
+	if err := tx.Error; err != nil {
+		tx.Rollback()
+		return e.InternalServerError(err.Error())
+	}
 
-	// TODO: Calculate points for each entry in the event
+	// Calculate points for each entry in the event and update placements
+	rankingService := NewRankingService(tx)
+	eventSize := len(entries)
+	for i, entry := range entries {
+		points := CalculatePoints(eventSize, i+1)
+
+		err := rankingService.UpdateRanking(entry.MembershipID, points)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		entry.Placement = uint32(i + 1)
+
+		tx.Save(&entry)
+		if err := tx.Error; err != nil {
+			tx.Rollback()
+			return e.InternalServerError(err.Error())
+		}
+	}
 
 	// Save all changes to the database
 	res = tx.Commit()

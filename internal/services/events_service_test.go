@@ -3,6 +3,7 @@ package services
 import (
 	"api/internal/database"
 	"api/internal/models"
+	"api/internal/testhelpers"
 	"reflect"
 	"testing"
 	"time"
@@ -309,5 +310,125 @@ func EndEventTest() func(*testing.T) {
 			t.Errorf("EventService.EndEvent() did not update event: %v", updatedEvent)
 			return
 		}
+	}
+}
+
+func TestEventService_EndEvent_PlacementAndRankingsUpdated(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	set, err := testhelpers.SetupSemester(db, "Fall 2022")
+	if err != nil {
+		t.Fatalf("Failed to setup test environment: %v", err)
+	}
+
+	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("Failed to setup event: %v", err)
+	}
+
+	now := time.Now().UTC()
+	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now, 2)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	next := now.Add(time.Minute * 30)
+	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next, 0)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	last := next.Add(time.Minute * 30)
+	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, &last, 4)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	svc := NewEventService(db)
+	err = svc.EndEvent(event.ID)
+	if err != nil {
+		t.Errorf("EndEvent() error = %v", err)
+		return
+	}
+
+	// Check if entries placements were updated
+	// Entry3 = first place
+	// Entry2 = second place
+	// Entry1 = third place
+	firstPlace := models.Participant{
+		EventID:   event.ID,
+		Placement: 1,
+	}
+	res := db.Where("event_id = ? AND placement = ?", entry1.EventID, 1).First(&firstPlace)
+	if res.Error != nil {
+		t.Fatalf("Failed to retrieve entry: %v", err)
+	}
+	secondPlace := models.Participant{
+		EventID:   event.ID,
+		Placement: 2,
+	}
+	res = db.Where("event_id = ? AND placement = ?", entry2.EventID, 2).First(&secondPlace)
+	if res.Error != nil {
+		t.Fatalf("Failed to retrieve entry: %v", err)
+	}
+	thirdPlace := models.Participant{
+		EventID:   event.ID,
+		Placement: 3,
+	}
+	res = db.Where("event_id = ? AND placement = ?", entry3.EventID, 3).First(&thirdPlace)
+	if res.Error != nil {
+		t.Fatalf("Failed to retrieve entry: %v", err)
+	}
+
+	if firstPlace.MembershipID != entry3.MembershipID {
+		t.Errorf("Event first place = %v. wanted = %v", firstPlace.MembershipID, entry3.MembershipID)
+		return
+	}
+	if secondPlace.MembershipID != entry2.MembershipID {
+		t.Errorf("Event second place = %v. wanted = %v", secondPlace.MembershipID, entry2.MembershipID)
+		return
+	}
+	if thirdPlace.MembershipID != entry1.MembershipID {
+		t.Errorf("Event third place = %v. wanted = %v", thirdPlace.MembershipID, entry1.MembershipID)
+		return
+	}
+
+	// Check to see rankings were updated
+	// First place = 2 points
+	// Second place = 2 points
+	// Third place = 2 points
+	ranking1 := models.Ranking{MembershipID: entry3.MembershipID}
+	res = db.First(&ranking1)
+	if res.Error != nil {
+		t.Fatalf("Failed to retrieve ranking: %v", err)
+	}
+	ranking2 := models.Ranking{MembershipID: entry2.MembershipID}
+	res = db.First(&ranking2)
+	if res.Error != nil {
+		t.Fatalf("Failed to retrieve ranking: %v", err)
+	}
+	ranking3 := models.Ranking{MembershipID: entry1.MembershipID}
+	res = db.First(&ranking3)
+	if res.Error != nil {
+		t.Fatalf("Failed to retrieve ranking: %v", err)
+	}
+
+	if ranking1.Points != 2 {
+		t.Errorf("%v ranking points = %v, expected = %v", ranking1.MembershipID, ranking1.Points, 2)
+		return
+	}
+	if ranking2.Points != 2 {
+		t.Errorf("%v ranking points = %v, expected = %v", ranking2.MembershipID, ranking2.Points, 2)
+		return
+	}
+	if ranking3.Points != 2 {
+		t.Errorf("%v ranking points = %v, expected = %v", ranking3.MembershipID, ranking3.Points, 2)
+		return
 	}
 }

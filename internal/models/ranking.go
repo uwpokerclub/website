@@ -3,7 +3,7 @@ package models
 import "github.com/google/uuid"
 
 type Ranking struct {
-	MembershipID uuid.UUID `gorm:"type:uuid"`
+	MembershipID uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Points       int32
 }
 

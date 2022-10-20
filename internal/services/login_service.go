@@ -77,7 +77,8 @@ func (svc *loginService) ValidateCredentials(username string, password string) (
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 	})
 
-	tokenString, err := token.SignedString(os.Getenv("JWT_SECRET"))
+	secretKey := os.Getenv("JWT_SECRET")
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", e.InternalServerError(fmt.Sprintf("Error occurred signing token: %v", err))
 	}

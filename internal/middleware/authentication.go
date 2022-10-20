@@ -16,7 +16,7 @@ func UseAuthentication(ctx *gin.Context) {
 	cookie, err := ctx.Cookie("pctoken")
 	if err != nil {
 		// Cookie not present in the request. Return 401
-		ctx.JSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
 		return
 	}
 
@@ -29,17 +29,17 @@ func UseAuthentication(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.JSON(http.StatusForbidden, e.Forbidden(err.Error()))
+		ctx.AbortWithStatusJSON(http.StatusForbidden, e.Forbidden(err.Error()))
 		return
 	}
 
 	if token.Valid {
 		ctx.Next()
 	} else if errors.Is(err, jwt.ErrTokenMalformed) {
-		ctx.JSON(http.StatusForbidden, e.Forbidden("Malformed token"))
+		ctx.AbortWithStatusJSON(http.StatusForbidden, e.Forbidden("Malformed token"))
 	} else if errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet) {
-		ctx.JSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
 	} else {
-		ctx.JSON(http.StatusInternalServerError, e.InternalServerError("Unknown error occurred authenticating request"))
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError("Unknown error occurred authenticating request"))
 	}
 }

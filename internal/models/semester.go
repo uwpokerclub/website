@@ -24,7 +24,7 @@ type CreateSemesterRequest struct {
 	Meta                  string    `json:"meta"`
 	StartDate             time.Time `json:"startDate" binding:"required"`
 	EndDate               time.Time `json:"endDate" binding:"required"`
-	StartingBudget        float64   `json:"startingBudget" binding:"required"`
+	StartingBudget        float64   `json:"startingBudget" binding:"gte=0,omitempty"`
 	MembershipFee         int8      `json:"membershipFee" binding:"required"`
 	MembershipDiscountFee int8      `json:"membershipDiscountFee" binding:"required"`
 	RebuyFee              int8      `json:"rebuyFee" binding:"required"`

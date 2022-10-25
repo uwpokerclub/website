@@ -13,8 +13,8 @@ type Membership struct {
 type CreateMembershipRequest struct {
 	UserID     uint64 `json:"userId" binding:"required"`
 	SemesterID string `json:"semesterId" binding:"required"`
-	Paid       bool   `json:"paid" binding:"required_with=Discounted"`
-	Discounted bool   `json:"discounted" binding:"required_with=Paid"`
+	Paid       bool   `json:"paid" binding:"omitempty,required_with=Discounted"`
+	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
 }
 
 type UpdateMembershipRequest struct {

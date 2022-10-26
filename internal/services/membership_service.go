@@ -107,7 +107,7 @@ func (ms *membershipService) ListMemberships(semesterId uuid.UUID) ([]models.Lis
 		).
 		Joins("INNER JOIN memberships ON users.id = memberships.user_id").
 		Where("memberships.semester_id = ?", semesterId).
-		Scan(&ret)
+		Find(&ret)
 
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())

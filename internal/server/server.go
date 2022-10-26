@@ -7,7 +7,9 @@ import (
 	"api/internal/services"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -21,6 +23,10 @@ type apiServer struct {
 }
 
 func NewAPIServer(db *gorm.DB) *apiServer {
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Initialize a gin router without any middleware
 	r := gin.New()
 

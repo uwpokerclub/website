@@ -19,8 +19,8 @@ type CreateMembershipRequest struct {
 
 type UpdateMembershipRequest struct {
 	ID         uuid.UUID
-	Paid       bool `json:"paid" binding:"required"`
-	Discounted bool `json:"discounted" binding:"required"`
+	Paid       bool `json:"paid" binding:"omitempty,required"`
+	Discounted bool `json:"discounted" binding:"omitempty,required"`
 }
 
 type ListMembershipsResult struct {

@@ -79,7 +79,7 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 		Joins("INNER JOIN rankings ON memberships.id = rankings.membership_id").
 		Where("memberships.semester_id = ?", id).
 		Order("rankings.points DESC").
-		Scan(&rankings)
+		Find(&rankings)
 
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())

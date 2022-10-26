@@ -28,11 +28,6 @@ func UseAuthentication(ctx *gin.Context) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusForbidden, e.Forbidden(err.Error()))
-		return
-	}
-
 	if token.Valid {
 		ctx.Next()
 	} else if errors.Is(err, jwt.ErrTokenMalformed) {
@@ -40,6 +35,6 @@ func UseAuthentication(ctx *gin.Context) {
 	} else if errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet) {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
 	} else {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError("Unknown error occurred authenticating request"))
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(fmt.Sprintf("Unknown error occurred authenticating request: %s", err.Error())))
 	}
 }

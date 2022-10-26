@@ -107,6 +107,8 @@ func (ms *membershipService) ListMemberships(semesterId uuid.UUID) ([]models.Lis
 		).
 		Joins("INNER JOIN memberships ON users.id = memberships.user_id").
 		Where("memberships.semester_id = ?", semesterId).
+		Order("first_name ASC").
+		Order("last_name ASC").
 		Find(&ret)
 
 	if err := res.Error; err != nil {

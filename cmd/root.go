@@ -8,7 +8,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "api",
+	Use:   "server",
 	Short: "The UWPSC Admin API handles logic for managing the UWPSC events and semsters",
 }
 

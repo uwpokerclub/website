@@ -1,10 +1,12 @@
 version: "3.9"
 services:
   server:
-    build: .
-    command: /tmp/api start
+    build:
+      context: .
+      target: build
+    command: sh -c "go build -o /tmp/server . && /tmp/server start"
     volumes:
-      - .:/usr/app
+      - .:/app
     ports:
       - 5000:5000
     depends_on:

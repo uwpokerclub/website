@@ -13,6 +13,6 @@ jobs:
     - name: Start containers
       run: docker compose up -d
     - name: Run tests
-      run: docker compose exec server -- go test -v -p=1 ./internal/...
+      run: docker compose exec server go test -v -p=1 ./internal/...
     - name: Teardown containers
       run: docker compose down --volume

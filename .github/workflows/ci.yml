@@ -12,6 +12,8 @@ jobs:
       run: docker compose build
     - name: Start containers
       run: docker compose up -d
+    - name: Debug
+      run: docker compose exec server env
     - name: Run migrations
       run: docker compose exec server ./scripts/migrate.sh --test up
     - name: Run tests

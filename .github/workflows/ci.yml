@@ -6,6 +6,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+    - name: Create docker network
+      run: docker network create uwpokerclub_services_network
     - name: Build image
       run: docker compose build
     - name: Start containers

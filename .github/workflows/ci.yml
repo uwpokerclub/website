@@ -4,17 +4,35 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
+    - name: Checkout Code
       uses: actions/checkout@v2
-    - name: Create docker network
-      run: docker network create uwpokerclub_services_network
-    - name: Build image
-      run: docker compose build
-    - name: Start containers
-      run: docker compose up -d
-    - name: Run migrations
-      run: docker compose exec server ./scripts/migrate.sh --test up
-    - name: Run tests
-      run: docker compose exec server go test -v -p=1 ./internal/...
-    - name: Teardown containers
-      run: docker compose down --volume
+    - name: Build and Test Image
+      env:
+        IMAGE_NAME: api-golang_server
+        MIGRATION_COMMAND: ./scripts/migrations --test up
+        TEST_COMMAND: go test -v -p=1 ./internal/...
+      run: |
+        # Create network
+        echo "Creating network uwpokerclub_services_network"
+        docker network create uwpokerclub_services_network
+
+        # Build image
+        echo "Building image..."
+        docker-compose build
+
+        # Start image
+        echo "Starting containers..."
+        docker-compose up -d
+
+        # Run DB migrations
+        echo "Running DB migrations..."
+        CONTAINER_ID=`docker ps | grep ${IMAGE_NAME} | awk '{ print $1 }'`
+        echo "Found container ${CONTAINER_ID}"
+        docker exec -i ${CONTAINER_ID} sh -c "${MIGRATION_COMMAND}"
+
+        # Run tests
+        echo "Running tests..."
+        docker exec -i ${CONTAINER_ID} sh -c "${TEST_COMMAND}"
+
+        # Teardown containers
+        docker-compose down --volume --remove-orphans

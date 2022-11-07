@@ -24,8 +24,6 @@ jobs:
         echo "Starting containers..."
         docker-compose up -d
 
-        sleep 10
-
         # Run DB migrations
         echo "Running DB migrations..."
         CONTAINER_ID=`docker ps | grep ${IMAGE_NAME} | awk '{ print $1 }'`

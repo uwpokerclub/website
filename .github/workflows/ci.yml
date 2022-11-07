@@ -9,7 +9,7 @@ jobs:
     - name: Build and Test Image
       env:
         IMAGE_NAME: api-golang_server
-        MIGRATION_COMMAND: ./scripts/migrations --test up
+        MIGRATION_COMMAND: ./scripts/migrate.sh --test up
         TEST_COMMAND: go test -v -p=1 ./internal/...
       run: |
         # Create network

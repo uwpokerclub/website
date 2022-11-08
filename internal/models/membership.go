@@ -30,4 +30,5 @@ type ListMembershipsResult struct {
 	LastName   string    `json:"lastName"`
 	Paid       bool      `json:"paid"`
 	Discounted bool      `json:"discounted"`
+	Attendance int       `json:"attendance"`
 }

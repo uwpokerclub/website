@@ -416,6 +416,11 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 		t.Errorf("result = %v, want = %v", memberships, []uint64{user1.ID, user2.ID})
 		return
 	}
+
+	if memberships[0].Attendance != 0 || memberships[1].Attendance != 0 {
+		t.Errorf("ListMemberships attendance incorrect: %v, expected 0", memberships)
+		return
+	}
 }
 
 func TestMembershipService_UpdateMembership_InvalidUpdate(t *testing.T) {

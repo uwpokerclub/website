@@ -99,17 +99,37 @@ func (ms *membershipService) GetMembership(membershipId uuid.UUID) (*models.Memb
 func (ms *membershipService) ListMemberships(semesterId uuid.UUID) ([]models.ListMembershipsResult, error) {
 	var ret []models.ListMembershipsResult
 
-	res := ms.db.
-		Table("users").
-		Select(
-			"memberships.id", "users.id AS user_id", "users.first_name",
-			"users.last_name", "memberships.paid", "memberships.discounted",
-		).
-		Joins("INNER JOIN memberships ON users.id = memberships.user_id").
-		Where("memberships.semester_id = ?", semesterId).
-		Order("first_name ASC").
-		Order("last_name ASC").
-		Find(&ret)
+	res := ms.db.Raw(`
+	WITH attendance AS (
+		SELECT
+			p.membership_id,
+			COUNT(*) AS total
+		FROM
+			participants p
+			INNER JOIN events e ON p.event_id = e.id
+		WHERE
+			e.semester_id = $1
+		GROUP BY
+			p.membership_id
+		)
+		
+		SELECT
+			m.id,
+			users.id AS user_id,
+			users.first_name,
+			users.last_name,
+			m.paid,
+			m.discounted,
+			coalesce(a.total, 0) AS attendance
+		FROM
+			memberships m
+			INNER JOIN users ON m.user_id = users.id
+			left JOIN attendance a ON m.id = a.membership_id
+		WHERE m.semester_id = $1
+		ORDER BY
+			users.first_name ASC,
+			users.last_name ASC;
+	`, semesterId).Find(&ret)
 
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())

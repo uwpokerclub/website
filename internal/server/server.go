@@ -424,7 +424,7 @@ func (s *apiServer) SetupEventsRoute() {
 		ctx.JSON(http.StatusOK, event)
 	})
 
-	eventsRoute.GET("/:eventId/end", func(ctx *gin.Context) {
+	eventsRoute.POST("/:eventId/end", func(ctx *gin.Context) {
 		eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))

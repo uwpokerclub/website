@@ -18,6 +18,10 @@ func OpenConnection() (*gorm.DB, error) {
 		return nil, errors.New("environment variable 'DATABASE_URL' has not been set")
 	}
 
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+		connectionUrl = connectionUrl + "?sslmode=require&sslrootcert=certs/server-ca.pem"
+	}
+
 	db, err := gorm.Open(postgres.Open(connectionUrl))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open connection to database: %s", err.Error())

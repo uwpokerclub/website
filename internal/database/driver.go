@@ -19,7 +19,7 @@ func OpenConnection() (*gorm.DB, error) {
 	}
 
 	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
-		connectionUrl = connectionUrl + "?sslmode=require&sslrootcert=certs/server-ca.pem&sslcert=certs/client-cert.pem&sslkey=cets/client-key.pem"
+		connectionUrl = connectionUrl + "?sslmode=require&sslrootcert=certs/server-ca.pem&sslcert=client-cert/client-cert.pem&sslkey=client-key/client-key.pem"
 	}
 
 	db, err := gorm.Open(postgres.Open(connectionUrl))

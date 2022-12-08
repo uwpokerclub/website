@@ -44,6 +44,6 @@ COPY --from=build /app/server .
 COPY --from=build /go/bin/goose /bin
 COPY --from=build /app/migrations ./migrations
 
-RUN mkdir certs
+RUN mkdir certs client-cert client-key
 
 CMD [ "/app/server", "start" ]

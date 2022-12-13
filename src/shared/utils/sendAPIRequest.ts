@@ -12,6 +12,13 @@ const sendAPIRequest = async <T>(path: string, method = "GET", body?: any): Prom
   // Save response status for later.
   const status = res.status;
 
+  // Check if response header has 'Set-Cookie'
+  const cookie = res.headers.get('set-cookie');
+  if (cookie) {
+    console.log("we are setting a cookie");
+    document.cookie = cookie;
+  }
+
   // Attempt to convert response body to JSON. If this fails that means there is no body.
   let data: T | null = null;
   try {

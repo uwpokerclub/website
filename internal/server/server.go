@@ -36,6 +36,10 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	// Use the default recovery handler
 	r.Use(gin.Recovery())
 
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+		r.Use(middleware.CORSMiddleware)
+	}
+
 	s := &apiServer{r: r, db: db}
 
 	// Initialize all routes
@@ -59,7 +63,7 @@ func (s *apiServer) SetupAuthenticationRoute() {
 
 	svc := services.NewLoginService(s.db)
 
-	loginRoute.POST("/", func(ctx *gin.Context) {
+	loginRoute.POST("", func(ctx *gin.Context) {
 		var req models.Login
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -76,7 +80,7 @@ func (s *apiServer) SetupAuthenticationRoute() {
 		ctx.JSON(http.StatusCreated, "")
 	})
 
-	loginRoute.POST("/session", func(ctx *gin.Context) {
+	loginRoute.POST("session", func(ctx *gin.Context) {
 		var req models.Login
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -104,7 +108,7 @@ func (s *apiServer) SetupUsersRoute() {
 
 	us := services.NewUserService(s.db)
 
-	usersRoute.GET("/", func(ctx *gin.Context) {
+	usersRoute.GET("", func(ctx *gin.Context) {
 		users, err := us.ListUsers()
 		if err != nil {
 			ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -114,7 +118,7 @@ func (s *apiServer) SetupUsersRoute() {
 		ctx.JSON(http.StatusOK, users)
 	})
 
-	usersRoute.POST("/", func(ctx *gin.Context) {
+	usersRoute.POST("", func(ctx *gin.Context) {
 		var req models.CreateUserRequest
 
 		err := ctx.ShouldBindJSON(&req)
@@ -132,7 +136,7 @@ func (s *apiServer) SetupUsersRoute() {
 		ctx.JSON(http.StatusCreated, user)
 	})
 
-	usersRoute.GET("/:id", func(ctx *gin.Context) {
+	usersRoute.GET(":id", func(ctx *gin.Context) {
 		id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid user id specified in request."))
@@ -148,7 +152,7 @@ func (s *apiServer) SetupUsersRoute() {
 		ctx.JSON(http.StatusOK, user)
 	})
 
-	usersRoute.PATCH("/:id", func(ctx *gin.Context) {
+	usersRoute.PATCH(":id", func(ctx *gin.Context) {
 		id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid user id specified in request."))
@@ -171,7 +175,7 @@ func (s *apiServer) SetupUsersRoute() {
 		ctx.JSON(http.StatusOK, user)
 	})
 
-	usersRoute.DELETE("/:id", func(ctx *gin.Context) {
+	usersRoute.DELETE(":id", func(ctx *gin.Context) {
 		id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid user id specified in request."))
@@ -181,6 +185,7 @@ func (s *apiServer) SetupUsersRoute() {
 		err = us.DeleteUser(uint64(id))
 		if err != nil {
 			ctx.JSON(err.(e.APIErrorResponse).Code, err)
+			return
 		}
 
 		ctx.String(http.StatusNoContent, "")
@@ -193,7 +198,7 @@ func (s *apiServer) SetupSemestersRoute() {
 	semesterService := services.NewSemesterService(s.db)
 	transactionService := services.NewTransactionService(s.db)
 
-	semestersRoute.GET("/", func(ctx *gin.Context) {
+	semestersRoute.GET("", func(ctx *gin.Context) {
 		semesters, err := semesterService.ListSemesters()
 		if err != nil {
 			ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -203,7 +208,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusOK, semesters)
 	})
 
-	semestersRoute.POST("/", func(ctx *gin.Context) {
+	semestersRoute.POST("", func(ctx *gin.Context) {
 		var req models.CreateSemesterRequest
 
 		err := ctx.ShouldBindJSON(&req)
@@ -221,7 +226,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusCreated, semester)
 	})
 
-	semestersRoute.GET("/:semesterId", func(ctx *gin.Context) {
+	semestersRoute.GET(":semesterId", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -238,7 +243,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusOK, semester)
 	})
 
-	semestersRoute.GET("/:semesterId/rankings", func(ctx *gin.Context) {
+	semestersRoute.GET(":semesterId/rankings", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -255,7 +260,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusOK, rankings)
 	})
 
-	semestersRoute.GET("/:semesterId/transactions", func(ctx *gin.Context) {
+	semestersRoute.GET(":semesterId/transactions", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -272,7 +277,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusOK, transactions)
 	})
 
-	semestersRoute.POST("/:semesterId/transactions", func(ctx *gin.Context) {
+	semestersRoute.POST(":semesterId/transactions", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -296,7 +301,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusCreated, transaction)
 	})
 
-	semestersRoute.GET("/:semesterId/transactions/:transactionId", func(ctx *gin.Context) {
+	semestersRoute.GET(":semesterId/transactions/:transactionId", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -319,7 +324,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusOK, transaction)
 	})
 
-	semestersRoute.PATCH("/:semesterId/transactions/:transactionId", func(ctx *gin.Context) {
+	semestersRoute.PATCH(":semesterId/transactions/:transactionId", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -350,7 +355,7 @@ func (s *apiServer) SetupSemestersRoute() {
 		ctx.JSON(http.StatusOK, transaction)
 	})
 
-	semestersRoute.DELETE("/:semesterId/transactions/:transactionId", func(ctx *gin.Context) {
+	semestersRoute.DELETE(":semesterId/transactions/:transactionId", func(ctx *gin.Context) {
 		semesterId := ctx.Param("semesterId")
 		id, err := uuid.Parse(semesterId)
 		if err != nil {
@@ -379,7 +384,7 @@ func (s *apiServer) SetupEventsRoute() {
 
 	es := services.NewEventService(s.db)
 
-	eventsRoute.GET("/", func(ctx *gin.Context) {
+	eventsRoute.GET("", func(ctx *gin.Context) {
 		semesterId := ctx.Query("semesterId")
 
 		events, err := es.ListEvents(semesterId)
@@ -391,7 +396,7 @@ func (s *apiServer) SetupEventsRoute() {
 		ctx.JSON(http.StatusOK, events)
 	})
 
-	eventsRoute.POST("/", func(ctx *gin.Context) {
+	eventsRoute.POST("", func(ctx *gin.Context) {
 		var req models.CreateEventRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -408,7 +413,7 @@ func (s *apiServer) SetupEventsRoute() {
 		ctx.JSON(http.StatusCreated, event)
 	})
 
-	eventsRoute.GET("/:eventId", func(ctx *gin.Context) {
+	eventsRoute.GET(":eventId", func(ctx *gin.Context) {
 		eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
@@ -424,7 +429,7 @@ func (s *apiServer) SetupEventsRoute() {
 		ctx.JSON(http.StatusOK, event)
 	})
 
-	eventsRoute.POST("/:eventId/end", func(ctx *gin.Context) {
+	eventsRoute.POST(":eventId/end", func(ctx *gin.Context) {
 		eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
@@ -446,7 +451,7 @@ func (s *apiServer) SetupMembershipRoutes() {
 
 	ms := services.NewMembershipService(s.db)
 
-	membershipRoutes.GET("/", func(ctx *gin.Context) {
+	membershipRoutes.GET("", func(ctx *gin.Context) {
 		semesterId, err := uuid.Parse(ctx.Query("semesterId"))
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester UUID specified in query."))
@@ -461,7 +466,7 @@ func (s *apiServer) SetupMembershipRoutes() {
 		ctx.JSON(http.StatusOK, memberships)
 	})
 
-	membershipRoutes.POST("/", func(ctx *gin.Context) {
+	membershipRoutes.POST("", func(ctx *gin.Context) {
 		var req models.CreateMembershipRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -478,7 +483,7 @@ func (s *apiServer) SetupMembershipRoutes() {
 		ctx.JSON(http.StatusCreated, membership)
 	})
 
-	membershipRoutes.GET("/:id", func(ctx *gin.Context) {
+	membershipRoutes.GET(":id", func(ctx *gin.Context) {
 		id, err := uuid.Parse(ctx.Param("id"))
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid membership UUID specified in request."))
@@ -494,7 +499,7 @@ func (s *apiServer) SetupMembershipRoutes() {
 		ctx.JSON(http.StatusOK, membership)
 	})
 
-	membershipRoutes.PATCH("/:id", func(ctx *gin.Context) {
+	membershipRoutes.PATCH(":id", func(ctx *gin.Context) {
 		id, err := uuid.Parse(ctx.Param("id"))
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid membership UUID specified in request."))
@@ -524,7 +529,7 @@ func (s *apiServer) SetupParticipantRoutes() {
 
 	svc := services.NewParticipantsService(s.db)
 
-	participantRoute.GET("/", func(ctx *gin.Context) {
+	participantRoute.GET("", func(ctx *gin.Context) {
 		eventId, err := strconv.Atoi(ctx.Query("eventId"))
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID in query"))
@@ -540,7 +545,7 @@ func (s *apiServer) SetupParticipantRoutes() {
 		ctx.JSON(http.StatusOK, participants)
 	})
 
-	participantRoute.POST("/", func(ctx *gin.Context) {
+	participantRoute.POST("", func(ctx *gin.Context) {
 		var req models.CreateParticipantRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -557,7 +562,7 @@ func (s *apiServer) SetupParticipantRoutes() {
 		ctx.JSON(http.StatusCreated, participant)
 	})
 
-	participantRoute.POST("/sign-out", func(ctx *gin.Context) {
+	participantRoute.POST("sign-out", func(ctx *gin.Context) {
 		var req models.UpdateParticipantRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -575,7 +580,7 @@ func (s *apiServer) SetupParticipantRoutes() {
 		ctx.JSON(http.StatusOK, participant)
 	})
 
-	participantRoute.POST("/sign-in", func(ctx *gin.Context) {
+	participantRoute.POST("sign-in", func(ctx *gin.Context) {
 		var req models.UpdateParticipantRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -593,7 +598,7 @@ func (s *apiServer) SetupParticipantRoutes() {
 		ctx.JSON(http.StatusOK, participant)
 	})
 
-	participantRoute.POST("/rebuy", func(ctx *gin.Context) {
+	participantRoute.POST("rebuy", func(ctx *gin.Context) {
 		var req models.UpdateParticipantRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {
@@ -611,7 +616,7 @@ func (s *apiServer) SetupParticipantRoutes() {
 		ctx.JSON(http.StatusOK, participant)
 	})
 
-	participantRoute.DELETE("/", func(ctx *gin.Context) {
+	participantRoute.DELETE("", func(ctx *gin.Context) {
 		var req models.DeleteParticipantRequest
 		err := ctx.ShouldBindJSON(&req)
 		if err != nil {

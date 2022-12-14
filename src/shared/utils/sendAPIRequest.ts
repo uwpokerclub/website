@@ -3,10 +3,11 @@ const sendAPIRequest = async <T>(path: string, method = "GET", body?: any): Prom
   const apiUrl = process.env.NODE_ENV === "development" ? "/api" : "https://api.uwpokerclub.com"
 
   const res = await fetch(`${apiUrl}/${path}`, {
+    credentials: "include",
     method,
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined
-  })
+  });
 
   // Save response status for later.
   const status = res.status;

@@ -23,4 +23,5 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 
 	startCmd.Flags().StringVarP(&PORT, "port", "p", "5000", "The port number for the server to run on.")
+	startCmd.Flags().BoolVar(&RUN_MIGRATIONS, "run-migrations", false, "Run the SQL migrations on startup.")
 }

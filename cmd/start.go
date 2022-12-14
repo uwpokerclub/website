@@ -11,13 +11,14 @@ import (
 )
 
 var PORT string
+var RUN_MIGRATIONS bool
 
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Starts the UWPSC Admin API server",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Establish connection to the database
-		db, err := database.OpenConnection()
+		db, err := database.OpenConnection(RUN_MIGRATIONS)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to open connection to the database: %s", err.Error())
 			os.Exit(1)

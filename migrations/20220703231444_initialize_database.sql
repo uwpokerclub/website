@@ -1,13 +1,13 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE EXTENSION "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE logins (
+CREATE TABLE IF NOT EXISTS logins (
   username VARCHAR PRIMARY KEY,
   password VARCHAR NOT NULL
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id BIGINT PRIMARY KEY,
   first_name VARCHAR,
   last_name VARCHAR,
@@ -17,7 +17,7 @@ CREATE TABLE users (
   created_at DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
-CREATE TABLE semesters (
+CREATE TABLE IF NOT EXISTS semesters (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR,
   meta VARCHAR,
@@ -30,7 +30,7 @@ CREATE TABLE semesters (
   rebuy_fee SMALLINT NOT NULL DEFAULT '0'::SMALLINT
 );
 
-CREATE TABLE memberships (
+CREATE TABLE IF NOT EXISTS memberships (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id BIGINT,
   semester_id uuid,
@@ -40,7 +40,7 @@ CREATE TABLE memberships (
   CONSTRAINT memberships_semester_id_fkey FOREIGN KEY (semester_id) REFERENCES semesters(id)
 );
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
   id SERIAL PRIMARY KEY,
   name VARCHAR,
   format VARCHAR,
@@ -51,7 +51,7 @@ CREATE TABLE events (
   CONSTRAINT events_semester_id_fkey FOREIGN KEY (semester_id) REFERENCES semesters(id)
 );
 
-CREATE TABLE participants (
+CREATE TABLE IF NOT EXISTS participants (
   id SERIAL,
   membership_id uuid,
   event_id SERIAL,
@@ -63,14 +63,14 @@ CREATE TABLE participants (
   CONSTRAINT participants_membership_id_fkey FOREIGN KEY (membership_id) REFERENCES memberships(id)
 );
 
-CREATE TABLE rankings (
+CREATE TABLE IF NOT EXISTS rankings (
   membership_id uuid,
   points integer,
   PRIMARY KEY (membership_id),
   CONSTRAINT rankings_membership_id_fkey FOREIGN KEY (membership_id) REFERENCES memberships(id)
 );
 
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
   id SERIAL PRIMARY KEY,
   semester_id uuid,
   amount DECIMAL NOT NULL DEFAULT '0'::DECIMAL,

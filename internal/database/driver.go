@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pressly/goose/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func OpenConnection() (*gorm.DB, error) {
+func OpenConnection(runMigrations bool) (*gorm.DB, error) {
 	connectionUrl := os.Getenv("DATABASE_URL")
 	if connectionUrl == "" {
 		return nil, errors.New("environment variable 'DATABASE_URL' has not been set")
@@ -45,6 +46,14 @@ func OpenConnection() (*gorm.DB, error) {
 	err = sqlDB.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping the database: %s", err.Error())
+	}
+
+	// Run SQL migrations
+	if runMigrations {
+		err = goose.Up(sqlDB, "migrations")
+		if err != nil {
+			return nil, fmt.Errorf("failed to run migrations: %s", err.Error())
+		}
 	}
 
 	return db, nil

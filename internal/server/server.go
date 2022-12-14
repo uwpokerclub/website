@@ -36,9 +36,8 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	// Use the default recovery handler
 	r.Use(gin.Recovery())
 
-	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
-		r.Use(middleware.CORSMiddleware)
-	}
+	// Middleware to set CORS policy
+	r.Use(middleware.CORSMiddleware)
 
 	s := &apiServer{r: r, db: db}
 
@@ -96,7 +95,12 @@ func (s *apiServer) SetupAuthenticationRoute() {
 
 		// Set cookie
 		oneDayInSeconds := 86400
-		ctx.SetCookie("pctoken", token, oneDayInSeconds, "/", "", true, false)
+
+		if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+			ctx.SetCookie("pctoken", token, oneDayInSeconds, "/", "uwpokerclub.com", true, false)
+		} else {
+			ctx.SetCookie("pctoken", token, oneDayInSeconds, "/", "localhost", false, false)
+		}
 
 		// Return empty created response
 		ctx.JSON(http.StatusCreated, "")

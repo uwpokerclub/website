@@ -29,14 +29,14 @@ After installing both Docker and Golang, you are ready to begin.
 Clone the repository to your local development environment using:
 ```sh
 # HTTPS
-git clone https://github.com/uwpokerclub/api-golang.git
+git clone https://github.com/uwpokerclub/api.git
 # SSH
-git clone git@github.com:uwpokerclub/api-golang.git
+git clone git@github.com:uwpokerclub/api.git
 # GH CLI
-gh repo clone uwpokerclub/api-golang
+gh repo clone uwpokerclub/api
 
 # Change into project directory
-cd api-golang
+cd api
 ```
 
 ### Building

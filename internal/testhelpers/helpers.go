@@ -18,7 +18,7 @@ func CreateSemester(db *gorm.DB, id uuid.UUID, name string, meta string, startDa
 		StartingBudget:        startingBudget,
 		CurrentBudget:         currentBudget,
 		MembershipFee:         membershipFee,
-		MembershipFeeDiscount: discountFee,
+		MembershipDiscountFee: discountFee,
 		RebuyFee:              rebuyFee,
 	}
 

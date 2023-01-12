@@ -55,7 +55,7 @@ func CreateEventTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -119,7 +119,7 @@ func ListEventsTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -206,7 +206,7 @@ func GetEventTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -266,7 +266,7 @@ func EndEventTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)

@@ -58,7 +58,7 @@ func CreateTransactionTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -124,7 +124,7 @@ func GetTransactionTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -173,7 +173,7 @@ func ListTransactionTest() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -233,7 +233,7 @@ func UpdateTransactionTest() func(*testing.T) {
 			StartingBudget:        100.0,
 			CurrentBudget:         110.0,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -304,7 +304,7 @@ func DeleteTransactionTest() func(*testing.T) {
 			StartingBudget:        100.0,
 			CurrentBudget:         110.0,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)

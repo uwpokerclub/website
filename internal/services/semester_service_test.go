@@ -122,7 +122,7 @@ func CreateSemesterTest() func(*testing.T) {
 			return
 		}
 
-		if res.MembershipFeeDiscount != 5 {
+		if res.MembershipDiscountFee != 5 {
 			t.Errorf("SemesterService.CreateSemester().MembershipDiscountFee = %v, wanted = %v", res.Meta, 5)
 			return
 		}
@@ -149,7 +149,7 @@ func GetSemesterTest() func(*testing.T) {
 			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
 			StartingBudget:        105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -187,7 +187,7 @@ func ListSemesterTest() func(*testing.T) {
 			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
 			StartingBudget:        100.54,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -201,7 +201,7 @@ func ListSemesterTest() func(*testing.T) {
 			EndDate:               time.Date(2022, 8, 1, 0, 0, 0, 0, time.UTC),
 			StartingBudget:        105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 7,
+			MembershipDiscountFee: 7,
 			RebuyFee:              2,
 		}
 		res = db.Create(&semester2)
@@ -216,7 +216,7 @@ func ListSemesterTest() func(*testing.T) {
 			EndDate:               time.Date(2022, 12, 1, 0, 0, 0, 0, time.UTC),
 			StartingBudget:        140,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 7,
+			MembershipDiscountFee: 7,
 			RebuyFee:              1,
 		}
 		res = db.Create(&semester3)
@@ -282,7 +282,7 @@ func GetRankingsTest() func(*testing.T) {
 			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
 			StartingBudget:        100.54,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res = db.Create(&semester1)
@@ -369,7 +369,7 @@ func UpdateBudget_Positive() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)
@@ -415,7 +415,7 @@ func UpdateBudget_Negative() func(*testing.T) {
 			StartingBudget:        105.57,
 			CurrentBudget:         105.57,
 			MembershipFee:         10,
-			MembershipFeeDiscount: 5,
+			MembershipDiscountFee: 5,
 			RebuyFee:              2,
 		}
 		res := db.Create(&semester1)

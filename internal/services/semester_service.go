@@ -28,7 +28,7 @@ func (ss *semesterService) CreateSemester(req *models.CreateSemesterRequest) (*m
 		StartingBudget:        req.StartingBudget,
 		CurrentBudget:         req.StartingBudget,
 		MembershipFee:         req.MembershipFee,
-		MembershipFeeDiscount: req.MembershipDiscountFee,
+		MembershipDiscountFee: req.MembershipDiscountFee,
 		RebuyFee:              req.RebuyFee,
 	}
 

@@ -15,7 +15,7 @@ type Semester struct {
 	StartingBudget        float64   `json:"startingBudget"`
 	CurrentBudget         float64   `json:"currentBudget"`
 	MembershipFee         int8      `json:"membershipFee"`
-	MembershipFeeDiscount int8      `json:"membershipFeeDiscount"`
+	MembershipDiscountFee int8      `json:"membershipDiscountFee"`
 	RebuyFee              int8      `json:"rebuyFee"`
 }
 

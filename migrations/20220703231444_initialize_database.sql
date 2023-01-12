@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS semesters (
   starting_budget DECIMAL NOT NULL DEFAULT '0'::DECIMAL,
   current_budget DECIMAL NOT NULL DEFAULT '0'::DECIMAL,
   membership_fee SMALLINT NOT NULL DEFAULT '0'::SMALLINT,
-  membership_fee_discount SMALLINT NOT NULL DEFAULT '0'::SMALLINT,
+  membership_discount_fee SMALLINT NOT NULL DEFAULT '0'::SMALLINT,
   rebuy_fee SMALLINT NOT NULL DEFAULT '0'::SMALLINT
 );
 

@@ -56,7 +56,7 @@ func (ms *membershipService) CreateMembership(req *models.CreateMembershipReques
 	if req.Paid {
 		// If the membership has been discounted, use the discounted rate instead
 		if req.Discounted {
-			err = ss.UpdateBudget(semesterId, float64(semester.MembershipFeeDiscount))
+			err = ss.UpdateBudget(semesterId, float64(semester.MembershipDiscountFee))
 			if err != nil {
 				tx.Rollback()
 				return nil, err
@@ -177,7 +177,7 @@ func (ms *membershipService) UpdateMembership(req *models.UpdateMembershipReques
 		if existingMembership.Paid {
 			// Update semester's budget
 			if existingMembership.Discounted {
-				err = ss.UpdateBudget(existingMembership.SemesterID, -float64(semester.MembershipFeeDiscount))
+				err = ss.UpdateBudget(existingMembership.SemesterID, -float64(semester.MembershipDiscountFee))
 				if err != nil {
 					tx.Rollback()
 					return nil, err
@@ -197,14 +197,14 @@ func (ms *membershipService) UpdateMembership(req *models.UpdateMembershipReques
 			// Next compare the discounted flag
 			if !req.Discounted && existingMembership.Discounted {
 				// Member is marked as discounted and updating them to not discounted
-				err = ss.UpdateBudget(semester.ID, float64(semester.MembershipFee-semester.MembershipFeeDiscount))
+				err = ss.UpdateBudget(semester.ID, float64(semester.MembershipFee-semester.MembershipDiscountFee))
 				if err != nil {
 					tx.Rollback()
 					return nil, err
 				}
 			} else if req.Discounted && !existingMembership.Discounted {
 				// Member is not marked as discounted and updating them to discounted
-				err = ss.UpdateBudget(semester.ID, -float64(semester.MembershipFee-semester.MembershipFeeDiscount))
+				err = ss.UpdateBudget(semester.ID, -float64(semester.MembershipFee-semester.MembershipDiscountFee))
 				if err != nil {
 					tx.Rollback()
 					return nil, err
@@ -213,7 +213,7 @@ func (ms *membershipService) UpdateMembership(req *models.UpdateMembershipReques
 		} else {
 			// Existing member has not paid, and we are updating them to paid
 			if req.Discounted {
-				err = ss.UpdateBudget(semester.ID, float64(semester.MembershipFeeDiscount))
+				err = ss.UpdateBudget(semester.ID, float64(semester.MembershipDiscountFee))
 				if err != nil {
 					tx.Rollback()
 					return nil, err

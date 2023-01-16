@@ -115,7 +115,7 @@ function SemesterInfo(): ReactElement {
   const onUserSubmit = (user: Partial<User>, paid: boolean, discounted: boolean): Promise<boolean> => {
     // Create user first
     return sendAPIRequest("users", "POST", {
-      id: user.id,
+      id: Number(user.id),
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -128,7 +128,7 @@ function SemesterInfo(): ReactElement {
 
       sendAPIRequest("memberships", "POST", {
         semesterId,
-        userId: user.id,
+        userId: Number(user.id),
         paid,
         discounted
       }).then(({ status }) => {

@@ -50,7 +50,7 @@ function SemesterInfo(): ReactElement {
   }, [semesterData, membershipsData, transactionsData]);
 
   const updateMembership = (membershipId: string, isPaid: boolean, isDiscounted: boolean) => {
-    sendAPIRequest(`memberships/${membershipId}`, "POST", {
+    sendAPIRequest(`memberships/${membershipId}`, "PATCH", {
       paid: isPaid,
       discounted: isDiscounted
     }).then(({ status }) => {
@@ -141,7 +141,7 @@ function SemesterInfo(): ReactElement {
 
   const handleDelete = (id: number): void => {
     sendAPIRequest(`semesters/${semesterId}/transactions/${id}`, "DELETE").then(({ status }) => {
-      if (status === 200) {
+      if (status === 204) {
         sendAPIRequest<Transaction[]>(`semesters/${semesterId}/transactions`).then(({ data }) => {
           if (data) {
             setTransactions(data)

@@ -37,7 +37,7 @@ func (s *apiServer) CreateMembership(ctx *gin.Context) {
 	svc := services.NewMembershipService(s.db)
 	membership, err := svc.CreateMembership(&req)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, e.InvalidRequest(err.Error()))
+		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return
 	}
 

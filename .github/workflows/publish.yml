@@ -18,6 +18,12 @@ jobs:
         with:
           workload_identity_provider: '${{ secrets.GCP_WIP }}'
           service_account: '${{ secrets.GCP_SA }}'
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v1
+        with:
+          registry: us-east1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
       - name: Build the tagged Docker image
         run: docker build --rm --no-cache -t us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/app:${GITHUB_REF##*/} -t us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/app:latest .
       - name: Push the tagged Docker image

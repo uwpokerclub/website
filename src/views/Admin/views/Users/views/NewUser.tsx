@@ -18,7 +18,7 @@ function NewUser(): ReactElement {
     e.preventDefault();
 
     sendAPIRequest("users", "POST", {
-      id,
+      id: Number(id),
       firstName,
       lastName,
       email,
@@ -26,7 +26,7 @@ function NewUser(): ReactElement {
       questId,
     }).then(({ status }) => {
       if (status === 201) {
-        return navigate("/users");
+        return navigate("../");
       }
     });
   };

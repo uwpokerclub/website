@@ -313,6 +313,73 @@ func EndEventTest() func(*testing.T) {
 	}
 }
 
+func TestEventService_EndEvent_UnsignedOutEntries(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	set, err := testhelpers.SetupSemester(db, "Fall 2022")
+	if err != nil {
+		t.Fatalf("Failed to setup test environment: %v", err)
+	}
+
+	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("Failed to setup event: %v", err)
+	}
+
+	now := time.Now().UTC()
+	_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now, 2)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	next := now.Add(time.Minute * 30)
+	_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next, 0)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil, 4)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	svc := NewEventService(db)
+	err = svc.EndEvent(event.ID)
+	if err != nil {
+		t.Errorf("EndEvent() error = %v", err)
+		return
+	}
+
+	// Check that entry3's signed_out_at field is set to the start time of the event
+	foundEntry := models.Participant{ID: entry3.ID}
+	res := db.First(&foundEntry)
+	if res.Error != nil {
+		t.Fatal(res.Error.Error())
+	}
+
+	// Check that the date is the same
+	sYear, sMonth, sDay := foundEntry.SignedOutAt.Date()
+	eYear, eMonth, eDay := event.StartDate.Date()
+	if sYear != eYear || sMonth != eMonth || sDay != eDay {
+		t.Errorf("SignedOutAt not equal to StartDate of event (user not signed out in last place): SignedOutAt: %v, StartDate: %v", foundEntry.SignedOutAt, event.StartDate)
+		return
+	}
+
+	// Check that hour, min, and second are equal (milliseconds don't matter)
+	sHour, sMin, sSec := foundEntry.SignedOutAt.Clock()
+	eHour, eMin, eSec := event.StartDate.Clock()
+	if sHour != eHour || sMin != eMin || sSec != eSec {
+		t.Errorf("SignedOutAt not equal to StartDate of event (user not signed out in last place): SignedOutAt: %v, StartDate: %v", foundEntry.SignedOutAt, event.StartDate)
+		return
+	}
+}
+
 func TestEventService_EndEvent_PlacementAndRankingsUpdated(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 

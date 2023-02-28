@@ -6,7 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/google/uuid v1.3.0
-	github.com/pressly/goose/v3 v3.6.1
+	github.com/pressly/goose/v3 v3.9.0
 	github.com/spf13/cobra v1.6.1
 	golang.org/x/crypto v0.6.0
 	gorm.io/driver/postgres v1.4.8

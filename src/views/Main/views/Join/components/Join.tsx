@@ -1,6 +1,6 @@
 import React from "react";
 
-import { discordLine, instagramLine, facebookLine, emailLine, formsLine } from "../../../../../assets"
+import { discordLine, instagramLine, facebookLine, emailLine } from "../../../../../assets"
 import "./Join.scss"
 
 const Join = () => {

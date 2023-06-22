@@ -7,7 +7,7 @@ import AuthProvider from "./shared/utils/AuthProvider";
 import RequireAuth from "./shared/utils/RequireAuth";
 import { Login, Admin, Main } from "./views";
 import { TournamentClock } from "./shared/components";
-import { EVENT_LEVELS } from "./constants";
+import { EVENT_LEVELS, FREEZEOUT_EVENT_LEVELS } from "./constants";
 
 export default function App(): ReactElement {
 
@@ -23,6 +23,7 @@ export default function App(): ReactElement {
             </RequireAuth>
           } />
           <Route path="/tournament-clock" element={<TournamentClock levels={EVENT_LEVELS} />} />
+          <Route path="/deepstack-tournament-clock" element={<TournamentClock levels={FREEZEOUT_EVENT_LEVELS} />} />
         </Routes>
       </Router>
     </AuthProvider>

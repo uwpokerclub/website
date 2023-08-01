@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/pressly/goose/v3 v3.14.0
 	github.com/spf13/cobra v1.7.0
-	golang.org/x/crypto v0.10.0
+	golang.org/x/crypto v0.11.0
 	gorm.io/driver/postgres v1.5.2
 	gorm.io/gorm v1.25.2
 )

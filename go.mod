@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/pressly/goose/v3 v3.15.0
 	github.com/spf13/cobra v1.7.0
-	golang.org/x/crypto v0.11.0
+	golang.org/x/crypto v0.12.0
 	gorm.io/driver/postgres v1.5.2
 	gorm.io/gorm v1.25.4
 )
@@ -43,8 +43,8 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

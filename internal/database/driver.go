@@ -107,6 +107,14 @@ func WipeDB(db *gorm.DB) error {
 	if err := res.Error; err != nil {
 		return err
 	}
+	res = db.Delete(&models.Blind{})
+	if err := res.Error; err != nil {
+		return err
+	}
+	res = db.Delete(&models.Structure{})
+	if err := res.Error; err != nil {
+		return err
+	}
 	res = db.Delete(&models.Semester{})
 	if err := res.Error; err != nil {
 		return err

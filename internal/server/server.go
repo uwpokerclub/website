@@ -102,4 +102,12 @@ func (s *apiServer) SetupRoutes() {
 		participantRoute.POST("rebuy", s.RebuyParticipant)
 		participantRoute.DELETE("", s.DeleteParticipant)
 	}
+
+	structuresRoute := s.r.Group("/structures", middleware.UseAuthentication)
+	{
+		structuresRoute.POST("", s.CreateStructure)
+		structuresRoute.GET("", s.ListStructures)
+		structuresRoute.GET(":id", s.GetStructure)
+		structuresRoute.PUT(":id", s.UpdateStructure)
+	}
 }

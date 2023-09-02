@@ -4,498 +4,339 @@ import (
 	"api/internal/database"
 	"api/internal/models"
 	"api/internal/testhelpers"
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEventService(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
-
-	tests := []struct {
-		name string
-		test func(*testing.T)
-	}{
-		{
-			name: "CreateEvent",
-			test: CreateEventTest(),
-		},
-		{
-			name: "ListEvents",
-			test: ListEventsTest(),
-		},
-		{
-			name: "GetEvent",
-			test: GetEventTest(),
-		},
-		{
-			name: "EndEvent",
-			test: EndEventTest(),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, tt.test)
-	}
-}
-
-func CreateEventTest() func(*testing.T) {
-	return func(t *testing.T) {
-		db, err := database.OpenTestConnection()
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		defer database.WipeDB(db)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing semester: %v", res.Error)
-		}
-
-		es := NewEventService(db)
-
-		date := time.Now()
-
-		req := &models.CreateEventRequest{
-			Name:       "test",
-			Format:     "NLHE",
-			Notes:      "test event",
-			SemesterID: semester1.ID.String(),
-			StartDate:  date,
-		}
-
-		event, err := es.CreateEvent(req)
-		if err != nil {
-			t.Errorf("EventService.CreateEvent() error = %v", err)
-			return
-		}
-
-		if event.Name != "test" {
-			t.Errorf("EventService.CreateEvent().Name = %v, expected = %v", event.Name, "test")
-			return
-		}
-
-		if event.Format != "NLHE" {
-			t.Errorf("EventService.CreateEvent().Format = %v, expected = %v", event.Name, "NLHE")
-			return
-		}
-
-		if event.SemesterID.String() != semester1.ID.String() {
-			t.Errorf("EventService.CreateEvent().SemesterID = %v, expected = %v", event.SemesterID.String(), semester1.ID.String())
-			return
-		}
-
-		if event.StartDate != date {
-			t.Errorf("EventService.CreateEvent().StartDate = %v, expected = %v", event.StartDate, date)
-			return
-		}
-	}
-}
-
-func ListEventsTest() func(*testing.T) {
-	return func(t *testing.T) {
-		db, err := database.OpenTestConnection()
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		defer database.WipeDB(db)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing semester: %v", res.Error)
-		}
-
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
-		event2Date := time.Date(2022, 1, 2, 7, 0, 0, 0, time.UTC)
-		event3Date := time.Date(2022, 1, 3, 7, 0, 0, 0, time.UTC)
-
-		event1 := models.Event{
-			Name:       "Event 1",
-			Format:     "NLHE",
-			Notes:      "#1",
-			SemesterID: semester1.ID,
-			StartDate:  event1Date,
-			State:      models.EventStateStarted,
-		}
-		event2 := models.Event{
-			Name:       "Event 2",
-			Format:     "PLO",
-			Notes:      "#2",
-			SemesterID: semester1.ID,
-			StartDate:  event2Date,
-			State:      models.EventStateEnded,
-		}
-		event3 := models.Event{
-			Name:       "Event 3",
-			Format:     "Short Deck",
-			Notes:      "#3",
-			SemesterID: semester1.ID,
-			StartDate:  event3Date,
-			State:      models.EventStateStarted,
-		}
-
-		res = db.Create(&event1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing event: %v", res.Error)
-		}
-		res = db.Create(&event2)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing event: %v", res.Error)
-		}
-		res = db.Create(&event3)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing event: %v", res.Error)
-		}
-
-		es := NewEventService(db)
-
-		events, err := es.ListEvents(semester1.ID.String())
-		if err != nil {
-			t.Errorf("EventsService.ListEvents() error = %v", err)
-			return
-		}
-
-		expIds := []uint64{event3.ID, event2.ID, event1.ID}
-		accIds := make([]uint64, len(events))
-		for i, e := range events {
-			accIds[i] = e.ID
-		}
-
-		if !reflect.DeepEqual(accIds, expIds) {
-			t.Errorf("EventsService.ListEvents() = %v, expected = %v", accIds, expIds)
-			return
-		}
-	}
-}
-
-func GetEventTest() func(*testing.T) {
-	return func(t *testing.T) {
-		db, err := database.OpenTestConnection()
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		defer database.WipeDB(db)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing semester: %v", res.Error)
-		}
-
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
-
-		event1 := models.Event{
-			Name:       "Event 1",
-			Format:     "NLHE",
-			Notes:      "#1",
-			SemesterID: semester1.ID,
-			StartDate:  event1Date,
-			State:      models.EventStateStarted,
-		}
-
-		res = db.Create(&event1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing event: %v", res.Error)
-		}
-
-		es := NewEventService(db)
-
-		event, err := es.GetEvent(event1.ID)
-		if err != nil {
-			t.Errorf("EventService.GetEvent() error = %v", err)
-			return
-		}
-
-		if event.ID != event1.ID ||
-			event.Name != event1.Name ||
-			event.Format != event1.Format ||
-			event.Notes != event1.Notes ||
-			event.SemesterID != event1.SemesterID ||
-			event.State != event1.State {
-			t.Errorf("EventService.GetEvent() = %v, expected = %v", *event, event1)
-			return
-		}
-	}
-}
-
-func EndEventTest() func(*testing.T) {
-	return func(t *testing.T) {
-		db, err := database.OpenTestConnection()
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		defer database.WipeDB(db)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing semester: %v", res.Error)
-		}
-
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
-
-		event1 := models.Event{
-			Name:       "Event 1",
-			Format:     "NLHE",
-			Notes:      "#1",
-			SemesterID: semester1.ID,
-			StartDate:  event1Date,
-			State:      models.EventStateStarted,
-		}
-
-		res = db.Create(&event1)
-		if res.Error != nil {
-			t.Fatalf("Error when creating existing event: %v", res.Error)
-		}
-
-		es := NewEventService(db)
-
-		err = es.EndEvent(event1.ID)
-		if err != nil {
-			t.Errorf("EventService.EndEvent() error = %v", err)
-			return
-		}
-
-		// Retrieve event to see if state was updated
-		updatedEvent := models.Event{ID: event1.ID}
-		res = db.First(&updatedEvent)
-		if res.Error != nil {
-			t.Fatalf("Failed to find existing event: %v", err)
-			return
-		}
-
-		if updatedEvent.State != models.EventStateEnded {
-			t.Errorf("EventService.EndEvent() did not update event: %v", updatedEvent)
-			return
-		}
-	}
-}
-
-func TestEventService_EndEvent_UnsignedOutEntries(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	defer database.WipeDB(db)
-
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
+	sqlDB, err := db.DB()
 	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
+		t.Fatal(err.Error())
+	}
+	defer sqlDB.Close()
+
+	wipeDB := func() {
+		err := database.WipeDB(db)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
 	}
 
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
+	eventService := NewEventService(db)
 
-	now := time.Now().UTC()
-	_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now, 2)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
+	t.Run("CreateEvent", func(t *testing.T) {
+		t.Cleanup(wipeDB)
 
-	next := now.Add(time.Minute * 30)
-	_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next, 0)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
+		semester1 := models.Semester{
+			Name:                  "Spring 2022",
+			Meta:                  "",
+			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
+			StartingBudget:        105.57,
+			CurrentBudget:         105.57,
+			MembershipFee:         10,
+			MembershipDiscountFee: 5,
+			RebuyFee:              2,
+		}
+		res := db.Create(&semester1)
+		assert.NoError(t, res.Error)
 
-	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil, 4)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
+		structure := models.Structure{
+			Name: "Main Event Structure",
+		}
+		res = db.Create(&structure)
+		assert.NoError(t, res.Error)
 
-	svc := NewEventService(db)
-	err = svc.EndEvent(event.ID)
-	if err != nil {
-		t.Errorf("EndEvent() error = %v", err)
-		return
-	}
+		date := time.Now()
 
-	// Check that entry3's signed_out_at field is set to the start time of the event
-	foundEntry := models.Participant{ID: entry3.ID}
-	res := db.First(&foundEntry)
-	if res.Error != nil {
-		t.Fatal(res.Error.Error())
-	}
+		req := &models.CreateEventRequest{
+			Name:        "test",
+			Format:      "NLHE",
+			Notes:       "test event",
+			SemesterID:  semester1.ID.String(),
+			StartDate:   date,
+			StructureID: structure.ID,
+		}
 
-	// Check that the date is the same
-	sYear, sMonth, sDay := foundEntry.SignedOutAt.Date()
-	eYear, eMonth, eDay := event.StartDate.Date()
-	if sYear != eYear || sMonth != eMonth || sDay != eDay {
-		t.Errorf("SignedOutAt not equal to StartDate of event (user not signed out in last place): SignedOutAt: %v, StartDate: %v", foundEntry.SignedOutAt, event.StartDate)
-		return
-	}
+		event, err := eventService.CreateEvent(req)
+		assert.NoError(t, err, "EventService.CreateEvent")
+		assert.Equal(t, req.Name, event.Name, "Event.Name")
+		assert.Equal(t, req.Format, event.Format, "Event.Format")
+		assert.Equal(t, semester1.ID.String(), event.SemesterID.String(), "Event.SemesterID")
+		assert.Equal(t, date, event.StartDate, "Event.StartDate")
+		assert.Equal(t, structure.ID, event.StructureID)
+	})
 
-	// Check that hour, min, and second are equal (milliseconds don't matter)
-	sHour, sMin, sSec := foundEntry.SignedOutAt.Clock()
-	eHour, eMin, eSec := event.StartDate.Clock()
-	if sHour != eHour || sMin != eMin || sSec != eSec {
-		t.Errorf("SignedOutAt not equal to StartDate of event (user not signed out in last place): SignedOutAt: %v, StartDate: %v", foundEntry.SignedOutAt, event.StartDate)
-		return
-	}
-}
+	t.Run("ListEvents", func(t *testing.T) {
+		t.Cleanup(wipeDB)
 
-func TestEventService_EndEvent_PlacementAndRankingsUpdated(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+		semester1 := models.Semester{
+			Name:                  "Spring 2022",
+			Meta:                  "",
+			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
+			StartingBudget:        105.57,
+			CurrentBudget:         105.57,
+			MembershipFee:         10,
+			MembershipDiscountFee: 5,
+			RebuyFee:              2,
+		}
+		res := db.Create(&semester1)
+		assert.NoError(t, res.Error, "ListEvents (create semester)")
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
-	defer database.WipeDB(db)
+		structure := models.Structure{
+			Name: "Main Event Structure",
+		}
+		res = db.Create(&structure)
+		assert.NoError(t, res.Error, "ListEvents (create structure)")
 
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
+		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
+		event2Date := time.Date(2022, 1, 2, 7, 0, 0, 0, time.UTC)
+		event3Date := time.Date(2022, 1, 3, 7, 0, 0, 0, time.UTC)
 
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
+		event1 := models.Event{
+			Name:        "Event 1",
+			Format:      "NLHE",
+			Notes:       "#1",
+			SemesterID:  semester1.ID,
+			StartDate:   event1Date,
+			State:       models.EventStateStarted,
+			StructureID: structure.ID,
+		}
+		event2 := models.Event{
+			Name:        "Event 2",
+			Format:      "PLO",
+			Notes:       "#2",
+			SemesterID:  semester1.ID,
+			StartDate:   event2Date,
+			State:       models.EventStateEnded,
+			StructureID: structure.ID,
+		}
+		event3 := models.Event{
+			Name:        "Event 3",
+			Format:      "Short Deck",
+			Notes:       "#3",
+			SemesterID:  semester1.ID,
+			StartDate:   event3Date,
+			State:       models.EventStateStarted,
+			StructureID: structure.ID,
+		}
 
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now, 2)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
+		res = db.Create(&event1)
+		assert.NoError(t, res.Error, "ListEvents (create event 1)")
+		res = db.Create(&event2)
+		assert.NoError(t, res.Error, "ListEvents (create event 2)")
+		res = db.Create(&event3)
+		assert.NoError(t, res.Error, "ListEvents (create event 3)")
 
-	next := now.Add(time.Minute * 30)
-	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next, 0)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
+		events, err := eventService.ListEvents(semester1.ID.String())
+		assert.NoError(t, err, "eventService.ListEvents()")
 
-	last := next.Add(time.Minute * 30)
-	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, &last, 4)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
+		expIds := []uint64{event3.ID, event2.ID, event1.ID}
+		accIds := make([]uint64, len(events))
+		for i, e := range events {
+			accIds[i] = e.ID
+		}
+		assert.Equal(t, expIds, accIds, "Event IDs match")
+	})
 
-	svc := NewEventService(db)
-	err = svc.EndEvent(event.ID)
-	if err != nil {
-		t.Errorf("EndEvent() error = %v", err)
-		return
-	}
+	t.Run("GetEvent", func(t *testing.T) {
+		t.Cleanup(wipeDB)
 
-	// Check if entries placements were updated
-	// Entry3 = first place
-	// Entry2 = second place
-	// Entry1 = third place
-	firstPlace := models.Participant{
-		EventID:   event.ID,
-		Placement: 1,
-	}
-	res := db.Where("event_id = ? AND placement = ?", entry1.EventID, 1).First(&firstPlace)
-	if res.Error != nil {
-		t.Fatalf("Failed to retrieve entry: %v", err)
-	}
-	secondPlace := models.Participant{
-		EventID:   event.ID,
-		Placement: 2,
-	}
-	res = db.Where("event_id = ? AND placement = ?", entry2.EventID, 2).First(&secondPlace)
-	if res.Error != nil {
-		t.Fatalf("Failed to retrieve entry: %v", err)
-	}
-	thirdPlace := models.Participant{
-		EventID:   event.ID,
-		Placement: 3,
-	}
-	res = db.Where("event_id = ? AND placement = ?", entry3.EventID, 3).First(&thirdPlace)
-	if res.Error != nil {
-		t.Fatalf("Failed to retrieve entry: %v", err)
-	}
+		semester1 := models.Semester{
+			Name:                  "Spring 2022",
+			Meta:                  "",
+			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
+			StartingBudget:        105.57,
+			CurrentBudget:         105.57,
+			MembershipFee:         10,
+			MembershipDiscountFee: 5,
+			RebuyFee:              2,
+		}
+		res := db.Create(&semester1)
+		assert.NoError(t, res.Error, "GetEvent (create semester)")
 
-	if firstPlace.MembershipID != entry3.MembershipID {
-		t.Errorf("Event first place = %v. wanted = %v", firstPlace.MembershipID, entry3.MembershipID)
-		return
-	}
-	if secondPlace.MembershipID != entry2.MembershipID {
-		t.Errorf("Event second place = %v. wanted = %v", secondPlace.MembershipID, entry2.MembershipID)
-		return
-	}
-	if thirdPlace.MembershipID != entry1.MembershipID {
-		t.Errorf("Event third place = %v. wanted = %v", thirdPlace.MembershipID, entry1.MembershipID)
-		return
-	}
+		structure := models.Structure{
+			Name: "Main Event Structure",
+		}
+		res = db.Create(&structure)
+		assert.NoError(t, res.Error, "ListEvents (create structure)")
 
-	// Check to see rankings were updated
-	// First place = 2 points
-	// Second place = 2 points
-	// Third place = 2 points
-	ranking1 := models.Ranking{MembershipID: entry3.MembershipID}
-	res = db.First(&ranking1)
-	if res.Error != nil {
-		t.Fatalf("Failed to retrieve ranking: %v", err)
-	}
-	ranking2 := models.Ranking{MembershipID: entry2.MembershipID}
-	res = db.First(&ranking2)
-	if res.Error != nil {
-		t.Fatalf("Failed to retrieve ranking: %v", err)
-	}
-	ranking3 := models.Ranking{MembershipID: entry1.MembershipID}
-	res = db.First(&ranking3)
-	if res.Error != nil {
-		t.Fatalf("Failed to retrieve ranking: %v", err)
-	}
+		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
 
-	if ranking1.Points != 2 {
-		t.Errorf("%v ranking points = %v, expected = %v", ranking1.MembershipID, ranking1.Points, 2)
-		return
-	}
-	if ranking2.Points != 2 {
-		t.Errorf("%v ranking points = %v, expected = %v", ranking2.MembershipID, ranking2.Points, 2)
-		return
-	}
-	if ranking3.Points != 2 {
-		t.Errorf("%v ranking points = %v, expected = %v", ranking3.MembershipID, ranking3.Points, 2)
-		return
-	}
+		event1 := models.Event{
+			Name:        "Event 1",
+			Format:      "NLHE",
+			Notes:       "#1",
+			SemesterID:  semester1.ID,
+			StartDate:   event1Date,
+			State:       models.EventStateStarted,
+			StructureID: structure.ID,
+		}
+
+		res = db.Create(&event1)
+		assert.NoError(t, res.Error, "GetEvent (create event)")
+
+		event, err := eventService.GetEvent(event1.ID)
+		assert.NoError(t, err, "EventService.GetEvent()")
+
+		assert.Equal(t, event1, *event, "Returned event does not match")
+	})
+
+	t.Run("EndEvent", func(t *testing.T) {
+		t.Run("Updates the state of the event", func(t *testing.T) {
+			semester1 := models.Semester{
+				Name:                  "Spring 2022",
+				Meta:                  "",
+				StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
+				EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
+				StartingBudget:        105.57,
+				CurrentBudget:         105.57,
+				MembershipFee:         10,
+				MembershipDiscountFee: 5,
+				RebuyFee:              2,
+			}
+			res := db.Create(&semester1)
+			assert.NoError(t, res.Error, "GetEvent (create semester)")
+
+			structure := models.Structure{
+				Name: "Main Event Structure",
+			}
+			res = db.Create(&structure)
+			assert.NoError(t, res.Error, "ListEvents (create structure)")
+
+			event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
+
+			event1 := models.Event{
+				Name:        "Event 1",
+				Format:      "NLHE",
+				Notes:       "#1",
+				SemesterID:  semester1.ID,
+				StartDate:   event1Date,
+				State:       models.EventStateStarted,
+				StructureID: structure.ID,
+			}
+
+			res = db.Create(&event1)
+			assert.NoError(t, res.Error, "GetEvent (create event)")
+
+			err = eventService.EndEvent(event1.ID)
+			assert.NoError(t, err, "EventService.EndEvent()")
+
+			// Retrieve event to see if state was updated
+			updatedEvent := models.Event{ID: event1.ID}
+			res = db.First(&updatedEvent)
+			assert.NoError(t, res.Error, "EndEvent (get updated event)")
+			assert.Equal(t, uint8(models.EventStateEnded), updatedEvent.State, "Event state not updated")
+		})
+		t.Run("Signs out unsigned out entries", func(t *testing.T) {
+			t.Cleanup(wipeDB)
+
+			set, err := testhelpers.SetupSemester(db, "Fall 2022")
+			assert.NoError(t, err, "Semester setup")
+
+			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+			assert.NoError(t, err, "Event creation")
+
+			now := time.Now().UTC()
+			_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now, 2)
+			assert.NoError(t, err, "Adding first entry")
+
+			next := now.Add(time.Minute * 30)
+			_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next, 0)
+			assert.NoError(t, err, "Adding second entry")
+
+			entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil, 4)
+			assert.NoError(t, err, "Adding third entry")
+
+			err = eventService.EndEvent(event.ID)
+			assert.NoError(t, err, "EventService.EndEvent()")
+
+			// Check that entry3's signed_out_at field is set to the start time of the event
+			foundEntry := models.Participant{ID: entry3.ID}
+			res := db.First(&foundEntry)
+			assert.NoError(t, res.Error, "Getting third entry from DB")
+			assert.WithinDuration(t, event.StartDate, *foundEntry.SignedOutAt, time.Second, "Signout time check")
+		})
+		t.Run("Placements and rankings are updated", func(t *testing.T) {
+			t.Cleanup(wipeDB)
+
+			set, err := testhelpers.SetupSemester(db, "Fall 2022")
+			assert.NoError(t, err, "Semester setup")
+
+			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+			assert.NoError(t, err, "Event creation")
+
+			now := time.Now().UTC()
+			entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now, 2)
+			assert.NoError(t, err, "Adding first entry")
+
+			next := now.Add(time.Minute * 30)
+			entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next, 0)
+			assert.NoError(t, err, "Adding second entry")
+
+			last := next.Add(time.Minute * 30)
+			entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, &last, 4)
+			assert.NoError(t, err, "Adding third entry")
+
+			err = eventService.EndEvent(event.ID)
+			assert.NoError(t, err, "EventService.EndEvent()")
+
+			// Check if entries placements were updated
+			// Entry3 = first place
+			// Entry2 = second place
+			// Entry1 = third place
+			firstPlace := models.Participant{
+				EventID:   event.ID,
+				Placement: 1,
+			}
+			res := db.Where("event_id = ? AND placement = ?", entry1.EventID, 1).First(&firstPlace)
+			assert.NoError(t, res.Error, "Retrieve first place entry")
+
+			secondPlace := models.Participant{
+				EventID:   event.ID,
+				Placement: 2,
+			}
+			res = db.Where("event_id = ? AND placement = ?", entry2.EventID, 2).First(&secondPlace)
+			assert.NoError(t, res.Error, "Retrieve second place entry")
+
+			thirdPlace := models.Participant{
+				EventID:   event.ID,
+				Placement: 3,
+			}
+			res = db.Where("event_id = ? AND placement = ?", entry3.EventID, 3).First(&thirdPlace)
+			assert.NoError(t, res.Error, "Retrieve third place entry")
+
+			assert.Equal(t, entry3.MembershipID, firstPlace.MembershipID, "First place member")
+			assert.Equal(t, entry2.MembershipID, secondPlace.MembershipID, "Second place member")
+			assert.Equal(t, entry1.MembershipID, thirdPlace.MembershipID, "Third place member")
+
+			// Check to see rankings were updated
+			// First place = 2 points
+			// Second place = 2 points
+			// Third place = 2 points
+			ranking1 := models.Ranking{MembershipID: entry3.MembershipID}
+			res = db.First(&ranking1)
+			assert.NoError(t, res.Error, "Entry 3 ranking")
+			ranking2 := models.Ranking{MembershipID: entry2.MembershipID}
+			res = db.First(&ranking2)
+			assert.NoError(t, res.Error, "Entry 2 ranking")
+			ranking3 := models.Ranking{MembershipID: entry1.MembershipID}
+			res = db.First(&ranking3)
+			assert.NoError(t, res.Error, "Entry 1 ranking")
+
+			assert.EqualValues(t, 2, ranking1.Points, "Ranking 1 points")
+			assert.EqualValues(t, 2, ranking2.Points, "Ranking 2 points")
+			assert.EqualValues(t, 2, ranking3.Points, "Ranking 3 points")
+		})
+	})
 }

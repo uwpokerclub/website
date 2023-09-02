@@ -26,12 +26,13 @@ func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Eve
 	}
 
 	event := models.Event{
-		Name:       req.Name,
-		Format:     req.Format,
-		Notes:      req.Notes,
-		SemesterID: semesterId,
-		StartDate:  req.StartDate,
-		State:      models.EventStateStarted,
+		Name:        req.Name,
+		Format:      req.Format,
+		Notes:       req.Notes,
+		SemesterID:  semesterId,
+		StartDate:   req.StartDate,
+		State:       models.EventStateStarted,
+		StructureID: req.StructureID,
 	}
 
 	res := es.db.Create(&event)

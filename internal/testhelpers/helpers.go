@@ -49,16 +49,25 @@ func CreateUser(db *gorm.DB, id uint64, firstName string, lastName string, email
 }
 
 func CreateEvent(db *gorm.DB, name string, semesterId uuid.UUID, startDate time.Time) (*models.Event, error) {
-	event := models.Event{
-		Name:       name,
-		Format:     "NLHE",
-		Notes:      "",
-		SemesterID: semesterId,
-		StartDate:  startDate,
-		State:      models.EventStateStarted,
+	structure := models.Structure{
+		Name: "Main Event Structure",
+	}
+	res := db.Create(&structure)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 
-	res := db.Create(&event)
+	event := models.Event{
+		Name:        name,
+		Format:      "NLHE",
+		Notes:       "",
+		SemesterID:  semesterId,
+		StartDate:   startDate,
+		State:       models.EventStateStarted,
+		StructureID: structure.ID,
+	}
+
+	res = db.Create(&event)
 	if res.Error != nil {
 		return nil, res.Error
 	}

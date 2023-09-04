@@ -33,6 +33,7 @@ func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Eve
 		StartDate:   req.StartDate,
 		State:       models.EventStateStarted,
 		StructureID: req.StructureID,
+		Rebuys:      0,
 	}
 
 	res := es.db.Create(&event)
@@ -159,6 +160,56 @@ func (es *eventService) EndEvent(eventId uint64) error {
 	}
 
 	// Save all changes to the database
+	res = tx.Commit()
+	if err := res.Error; err != nil {
+		tx.Rollback()
+		return e.InternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+func (es *eventService) NewRebuy(eventId uint64) error {
+	event := models.Event{ID: eventId}
+	res := es.db.First(&event)
+
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return e.NotFound(err.Error())
+	} else if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	if event.State == models.EventStateEnded {
+		return e.Forbidden("This event has already ended, it cannot be ended again.")
+	}
+
+	tx := es.db.Begin()
+	if err := tx.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	event.Rebuys += 1
+
+	semesterService := NewSemesterService(tx)
+
+	semester, err := semesterService.GetSemester(event.SemesterID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = semesterService.UpdateBudget(event.SemesterID, float64(semester.RebuyFee))
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	res = tx.Save(&event)
+	if err := res.Error; err != nil {
+		tx.Rollback()
+		return e.InternalServerError(err.Error())
+	}
+
 	res = tx.Commit()
 	if err := res.Error; err != nil {
 		tx.Rollback()

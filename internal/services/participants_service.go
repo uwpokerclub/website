@@ -36,7 +36,6 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 		EventID:      req.EventID,
 		Placement:    0,
 		SignedOutAt:  nil,
-		Rebuys:       0,
 	}
 
 	res := svc.db.Create(&participant)
@@ -52,13 +51,13 @@ func (svc *participantsService) ListParticipants(eventId uint64) ([]models.ListP
 
 	subQuery := svc.db.
 		Table("participants").
-		Select("memberships.id, memberships.user_id, participants.signed_out_at, participants.placement, participants.rebuys").
+		Select("memberships.id, memberships.user_id, participants.signed_out_at, participants.placement").
 		Joins("INNER JOIN memberships on memberships.id = participants.membership_id").
 		Where("participants.event_id = ?", eventId)
 
 	res := svc.db.
 		Table("(?) as entries", subQuery).
-		Select("users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.rebuys, entries.id as membership_id").
+		Select("users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id as membership_id").
 		Joins("INNER JOIN users ON users.id = entries.user_id").
 		Order("entries.signed_out_at DESC").
 		Find(&ret)
@@ -102,25 +101,6 @@ func (svc *participantsService) UpdateParticipant(req *models.UpdateParticipantR
 	tx := svc.db.Begin()
 	if err := tx.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
-	}
-
-	semesterService := NewSemesterService(tx)
-
-	semester, err := semesterService.GetSemester(event.SemesterID)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	if req.Rebuy {
-		participant.Rebuys += 1
-
-		// Update semester budget by rebuy fee
-		err = semesterService.UpdateBudget(event.SemesterID, float64(semester.RebuyFee))
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
 	}
 
 	if req.SignIn {

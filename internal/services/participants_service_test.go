@@ -47,11 +47,6 @@ func TestParticipantsService_CreateParticipant(t *testing.T) {
 		return
 	}
 
-	if res.Rebuys != 0 {
-		t.Errorf("Rebuys = %v, expected = %v", res.Rebuys, 0)
-		return
-	}
-
 	if res.SignedOutAt != nil {
 		t.Errorf("SignedOutAt not nil")
 		return
@@ -78,18 +73,18 @@ func TestParticipantsService_ListParticipants(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now, 2)
+	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
 	if err != nil {
 		t.Fatalf("Failed to add entry: %v", err)
 	}
 
 	next := now.Add(time.Minute * 30)
-	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 2, &next, 0)
+	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 2, &next)
 	if err != nil {
 		t.Fatalf("Failed to add entry: %v", err)
 	}
 
-	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 1, nil, 4)
+	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 1, nil)
 	if err != nil {
 		t.Fatalf("Failed to add entry: %v", err)
 	}
@@ -137,7 +132,7 @@ func TestParticipantsService_UpdateParticipant_SignIn(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now, 2)
+	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
 	if err != nil {
 		t.Fatalf("Failed to add entry: %v", err)
 	}
@@ -149,7 +144,6 @@ func TestParticipantsService_UpdateParticipant_SignIn(t *testing.T) {
 		EventID:      event.ID,
 		SignIn:       true,
 		SignOut:      false,
-		Rebuy:        false,
 	})
 	if err != nil {
 		t.Errorf("UpdateParticipant() error = %v", err)
@@ -182,7 +176,7 @@ func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now, 2)
+	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
 	if err != nil {
 		t.Fatalf("Failed to add entry: %v", err)
 	}
@@ -194,7 +188,6 @@ func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
 		EventID:      event.ID,
 		SignIn:       false,
 		SignOut:      true,
-		Rebuy:        false,
 	})
 	if err != nil {
 		t.Errorf("UpdateParticipant() error = %v", err)
@@ -203,60 +196,6 @@ func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
 
 	if res.SignedOutAt == nil {
 		t.Errorf("SignedOutAt = nil, expected not nil")
-		return
-	}
-}
-
-func TestParticipantsService_UpdateParticipant_Rebuy(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
-
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
-
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now, 2)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	svc := NewParticipantsService(db)
-
-	res, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{
-		MembershipID: entry1.MembershipID,
-		EventID:      event.ID,
-		SignIn:       false,
-		SignOut:      false,
-		Rebuy:        true,
-	})
-	if err != nil {
-		t.Errorf("UpdateParticipant() error = %v", err)
-		return
-	}
-
-	if res.Rebuys != entry1.Rebuys+1 {
-		t.Errorf("Rebuys = %v, expected = %v", res.Rebuys, entry1.Rebuys+1)
-		return
-	}
-
-	// Ensure budget was updated
-	semester := models.Semester{ID: set.Semester.ID}
-	_ = db.First(&semester)
-
-	if !almostEqual(semester.CurrentBudget, set.Semester.CurrentBudget+float64(set.Semester.RebuyFee)) {
-		t.Errorf("Semester budget not correct; got: %v, wanted: %v", semester.CurrentBudget, set.Semester.CurrentBudget+float64(set.Semester.RebuyFee))
 		return
 	}
 }
@@ -281,7 +220,7 @@ func TestParticipantsService_DeleteParticipant(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now, 2)
+	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
 	if err != nil {
 		t.Fatalf("Failed to add entry: %v", err)
 	}

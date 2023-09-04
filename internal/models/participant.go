@@ -12,7 +12,6 @@ type Participant struct {
 	EventID      uint64     `json:"eventId"`
 	Placement    uint32     `json:"placement"`
 	SignedOutAt  *time.Time `json:"signedOutAt"`
-	Rebuys       uint8      `json:"rebuys"`
 }
 
 type CreateParticipantRequest struct {
@@ -25,7 +24,6 @@ type UpdateParticipantRequest struct {
 	EventID      uint64    `json:"eventId" binding:"required"`
 	SignIn       bool
 	SignOut      bool
-	Rebuy        bool
 }
 
 type DeleteParticipantRequest struct {
@@ -40,5 +38,4 @@ type ListParticipantsResult struct {
 	LastName     string     `json:"lastName"`
 	SignedOutAt  *time.Time `json:"signedOutAt"`
 	Placement    uint32     `json:"placement"`
-	Rebuys       uint8      `json:"rebuys"`
 }

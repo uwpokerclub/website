@@ -65,6 +65,7 @@ func CreateEvent(db *gorm.DB, name string, semesterId uuid.UUID, startDate time.
 		StartDate:   startDate,
 		State:       models.EventStateStarted,
 		StructureID: structure.ID,
+		Rebuys:      0,
 	}
 
 	res = db.Create(&event)
@@ -91,13 +92,12 @@ func CreateMembership(db *gorm.DB, userId uint64, semesterId uuid.UUID, paid boo
 	return &membership, nil
 }
 
-func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId uint64, placement uint32, signedOutAt *time.Time, rebuys uint8) (*models.Participant, error) {
+func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId uint64, placement uint32, signedOutAt *time.Time) (*models.Participant, error) {
 	entry := models.Participant{
 		MembershipID: membershipId,
 		EventID:      eventId,
 		Placement:    placement,
 		SignedOutAt:  signedOutAt,
-		Rebuys:       rebuys,
 	}
 
 	res := db.Create(&entry)

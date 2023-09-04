@@ -20,6 +20,7 @@ type Event struct {
 	StartDate   time.Time `json:"startDate"`
 	State       uint8     `json:"state"`
 	StructureID uint64    `json:"structureId"`
+	Rebuys      uint8     `json:"rebuys"`
 }
 
 type CreateEventRequest struct {

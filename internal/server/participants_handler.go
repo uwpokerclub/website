@@ -83,25 +83,6 @@ func (s *apiServer) SignInParticipant(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, participant)
 }
 
-func (s *apiServer) RebuyParticipant(ctx *gin.Context) {
-	var req models.UpdateParticipantRequest
-	err := ctx.ShouldBindJSON(&req)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
-		return
-	}
-	req.Rebuy = true
-
-	svc := services.NewParticipantsService(s.db)
-	participant, err := svc.UpdateParticipant(&req)
-	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, participant)
-}
-
 func (s *apiServer) DeleteParticipant(ctx *gin.Context) {
 	var req models.DeleteParticipantRequest
 	err := ctx.ShouldBindJSON(&req)

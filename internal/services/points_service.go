@@ -57,6 +57,6 @@ func getPayout(placement int) int {
 	return payouts[placement]
 }
 
-func CalculatePoints(eventSize int, placement int) int {
-	return int(math.Ceil(float64((getPayout(placement) * eventSize)) / SizeFactor))
+func CalculatePoints(eventSize int, placement int, pointsMultiplier float32) int {
+	return int(math.Ceil(float64((getPayout(placement)*eventSize))/SizeFactor) * float64(pointsMultiplier))
 }

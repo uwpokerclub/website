@@ -58,14 +58,15 @@ func CreateEvent(db *gorm.DB, name string, semesterId uuid.UUID, startDate time.
 	}
 
 	event := models.Event{
-		Name:        name,
-		Format:      "NLHE",
-		Notes:       "",
-		SemesterID:  semesterId,
-		StartDate:   startDate,
-		State:       models.EventStateStarted,
-		StructureID: structure.ID,
-		Rebuys:      0,
+		Name:             name,
+		Format:           "NLHE",
+		Notes:            "",
+		SemesterID:       semesterId,
+		StartDate:        startDate,
+		State:            models.EventStateStarted,
+		StructureID:      structure.ID,
+		Rebuys:           0,
+		PointsMultiplier: 1.0,
 	}
 
 	res = db.Create(&event)

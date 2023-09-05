@@ -26,14 +26,15 @@ func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Eve
 	}
 
 	event := models.Event{
-		Name:        req.Name,
-		Format:      req.Format,
-		Notes:       req.Notes,
-		SemesterID:  semesterId,
-		StartDate:   req.StartDate,
-		State:       models.EventStateStarted,
-		StructureID: req.StructureID,
-		Rebuys:      0,
+		Name:             req.Name,
+		Format:           req.Format,
+		Notes:            req.Notes,
+		SemesterID:       semesterId,
+		StartDate:        req.StartDate,
+		State:            models.EventStateStarted,
+		StructureID:      req.StructureID,
+		Rebuys:           0,
+		PointsMultiplier: req.PointsMultiplier,
 	}
 
 	res := es.db.Create(&event)
@@ -142,7 +143,7 @@ func (es *eventService) EndEvent(eventId uint64) error {
 	rankingService := NewRankingService(tx)
 	eventSize := len(entries)
 	for i, entry := range entries {
-		points := CalculatePoints(eventSize, i+1)
+		points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
 
 		err := rankingService.UpdateRanking(entry.MembershipID, points)
 		if err != nil {

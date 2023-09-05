@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEventService(t *testing.T) {
+func TestEventsService(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 
 	db, err := database.OpenTestConnection()
@@ -58,12 +58,13 @@ func TestEventService(t *testing.T) {
 		date := time.Now()
 
 		req := &models.CreateEventRequest{
-			Name:        "test",
-			Format:      "NLHE",
-			Notes:       "test event",
-			SemesterID:  semester1.ID.String(),
-			StartDate:   date,
-			StructureID: structure.ID,
+			Name:             "test",
+			Format:           "NLHE",
+			Notes:            "test event",
+			SemesterID:       semester1.ID.String(),
+			StartDate:        date,
+			StructureID:      structure.ID,
+			PointsMultiplier: 2.3,
 		}
 
 		event, err := eventService.CreateEvent(req)
@@ -72,8 +73,9 @@ func TestEventService(t *testing.T) {
 		assert.Equal(t, req.Format, event.Format, "Event.Format")
 		assert.Equal(t, semester1.ID.String(), event.SemesterID.String(), "Event.SemesterID")
 		assert.Equal(t, date, event.StartDate, "Event.StartDate")
-		assert.Equal(t, structure.ID, event.StructureID)
-		assert.EqualValues(t, 0, event.Rebuys)
+		assert.Equal(t, structure.ID, event.StructureID, "Event.StructureID")
+		assert.EqualValues(t, 0, event.Rebuys, "Event.Rebuys")
+		assert.InDelta(t, 2.3, event.PointsMultiplier, 0.01, "Event.PointsMultiplier")
 	})
 
 	t.Run("ListEvents", func(t *testing.T) {
@@ -178,14 +180,15 @@ func TestEventService(t *testing.T) {
 		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
 
 		event1 := models.Event{
-			Name:        "Event 1",
-			Format:      "NLHE",
-			Notes:       "#1",
-			SemesterID:  semester1.ID,
-			StartDate:   event1Date,
-			State:       models.EventStateStarted,
-			StructureID: structure.ID,
-			Rebuys:      0,
+			Name:             "Event 1",
+			Format:           "NLHE",
+			Notes:            "#1",
+			SemesterID:       semester1.ID,
+			StartDate:        event1Date,
+			State:            models.EventStateStarted,
+			StructureID:      structure.ID,
+			Rebuys:           0,
+			PointsMultiplier: 2.3,
 		}
 
 		res = db.Create(&event1)
@@ -222,14 +225,15 @@ func TestEventService(t *testing.T) {
 			event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
 
 			event1 := models.Event{
-				Name:        "Event 1",
-				Format:      "NLHE",
-				Notes:       "#1",
-				SemesterID:  semester1.ID,
-				StartDate:   event1Date,
-				State:       models.EventStateStarted,
-				StructureID: structure.ID,
-				Rebuys:      0,
+				Name:             "Event 1",
+				Format:           "NLHE",
+				Notes:            "#1",
+				SemesterID:       semester1.ID,
+				StartDate:        event1Date,
+				State:            models.EventStateStarted,
+				StructureID:      structure.ID,
+				Rebuys:           0,
+				PointsMultiplier: 2.3,
 			}
 
 			res = db.Create(&event1)
@@ -371,14 +375,15 @@ func TestEventService(t *testing.T) {
 		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
 
 		event1 := models.Event{
-			Name:        "Event 1",
-			Format:      "NLHE",
-			Notes:       "#1",
-			SemesterID:  semester1.ID,
-			StartDate:   event1Date,
-			State:       models.EventStateStarted,
-			StructureID: structure.ID,
-			Rebuys:      0,
+			Name:             "Event 1",
+			Format:           "NLHE",
+			Notes:            "#1",
+			SemesterID:       semester1.ID,
+			StartDate:        event1Date,
+			State:            models.EventStateStarted,
+			StructureID:      structure.ID,
+			Rebuys:           0,
+			PointsMultiplier: 1.0,
 		}
 
 		res = db.Create(&event1)

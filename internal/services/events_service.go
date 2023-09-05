@@ -62,8 +62,8 @@ func (es *eventService) GetEvent(eventId uint64) (*models.Event, error) {
 	return &event, nil
 }
 
-func (es *eventService) ListEvents(semesterId string) ([]models.Event, error) {
-	var events []models.Event
+func (es *eventService) ListEvents(semesterId string) ([]models.ListEventsResponse, error) {
+	var events []models.ListEventsResponse
 
 	query := es.db.
 		Table("events").

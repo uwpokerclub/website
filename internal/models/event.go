@@ -40,4 +40,5 @@ type ListEventsResponse struct {
 	SemesterID string    `json:"semesterId" gorm:"type:uuid"`
 	StartDate  time.Time `json:"startDate"`
 	State      uint8     `json:"state"`
+	Count      int32     `json:"count"`
 }

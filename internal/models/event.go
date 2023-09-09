@@ -31,7 +31,7 @@ type CreateEventRequest struct {
 	SemesterID       string    `json:"semesterId" binding:"required"`
 	StartDate        time.Time `json:"startDate" binding:"required"`
 	StructureID      uint64    `json:"structureId" binding:"required"`
-	PointsMultiplier float32   `json:"pointsMulitplier" binding:"required"`
+	PointsMultiplier float32   `json:"pointsMultiplier" binding:"required"`
 }
 
 type ListEventsResponse struct {

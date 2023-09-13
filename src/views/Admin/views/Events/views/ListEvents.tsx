@@ -17,7 +17,7 @@ function ListEvents(): ReactElement {
       setFilteredEvents(events);
     } else {
       setFilteredEvents(
-        events.filter((event) => event.semesterId === semesterId)
+        events.filter((event) => event.semesterId === semesterId),
       );
     }
   };
@@ -34,7 +34,6 @@ function ListEvents(): ReactElement {
     }
   }, [eventsData, semestersData]);
 
-
   return (
     <>
       {!isLoading && (
@@ -43,10 +42,7 @@ function ListEvents(): ReactElement {
 
           <div className="row">
             <div className="col-md-6">
-              <Link
-                to={`new`}
-                className="btn btn-primary btn-responsive"
-              >
+              <Link to={`new`} className="btn btn-primary btn-responsive">
                 Create an Event
               </Link>
             </div>
@@ -80,13 +76,13 @@ function ListEvents(): ReactElement {
                       </p>
                       <p>
                         <strong>Date:</strong>{" "}
-                        {event.startDate.toLocaleString("en-US", {
-                          hour12: true,
-                          month: "short",
-                          day: "numeric",
+                        {new Date(event.startDate).toLocaleDateString("en-US", {
+                          weekday: "long",
                           year: "numeric",
+                          month: "long",
+                          day: "numeric",
                           hour: "numeric",
-                          minute: "2-digit",
+                          minute: "numeric",
                         })}
                       </p>
                       <p>

@@ -90,7 +90,7 @@ function RegisterEntires(): ReactElement {
                   <div
                     key={member.id}
                     className={`Participants__item ${
-                      Number(member.attendance) >= 1 && !member.paid
+                      Number(member.attendance) >= 4 && !member.paid
                         ? "Participants__item-danger"
                         : ""
                     }`}

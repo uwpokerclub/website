@@ -18,7 +18,7 @@ type Blind struct {
 type BlindJSON struct {
 	Small int32 `json:"small" binding:"required,gte=0"`
 	Big   int32 `json:"big" binding:"required,gte=0"`
-	Ante  int32 `json:"ante" binding:"required,gte=0"`
+	Ante  int32 `json:"ante" binding:"omitempty,gte=0"`
 	Time  int8  `json:"time" binding:"required,gt=0,lte=60"`
 }
 

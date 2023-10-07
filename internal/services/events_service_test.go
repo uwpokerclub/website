@@ -349,6 +349,7 @@ func TestEventsService(t *testing.T) {
 			assert.EqualValues(t, 2, ranking3.Points, "Ranking 3 points")
 		})
 	})
+
 	t.Run("NewRebuy", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
@@ -401,5 +402,40 @@ func TestEventsService(t *testing.T) {
 		res = db.First(&updatedSemester)
 		assert.NoError(t, res.Error, "Retrieve updated semester")
 		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float64(semester1.RebuyFee), 0.001)
+	})
+
+	t.Run("UndoEndEvent", func(t *testing.T) {
+		t.Cleanup(wipeDB)
+		//setup semester
+		set, err := testhelpers.SetupSemester(db, "Fall 2023")
+		assert.NoError(t, err, "Semester setup")
+		//create event
+		event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+		assert.NoError(t, err, "Event creation")
+
+		//add participant  to event
+		now := time.Now().UTC()
+		entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now)
+		assert.NoError(t, err, "Add participant to event")
+
+		//end event
+		err = eventService.EndEvent(event.ID)
+		assert.NoError(t, err, "EventService.EndEvent()")
+
+		//check points is > 0
+		points1 := models.Ranking{MembershipID: entry1.MembershipID}
+		res := db.First(&points1)
+		assert.NoError(t, res.Error, "Retrieve points from rankings")
+		assert.Greater(t, points1.Points, int32(0), "Entry 1 points")
+
+		//check user points is 0
+		err = eventService.UndoEndEvent(event.ID)
+		assert.NoError(t, err, "EventService.UndoEndEvent()")
+
+		points1 = models.Ranking{MembershipID: entry1.MembershipID}
+		res = db.First(&points1)
+		assert.NoError(t, res.Error, "Retrieve rankings after restarting event")
+
+		assert.EqualValues(t, 0, points1.Points, "Entry 1 points")
 	})
 }

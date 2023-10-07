@@ -58,6 +58,23 @@ func (s *apiServer) GetEvent(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, event)
 }
 
+func (s *apiServer) UndoEndEvent(ctx *gin.Context) {
+	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
+		return
+	}
+
+	svc := services.NewEventService(s.db)
+	err = svc.UndoEndEvent(eventId)
+	if err != nil {
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		return
+	}
+
+	ctx.String(http.StatusNoContent, "")
+}
+
 func (s *apiServer) EndEvent(ctx *gin.Context) {
 	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
 	if err != nil {

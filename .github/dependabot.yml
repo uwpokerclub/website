@@ -6,16 +6,15 @@ updates:
       interval: daily
     reviewers:
       - asmahood
-    ignore:
-      # We can customize this per repo but as a starting point we may want to ignore all major updates
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+    labels:
+      - "type::Dependencies"
+      - "dep::Javascript"
   - package-ecosystem: docker
     directory: "/"
     schedule:
       interval: daily
     reviewers:
       - asmahood
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+    labels:
+      - "type::Dependencies"
+      - "dep::Docker"

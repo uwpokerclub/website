@@ -1,4 +1,4 @@
-name: Publish Docker image
+name: Publish And Deploy
 on:
   release:
     types: [created]
@@ -26,3 +26,15 @@ jobs:
         run: docker push us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/api:${GITHUB_REF##*/}
       - name: Push the latest Docker image
         run: docker push us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/api:latest
+  deploy:
+    name: Deploy version to Google Cloud
+    runs-on: ubuntu-latest
+    needs: push_to_artifact_registry
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: '${{ secrets.GCP_WIP }}'
+          service_account: '${{ secrets.GCP_SA }}'
+      - name: Deploy
+        run: gcloud run deploy api-golang --image=us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/api:${GITHUB_REF##*/}

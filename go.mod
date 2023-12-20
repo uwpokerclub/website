@@ -7,7 +7,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.5.0
 	github.com/pressly/goose/v3 v3.15.1
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.17.0
 	gorm.io/driver/postgres v1.5.3

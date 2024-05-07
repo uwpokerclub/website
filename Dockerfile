@@ -1,4 +1,4 @@
-FROM golang:1.18.3-stretch as build
+FROM golang:1.21.10-bullseye as build
 
 # Set Golang build environment variables
 ENV GO111MODULE=on
@@ -16,8 +16,8 @@ COPY go.sum ./
 RUN go mod download
 
 # Install development dependencies
-RUN go install github.com/pressly/goose/v3/cmd/goose@v3.6.1
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.15.1
 
 RUN go mod verify
 
@@ -25,7 +25,7 @@ RUN go mod verify
 COPY . .
 
 # Build executable
-RUN go build -o /app/server .
+RUN go build -buildvcs=false -o /app/server .
 
 EXPOSE 5000
 

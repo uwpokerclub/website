@@ -35,3 +35,14 @@ func (svc *sessionManager) Create(username string) (uuid.UUID, error) {
 
 	return session.ID, nil
 }
+
+func (svc *sessionManager) Invalidate(sessionID uuid.UUID) error {
+	session := models.Session{ID: sessionID}
+
+	res := svc.db.Delete(&session)
+	if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	return nil
+}

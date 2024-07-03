@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func (s *apiServer) CreateLogin(ctx *gin.Context) {
@@ -102,4 +103,38 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 
 	// Returm an empty response with status code 201
 	ctx.Status(http.StatusCreated)
+}
+
+func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
+	var cookieKey string
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+		cookieKey = "uwpsc-session-id"
+	} else {
+		cookieKey = "uwpsc-dev-session-id"
+	}
+
+	// Ensure cookie is in the request
+	sessionID, err := ctx.Cookie(cookieKey)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
+		return
+	}
+
+	// Ensure cookie is a valid UUID
+	err = uuid.Validate(sessionID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusForbidden, e.Forbidden("Invalid session ID provided"))
+		return
+	}
+
+	sessionUUID, _ := uuid.Parse(sessionID)
+
+	sessionManger := authentication.NewSessionManager(s.db)
+	err = sessionManger.Invalidate(sessionUUID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
 }

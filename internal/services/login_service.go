@@ -52,6 +52,7 @@ func (svc *loginService) CreateLogin(username string, password string) error {
 	return nil
 }
 
+// TODO: Remove once session based authentication is implemented on app and api side
 func (svc *loginService) ValidateCredentials(username string, password string) (string, error) {
 	login := models.Login{Username: username}
 

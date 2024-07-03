@@ -50,7 +50,13 @@ func (s *apiServer) SetupRoutes() {
 	loginRoute := s.r.Group("/login")
 	{
 		loginRoute.POST("", s.CreateLogin)
+		// TODO: Remove this route when session-based login is implmented in both app and api
 		loginRoute.POST("session", s.NewSession)
+	}
+
+	sessionRoute := s.r.Group("/session")
+	{
+		sessionRoute.POST("", s.SessionLoginHandler)
 	}
 
 	usersRoute := s.r.Group("/users", middleware.UseAuthentication)

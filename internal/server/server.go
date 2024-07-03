@@ -60,7 +60,7 @@ func (s *apiServer) SetupRoutes() {
 		sessionRoute.POST("logout", s.SessionLogoutHandler)
 	}
 
-	usersRoute := s.r.Group("/users", middleware.UseAuthentication)
+	usersRoute := s.r.Group("/users", middleware.UseAuthentication(s.db))
 	{
 		usersRoute.GET("", s.ListUsers)
 		usersRoute.POST("", s.CreateUser)
@@ -69,7 +69,7 @@ func (s *apiServer) SetupRoutes() {
 		usersRoute.DELETE(":id", s.DeleteUser)
 	}
 
-	semestersRoute := s.r.Group("/semesters", middleware.UseAuthentication)
+	semestersRoute := s.r.Group("/semesters", middleware.UseAuthentication(s.db))
 	{
 		semestersRoute.GET("", s.ListSemesters)
 		semestersRoute.POST("", s.CreateSemester)
@@ -84,7 +84,7 @@ func (s *apiServer) SetupRoutes() {
 		semestersRoute.DELETE(":semesterId/transactions/:transactionId", s.DeleteTransaction)
 	}
 
-	eventsRoute := s.r.Group("/events", middleware.UseAuthentication)
+	eventsRoute := s.r.Group("/events", middleware.UseAuthentication(s.db))
 	{
 		eventsRoute.GET("", s.ListEvents)
 		eventsRoute.POST("", s.CreateEvent)
@@ -94,7 +94,7 @@ func (s *apiServer) SetupRoutes() {
 		eventsRoute.POST(":eventId/rebuy", s.NewRebuy)
 	}
 
-	membershipRoutes := s.r.Group("/memberships", middleware.UseAuthentication)
+	membershipRoutes := s.r.Group("/memberships", middleware.UseAuthentication(s.db))
 	{
 		membershipRoutes.GET("", s.ListMemberships)
 		membershipRoutes.POST("", s.CreateMembership)
@@ -102,7 +102,7 @@ func (s *apiServer) SetupRoutes() {
 		membershipRoutes.PATCH(":id", s.UpdateMembership)
 	}
 
-	participantRoute := s.r.Group("/participants", middleware.UseAuthentication)
+	participantRoute := s.r.Group("/participants", middleware.UseAuthentication(s.db))
 	{
 		participantRoute.GET("", s.ListParticipants)
 		participantRoute.POST("", s.CreateParticipant)
@@ -111,7 +111,7 @@ func (s *apiServer) SetupRoutes() {
 		participantRoute.DELETE("", s.DeleteParticipant)
 	}
 
-	structuresRoute := s.r.Group("/structures", middleware.UseAuthentication)
+	structuresRoute := s.r.Group("/structures", middleware.UseAuthentication(s.db))
 	{
 		structuresRoute.POST("", s.CreateStructure)
 		structuresRoute.GET("", s.ListStructures)

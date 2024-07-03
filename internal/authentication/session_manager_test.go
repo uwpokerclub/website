@@ -11,6 +11,25 @@ import (
 	"gorm.io/gorm"
 )
 
+func CreateTestSession(db *gorm.DB, username, password string, start time.Time) (*models.Session, error) {
+	// Create test user
+	err := CreateTestLogin(db, "testuser", "password")
+	if err != nil {
+		return nil, err
+	}
+
+	// Create test session
+	session := models.Session{
+		ID:        uuid.New(),
+		Username:  "testuser",
+		StartedAt: start,
+		ExpiresAt: start.Add(time.Hour * 8),
+	}
+	res := db.Create(&session)
+
+	return &session, res.Error
+}
+
 func TestSessionManager(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 
@@ -65,19 +84,9 @@ func TestSessionManager(t *testing.T) {
 	t.Run("Invalidate__ExistingSession", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
-		// Create test user
-		err := CreateTestLogin(db, "testuser", "password")
-		assert.NoError(t, err)
-
 		// Create test session
-		session := models.Session{
-			ID:        uuid.New(),
-			Username:  "testuser",
-			StartedAt: time.Now(),
-			ExpiresAt: time.Now().Add(time.Hour * 8),
-		}
-		res := db.Create(&session)
-		assert.NoError(t, res.Error)
+		session, err := CreateTestSession(db, "testuser", "password", time.Now())
+		assert.NoError(t, err)
 
 		err = sessManager.Invalidate(session.ID)
 		assert.NoError(t, err)
@@ -86,8 +95,43 @@ func TestSessionManager(t *testing.T) {
 		foundSession := models.Session{
 			ID: session.ID,
 		}
-		res = db.First(&foundSession)
+		res := db.First(&foundSession)
 		assert.Error(t, res.Error)
 		assert.ErrorIs(t, res.Error, gorm.ErrRecordNotFound)
+	})
+
+	t.Run("Authenticate__NoSession", func(t *testing.T) {
+		t.Cleanup(wipeDB)
+
+		err := sessManager.Authenticate(uuid.New())
+		assert.Error(t, err)
+	})
+
+	t.Run("Authenticate__SessionExpired", func(t *testing.T) {
+		t.Cleanup(wipeDB)
+
+		session, err := CreateTestSession(db, "testuser", "password", time.Now().Add(time.Hour*-9))
+		assert.NoError(t, err)
+
+		err = sessManager.Authenticate(session.ID)
+		assert.Error(t, err)
+
+		// Ensure session was deleted
+		foundSession := models.Session{
+			ID: session.ID,
+		}
+		res := db.First(&foundSession)
+		assert.Error(t, res.Error)
+		assert.ErrorIs(t, res.Error, gorm.ErrRecordNotFound)
+	})
+
+	t.Run("Authenticate__ValidSession", func(t *testing.T) {
+		t.Cleanup(wipeDB)
+
+		session, err := CreateTestSession(db, "testuser", "password", time.Now())
+		assert.NoError(t, err)
+
+		err = sessManager.Authenticate(session.ID)
+		assert.NoError(t, err)
 	})
 }

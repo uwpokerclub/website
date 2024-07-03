@@ -3,6 +3,7 @@ package authentication
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,6 +43,33 @@ func (svc *sessionManager) Invalidate(sessionID uuid.UUID) error {
 	res := svc.db.Delete(&session)
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+func (svc *sessionManager) Authenticate(sessionID uuid.UUID) error {
+	session := models.Session{ID: sessionID}
+	res := svc.db.First(&session)
+
+	// Check if session exists
+	err := res.Error
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		return e.Unauthorized("Authentication required")
+	}
+
+	if err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	// Check if session has expired, if it is delete it from the table and return 401
+	if time.Now().UTC().After(session.ExpiresAt) {
+		res = svc.db.Delete(&session)
+		if err := res.Error; err != nil {
+			return e.InternalServerError(err.Error())
+		}
+
+		return e.Unauthorized("Session has expired. Please reauthenticate")
 	}
 
 	return nil

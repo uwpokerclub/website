@@ -30,7 +30,7 @@ RUN go build -buildvcs=false -o /app/server .
 EXPOSE 5000
 
 # ====================== THIN IMAGE ======================
-FROM alpine:3.19.1
+FROM alpine:3.20.1
 
 WORKDIR /app
 

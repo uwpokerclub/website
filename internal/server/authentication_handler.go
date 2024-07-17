@@ -32,35 +32,6 @@ func (s *apiServer) CreateLogin(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, "")
 }
 
-// TODO: remove this once session-based authentication implemented in app and server
-func (s *apiServer) NewSession(ctx *gin.Context) {
-	var req models.Login
-	err := ctx.ShouldBindJSON(&req)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
-		return
-	}
-
-	svc := services.NewLoginService(s.db)
-	token, err := svc.ValidateCredentials(req.Username, req.Password)
-	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
-		return
-	}
-
-	// Set cookie
-	oneDayInSeconds := 86400
-
-	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
-		ctx.SetCookie("pctoken", token, oneDayInSeconds, "/", "uwpokerclub.com", true, false)
-	} else {
-		ctx.SetCookie("pctoken", token, oneDayInSeconds, "/", "localhost", false, false)
-	}
-
-	// Return empty created response
-	ctx.JSON(http.StatusCreated, "")
-}
-
 func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 	// Load and validate request body
 	var req models.Login

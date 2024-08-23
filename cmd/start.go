@@ -7,6 +7,9 @@ import (
 	"os"
 	"strings"
 
+	cr "api/cron"
+
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +31,11 @@ var startCmd = &cobra.Command{
 		if strings.ToLower(os.Getenv("ENVIRONMENT")) == "development" {
 			db.Debug()
 		}
+
+		// Initialize cron tasks
+		c := cron.New()
+		c.AddFunc("@daily", cr.SessionCleanup(false))
+		c.Start()
 
 		// Initialize the server
 		serv := server.NewAPIServer(db)

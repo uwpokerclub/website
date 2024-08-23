@@ -8,7 +8,7 @@ jobs:
       uses: actions/checkout@v2
     - name: Build and Test Image
       env:
-        IMAGE_NAME: api_server
+        IMAGE_NAME: api-server
         MIGRATION_COMMAND: ./scripts/migrate.sh --test up
         TEST_COMMAND: go test -v -p=1 ./internal/...
       run: |
@@ -18,11 +18,11 @@ jobs:
 
         # Build image
         echo "Building image..."
-        docker-compose build
+        docker compose build
 
         # Start image
         echo "Starting containers..."
-        docker-compose up -d
+        docker compose up -d
 
         # Run DB migrations
         echo "Running DB migrations..."
@@ -35,4 +35,4 @@ jobs:
         docker exec -i ${CONTAINER_ID} sh -c "${TEST_COMMAND}"
 
         # Teardown containers
-        docker-compose down --volume --remove-orphans
+        docker compose down --volume --remove-orphans

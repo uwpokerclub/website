@@ -32,3 +32,20 @@ type ListMembershipsResult struct {
 	Discounted bool      `json:"discounted"`
 	Attendance int       `json:"attendance"`
 }
+
+// ListMembershipsFilter is the set of parameters that will be used to filter the
+// list memberships query. The zero value for ListMembershipsFilter is the same as
+// not filtering the result.
+type ListMembershipsFilter struct {
+	// Limit is the the upper bound of results that will be returned by the query.
+	// If this value is nil then no limit will be put on the query.
+	Limit *int
+
+	// Offset is the number of results to offset the query result by.
+	// If this value is nil then no offset will be put on the query.
+	Offset *int
+
+	// SemesterID is the ID of the semester that you want to only list members from.
+	// If this value is nil, then the query will return results from all semesters.
+	SemesterID *uuid.UUID
+}

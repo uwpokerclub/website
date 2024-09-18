@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strconv"
+
 	e "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
@@ -10,19 +12,54 @@ import (
 	"github.com/google/uuid"
 )
 
+// ListMemberships returns an array of all members.
+//
+// This handler supports the following pagination query parameters:
+//
+//	offset: number - number of members to offset the list by
+//	limit: number - the amount of members tor return in the response
+//
+// This handler supports the following filters
+//
+//	semesterId: uuid - the ID of the semester to get members for
 func (s *apiServer) ListMemberships(ctx *gin.Context) {
+	// Retrieve the semester ID from the query parameters
 	semesterId, err := uuid.Parse(ctx.Query("semesterId"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester UUID specified in query."))
-	}
-
-	svc := services.NewMembershipService(s.db)
-	memberships, err := svc.ListMemberships(semesterId)
-	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester UUID specified in query."))
 		return
 	}
 
+	// Retrieve the limit pagination parameter from the query string
+	var limit *int
+	limitVal, err := strconv.Atoi(ctx.Query("limit"))
+	if err == nil {
+		limit = &limitVal
+	}
+
+	// Retrieve the offset pagination parameter from the query string
+	var offset *int
+	offsetVal, err := strconv.Atoi(ctx.Query("offset"))
+	if err == nil {
+		offset = &offsetVal
+	}
+
+	// Set up the filter
+	filter := models.ListMembershipsFilter{
+		Limit:      limit,
+		Offset:     offset,
+		SemesterID: &semesterId,
+	}
+
+	// Get the list fo all the members
+	svc := services.NewMembershipService(s.db)
+	memberships, err := svc.ListMemberships(&filter)
+	if err != nil {
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		return
+	}
+
+	// Return as JSON with status 200
 	ctx.JSON(http.StatusOK, memberships)
 }
 

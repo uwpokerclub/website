@@ -96,41 +96,43 @@ func (ms *membershipService) GetMembership(membershipId uuid.UUID) (*models.Memb
 	return &membership, nil
 }
 
-func (ms *membershipService) ListMemberships(semesterId uuid.UUID) ([]models.ListMembershipsResult, error) {
-	var ret []models.ListMembershipsResult
+func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilter) ([]models.ListMembershipsResult, error) {
+	ret := []models.ListMembershipsResult{}
 
-	res := ms.db.Raw(`
-	WITH attendance AS (
-		SELECT
-			p.membership_id,
-			COUNT(*) AS total
-		FROM
-			participants p
-			INNER JOIN events e ON p.event_id = e.id
-		WHERE
-			e.semester_id = $1
-		GROUP BY
-			p.membership_id
-		)
-		
-		SELECT
-			m.id,
-			users.id AS user_id,
-			users.first_name,
-			users.last_name,
-			m.paid,
-			m.discounted,
-			coalesce(a.total, 0) AS attendance
-		FROM
-			memberships m
-			INNER JOIN users ON m.user_id = users.id
-			left JOIN attendance a ON m.id = a.membership_id
-		WHERE m.semester_id = $1
-		ORDER BY
-			users.first_name ASC,
-			users.last_name ASC;
-	`, semesterId).Find(&ret)
+	// Find the amount of events each member has participated in the semester
+	attendanceQuery := ms.db.
+		Select("participants.membership_id, COUNT(*) as total").
+		Table("participants").
+		Joins("INNER JOIN events ON participants.event_id = events.id").
+		Where("events.semester_id = ?", filter.SemesterID).
+		Group("participants.membership_id")
 
+	// Get a list of all members in the semester with the number of events they have attended
+	// ordered by the members name.
+	res := ms.db.
+		Select([]string{
+			"memberships.id", "users.id as user_id", "users.first_name", "users.last_name",
+			"memberships.paid", "memberships.discounted", "COALESCE(attendance.total, 0) as attendance",
+		}).
+		Table("memberships").
+		Joins("LEFT JOIN (?) as attendance ON memberships.id = attendance.membership_id", attendanceQuery).
+		Joins("INNER JOIN users ON memberships.user_id = users.id").
+		Where("memberships.semester_id = ?", filter.SemesterID).
+		Order("users.first_name ASC").
+		Order("users.last_name ASC")
+
+	// If a limit is present in the filter, apply this to the query
+	if filter.Limit != nil {
+		res = res.Limit(*filter.Limit)
+	}
+
+	// If an offset is present in the filter, apply this to the query
+	if filter.Offset != nil {
+		res = res.Offset(*filter.Offset)
+	}
+
+	// Fetch the results and return an error if one occured
+	res = res.Scan(&ret)
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}

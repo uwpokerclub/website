@@ -29,7 +29,7 @@ var startCmd = &cobra.Command{
 
 		// Turn on gorm debug mode to print SQL queries to the console in local development.
 		if strings.ToLower(os.Getenv("ENVIRONMENT")) == "development" {
-			db.Debug()
+			db = db.Debug()
 		}
 
 		// Initialize cron tasks

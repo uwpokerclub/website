@@ -401,7 +401,11 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 
 	membershipService := NewMembershipService(db)
 
-	memberships, err := membershipService.ListMemberships(semester1.ID)
+	filter := models.ListMembershipsFilter{
+		SemesterID: &semester1.ID,
+	}
+
+	memberships, err := membershipService.ListMemberships(&filter)
 	if err != nil {
 		t.Errorf("ListMemberships() error = %v", err)
 		return
@@ -418,6 +422,314 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 	}
 
 	if memberships[0].Attendance != 0 || memberships[1].Attendance != 0 {
+		t.Errorf("ListMemberships attendance incorrect: %v, expected 0", memberships)
+		return
+	}
+}
+
+func TestMembershipService_ListMemberships_Limit(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	semester1, err := testhelpers.CreateSemester(
+		db,
+		uuid.New(),
+		"Fall 2022",
+		"",
+		time.Date(2022, 1, 1, 12, 0, 0, 0, time.UTC),
+		time.Date(2022, 2, 1, 12, 0, 0, 0, time.UTC),
+		100.0,
+		110.0,
+		10,
+		7,
+		2,
+	)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	membership1 := models.Membership{
+		UserID:     user1.ID,
+		SemesterID: semester1.ID,
+		Paid:       false,
+		Discounted: false,
+	}
+	res := db.Create(&membership1)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membership2 := models.Membership{
+		UserID:     user2.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: false,
+	}
+	res = db.Create(&membership2)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membership3 := models.Membership{
+		UserID:     user3.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: true,
+	}
+	res = db.Create(&membership3)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membershipService := NewMembershipService(db)
+
+	limit := 1
+	filter := models.ListMembershipsFilter{
+		SemesterID: &semester1.ID,
+		Limit:      &limit,
+	}
+
+	memberships, err := membershipService.ListMemberships(&filter)
+	if err != nil {
+		t.Errorf("ListMemberships() error = %v", err)
+		return
+	}
+
+	if len(memberships) != 1 {
+		t.Errorf("length = %v, want = %v", len(memberships), 2)
+		return
+	}
+
+	if memberships[0].UserID != user1.ID {
+		t.Errorf("result = %v, want = %v", memberships, []uint64{user1.ID})
+		return
+	}
+
+	if memberships[0].Attendance != 0 {
+		t.Errorf("ListMemberships attendance incorrect: %v, expected 0", memberships)
+		return
+	}
+}
+
+func TestMembershipService_ListMemberships_Offset(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	semester1, err := testhelpers.CreateSemester(
+		db,
+		uuid.New(),
+		"Fall 2022",
+		"",
+		time.Date(2022, 1, 1, 12, 0, 0, 0, time.UTC),
+		time.Date(2022, 2, 1, 12, 0, 0, 0, time.UTC),
+		100.0,
+		110.0,
+		10,
+		7,
+		2,
+	)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	membership1 := models.Membership{
+		UserID:     user1.ID,
+		SemesterID: semester1.ID,
+		Paid:       false,
+		Discounted: false,
+	}
+	res := db.Create(&membership1)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membership2 := models.Membership{
+		UserID:     user2.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: false,
+	}
+	res = db.Create(&membership2)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membership3 := models.Membership{
+		UserID:     user3.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: true,
+	}
+	res = db.Create(&membership3)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membershipService := NewMembershipService(db)
+
+	offset := 1
+	filter := models.ListMembershipsFilter{
+		SemesterID: &semester1.ID,
+		Offset:     &offset,
+	}
+
+	memberships, err := membershipService.ListMemberships(&filter)
+	if err != nil {
+		t.Errorf("ListMemberships() error = %v", err)
+		return
+	}
+
+	if len(memberships) != 2 {
+		t.Errorf("length = %v, want = %v", len(memberships), 2)
+		return
+	}
+
+	if memberships[0].UserID != user2.ID && memberships[1].UserID != user3.ID {
+		t.Errorf("result = %v, want = %v", memberships, []uint64{user2.ID, user3.ID})
+		return
+	}
+
+	if memberships[0].Attendance != 0 || memberships[1].Attendance != 0 {
+		t.Errorf("ListMemberships attendance incorrect: %v, expected 0", memberships)
+		return
+	}
+}
+
+func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	semester1, err := testhelpers.CreateSemester(
+		db,
+		uuid.New(),
+		"Fall 2022",
+		"",
+		time.Date(2022, 1, 1, 12, 0, 0, 0, time.UTC),
+		time.Date(2022, 2, 1, 12, 0, 0, 0, time.UTC),
+		100.0,
+		110.0,
+		10,
+		7,
+		2,
+	)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	membership1 := models.Membership{
+		UserID:     user1.ID,
+		SemesterID: semester1.ID,
+		Paid:       false,
+		Discounted: false,
+	}
+	res := db.Create(&membership1)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membership2 := models.Membership{
+		UserID:     user2.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: false,
+	}
+	res = db.Create(&membership2)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membership3 := models.Membership{
+		UserID:     user3.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: true,
+	}
+	res = db.Create(&membership3)
+	if res.Error != nil {
+		t.Fatalf(res.Error.Error())
+	}
+
+	membershipService := NewMembershipService(db)
+
+	limit := 1
+	offset := 1
+	filter := models.ListMembershipsFilter{
+		SemesterID: &semester1.ID,
+		Offset:     &offset,
+		Limit:      &limit,
+	}
+
+	memberships, err := membershipService.ListMemberships(&filter)
+	if err != nil {
+		t.Errorf("ListMemberships() error = %v", err)
+		return
+	}
+
+	if len(memberships) != 1 {
+		t.Errorf("length = %v, want = %v", len(memberships), 2)
+		return
+	}
+
+	if memberships[0].UserID != user2.ID {
+		t.Errorf("result = %v, want = %v", memberships, []uint64{user2.ID})
+		return
+	}
+
+	if memberships[0].Attendance != 0 {
 		t.Errorf("ListMemberships attendance incorrect: %v, expected 0", memberships)
 		return
 	}

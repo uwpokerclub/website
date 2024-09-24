@@ -34,6 +34,10 @@ func (s *apiServer) ListMemberships(ctx *gin.Context) {
 	var limit *int
 	limitVal, err := strconv.Atoi(ctx.Query("limit"))
 	if err == nil {
+		// Ensure limit is within the valid values, if not default it to 100
+		if limitVal < 0 || limitVal > 100 {
+			limitVal = 100
+		}
 		limit = &limitVal
 	}
 
@@ -41,6 +45,10 @@ func (s *apiServer) ListMemberships(ctx *gin.Context) {
 	var offset *int
 	offsetVal, err := strconv.Atoi(ctx.Query("offset"))
 	if err == nil {
+		// Ensure offset is greater than 0, otherwise default to 0
+		if offsetVal < 0 {
+			offsetVal = 0
+		}
 		offset = &offsetVal
 	}
 

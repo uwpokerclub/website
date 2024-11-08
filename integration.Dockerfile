@@ -15,8 +15,6 @@ COPY go.sum ./
 # Download dependencies
 RUN go mod download
 
-# Install development dependencies
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
 RUN go install github.com/pressly/goose/v3/cmd/goose@v3.15.1
 
 RUN go mod verify
@@ -25,7 +23,7 @@ RUN go mod verify
 COPY . .
 
 # Build executable
-RUN go build -buildvcs=false -o /app/server main.go
+RUN go build -buildvcs=false -o /app/server -tags test main_integration.go
 
 EXPOSE 5000
 
@@ -46,4 +44,4 @@ COPY --from=build /app/migrations ./migrations
 
 RUN mkdir certs client-cert client-key
 
-CMD [ "/app/server", "start" ]
+CMD [ "/app/server" ]

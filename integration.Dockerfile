@@ -1,4 +1,4 @@
-FROM golang:1.23.2-bullseye AS build
+FROM golang:1.23.3-bullseye AS build
 
 # Set Golang build environment variables
 ENV GO111MODULE=on

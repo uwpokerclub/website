@@ -12,3 +12,7 @@ type Session struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 	Username  string    `json:"username"`
 }
+
+type GetSessionResponse struct {
+	Username string `json:"username"`
+}

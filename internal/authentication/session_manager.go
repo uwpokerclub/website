@@ -74,3 +74,23 @@ func (svc *sessionManager) Authenticate(sessionID uuid.UUID) error {
 
 	return nil
 }
+
+func (svc *sessionManager) Get(sessionID uuid.UUID) (*models.GetSessionResponse, error) {
+	session := models.Session{ID: sessionID}
+	res := svc.db.First(&session)
+
+	err := res.Error
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, e.Unauthorized("Authentication required")
+	}
+
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	response := models.GetSessionResponse{
+		Username: session.Username,
+	}
+
+	return &response, nil
+}

@@ -56,6 +56,7 @@ func (s *apiServer) SetupRoutes() {
 	{
 		sessionRoute.POST("", s.SessionLoginHandler)
 		sessionRoute.POST("logout", s.SessionLogoutHandler)
+		sessionRoute.GET("", middleware.UseAuthentication(s.db), s.GetSessionHandler)
 	}
 
 	usersRoute := s.Router.Group("/users", middleware.UseAuthentication(s.db))

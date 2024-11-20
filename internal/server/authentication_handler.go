@@ -14,6 +14,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// / getCookieKey returns the key of the session ID cookie for the environment
+func getCookieKey() string {
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+		return "uwpsc-session-id"
+	}
+
+	return "uwpsc-dev-session-id"
+}
+
 func (s *apiServer) CreateLogin(ctx *gin.Context) {
 	var req models.Login
 	err := ctx.ShouldBindJSON(&req)
@@ -77,12 +86,7 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 }
 
 func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
-	var cookieKey string
-	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
-		cookieKey = "uwpsc-session-id"
-	} else {
-		cookieKey = "uwpsc-dev-session-id"
-	}
+	cookieKey := getCookieKey()
 
 	// Ensure cookie is in the request
 	sessionID, err := ctx.Cookie(cookieKey)
@@ -108,4 +112,20 @@ func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+func (s *apiServer) GetSessionHandler(ctx *gin.Context) {
+	cookieKey := getCookieKey()
+
+	sessionID, _ := ctx.Cookie(cookieKey)
+	sessionUUID, _ := uuid.Parse(sessionID)
+
+	sessionManager := authentication.NewSessionManager(s.db)
+	session, err := sessionManager.Get(sessionUUID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, session)
 }

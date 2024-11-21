@@ -5,7 +5,6 @@ import (
 	"api/internal/server"
 	"fmt"
 	"os"
-	"strings"
 
 	cr "api/cron"
 
@@ -25,11 +24,6 @@ var startCmd = &cobra.Command{
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to open connection to the database: %s", err.Error())
 			os.Exit(1)
-		}
-
-		// Turn on gorm debug mode to print SQL queries to the console in local development.
-		if strings.ToLower(os.Getenv("ENVIRONMENT")) == "development" {
-			db = db.Debug()
 		}
 
 		// Initialize cron tasks

@@ -11,6 +11,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func OpenConnection(runMigrations bool) (*gorm.DB, error) {
@@ -23,7 +24,10 @@ func OpenConnection(runMigrations bool) (*gorm.DB, error) {
 		connectionUrl = connectionUrl + "?sslmode=require&sslrootcert=certs/server-ca.pem&sslcert=client-cert/client-cert.pem&sslkey=client-key/client-key.pem"
 	}
 
-	db, err := gorm.Open(postgres.Open(connectionUrl))
+	db, err := gorm.Open(postgres.Open(connectionUrl), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to open connection to database: %s", err.Error())
 	}

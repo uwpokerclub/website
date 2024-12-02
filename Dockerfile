@@ -1,4 +1,4 @@
-FROM node:20.12.0-alpine as node_stage
+FROM node:22.11.0-alpine as node_stage
 
 WORKDIR /usr/app
 
@@ -16,7 +16,7 @@ ENV NODE_ENV=production
 # Build production ready application
 RUN npm run build
 
-FROM nginx:1.25.4-alpine
+FROM nginx:1.27.3-alpine
 
 WORKDIR /usr/share/nginx/html
 

@@ -1,10 +1,16 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { authContext } from "./context";
+import { sendRequest } from "../../lib";
+import { getSession } from "../../sdk/session";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [authenticated, setAuthenticated] = useState(
-    document.cookie.split(";").some((item) => item.trim().startsWith("pctoken")),
-  );
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getSession()
+      .then(() => setAuthenticated(true))
+      .catch(() => setAuthenticated(false));
+  }, []);
 
   const signIn = (cb: () => void) => {
     setAuthenticated(true);
@@ -12,9 +18,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = (cb: () => void) => {
-    document.cookie = "pctoken=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    setAuthenticated(false);
-    return cb();
+    sendRequest("session/logout", "POST")
+      .then(() => {
+        setAuthenticated(false);
+        cb();
+      })
+      .catch((err) => {
+        if (err instanceof SyntaxError) {
+          setAuthenticated(false);
+          cb();
+        }
+      });
   };
 
   const value = { authenticated, signIn, signOut };

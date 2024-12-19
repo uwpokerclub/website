@@ -29,11 +29,43 @@ func (s *apiServer) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, user)
 }
 
+func parseListUsersQueryParams(ctx *gin.Context) *models.ListUsersFilter {
+	// Get filter parameters from query params
+	filter := models.ListUsersFilter{}
+
+	// Add user's ID to filter if it is present
+	if stringID, exists := ctx.GetQuery("id"); exists {
+		ID, err := strconv.ParseUint(stringID, 10, 64)
+		if err == nil {
+			filter.ID = &ID
+		}
+	}
+
+	// Add user's email to filter if it is present
+	if email, exists := ctx.GetQuery("email"); exists {
+		filter.Email = &email
+	}
+
+	// Add user's name to filter if it is present
+	if name, exists := ctx.GetQuery("name"); exists {
+		filter.Name = &name
+	}
+
+	// Add user's faculty to filter if it is present {
+	if faculty, exists := ctx.GetQuery("faculty"); exists {
+		filter.Faculty = &faculty
+	}
+
+	return &filter
+}
+
 func (s *apiServer) ListUsers(ctx *gin.Context) {
+	filter := parseListUsersQueryParams(ctx)
+
 	svc := services.NewUserService(s.db)
-	users, err := svc.ListUsers()
+	users, err := svc.ListUsers(filter)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
 	}
 

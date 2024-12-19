@@ -4,6 +4,7 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"errors"
+	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -34,10 +35,31 @@ func (u *userService) CreateUser(req *models.CreateUserRequest) (*models.User, e
 	return &user, nil
 }
 
-func (u *userService) ListUsers() ([]models.User, error) {
+func (u *userService) ListUsers(filter *models.ListUsersFilter) ([]models.User, error) {
 	var users []models.User
 
-	res := u.db.Order("created_at DESC").Find(&users)
+	// Ensure a consistent order is always applied
+	res := u.db.Order("created_at DESC")
+
+	// Add filter to SQL query if they are present
+	if filter.ID != nil {
+		res.Where("id = ?", *filter.ID)
+	}
+
+	if filter.Name != nil {
+		res.Where("first_name || ' ' || last_name ILIKE ?", fmt.Sprintf("%%%s%%", *filter.Name))
+	}
+
+	if filter.Email != nil {
+		res.Where("email ILIKE ?", fmt.Sprintf("%%%s%%", *filter.Email))
+	}
+
+	if filter.Faculty != nil {
+		res.Where("faculty = ?", *filter.Faculty)
+	}
+
+	// Find all results matching the query
+	res.Find(&users)
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
 
@@ -24,6 +25,22 @@ func TestUserService(t *testing.T) {
 		{
 			name: "ListUsers",
 			test: ListUsersTest(),
+		},
+		{
+			name: "ListUsers_FilterID",
+			test: ListUsers_FilterIDTest,
+		},
+		{
+			name: "ListUsers_FilterName",
+			test: ListUsers_FilterNameTest,
+		},
+		{
+			name: "ListUsers_FilterEmail",
+			test: ListUsers_FilterEmailTest,
+		},
+		{
+			name: "ListUsers_FilterFaculty",
+			test: ListUsers_FilterFacultyTest,
 		},
 		{
 			name: "GetUser",
@@ -141,7 +158,8 @@ func ListUsersTest() func(*testing.T) {
 
 		us := NewUserService(db)
 
-		users, err := us.ListUsers()
+		filter := models.ListUsersFilter{}
+		users, err := us.ListUsers(&filter)
 		// Should not return an error
 		if err != nil {
 			t.Errorf("Unexpected error occurred in ListUsers: %v", err)
@@ -166,6 +184,259 @@ func ListUsersTest() func(*testing.T) {
 			return
 		}
 	}
+}
+
+func ListUsers_FilterIDTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	// Create existing users
+	user1 := models.User{
+		ID:        1,
+		FirstName: "adam",
+		LastName:  "mahood",
+		Email:     "adam@gmail.com",
+		Faculty:   "Math",
+		QuestID:   "asmahood",
+	}
+	res := db.Create(&user1)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user2 := models.User{
+		ID:        2,
+		FirstName: "john",
+		LastName:  "doe",
+		Email:     "john@gmail.com",
+		Faculty:   "Science",
+		QuestID:   "jdoe",
+	}
+	res = db.Create(&user2)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user3 := models.User{
+		ID:        3,
+		FirstName: "jane",
+		LastName:  "doe",
+		Email:     "jane@gmail.com",
+		Faculty:   "Arts",
+		QuestID:   "jadoe",
+	}
+	res = db.Create(&user3)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	userService := NewUserService(db)
+
+	id := uint64(2)
+	filter := models.ListUsersFilter{
+		ID: &id,
+	}
+
+	users, err := userService.ListUsers(&filter)
+	assert.NoError(t, err, "ListUsers should not error when filtering for an ID")
+	assert.Len(t, users, 1)
+
+	user2.CreatedAt = users[0].CreatedAt
+
+	assert.Contains(t, users, user2)
+}
+
+func ListUsers_FilterNameTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	// Create existing users
+	user1 := models.User{
+		ID:        1,
+		FirstName: "adam",
+		LastName:  "mahood",
+		Email:     "adam@gmail.com",
+		Faculty:   "Math",
+		QuestID:   "asmahood",
+	}
+	res := db.Create(&user1)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user2 := models.User{
+		ID:        2,
+		FirstName: "john",
+		LastName:  "doe",
+		Email:     "john@gmail.com",
+		Faculty:   "Science",
+		QuestID:   "jdoe",
+	}
+	res = db.Create(&user2)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user3 := models.User{
+		ID:        3,
+		FirstName: "jane",
+		LastName:  "doe",
+		Email:     "jane@gmail.com",
+		Faculty:   "Arts",
+		QuestID:   "jadoe",
+	}
+	res = db.Create(&user3)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	userService := NewUserService(db)
+
+	name := "ADAM"
+	filter := models.ListUsersFilter{
+		Name: &name,
+	}
+
+	users, err := userService.ListUsers(&filter)
+	assert.NoError(t, err, "ListUsers should not error when filtering for a name")
+	assert.Len(t, users, 1)
+
+	user1.CreatedAt = users[0].CreatedAt
+
+	assert.Contains(t, users, user1)
+}
+
+func ListUsers_FilterEmailTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	// Create existing users
+	user1 := models.User{
+		ID:        1,
+		FirstName: "adam",
+		LastName:  "mahood",
+		Email:     "adam@gmail.com",
+		Faculty:   "Math",
+		QuestID:   "asmahood",
+	}
+	res := db.Create(&user1)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user2 := models.User{
+		ID:        2,
+		FirstName: "john",
+		LastName:  "doe",
+		Email:     "john@gmail.com",
+		Faculty:   "Science",
+		QuestID:   "jdoe",
+	}
+	res = db.Create(&user2)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user3 := models.User{
+		ID:        3,
+		FirstName: "jane",
+		LastName:  "doe",
+		Email:     "jane@gmail.com",
+		Faculty:   "Arts",
+		QuestID:   "jadoe",
+	}
+	res = db.Create(&user3)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	userService := NewUserService(db)
+
+	email := "adam"
+	filter := models.ListUsersFilter{
+		Email: &email,
+	}
+
+	users, err := userService.ListUsers(&filter)
+	assert.NoError(t, err, "ListUsers should not error when filtering for an email")
+	assert.Len(t, users, 1)
+
+	user1.CreatedAt = users[0].CreatedAt
+
+	assert.Contains(t, users, user1)
+}
+
+func ListUsers_FilterFacultyTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	// Create existing users
+	user1 := models.User{
+		ID:        1,
+		FirstName: "adam",
+		LastName:  "mahood",
+		Email:     "adam@gmail.com",
+		Faculty:   "Math",
+		QuestID:   "asmahood",
+	}
+	res := db.Create(&user1)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user2 := models.User{
+		ID:        2,
+		FirstName: "john",
+		LastName:  "doe",
+		Email:     "john@gmail.com",
+		Faculty:   "Science",
+		QuestID:   "jdoe",
+	}
+	res = db.Create(&user2)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	user3 := models.User{
+		ID:        3,
+		FirstName: "jane",
+		LastName:  "doe",
+		Email:     "jane@gmail.com",
+		Faculty:   "Arts",
+		QuestID:   "jadoe",
+	}
+	res = db.Create(&user3)
+	if res.Error != nil {
+		t.Fatalf("Error when creating existing users: %v", res.Error)
+	}
+
+	userService := NewUserService(db)
+
+	faculty := models.FacultyArts
+
+	filter := models.ListUsersFilter{
+		Faculty: &faculty,
+	}
+
+	users, err := userService.ListUsers(&filter)
+	assert.NoError(t, err, "ListUsers should not error when filtering for an faculty")
+	assert.Len(t, users, 1)
+
+	user3.CreatedAt = users[0].CreatedAt
+
+	assert.Contains(t, users, user3)
 }
 
 func GetUserTest() func(*testing.T) {

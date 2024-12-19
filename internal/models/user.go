@@ -37,3 +37,10 @@ type UpdateUserRequest struct {
 	Faculty   string `json:"faculty" binding:"omitempty,oneof=AHS Arts Engineering Environment Math Science"`
 	QuestID   string `json:"questId"`
 }
+
+type ListUsersFilter struct {
+	ID      *uint64
+	Name    *string
+	Email   *string
+	Faculty *string
+}

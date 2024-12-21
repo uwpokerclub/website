@@ -74,6 +74,7 @@ func (s *apiServer) SetupRoutes() {
 		semestersRoute.POST("", s.CreateSemester)
 		semestersRoute.GET(":semesterId", s.GetSemester)
 		semestersRoute.GET(":semesterId/rankings", s.GetRankings)
+		semestersRoute.GET(":semesterId/rankings/export", s.ExportRankings)
 
 		// Transaction routes
 		semestersRoute.GET(":semesterId/transactions", s.ListTransactions)

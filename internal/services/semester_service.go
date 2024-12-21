@@ -3,7 +3,12 @@ package services
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"encoding/csv"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -112,4 +117,62 @@ func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float64) error {
 	}
 
 	return nil
+}
+
+func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
+	var rankings []models.RankingResponse
+
+	// Get the top 100 rankings
+	res := ss.db.
+		Table("memberships").
+		Select("users.id, users.first_name, users.last_name, rankings.points").
+		Joins("INNER JOIN users ON memberships.user_id = users.id").
+		Joins("INNER JOIN rankings on memberships.id = rankings.membership_id").
+		Where("memberships.semester_id = ?", id).
+		Order("rankings.points DESC").
+		Limit(100).
+		Find(&rankings)
+
+	if err := res.Error; err != nil {
+		return "", e.InternalServerError(fmt.Sprintf("Error when retrieving rankings: %s", err.Error()))
+	}
+
+	// Open a new CSV file
+	filename := "rankings.csv"
+	file, err := os.Create(filename)
+	if err != nil {
+		return "", e.InternalServerError(fmt.Sprintf("Error when creating rankings file: %s", err.Error()))
+	}
+	// Ensure the file is closed at the end of the function
+	defer file.Close()
+
+	// Initialize a new CSV writer
+	writer := csv.NewWriter(file)
+	// Ensure all data is written to the file
+	defer writer.Flush()
+
+	// Write headers to the file
+	writer.Write([]string{"id", "first_name", "last_name", "points"})
+
+	// Write each row from the database to the CSV
+	for _, ranking := range rankings {
+		record := []string{
+			strconv.FormatUint(ranking.ID, 10),
+			ranking.FirstName,
+			ranking.LastName,
+			strconv.FormatInt(int64(ranking.Points), 10),
+		}
+
+		if err := writer.Write(record); err != nil {
+			return "", e.InternalServerError(fmt.Sprintf("Error writing to the CSV file: %s", err.Error()))
+		}
+	}
+
+	// Get the absolute filepath to the new file
+	fp, err := filepath.Abs(filename)
+	if err != nil {
+		return "", e.InternalServerError(fmt.Sprintf("Failed to export CSV"))
+	}
+
+	return fp, nil
 }

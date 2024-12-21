@@ -3,7 +3,7 @@ package models
 import "time"
 
 const (
-	FacultyAHS         = "Math"
+	FacultyAHS         = "AHS"
 	FacultyArts        = "Arts"
 	FacultyEngineering = "Engineering"
 	FacultyEnvironment = "Environment"

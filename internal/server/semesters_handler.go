@@ -5,6 +5,8 @@ import (
 	"api/internal/models"
 	"api/internal/services"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -75,4 +77,26 @@ func (s *apiServer) GetRankings(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, rankings)
+}
+
+func (s *apiServer) ExportRankings(ctx *gin.Context) {
+	semesterId := ctx.Param("semesterId")
+	id, err := uuid.Parse(semesterId)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester ID specified in request"))
+		return
+	}
+
+	svc := services.NewSemesterService(s.db)
+
+	fp, err := svc.ExportRankings(id)
+	if err != nil {
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		return
+	}
+
+	filename := filepath.Base(fp)
+	defer os.Remove(filename)
+
+	ctx.FileAttachment(fp, filename)
 }

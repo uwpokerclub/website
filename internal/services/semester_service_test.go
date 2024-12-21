@@ -3,12 +3,17 @@ package services
 import (
 	"api/internal/database"
 	"api/internal/models"
+	"api/internal/testhelpers"
+	"encoding/csv"
 	"math"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSemesterService(t *testing.T) {
@@ -41,6 +46,10 @@ func TestSemesterService(t *testing.T) {
 		{
 			name: "UpdateBudget_Negative",
 			test: UpdateBudget_Negative(),
+		},
+		{
+			name: "ExportRankings",
+			test: ExportRankingsTest,
 		},
 	}
 
@@ -443,4 +452,73 @@ func UpdateBudget_Negative() func(*testing.T) {
 			return
 		}
 	}
+}
+
+func ExportRankingsTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if !assert.NoError(t, err, "Failed to initialize the database") {
+		t.Fatalf(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	semester, err := testhelpers.SetupSemester(db, "Fall 2022")
+	if !assert.NoError(t, err) {
+		t.Fatalf("Failed to seed a semester: %v", err)
+	}
+
+	// Seed rankings
+	r := []models.Ranking{
+		{
+			MembershipID: semester.Memberships[0].ID,
+			Points:       10,
+		},
+		{
+			MembershipID: semester.Memberships[1].ID,
+			Points:       5,
+		},
+		{
+			MembershipID: semester.Memberships[2].ID,
+			Points:       2,
+		},
+	}
+	res := db.Create(&r)
+	if !assert.NoError(t, res.Error) {
+		t.Fatalf("Failed to seed rankings: %v", res.Error)
+	}
+
+	svc := NewSemesterService(db)
+
+	// Ensure filepath was returned
+	fp, err := svc.ExportRankings(semester.Semester.ID)
+	assert.NoError(t, err, "ExportRankings should not return an error")
+
+	expectedPath, err := filepath.Abs("rankings.csv")
+	assert.NoError(t, err, "Should not error creating the expected file path")
+	assert.Equal(t, expectedPath, fp)
+
+	// Check that the file exists
+	assert.FileExists(t, fp, "The rankings CSV file should exist")
+
+	// Read the file
+	file, err := os.Open(fp)
+	assert.NoError(t, err, "Should not error when openning a file")
+
+	// Initialize reader
+	reader := csv.NewReader(file)
+
+	records, err := reader.ReadAll()
+	assert.NoError(t, err, "Should not error when reading the CSV file")
+
+	// Check records were inserted correctly
+	expectedRecords := [][]string{
+		{"id", "first_name", "last_name", "points"},
+		{"20780648", "Adam", "Mahood", "10"},
+		{"36459367", "Deep", "Kalra", "5"},
+		{"13274944", "Jane", "Doe", "2"},
+	}
+
+	assert.ElementsMatch(t, expectedRecords, records)
+
+	// Remove file
+	os.Remove(fp)
 }

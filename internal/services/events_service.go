@@ -5,8 +5,6 @@ import (
 	"api/internal/models"
 	"errors"
 
-	"fmt"
-
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -92,8 +90,56 @@ func (es *eventService) ListEvents(semesterId string) ([]models.ListEventsRespon
 	return events, nil
 }
 
+func (svc *eventService) UpdateEvent(eventID uint64, req *models.UpdateEventRequest) (*models.Event, error) {
+	event := models.Event{ID: eventID}
+
+	// Query DB for this event
+	res := svc.db.First(&event)
+
+	// Check if the error is a not found error
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, e.NotFound(err.Error())
+	}
+
+	// Check for any other error and return
+	if err := res.Error; err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	// Prevent updates on events that have already ended
+	if event.State == models.EventStateEnded {
+		return nil, e.Forbidden("This event has ended. It cannot be updated.")
+	}
+
+	// Update fields on the event
+	if req.Name != nil {
+		event.Name = *req.Name
+	}
+
+	if req.Format != nil {
+		event.Format = *req.Format
+	}
+
+	if req.Notes != nil {
+		event.Notes = *req.Notes
+	}
+
+	if req.StartDate != nil {
+		event.StartDate = *req.StartDate
+	}
+
+	if req.PointsMultiplier != nil {
+		event.PointsMultiplier = *req.PointsMultiplier
+	}
+
+	// Save the changes to the database
+	res = svc.db.Save(event)
+
+	// Return the updated event
+	return &event, nil
+}
+
 func (es *eventService) EndEvent(eventId uint64) error {
-	fmt.Print("at EndEvent")
 	// Retrieve the event first
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)

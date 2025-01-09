@@ -12,3 +12,9 @@ exec_server:
 
 exec_db:
 	docker compose exec db psql -U docker
+
+test:
+	docker compose exec server go test -p=1 ./...
+
+logs:
+	docker compose logs -f

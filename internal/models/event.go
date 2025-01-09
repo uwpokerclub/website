@@ -34,6 +34,14 @@ type CreateEventRequest struct {
 	PointsMultiplier float32   `json:"pointsMultiplier" binding:"required"`
 }
 
+type UpdateEventRequest struct {
+	Name             *string    `json:"name"`
+	Format           *string    `json:"format"`
+	Notes            *string    `json:"notes"`
+	StartDate        *time.Time `json:"startDate"`
+	PointsMultiplier *float32   `json:"pointsMultiplier"`
+}
+
 type ListEventsResponse struct {
 	ID         uint64    `json:"id"`
 	Name       string    `json:"name"`

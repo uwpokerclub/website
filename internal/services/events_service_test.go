@@ -10,29 +10,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEventsService(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+func TestEventsService(s *testing.T) {
+	s.Setenv("ENVIRONMENT", "TEST")
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatal(err.Error())
+		s.Fatal(err.Error())
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		t.Fatal(err.Error())
+		s.Fatal(err.Error())
 	}
 	defer sqlDB.Close()
 
 	wipeDB := func() {
 		err := database.WipeDB(db)
 		if err != nil {
-			t.Fatal(err.Error())
+			s.Fatal(err.Error())
 		}
 	}
 
 	eventService := NewEventService(db)
 
-	t.Run("CreateEvent", func(t *testing.T) {
+	s.Run("CreateEvent", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
 		semester1 := models.Semester{
@@ -78,7 +78,7 @@ func TestEventsService(t *testing.T) {
 		assert.InDelta(t, 2.3, event.PointsMultiplier, 0.01, "Event.PointsMultiplier")
 	})
 
-	t.Run("ListEvents", func(t *testing.T) {
+	s.Run("ListEvents", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
 		semester1 := models.Semester{
@@ -154,7 +154,7 @@ func TestEventsService(t *testing.T) {
 		assert.Equal(t, expIds, accIds, "Event IDs match")
 	})
 
-	t.Run("GetEvent", func(t *testing.T) {
+	s.Run("GetEvent", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
 		semester1 := models.Semester{
@@ -200,8 +200,84 @@ func TestEventsService(t *testing.T) {
 		assert.Equal(t, event1, *event, "Returned event does not match")
 	})
 
-	t.Run("EndEvent", func(t *testing.T) {
+	s.Run("UpdateEvent", func(t *testing.T) {
+		newName := "Event #10"
+		newFormat := "Pot Limit Omaha"
+		newNotes := "Updated event"
+		newDate := time.Now().Add(time.Hour * 24)
+		newPointsMultiplier := float32(2.0)
+
+		updateReq := models.UpdateEventRequest{
+			Name:             &newName,
+			Format:           &newFormat,
+			Notes:            &newNotes,
+			StartDate:        &newDate,
+			PointsMultiplier: &newPointsMultiplier,
+		}
+
+		t.Run("Should update all fields", func(f *testing.T) {
+			f.Cleanup(wipeDB)
+
+			seedRes, err := testhelpers.SetupSemester(db, "Winter 2025")
+			if !assert.NoError(f, err, "Seeding the semester should not fail") {
+				f.FailNow()
+			}
+
+			event, err := testhelpers.CreateEvent(db, "Event #9", seedRes.Semester.ID, time.Now())
+			if !assert.NoError(f, err, "Seeding the event should not fail") {
+				f.FailNow()
+			}
+
+			svc := NewEventService(db)
+
+			updatedEvent, err := svc.UpdateEvent(event.ID, &updateReq)
+			if !assert.NoError(f, err, "UpdatingEvent should not error") {
+				f.FailNow()
+			}
+
+			// Check that updated fields were updated and not updated fields weren't
+			assert.Equal(f, *updateReq.Name, updatedEvent.Name)
+			assert.Equal(f, *updateReq.Format, updatedEvent.Format)
+			assert.Equal(f, *updateReq.Notes, updatedEvent.Notes)
+			assert.Equal(f, event.SemesterID, updatedEvent.SemesterID)
+			assert.Equal(f, *updateReq.StartDate, updatedEvent.StartDate)
+			assert.Equal(f, event.State, updatedEvent.State)
+			assert.Equal(f, event.StructureID, updatedEvent.StructureID)
+			assert.Equal(f, event.Rebuys, updatedEvent.Rebuys)
+			assert.Equal(f, *updateReq.PointsMultiplier, updatedEvent.PointsMultiplier)
+		})
+
+		t.Run("Should fail when event has ended", func(f *testing.T) {
+			f.Cleanup(wipeDB)
+
+			seedRes, err := testhelpers.SetupSemester(db, "Winter 2025")
+			if !assert.NoError(f, err, "Seeding the semester should not fail") {
+				f.FailNow()
+			}
+
+			event, err := testhelpers.CreateEvent(db, "Event #9", seedRes.Semester.ID, time.Now())
+			if !assert.NoError(f, err, "Seeding the event should not fail") {
+				f.FailNow()
+			}
+
+			event.State = models.EventStateEnded
+
+			res := db.Save(event)
+			if !assert.NoError(f, res.Error, "Ending the event should not fail") {
+				f.FailNow()
+			}
+
+			svc := NewEventService(db)
+
+			_, err = svc.UpdateEvent(event.ID, &updateReq)
+			assert.Error(f, err, "UpdatingEvent should error")
+		})
+	})
+
+	s.Run("EndEvent", func(t *testing.T) {
 		t.Run("Updates the state of the event", func(t *testing.T) {
+			t.Cleanup(wipeDB)
+
 			semester1 := models.Semester{
 				Name:                  "Spring 2022",
 				Meta:                  "",
@@ -350,7 +426,7 @@ func TestEventsService(t *testing.T) {
 		})
 	})
 
-	t.Run("NewRebuy", func(t *testing.T) {
+	s.Run("NewRebuy", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
 		semester1 := models.Semester{
@@ -404,7 +480,7 @@ func TestEventsService(t *testing.T) {
 		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float64(semester1.RebuyFee), 0.001)
 	})
 
-	t.Run("UndoEndEvent", func(t *testing.T) {
+	s.Run("UndoEndEvent", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 		//setup semester
 		set, err := testhelpers.SetupSemester(db, "Fall 2023")

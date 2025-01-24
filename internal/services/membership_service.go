@@ -82,7 +82,7 @@ func (ms *membershipService) CreateMembership(req *models.CreateMembershipReques
 func (ms *membershipService) GetMembership(membershipId uuid.UUID) (*models.Membership, error) {
 	membership := models.Membership{ID: membershipId}
 
-	res := ms.db.First(&membership)
+	res := ms.db.Joins("User").Joins("Semester").First(&membership)
 	// Check if the error is a not found error
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.NotFound(err.Error())
@@ -99,6 +99,7 @@ func (ms *membershipService) GetMembership(membershipId uuid.UUID) (*models.Memb
 func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilter) ([]models.ListMembershipsResult, error) {
 	ret := []models.ListMembershipsResult{}
 
+	// TODO: Update after participants associations have been setup
 	// Find the amount of events each member has participated in the semester
 	attendanceQuery := ms.db.
 		Select("participants.membership_id, COUNT(*) as total").

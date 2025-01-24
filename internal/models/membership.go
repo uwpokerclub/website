@@ -5,7 +5,9 @@ import "github.com/google/uuid"
 type Membership struct {
 	ID         uuid.UUID `json:"id" gorm:"type:uuid;default:uuid_generate_v4()"`
 	UserID     uint64    `json:"userId"`
+	User       User      `json:"user"`
 	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid"`
+	Semester   Semester  `json:"semester"`
 	Paid       bool      `json:"paid"`
 	Discounted bool      `json:"discounted"`
 }

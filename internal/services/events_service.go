@@ -48,7 +48,7 @@ func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Eve
 func (es *eventService) GetEvent(eventId uint64) (*models.Event, error) {
 	event := models.Event{ID: eventId}
 
-	res := es.db.First(&event)
+	res := es.db.Joins("Semester").Joins("Structure").Preload("Entries").First(&event)
 
 	// Check if the error is a not found error
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
@@ -134,6 +134,9 @@ func (svc *eventService) UpdateEvent(eventID uint64, req *models.UpdateEventRequ
 
 	// Save the changes to the database
 	res = svc.db.Save(event)
+	if res.Error != nil {
+		return nil, e.InternalServerError(res.Error.Error())
+	}
 
 	// Return the updated event
 	return &event, nil

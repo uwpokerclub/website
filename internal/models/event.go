@@ -12,16 +12,19 @@ const (
 )
 
 type Event struct {
-	ID               uint64    `json:"id"`
-	Name             string    `json:"name"`
-	Format           string    `json:"format"`
-	Notes            string    `json:"notes"`
-	SemesterID       uuid.UUID `json:"semesterId" gorm:"type:uuid"`
-	StartDate        time.Time `json:"startDate"`
-	State            uint8     `json:"state"`
-	StructureID      uint64    `json:"structureId"`
-	Rebuys           uint8     `json:"rebuys"`
-	PointsMultiplier float32   `json:"pointsMultiplier"`
+	ID               uint64        `json:"id"`
+	Name             string        `json:"name"`
+	Format           string        `json:"format"`
+	Notes            string        `json:"notes"`
+	SemesterID       uuid.UUID     `json:"semesterId" gorm:"type:uuid"`
+	Semester         Semester      `json:"semester"`
+	StartDate        time.Time     `json:"startDate"`
+	State            uint8         `json:"state"`
+	StructureID      uint64        `json:"structureId"`
+	Structure        Structure     `json:"structure"`
+	Rebuys           uint8         `json:"rebuys"`
+	PointsMultiplier float32       `json:"pointsMultiplier"`
+	Entries          []Participant `json:"entries"`
 }
 
 type CreateEventRequest struct {

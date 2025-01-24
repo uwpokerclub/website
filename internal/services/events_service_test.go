@@ -184,11 +184,14 @@ func TestEventsService(s *testing.T) {
 			Format:           "NLHE",
 			Notes:            "#1",
 			SemesterID:       semester1.ID,
+			Semester:         semester1,
 			StartDate:        event1Date,
 			State:            models.EventStateStarted,
 			StructureID:      structure.ID,
+			Structure:        structure,
 			Rebuys:           0,
 			PointsMultiplier: 2.3,
+			Entries:          []models.Participant{},
 		}
 
 		res = db.Create(&event1)

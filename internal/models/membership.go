@@ -10,6 +10,7 @@ type Membership struct {
 	Semester   Semester  `json:"semester"`
 	Paid       bool      `json:"paid"`
 	Discounted bool      `json:"discounted"`
+	Ranking    Ranking   `json:"ranking"`
 }
 
 type CreateMembershipRequest struct {

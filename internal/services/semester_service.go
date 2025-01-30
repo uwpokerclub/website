@@ -171,7 +171,7 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 	// Get the absolute filepath to the new file
 	fp, err := filepath.Abs(filename)
 	if err != nil {
-		return "", e.InternalServerError(fmt.Sprintf("Failed to export CSV"))
+		return "", e.InternalServerError(fmt.Sprintf("Failed to export CSV: %s", err.Error()))
 	}
 
 	return fp, nil

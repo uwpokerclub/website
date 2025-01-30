@@ -49,6 +49,7 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 func (svc *participantsService) ListParticipants(eventId uint64) ([]models.ListParticipantsResult, error) {
 	ret := []models.ListParticipantsResult{}
 
+	// TODO: Update this query eventually to return a specific array of objects
 	subQuery := svc.db.
 		Table("participants").
 		Select("memberships.id, memberships.user_id, participants.signed_out_at, participants.placement").

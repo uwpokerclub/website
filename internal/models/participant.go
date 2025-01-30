@@ -9,6 +9,7 @@ import (
 type Participant struct {
 	ID           uint64     `json:"id"`
 	MembershipID uuid.UUID  `json:"membershipId" gorm:"type:uuid"`
+	Membership   Membership `json:"membership"`
 	EventID      uint64     `json:"eventId"`
 	Placement    uint32     `json:"placement"`
 	SignedOutAt  *time.Time `json:"signedOutAt"`

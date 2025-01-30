@@ -8,6 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func assertBlindsEqual(t *testing.T, expected models.BlindJSON, actual models.Blind, msg string) {
+	assert.Equal(t, expected.Small, actual.Small, msg)
+	assert.Equal(t, expected.Big, actual.Big, msg)
+	assert.Equal(t, expected.Ante, actual.Ante, msg)
+	assert.Equal(t, expected.Time, actual.Time, msg)
+}
+
 func TestStructureService(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 
@@ -60,9 +67,9 @@ func TestStructureService(t *testing.T) {
 		assert.NoError(t, err, "CreateStructure should not error")
 		assert.Equal(t, req.Name, structure.Name, "Structure name should be the same")
 		assert.Len(t, structure.Blinds, len(req.Blinds), "Should have the same number of blind levels")
-		assert.EqualValues(t, req.Blinds[0], structure.Blinds[0], "Blind level 1 should be the same")
-		assert.EqualValues(t, req.Blinds[1], structure.Blinds[1], "Blind level 2 should be the same")
-		assert.EqualValues(t, req.Blinds[2], structure.Blinds[2], "Blind level 3 should be the same")
+		assertBlindsEqual(t, req.Blinds[0], structure.Blinds[0], "Blind level 1 should be the same")
+		assertBlindsEqual(t, req.Blinds[1], structure.Blinds[1], "Blind level 2 should be the same")
+		assertBlindsEqual(t, req.Blinds[2], structure.Blinds[2], "Blind level 3 should be the same")
 	})
 	t.Run("ListStructures", func(t *testing.T) {
 		t.Cleanup(wipeDB)
@@ -128,16 +135,6 @@ func TestStructureService(t *testing.T) {
 				StructureId: testStructure.ID,
 			},
 		}
-		// Used for assertions
-		expectedBlindResponse := make([]models.BlindJSON, len(testBlinds))
-		for i, blind := range testBlinds {
-			expectedBlindResponse[i] = models.BlindJSON{
-				Small: blind.Small,
-				Big:   blind.Big,
-				Ante:  blind.Ante,
-				Time:  blind.Time,
-			}
-		}
 		res = db.Create(&testBlinds)
 		assert.NoError(t, res.Error)
 
@@ -146,9 +143,9 @@ func TestStructureService(t *testing.T) {
 		assert.Equal(t, testStructure.ID, structure.ID)
 		assert.Equal(t, testStructure.Name, structure.Name)
 		assert.Len(t, structure.Blinds, 3)
-		assert.EqualValues(t, expectedBlindResponse[0], structure.Blinds[0])
-		assert.EqualValues(t, expectedBlindResponse[1], structure.Blinds[1])
-		assert.EqualValues(t, expectedBlindResponse[2], structure.Blinds[2])
+		assert.EqualValues(t, testBlinds[0], structure.Blinds[0])
+		assert.EqualValues(t, testBlinds[1], structure.Blinds[1])
+		assert.EqualValues(t, testBlinds[2], structure.Blinds[2])
 	})
 	t.Run("UpdateStructure", func(t *testing.T) {
 		t.Cleanup(wipeDB)
@@ -217,8 +214,8 @@ func TestStructureService(t *testing.T) {
 		assert.Equal(t, testStructure.ID, structure.ID)
 		assert.Equal(t, req.Name, structure.Name)
 		assert.Len(t, structure.Blinds, 2)
-		assert.EqualValues(t, req.Blinds[0], structure.Blinds[0])
-		assert.EqualValues(t, req.Blinds[1], structure.Blinds[1])
+		assertBlindsEqual(t, req.Blinds[0], structure.Blinds[0], "")
+		assertBlindsEqual(t, req.Blinds[1], structure.Blinds[1], "")
 		// Check that old blinds got deleted
 		var blinds []models.Blind
 		res = db.Where("structure_id = ?", testStructure.ID).Find(&blinds)

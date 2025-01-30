@@ -1,8 +1,9 @@
 package models
 
 type Structure struct {
-	ID   uint64 `json:"id"`
-	Name string `json:"name"`
+	ID     uint64  `json:"id"`
+	Name   string  `json:"name"`
+	Blinds []Blind `json:"blinds"`
 }
 
 type Blind struct {
@@ -31,10 +32,4 @@ type UpdateStructureRequest struct {
 	ID     uint64
 	Name   string      `json:"name" binding:"required"`
 	Blinds []BlindJSON `json:"blinds" binding:"required,dive"`
-}
-
-type StructureWithBlindsResponse struct {
-	ID     uint64      `json:"id"`
-	Name   string      `json:"name"`
-	Blinds []BlindJSON `json:"blinds"`
 }

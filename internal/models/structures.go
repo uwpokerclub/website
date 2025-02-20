@@ -7,13 +7,13 @@ type Structure struct {
 }
 
 type Blind struct {
-	ID          uint64
-	Small       int32
-	Big         int32
-	Ante        int32
-	Time        int8
-	Index       int
-	StructureId uint64
+	ID          uint64 `json:"-"`
+	Small       int32  `json:"small"`
+	Big         int32  `json:"big"`
+	Ante        int32  `json:"ante"`
+	Time        int8   `json:"time"`
+	Index       int    `json:"-"`
+	StructureId uint64 `json:"-"`
 }
 
 type BlindJSON struct {

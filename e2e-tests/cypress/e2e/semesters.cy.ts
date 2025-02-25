@@ -41,6 +41,7 @@ describe("Semesters page", () => {
     beforeEach(() => {
       cy.fixture("semester.json").then((semester) => {
         cy.request("POST", "http://localhost:5000/semesters", semester).as("semester");
+        cy.reload();
       });
     });
 

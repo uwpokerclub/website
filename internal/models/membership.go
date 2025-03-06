@@ -51,4 +51,7 @@ type ListMembershipsFilter struct {
 	// SemesterID is the ID of the semester that you want to only list members from.
 	// If this value is nil, then the query will return results from all semesters.
 	SemesterID *uuid.UUID
+
+	// UserID will filter for memberships that are only held by this specified user.
+	UserID *int64
 }

@@ -96,6 +96,25 @@ func (ms *membershipService) GetMembership(membershipId uuid.UUID) (*models.Memb
 	return &membership, nil
 }
 
+func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gorm.DB {
+	// Add a WHERE clause for userID if it is present
+	if filter.UserID != nil {
+		query = query.Where("memberships.user_id = ?", *filter.UserID)
+	}
+
+	// If a limit is present in the filter, apply this to the query
+	if filter.Limit != nil {
+		query = query.Limit(*filter.Limit)
+	}
+
+	// If an offset is present in the filter, apply this to the query
+	if filter.Offset != nil {
+		query = query.Offset(*filter.Offset)
+	}
+
+	return query
+}
+
 func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilter) ([]models.ListMembershipsResult, error) {
 	ret := []models.ListMembershipsResult{}
 
@@ -122,15 +141,7 @@ func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilte
 		Order("users.first_name ASC").
 		Order("users.last_name ASC")
 
-	// If a limit is present in the filter, apply this to the query
-	if filter.Limit != nil {
-		res = res.Limit(*filter.Limit)
-	}
-
-	// If an offset is present in the filter, apply this to the query
-	if filter.Offset != nil {
-		res = res.Offset(*filter.Offset)
-	}
+	res = addFilterClauses(res, filter)
 
 	// Fetch the results and return an error if one occured
 	res = res.Scan(&ret)

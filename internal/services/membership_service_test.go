@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMembershipService_CreateMembership_NotPaid(t *testing.T) {
@@ -15,13 +16,13 @@ func TestMembershipService_CreateMembership_NotPaid(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -39,7 +40,7 @@ func TestMembershipService_CreateMembership_NotPaid(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -100,13 +101,13 @@ func TestMembershipService_CreateMembership_PaidNotDiscounted(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -124,7 +125,7 @@ func TestMembershipService_CreateMembership_PaidNotDiscounted(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -180,13 +181,13 @@ func TestMembershipService_CreateMembership_PaidDiscounted(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -204,7 +205,7 @@ func TestMembershipService_CreateMembership_PaidDiscounted(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -260,13 +261,13 @@ func TestMembershipService_GetMembership(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semester1, err := testhelpers.CreateSemester(
@@ -283,7 +284,7 @@ func TestMembershipService_GetMembership(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -294,7 +295,7 @@ func TestMembershipService_GetMembership(t *testing.T) {
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -316,21 +317,21 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semester1, err := testhelpers.CreateSemester(
@@ -347,7 +348,7 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	semester2, err := testhelpers.CreateSemester(
 		db,
@@ -363,7 +364,7 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership1 := models.Membership{
@@ -374,7 +375,7 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 	}
 	res := db.Create(&membership1)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership2 := models.Membership{
@@ -385,7 +386,7 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 	}
 	res = db.Create(&membership2)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership3 := models.Membership{
@@ -396,7 +397,7 @@ func TestMembershipService_ListMemberships(t *testing.T) {
 	}
 	res = db.Create(&membership3)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -432,21 +433,21 @@ func TestMembershipService_ListMemberships_Limit(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semester1, err := testhelpers.CreateSemester(
@@ -463,7 +464,7 @@ func TestMembershipService_ListMemberships_Limit(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership1 := models.Membership{
@@ -474,7 +475,7 @@ func TestMembershipService_ListMemberships_Limit(t *testing.T) {
 	}
 	res := db.Create(&membership1)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership2 := models.Membership{
@@ -485,7 +486,7 @@ func TestMembershipService_ListMemberships_Limit(t *testing.T) {
 	}
 	res = db.Create(&membership2)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership3 := models.Membership{
@@ -496,7 +497,7 @@ func TestMembershipService_ListMemberships_Limit(t *testing.T) {
 	}
 	res = db.Create(&membership3)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -534,21 +535,21 @@ func TestMembershipService_ListMemberships_Offset(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semester1, err := testhelpers.CreateSemester(
@@ -565,7 +566,7 @@ func TestMembershipService_ListMemberships_Offset(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership1 := models.Membership{
@@ -576,7 +577,7 @@ func TestMembershipService_ListMemberships_Offset(t *testing.T) {
 	}
 	res := db.Create(&membership1)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership2 := models.Membership{
@@ -587,7 +588,7 @@ func TestMembershipService_ListMemberships_Offset(t *testing.T) {
 	}
 	res = db.Create(&membership2)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership3 := models.Membership{
@@ -598,7 +599,7 @@ func TestMembershipService_ListMemberships_Offset(t *testing.T) {
 	}
 	res = db.Create(&membership3)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -636,21 +637,21 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semester1, err := testhelpers.CreateSemester(
@@ -667,7 +668,7 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership1 := models.Membership{
@@ -678,7 +679,7 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 	}
 	res := db.Create(&membership1)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership2 := models.Membership{
@@ -689,7 +690,7 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 	}
 	res = db.Create(&membership2)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membership3 := models.Membership{
@@ -700,7 +701,7 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 	}
 	res = db.Create(&membership3)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -735,18 +736,105 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 	}
 }
 
-func TestMembershipService_UpdateMembership_InvalidUpdate(t *testing.T) {
+func TestMembershipService_ListMemberships_UserIDFilter(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
+	}
+	user2, err := testhelpers.CreateUser(db, 46372894, "deep", "kalra", "deep@gmail.com", models.FacultyArts, "dkal")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	user3, err := testhelpers.CreateUser(db, 41694873, "jane", "doe", "jane@gmail.com", models.FacultyMath, "jdane")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	semester1, err := testhelpers.CreateSemester(
+		db,
+		uuid.New(),
+		"Fall 2022",
+		"",
+		time.Date(2022, 1, 1, 12, 0, 0, 0, time.UTC),
+		time.Date(2022, 2, 1, 12, 0, 0, 0, time.UTC),
+		100.0,
+		110.0,
+		10,
+		7,
+		2,
+	)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	membership1 := models.Membership{
+		UserID:     user1.ID,
+		SemesterID: semester1.ID,
+		Paid:       false,
+		Discounted: false,
+	}
+	res := db.Create(&membership1)
+	if res.Error != nil {
+		t.Fatal(res.Error.Error())
+	}
+
+	membership2 := models.Membership{
+		UserID:     user2.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: false,
+	}
+	res = db.Create(&membership2)
+	if res.Error != nil {
+		t.Fatal(res.Error.Error())
+	}
+
+	membership3 := models.Membership{
+		UserID:     user3.ID,
+		SemesterID: semester1.ID,
+		Paid:       true,
+		Discounted: true,
+	}
+	res = db.Create(&membership3)
+	if res.Error != nil {
+		t.Fatal(res.Error.Error())
+	}
+
+	membershipService := NewMembershipService(db)
+
+	userID := int64(user1.ID)
+	filter := models.ListMembershipsFilter{
+		SemesterID: &semester1.ID,
+		UserID:     &userID,
+	}
+
+	memberships, err := membershipService.ListMemberships(&filter)
+	if assert.NoError(t, err, "ListMemberships should not error") {
+		assert.Len(t, memberships, 1, "The result from ListMemberships should only have 1 value")
+		assert.Equal(t, user1.ID, memberships[0].UserID)
+	}
+}
+
+func TestMembershipService_UpdateMembership_InvalidUpdate(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
+	if err != nil {
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -764,7 +852,7 @@ func TestMembershipService_UpdateMembership_InvalidUpdate(t *testing.T) {
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -775,7 +863,7 @@ func TestMembershipService_UpdateMembership_InvalidUpdate(t *testing.T) {
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -796,13 +884,13 @@ func TestMembershipService_UpdateMembership_UnpaidToPaid_NoDiscount(t *testing.T
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -820,7 +908,7 @@ func TestMembershipService_UpdateMembership_UnpaidToPaid_NoDiscount(t *testing.T
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -831,7 +919,7 @@ func TestMembershipService_UpdateMembership_UnpaidToPaid_NoDiscount(t *testing.T
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -874,13 +962,13 @@ func TestMembershipService_UpdateMembership_UnpaidToPaid_Discount(t *testing.T) 
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -898,7 +986,7 @@ func TestMembershipService_UpdateMembership_UnpaidToPaid_Discount(t *testing.T) 
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -909,7 +997,7 @@ func TestMembershipService_UpdateMembership_UnpaidToPaid_Discount(t *testing.T) 
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -948,13 +1036,13 @@ func TestMembershipService_UpdateMembership_PaidToUnpaid_NotDiscounted(t *testin
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -972,7 +1060,7 @@ func TestMembershipService_UpdateMembership_PaidToUnpaid_NotDiscounted(t *testin
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -983,7 +1071,7 @@ func TestMembershipService_UpdateMembership_PaidToUnpaid_NotDiscounted(t *testin
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -1022,13 +1110,13 @@ func TestMembershipService_UpdateMembership_PaidToUnpaid_Discounted(t *testing.T
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -1046,7 +1134,7 @@ func TestMembershipService_UpdateMembership_PaidToUnpaid_Discounted(t *testing.T
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -1057,7 +1145,7 @@ func TestMembershipService_UpdateMembership_PaidToUnpaid_Discounted(t *testing.T
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -1096,13 +1184,13 @@ func TestMembershipService_UpdateMembership_Paid_NoDiscountToDiscount(t *testing
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -1120,7 +1208,7 @@ func TestMembershipService_UpdateMembership_Paid_NoDiscountToDiscount(t *testing
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -1131,7 +1219,7 @@ func TestMembershipService_UpdateMembership_Paid_NoDiscountToDiscount(t *testing
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)
@@ -1170,13 +1258,13 @@ func TestMembershipService_UpdateMembership_Paid_DiscountToNoDiscount(t *testing
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
 	user1, err := testhelpers.CreateUser(db, 20780648, "adam", "mahood", "adam@gmail.com", models.FacultyAHS, "amahood")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	semesterId := uuid.New()
@@ -1194,7 +1282,7 @@ func TestMembershipService_UpdateMembership_Paid_DiscountToNoDiscount(t *testing
 		2,
 	)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	membership := models.Membership{
@@ -1205,7 +1293,7 @@ func TestMembershipService_UpdateMembership_Paid_DiscountToNoDiscount(t *testing
 	}
 	res := db.Create(&membership)
 	if res.Error != nil {
-		t.Fatalf(res.Error.Error())
+		t.Fatal(res.Error.Error())
 	}
 
 	membershipService := NewMembershipService(db)

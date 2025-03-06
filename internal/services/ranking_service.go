@@ -50,3 +50,31 @@ func (svc *rankingService) UpdateRanking(membershipId uuid.UUID, points int) err
 
 	return nil
 }
+
+func (svc *rankingService) GetRanking(semesterID uuid.UUID, membershipID uuid.UUID) (*models.GetRankingResponse, error) {
+	ret := models.GetRankingResponse{}
+
+	rankingsTableQuery := svc.db.
+		Table("memberships").
+		Select("rankings.membership_id, rankings.points, ROW_NUMBER() OVER (ORDER BY rankings.points DESC) as position").
+		Joins("INNER JOIN rankings ON memberships.id = rankings.membership_id").
+		Where("memberships.semester_id = ?", semesterID)
+
+	res := svc.db.
+		Table("(?) as rankings", rankingsTableQuery).
+		Select("points", "position").
+		Where("membership_id = ?", membershipID).
+		First(&ret)
+
+	// Check if the error is a not found error
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, e.NotFound(err.Error())
+	}
+
+	// Any other DB error is a server error
+	if err := res.Error; err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	return &ret, nil
+}

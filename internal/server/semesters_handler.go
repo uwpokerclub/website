@@ -79,6 +79,31 @@ func (s *apiServer) GetRankings(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, rankings)
 }
 
+func (s *apiServer) GetRanking(ctx *gin.Context) {
+	queryValue := ctx.Param("semesterId")
+	semesterID, err := uuid.Parse(queryValue)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid UUID for semester ID"))
+		return
+	}
+
+	queryValue = ctx.Param("membershipId")
+	membershipID, err := uuid.Parse(queryValue)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid UUID for membership ID"))
+		return
+	}
+
+	svc := services.NewRankingService(s.db)
+	ranking, err := svc.GetRanking(semesterID, membershipID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, ranking)
+}
+
 func (s *apiServer) ExportRankings(ctx *gin.Context) {
 	semesterId := ctx.Param("semesterId")
 	id, err := uuid.Parse(semesterId)

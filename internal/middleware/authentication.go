@@ -38,11 +38,13 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		sessionManager := authentication.NewSessionManager(db)
 
 		// Authenticate this session ID
-		err = sessionManager.Authenticate(sessionID)
+		session, err := sessionManager.Authenticate(sessionID)
 		if err != nil {
 			ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 			return
 		}
+
+		ctx.Set("username", session.Username)
 
 		ctx.Next()
 	}

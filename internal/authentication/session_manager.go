@@ -48,37 +48,11 @@ func (svc *sessionManager) Invalidate(sessionID uuid.UUID) error {
 	return nil
 }
 
-func (svc *sessionManager) Authenticate(sessionID uuid.UUID) error {
+func (svc *sessionManager) Authenticate(sessionID uuid.UUID) (*models.Session, error) {
 	session := models.Session{ID: sessionID}
 	res := svc.db.First(&session)
 
 	// Check if session exists
-	err := res.Error
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return e.Unauthorized("Authentication required")
-	}
-
-	if err != nil {
-		return e.InternalServerError(err.Error())
-	}
-
-	// Check if session has expired, if it is delete it from the table and return 401
-	if time.Now().UTC().After(session.ExpiresAt) {
-		res = svc.db.Delete(&session)
-		if err := res.Error; err != nil {
-			return e.InternalServerError(err.Error())
-		}
-
-		return e.Unauthorized("Session has expired. Please reauthenticate")
-	}
-
-	return nil
-}
-
-func (svc *sessionManager) Get(sessionID uuid.UUID) (*models.GetSessionResponse, error) {
-	session := models.Session{ID: sessionID}
-	res := svc.db.First(&session)
-
 	err := res.Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.Unauthorized("Authentication required")
@@ -88,9 +62,15 @@ func (svc *sessionManager) Get(sessionID uuid.UUID) (*models.GetSessionResponse,
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	response := models.GetSessionResponse{
-		Username: session.Username,
+	// Check if session has expired, if it is delete it from the table and return 401
+	if time.Now().UTC().After(session.ExpiresAt) {
+		res = svc.db.Delete(&session)
+		if err := res.Error; err != nil {
+			return nil, e.InternalServerError(err.Error())
+		}
+
+		return nil, e.Unauthorized("Session has expired. Please reauthenticate")
 	}
 
-	return &response, nil
+	return &session, nil
 }

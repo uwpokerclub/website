@@ -121,11 +121,13 @@ func (s *apiServer) GetSessionHandler(ctx *gin.Context) {
 	sessionUUID, _ := uuid.Parse(sessionID)
 
 	sessionManager := authentication.NewSessionManager(s.db)
-	session, err := sessionManager.Get(sessionUUID)
+	session, err := sessionManager.Authenticate(sessionUUID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, session)
+	ctx.JSON(http.StatusOK, models.GetSessionResponse{
+		Username: session.Username,
+	})
 }

@@ -103,7 +103,7 @@ func TestSessionManager(t *testing.T) {
 	t.Run("Authenticate__NoSession", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
-		err := sessManager.Authenticate(uuid.New())
+		_, err := sessManager.Authenticate(uuid.New())
 		assert.Error(t, err)
 	})
 
@@ -113,7 +113,7 @@ func TestSessionManager(t *testing.T) {
 		session, err := CreateTestSession(db, "testuser", "password", time.Now().Add(time.Hour*-9))
 		assert.NoError(t, err)
 
-		err = sessManager.Authenticate(session.ID)
+		_, err = sessManager.Authenticate(session.ID)
 		assert.Error(t, err)
 
 		// Ensure session was deleted
@@ -131,23 +131,7 @@ func TestSessionManager(t *testing.T) {
 		session, err := CreateTestSession(db, "testuser", "password", time.Now())
 		assert.NoError(t, err)
 
-		err = sessManager.Authenticate(session.ID)
-		assert.NoError(t, err)
-	})
-
-	t.Run("Get__NoSession", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-		session, err := sessManager.Get(uuid.New())
-		assert.Error(t, err)
-		assert.Nil(t, session)
-	})
-
-	t.Run("Get__ValidSession", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-		session, err := CreateTestSession(db, "testuser", "password", time.Now())
-		assert.NoError(t, err)
-
-		foundSession, err := sessManager.Get(session.ID)
+		foundSession, err := sessManager.Authenticate(session.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, session.Username, foundSession.Username)
 	})

@@ -61,63 +61,63 @@ func (s *apiServer) SetupRoutes() {
 
 	usersRoute := s.Router.Group("/users", middleware.UseAuthentication(s.db))
 	{
-		usersRoute.GET("", s.ListUsers)
-		usersRoute.POST("", s.CreateUser)
-		usersRoute.GET(":id", s.GetUser)
-		usersRoute.PATCH(":id", s.UpdateUser)
-		usersRoute.DELETE(":id", s.DeleteUser)
+		usersRoute.GET("", middleware.UseAuthorization(s.db, "user.list"), s.ListUsers)
+		usersRoute.POST("", middleware.UseAuthorization(s.db, "user.create"), s.CreateUser)
+		usersRoute.GET(":id", middleware.UseAuthorization(s.db, "user.get"), s.GetUser)
+		usersRoute.PATCH(":id", middleware.UseAuthorization(s.db, "user.edit"), s.UpdateUser)
+		usersRoute.DELETE(":id", middleware.UseAuthorization(s.db, "user.delete"), s.DeleteUser)
 	}
 
 	semestersRoute := s.Router.Group("/semesters", middleware.UseAuthentication(s.db))
 	{
-		semestersRoute.GET("", s.ListSemesters)
-		semestersRoute.POST("", s.CreateSemester)
-		semestersRoute.GET(":semesterId", s.GetSemester)
-		semestersRoute.GET(":semesterId/rankings", s.GetRankings)
-		semestersRoute.GET(":semesterId/rankings/export", s.ExportRankings)
-		semestersRoute.GET(":semesterId/rankings/:membershipId", s.GetRanking)
+		semestersRoute.GET("", middleware.UseAuthorization(s.db, "semester.list"), s.ListSemesters)
+		semestersRoute.POST("", middleware.UseAuthorization(s.db, "semester.create"), s.CreateSemester)
+		semestersRoute.GET(":semesterId", middleware.UseAuthorization(s.db, "semester.get"), s.GetSemester)
+		semestersRoute.GET(":semesterId/rankings", middleware.UseAuthorization(s.db, "semester.rankings.list"), s.GetRankings)
+		semestersRoute.GET(":semesterId/rankings/export", middleware.UseAuthorization(s.db, "semester.rankings.export"), s.ExportRankings)
+		semestersRoute.GET(":semesterId/rankings/:membershipId", middleware.UseAuthorization(s.db, "semester.rankings.get"), s.GetRanking)
 
 		// Transaction routes
-		semestersRoute.GET(":semesterId/transactions", s.ListTransactions)
-		semestersRoute.POST(":semesterId/transactions", s.CreateTransaction)
-		semestersRoute.GET(":semesterId/transactions/:transactionId", s.GetTransaction)
-		semestersRoute.PATCH(":semesterId/transactions/:transactionId", s.UpdateTransaction)
-		semestersRoute.DELETE(":semesterId/transactions/:transactionId", s.DeleteTransaction)
+		semestersRoute.GET(":semesterId/transactions", middleware.UseAuthorization(s.db, "semester.transaction.list"), s.ListTransactions)
+		semestersRoute.POST(":semesterId/transactions", middleware.UseAuthorization(s.db, "semester.transaction.create"), s.CreateTransaction)
+		semestersRoute.GET(":semesterId/transactions/:transactionId", middleware.UseAuthorization(s.db, "semester.transaction.get"), s.GetTransaction)
+		semestersRoute.PATCH(":semesterId/transactions/:transactionId", middleware.UseAuthorization(s.db, "semester.transaction.edit"), s.UpdateTransaction)
+		semestersRoute.DELETE(":semesterId/transactions/:transactionId", middleware.UseAuthorization(s.db, "semester.transaction.delete"), s.DeleteTransaction)
 	}
 
 	eventsRoute := s.Router.Group("/events", middleware.UseAuthentication(s.db))
 	{
-		eventsRoute.GET("", s.ListEvents)
-		eventsRoute.POST("", s.CreateEvent)
-		eventsRoute.GET(":eventId", s.GetEvent)
-		eventsRoute.PATCH(":eventId", s.UpdateEvent)
-		eventsRoute.POST(":eventId/end", s.EndEvent)
-		eventsRoute.POST(":eventId/unend", s.UndoEndEvent)
-		eventsRoute.POST(":eventId/rebuy", s.NewRebuy)
+		eventsRoute.GET("", middleware.UseAuthorization(s.db, "event.list"), s.ListEvents)
+		eventsRoute.POST("", middleware.UseAuthorization(s.db, "event.create"), s.CreateEvent)
+		eventsRoute.GET(":eventId", middleware.UseAuthorization(s.db, "event.get"), s.GetEvent)
+		eventsRoute.PATCH(":eventId", middleware.UseAuthorization(s.db, "event.edit"), s.UpdateEvent)
+		eventsRoute.POST(":eventId/end", middleware.UseAuthorization(s.db, "event.end"), s.EndEvent)
+		eventsRoute.POST(":eventId/unend", middleware.UseAuthorization(s.db, "event.restart"), s.UndoEndEvent)
+		eventsRoute.POST(":eventId/rebuy", middleware.UseAuthorization(s.db, "event.rebuy"), s.NewRebuy)
 	}
 
 	membershipRoutes := s.Router.Group("/memberships", middleware.UseAuthentication(s.db))
 	{
-		membershipRoutes.GET("", s.ListMemberships)
-		membershipRoutes.POST("", s.CreateMembership)
-		membershipRoutes.GET(":id", s.GetMembership)
-		membershipRoutes.PATCH(":id", s.UpdateMembership)
+		membershipRoutes.GET("", middleware.UseAuthorization(s.db, "membership.list"), s.ListMemberships)
+		membershipRoutes.POST("", middleware.UseAuthorization(s.db, "membership.create"), s.CreateMembership)
+		membershipRoutes.GET(":id", middleware.UseAuthorization(s.db, "membership.get"), s.GetMembership)
+		membershipRoutes.PATCH(":id", middleware.UseAuthorization(s.db, "membership.edit"), s.UpdateMembership)
 	}
 
 	participantRoute := s.Router.Group("/participants", middleware.UseAuthentication(s.db))
 	{
-		participantRoute.GET("", s.ListParticipants)
-		participantRoute.POST("", s.CreateParticipant)
-		participantRoute.POST("sign-out", s.SignOutParticipant)
-		participantRoute.POST("sign-in", s.SignInParticipant)
-		participantRoute.DELETE("", s.DeleteParticipant)
+		participantRoute.GET("", middleware.UseAuthorization(s.db, "event.participant.list"), s.ListParticipants)
+		participantRoute.POST("", middleware.UseAuthorization(s.db, "event.participant.create"), s.CreateParticipant)
+		participantRoute.POST("sign-out", middleware.UseAuthorization(s.db, "event.participant.signout"), s.SignOutParticipant)
+		participantRoute.POST("sign-in", middleware.UseAuthorization(s.db, "event.participant.signin"), s.SignInParticipant)
+		participantRoute.DELETE("", middleware.UseAuthorization(s.db, "event.participant.delete"), s.DeleteParticipant)
 	}
 
 	structuresRoute := s.Router.Group("/structures", middleware.UseAuthentication(s.db))
 	{
-		structuresRoute.POST("", s.CreateStructure)
-		structuresRoute.GET("", s.ListStructures)
-		structuresRoute.GET(":id", s.GetStructure)
-		structuresRoute.PUT(":id", s.UpdateStructure)
+		structuresRoute.POST("", middleware.UseAuthorization(s.db, "structure.list"), s.CreateStructure)
+		structuresRoute.GET("", middleware.UseAuthorization(s.db, "structure.create"), s.ListStructures)
+		structuresRoute.GET(":id", middleware.UseAuthorization(s.db, "structure.get"), s.GetStructure)
+		structuresRoute.PUT(":id", middleware.UseAuthorization(s.db, "structure.edit"), s.UpdateStructure)
 	}
 }

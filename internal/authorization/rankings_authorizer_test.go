@@ -8,47 +8,92 @@ import (
 
 func TestRankingsAuthorizer(t *testing.T) {
 	testCases := []struct {
-		name     string
-		role     string
-		action   string
-		expected bool
+		name  string
+		roles []struct {
+			role     string
+			expected bool
+		}
+		action string
 	}{
 		{
-			name:     "No action",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "",
-			expected: false,
+			name: "No action",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+			},
+			action: "",
 		},
 		{
-			name:     "No role",
-			role:     "",
-			action:   "get",
-			expected: false,
+			name: "No role",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: "", expected: false},
+			},
+			action: "get",
 		},
 		{
-			name:     "Get Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "get",
-			expected: true,
+			name: "Get Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: true},
+				{role: ROLE_EXECUTIVE.ToString(), expected: true},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "get",
 		},
 		{
-			name:     "List Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "list",
-			expected: true,
+			name: "List Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: true},
+				{role: ROLE_EXECUTIVE.ToString(), expected: true},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "list",
 		},
 		{
-			name:     "Export Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "export",
-			expected: true,
+			name: "Export Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: false},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "export",
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			svc := NewRankingsAuthorizer()
-			result := svc.IsAuthorized(tC.role, tC.action)
-			assert.Equal(t, tC.expected, result)
+			for _, r := range tC.roles {
+				result := svc.IsAuthorized(r.role, tC.action)
+				assert.Equal(t, r.expected, result, "Expected %s to be %v for action %s", r.role, r.expected, tC.action)
+			}
 		})
 	}
 }

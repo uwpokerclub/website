@@ -2,16 +2,20 @@ package authorization
 
 import "strings"
 
+// eventAuthorizer is an interface that defines the methods for authorizing events.
 type eventAuthorizer struct {
 	resourceAuthorizers ResourceAuthorizerMap
 }
 
+// NewEventAuthorizer creates a new event authorizer.
+// It takes a ResourceAuthorizerMap as an argument, which is a map of resource names to their respective authorizers.
 func NewEventAuthorizer(resourceAuthorizers ResourceAuthorizerMap) ResourceAuthorizer {
 	return &eventAuthorizer{
 		resourceAuthorizers: resourceAuthorizers,
 	}
 }
 
+// IsAuthorized checks if a user with the given role is authorized to perform the specified action on an event.
 func (svc *eventAuthorizer) IsAuthorized(role string, action string) bool {
 	// Validate input
 	if action == "" || role == "" {
@@ -38,19 +42,19 @@ func (svc *eventAuthorizer) IsAuthorized(role string, action string) bool {
 	// Check if user only wants to perform an action on this resource
 	switch action {
 	case "create":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	case "get":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "list":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "edit":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	case "end":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_SECRETARY, role)
 	case "restart":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_SECRETARY, role)
 	case "rebuy":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	}
 
 	return false

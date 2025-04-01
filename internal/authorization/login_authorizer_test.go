@@ -8,35 +8,58 @@ import (
 
 func TestLoginAuthorizer(t *testing.T) {
 	testCases := []struct {
-		name     string
-		role     string
-		action   string
-		expected bool
+		name  string
+		roles []struct {
+			role     string
+			expected bool
+		}
+		action string
 	}{
 		{
-			name:     "No action",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "",
-			expected: false,
+			name: "No action",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+			},
+			action: "",
 		},
 		{
-			name:     "No role",
-			role:     "",
-			action:   "create",
-			expected: false,
+			name: "No role",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: "", expected: false},
+			},
+			action: "create",
 		},
 		{
-			name:     "Create Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "create",
-			expected: true,
+			name: "Create Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: false},
+				{role: ROLE_SECRETARY.ToString(), expected: false},
+				{role: ROLE_TREASURER.ToString(), expected: false},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: false},
+				{role: ROLE_PRESIDENT.ToString(), expected: false},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "create",
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			svc := NewLoginAuthorizer()
-			result := svc.IsAuthorized(tC.role, tC.action)
-			assert.Equal(t, tC.expected, result)
+			for _, r := range tC.roles {
+				result := svc.IsAuthorized(r.role, tC.action)
+				assert.Equal(t, r.expected, result, "Expected %s to be %v for action %s", r.role, r.expected, tC.action)
+			}
 		})
 	}
 }

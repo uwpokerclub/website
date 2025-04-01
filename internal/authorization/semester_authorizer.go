@@ -2,16 +2,19 @@ package authorization
 
 import "strings"
 
+// semesterAuthorizer is an interface that defines the methods for authorizing semesters.
 type semesterAuthorizer struct {
 	resourceAuthorizers ResourceAuthorizerMap
 }
 
+// NewSemesterAuthorizer creates a new semester authorizer.
 func NewSemesterAuthorizer(resourceAuthorizers ResourceAuthorizerMap) ResourceAuthorizer {
 	return &semesterAuthorizer{
 		resourceAuthorizers: resourceAuthorizers,
 	}
 }
 
+// IsAuthorized checks if a user with the given role is authorized to perform the specified action on a semester.
 func (svc *semesterAuthorizer) IsAuthorized(role, action string) bool {
 	// Validate input
 	if action == "" {
@@ -38,11 +41,11 @@ func (svc *semesterAuthorizer) IsAuthorized(role, action string) bool {
 	// Check if user only wants to perform an action on this resource
 	switch action {
 	case "create":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_VICE_PRESIDENT, role)
 	case "get":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "list":
-		return HasRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_BOT, role)
 	}
 
 	return false

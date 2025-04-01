@@ -12,70 +12,159 @@ func TestEventAuthorizer(t *testing.T) {
 		name                   string
 		mockResourceAuthorizer func(m *MockResourceAuthorizer)
 		resourceAuthorizers    ResourceAuthorizerMap
-		role                   string
-		action                 string
-		expected               bool
+		roles                  []struct {
+			role     string
+			expected bool
+		}
+		action string
 	}{
 		{
-			name:     "No action",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "",
-			expected: false,
+			name: "No action",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+			},
+			action: "",
 		},
 		{
-			name:     "No role",
-			role:     "",
-			action:   "create",
-			expected: false,
+			name: "No role",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: "", expected: false},
+			},
+			action: "create",
 		},
 		{
-			name:     "Create Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "create",
-			expected: true,
+			name: "Create Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "create",
 		},
 		{
-			name:     "Get Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "get",
-			expected: true,
+			name: "Get Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: true},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "get",
 		},
 		{
-			name:     "List Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "list",
-			expected: true,
+			name: "List Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: true},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "list",
 		},
 		{
-			name:     "Edit Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "edit",
-			expected: true,
+			name: "Edit Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "edit"},
+		{
+			name: "End Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: false},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "end",
 		},
 		{
-			name:     "End Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "end",
-			expected: true,
+			name: "Restart Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: false},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "restart",
 		},
 		{
-			name:     "Restart Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "restart",
-			expected: true,
-		},
-		{
-			name:     "Rebuy Authorized",
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "rebuy",
-			expected: true,
+			name: "Rebuy Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			}, action: "rebuy",
 		},
 		{
 			name:                "Unknown Sub-Resource",
 			resourceAuthorizers: ResourceAuthorizerMap{},
-			role:                ROLE_EXECUTIVE.ToString(),
-			action:              "resource.create",
-			expected:            false,
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+			},
+			action: "resource.create",
 		},
 		{
 			name: "Sub-Resource Unauthorized",
@@ -85,9 +174,13 @@ func TestEventAuthorizer(t *testing.T) {
 			resourceAuthorizers: ResourceAuthorizerMap{
 				"resource": &MockResourceAuthorizer{},
 			},
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "resource.create",
-			expected: false,
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+			},
+			action: "resource.create",
 		},
 		{
 			name: "Sub-Resource Authorized",
@@ -97,9 +190,13 @@ func TestEventAuthorizer(t *testing.T) {
 			resourceAuthorizers: ResourceAuthorizerMap{
 				"resource": &MockResourceAuthorizer{},
 			},
-			role:     ROLE_EXECUTIVE.ToString(),
-			action:   "resource.create",
-			expected: true,
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: true},
+			},
+			action: "resource.create",
 		},
 	}
 	for _, tC := range testCases {
@@ -109,8 +206,10 @@ func TestEventAuthorizer(t *testing.T) {
 			}
 
 			svc := NewEventAuthorizer(tC.resourceAuthorizers)
-			result := svc.IsAuthorized(tC.role, tC.action)
-			assert.Equal(t, tC.expected, result)
+			for _, r := range tC.roles {
+				result := svc.IsAuthorized(r.role, tC.action)
+				assert.Equal(t, r.expected, result, "Expected %s to be %v for action %s", r.role, r.expected, tC.action)
+			}
 		})
 	}
 }

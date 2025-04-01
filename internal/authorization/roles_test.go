@@ -71,3 +71,36 @@ func TestStringToRole(t *testing.T) {
 		})
 	}
 }
+
+func TestHasAtLeastRole(t *testing.T) {
+	testCases := []struct {
+		name     string
+		role     role
+		userRole string
+		expected bool
+	}{
+		{
+			name:     "Has exactly the same role",
+			role:     ROLE_EXECUTIVE,
+			userRole: "executive",
+			expected: true,
+		},
+		{
+			name:     "Has a higher role",
+			role:     ROLE_EXECUTIVE,
+			userRole: "tournament_director",
+			expected: true,
+		},
+		{
+			name:     "Has a lower role",
+			role:     ROLE_EXECUTIVE,
+			userRole: "bot",
+			expected: false,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			assert.Equal(t, tC.expected, HasAtleastRole(tC.role, tC.userRole))
+		})
+	}
+}

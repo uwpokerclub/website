@@ -27,14 +27,14 @@ func (s *apiServer) CreateLogin(ctx *gin.Context) {
 	var req models.Login
 	err := ctx.ShouldBindJSON(&req)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
 		return
 	}
 
 	svc := services.NewLoginService(s.db)
-	err = svc.CreateLogin(req.Username, req.Password)
+	err = svc.CreateLogin(req.Username, req.Password, req.Role)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
 	}
 

@@ -47,9 +47,9 @@ func (s *apiServer) Run(port string) {
 }
 
 func (s *apiServer) SetupRoutes() {
-	loginRoute := s.Router.Group("/login")
+	loginRoute := s.Router.Group("/login", middleware.UseAuthentication(s.db))
 	{
-		loginRoute.POST("", s.CreateLogin)
+		loginRoute.POST("", middleware.UseAuthorization(s.db, "login.create"), s.CreateLogin)
 	}
 
 	sessionRoute := s.Router.Group("/session")

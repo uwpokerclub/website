@@ -18,17 +18,7 @@ func NewLoginService(db *gorm.DB) *loginService {
 	}
 }
 
-func (svc *loginService) CreateLogin(username string, password string) error {
-	existingLogins := []models.Login{}
-	res := svc.db.Model(&models.Login{}).Find(&existingLogins)
-	if err := res.Error; err != nil {
-		return e.InternalServerError(err.Error())
-	}
-
-	if len(existingLogins) > 0 {
-		return e.Forbidden("You cannot perform this action")
-	}
-
+func (svc *loginService) CreateLogin(username string, password string, role string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return e.InternalServerError(err.Error())
@@ -37,9 +27,10 @@ func (svc *loginService) CreateLogin(username string, password string) error {
 	login := models.Login{
 		Username: username,
 		Password: string(hash),
+		Role:     role,
 	}
 
-	res = svc.db.Create(&login)
+	res := svc.db.Create(&login)
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
 	}

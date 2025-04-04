@@ -33,7 +33,7 @@ func TestLoginService(t *testing.T) {
 	t.Run("CreateLogin", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
-		err := loginService.CreateLogin("testuser", "testpassword")
+		err := loginService.CreateLogin("testuser", "testpassword", "president")
 		if assert.NoError(t, err) {
 			var login models.Login
 			err := db.First(&login, "username = ?", "testuser").Error
@@ -42,7 +42,7 @@ func TestLoginService(t *testing.T) {
 			}
 			assert.Equal(t, "testuser", login.Username)
 			assert.NotEmpty(t, login.Password)
-			assert.Equal(t, "executive", login.Role)
+			assert.Equal(t, "president", login.Role)
 		}
 	})
 }

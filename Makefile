@@ -11,7 +11,7 @@ exec_server:
 	docker compose exec server /bin/bash
 
 exec_db:
-	docker compose exec db psql -U docker
+	docker compose exec db psql -U docker -d uwpokerclub_development
 
 test:
 	docker compose exec server go test -p=1 ./...

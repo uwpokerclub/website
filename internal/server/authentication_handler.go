@@ -43,10 +43,10 @@ func (s *apiServer) CreateLogin(ctx *gin.Context) {
 
 func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 	// Load and validate request body
-	var req models.Login
+	var req models.NewSessionRequest
 	err := ctx.ShouldBindJSON(&req)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid body sent with request: expected {\"username\": string, \"password\": string"))
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
 		return
 	}
 

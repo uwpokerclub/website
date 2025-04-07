@@ -63,3 +63,26 @@ func TestLoginAuthorizer(t *testing.T) {
 		})
 	}
 }
+
+func TestLoginAuthorizer_GetPermissions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		role     string
+		expected map[string]any
+	}{
+		{
+			name: "Should return correct permission map",
+			role: "tournament_director",
+			expected: map[string]any{
+				"create": false,
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			svc := NewLoginAuthorizer()
+			permissions := svc.GetPermissions(tC.role)
+			assert.Equal(t, tC.expected, permissions)
+		})
+	}
+}

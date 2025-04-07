@@ -14,5 +14,7 @@ type Session struct {
 }
 
 type GetSessionResponse struct {
-	Username string `json:"username"`
+	Username    string                    `json:"username"`
+	Role        string                    `json:"role"`
+	Permissions map[string]map[string]any `json:"permissions"`
 }

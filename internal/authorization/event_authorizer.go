@@ -5,6 +5,8 @@ import "strings"
 // eventAuthorizer is an interface that defines the methods for authorizing events.
 type eventAuthorizer struct {
 	resourceAuthorizers ResourceAuthorizerMap
+	actions             []string
+	subResources        []string
 }
 
 // NewEventAuthorizer creates a new event authorizer.
@@ -12,6 +14,8 @@ type eventAuthorizer struct {
 func NewEventAuthorizer(resourceAuthorizers ResourceAuthorizerMap) ResourceAuthorizer {
 	return &eventAuthorizer{
 		resourceAuthorizers: resourceAuthorizers,
+		actions:             []string{"create", "get", "list", "edit", "end", "restart", "rebuy"},
+		subResources:        []string{"participant"},
 	}
 }
 
@@ -58,4 +62,18 @@ func (svc *eventAuthorizer) IsAuthorized(role string, action string) bool {
 	}
 
 	return false
+}
+
+func (svc *eventAuthorizer) GetPermissions(role string) map[string]any {
+	permissions := make(map[string]any)
+
+	for _, action := range svc.actions {
+		permissions[action] = svc.IsAuthorized(role, action)
+	}
+
+	for _, subResource := range svc.subResources {
+		permissions[subResource] = svc.resourceAuthorizers[subResource].GetPermissions(role)
+	}
+
+	return permissions
 }

@@ -97,3 +97,28 @@ func TestRankingsAuthorizer(t *testing.T) {
 		})
 	}
 }
+
+func TestRankingsAuthorizer_GetPermissions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		role     string
+		expected map[string]any
+	}{
+		{
+			name: "Should return correct permission map",
+			role: "tournament_director",
+			expected: map[string]any{
+				"get":    true,
+				"list":   true,
+				"export": false,
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			svc := NewRankingsAuthorizer()
+			permissions := svc.GetPermissions(tC.role)
+			assert.Equal(t, tC.expected, permissions)
+		})
+	}
+}

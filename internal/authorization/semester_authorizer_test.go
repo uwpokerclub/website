@@ -147,3 +147,53 @@ func TestSemesterAuthorizer(t *testing.T) {
 		})
 	}
 }
+
+func TestSemesterAuthorizer_GetPermissions(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		role                   string
+		expected               map[string]any
+		resourceAuthorizers    ResourceAuthorizerMap
+		mockResourceAuthorizer func(m *MockResourceAuthorizer)
+	}{
+		{
+			name: "Should return correct permission map",
+			role: "tournament_director",
+			expected: map[string]any{
+				"create": false,
+				"get":    true,
+				"list":   true,
+				"rankings": map[string]any{
+					"create": false,
+					"get":    true,
+					"list":   true,
+				},
+				"transaction": map[string]any{
+					"create": false,
+					"get":    true,
+					"list":   true,
+				},
+			},
+			resourceAuthorizers: ResourceAuthorizerMap{
+				"rankings":    &MockResourceAuthorizer{},
+				"transaction": &MockResourceAuthorizer{},
+			},
+			mockResourceAuthorizer: func(m *MockResourceAuthorizer) {
+				m.On("GetPermissions", mock.Anything).Return(map[string]any{
+					"create": false,
+					"get":    true,
+					"list":   true,
+				})
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			tC.mockResourceAuthorizer(tC.resourceAuthorizers["rankings"].(*MockResourceAuthorizer))
+			tC.mockResourceAuthorizer(tC.resourceAuthorizers["transaction"].(*MockResourceAuthorizer))
+			svc := NewSemesterAuthorizer(tC.resourceAuthorizers)
+			permissions := svc.GetPermissions(tC.role)
+			assert.Equal(t, tC.expected, permissions)
+		})
+	}
+}

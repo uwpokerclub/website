@@ -1,11 +1,15 @@
 package authorization
 
 // StructureAuthorizer is an interface that defines the methods for authorizing structure resources.
-type structureAuthorizer struct{}
+type structureAuthorizer struct {
+	actions []string
+}
 
 // NewStructureAuthorizer creates a new structure authorizer.
 func NewStructureAuthorizer() ResourceAuthorizer {
-	return &structureAuthorizer{}
+	return &structureAuthorizer{
+		actions: []string{"create", "get", "list", "edit"},
+	}
 }
 
 // IsAuthorized checks if a user with the given role is authorized to perform the specified action on a structure.
@@ -22,4 +26,14 @@ func (svc *structureAuthorizer) IsAuthorized(role, action string) bool {
 	}
 
 	return false
+}
+
+func (svc *structureAuthorizer) GetPermissions(role string) map[string]any {
+	permissions := make(map[string]any)
+
+	for _, action := range svc.actions {
+		permissions[action] = svc.IsAuthorized(role, action)
+	}
+
+	return permissions
 }

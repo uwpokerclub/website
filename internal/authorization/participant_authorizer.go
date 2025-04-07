@@ -1,11 +1,15 @@
 package authorization
 
 // participantAuthorizer is an interface that defines the methods for authorizing participants.
-type participantAuthorizer struct{}
+type participantAuthorizer struct {
+	actions []string
+}
 
 // NewParticipantAuthorizer creates a new participant authorizer.
 func NewParticipantAuthorizer() ResourceAuthorizer {
-	return &participantAuthorizer{}
+	return &participantAuthorizer{
+		actions: []string{"create", "get", "list", "signin", "signout", "delete"},
+	}
 }
 
 // IsAuthorized checks if a user with the given role is authorized to perform the specified action on a participant.
@@ -26,4 +30,14 @@ func (svc *participantAuthorizer) IsAuthorized(role string, action string) bool 
 	}
 
 	return false
+}
+
+func (svc *participantAuthorizer) GetPermissions(role string) map[string]any {
+	permissions := make(map[string]any)
+
+	for _, action := range svc.actions {
+		permissions[action] = svc.IsAuthorized(role, action)
+	}
+
+	return permissions
 }

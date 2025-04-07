@@ -1,11 +1,15 @@
 package authorization
 
 // RankingsAuthorizer is an interface that defines the methods for authorizing rankings.
-type rankingsAuthorizer struct{}
+type rankingsAuthorizer struct {
+	actions []string
+}
 
 // NewRankingsAuthorizer creates a new rankings authorizer.
 func NewRankingsAuthorizer() ResourceAuthorizer {
-	return &rankingsAuthorizer{}
+	return &rankingsAuthorizer{
+		actions: []string{"get", "list", "export"},
+	}
 }
 
 // IsAuthorized checks if a user with the given role is authorized to perform the specified action on rankings.
@@ -20,4 +24,14 @@ func (svc *rankingsAuthorizer) IsAuthorized(role string, action string) bool {
 	}
 
 	return false
+}
+
+func (svc *rankingsAuthorizer) GetPermissions(role string) map[string]any {
+	permissions := make(map[string]any)
+
+	for _, action := range svc.actions {
+		permissions[action] = svc.IsAuthorized(role, action)
+	}
+
+	return permissions
 }

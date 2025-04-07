@@ -131,3 +131,30 @@ func TestTransactionAuthorizer(t *testing.T) {
 		})
 	}
 }
+
+func TestTransactionAuthorizer_GetPermissions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		role     string
+		expected map[string]any
+	}{
+		{
+			name: "Should return correct permission map",
+			role: "tournament_director",
+			expected: map[string]any{
+				"create": false,
+				"get":    false,
+				"list":   false,
+				"edit":   false,
+				"delete": false,
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			svc := NewTransactionAuthorizer()
+			permissions := svc.GetPermissions(tC.role)
+			assert.Equal(t, tC.expected, permissions)
+		})
+	}
+}

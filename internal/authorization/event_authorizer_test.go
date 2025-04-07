@@ -213,3 +213,52 @@ func TestEventAuthorizer(t *testing.T) {
 		})
 	}
 }
+
+func TestEventAuthorizer_GetPermissions(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		role                   string
+		expected               map[string]any
+		resourceAuthorizers    ResourceAuthorizerMap
+		mockResourceAuthorizer func(m *MockResourceAuthorizer)
+	}{
+		{
+			name: "Should return correct permission map",
+			role: "tournament_director",
+			expected: map[string]any{
+				"create":  true,
+				"get":     true,
+				"list":    true,
+				"edit":    true,
+				"end":     false,
+				"restart": false,
+				"rebuy":   true,
+				"participant": map[string]any{
+					"create": true,
+					"get":    true,
+					"list":   true,
+					"delete": false,
+				},
+			},
+			resourceAuthorizers: ResourceAuthorizerMap{
+				"participant": &MockResourceAuthorizer{},
+			},
+			mockResourceAuthorizer: func(m *MockResourceAuthorizer) {
+				m.On("GetPermissions", mock.Anything).Return(map[string]any{
+					"create": true,
+					"get":    true,
+					"list":   true,
+					"delete": false,
+				})
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			tC.mockResourceAuthorizer(tC.resourceAuthorizers["participant"].(*MockResourceAuthorizer))
+			svc := NewEventAuthorizer(tC.resourceAuthorizers)
+			permissions := svc.GetPermissions(tC.role)
+			assert.Equal(t, tC.expected, permissions)
+		})
+	}
+}

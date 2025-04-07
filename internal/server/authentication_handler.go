@@ -2,6 +2,7 @@ package server
 
 import (
 	"api/internal/authentication"
+	"api/internal/authorization"
 	e "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
@@ -115,19 +116,17 @@ func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
 }
 
 func (s *apiServer) GetSessionHandler(ctx *gin.Context) {
-	cookieKey := getCookieKey()
+	username := ctx.GetString("username")
 
-	sessionID, _ := ctx.Cookie(cookieKey)
-	sessionUUID, _ := uuid.Parse(sessionID)
-
-	sessionManager := authentication.NewSessionManager(s.db)
-	session, err := sessionManager.Authenticate(sessionUUID)
+	svc, err := authorization.NewAuthorizationService(s.db, username, authorization.DefaultAuthorizerMap)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, models.GetSessionResponse{
-		Username: session.Username,
+		Username:    username,
+		Role:        svc.Role(),
+		Permissions: svc.GetPermissions(),
 	})
 }

@@ -148,3 +148,31 @@ func TestParticipantAuthorizer(t *testing.T) {
 		})
 	}
 }
+
+func TestParticipantAuthorizer_GetPermissions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		role     string
+		expected map[string]any
+	}{
+		{
+			name: "Should return correct permission map",
+			role: "tournament_director",
+			expected: map[string]any{
+				"create":  true,
+				"get":     true,
+				"list":    true,
+				"signin":  true,
+				"signout": true,
+				"delete":  true,
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			svc := NewParticipantAuthorizer()
+			permissions := svc.GetPermissions(tC.role)
+			assert.Equal(t, tC.expected, permissions)
+		})
+	}
+}

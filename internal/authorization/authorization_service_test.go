@@ -87,6 +87,11 @@ func (m *MockResourceAuthorizer) IsAuthorized(role string, action string) bool {
 	return args.Bool(0)
 }
 
+func (m *MockResourceAuthorizer) GetPermissions(role string) map[string]any {
+	args := m.Called(0)
+	return args.Get(0).(map[string]any)
+}
+
 func TestAuthorizationService_IsAuthorized(t *testing.T) {
 	sqlMock := func(mock sqlmock.Sqlmock) {
 		rows := sqlmock.NewRows([]string{"username", "password", "role"}).AddRow("testuser", "password", "webmaster")
@@ -167,6 +172,73 @@ func TestAuthorizationService_IsAuthorized(t *testing.T) {
 			}
 
 			result := authService.IsAuthorized(tC.action)
+			assert.Equal(t, tC.expected, result)
+		})
+	}
+}
+
+func TestGetPermissions(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		role                   string
+		expected               map[string]map[string]any
+		mockResourceAuthorizer func(m *MockResourceAuthorizer)
+		resourceAuthorizers    ResourceAuthorizerMap
+	}{
+		{
+			name: "Should return the correct permissions",
+			role: ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			expected: map[string]map[string]any{
+				"resource": {
+					"create": true,
+					"edit":   false,
+					"get":    true,
+					"list":   true,
+					"subresource": map[string]any{
+						"create": true,
+						"delete": false,
+						"get":    true,
+						"list":   true,
+					},
+				},
+			},
+			mockResourceAuthorizer: func(m *MockResourceAuthorizer) {
+				m.On("GetPermissions", mock.Anything).Return(map[string]any{
+					"create": true,
+					"edit":   false,
+					"get":    true,
+					"list":   true,
+					"subresource": map[string]any{
+						"create": true,
+						"delete": false,
+						"get":    true,
+						"list":   true,
+					},
+				})
+			},
+			resourceAuthorizers: ResourceAuthorizerMap{
+				"resource": &MockResourceAuthorizer{},
+			},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			db, mock, err := database.NewMockDatabase()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+
+			rows := sqlmock.NewRows([]string{"username", "password", "role"}).AddRow("testuser", "password", tC.role)
+			mock.ExpectQuery("^SELECT \\* FROM \"logins\" WHERE \"logins\".\"username\" = \\$1$").WillReturnRows(rows)
+
+			tC.mockResourceAuthorizer(tC.resourceAuthorizers["resource"].(*MockResourceAuthorizer))
+
+			authService, err := NewAuthorizationService(db, "testuser", tC.resourceAuthorizers)
+			if err != nil {
+				t.Fatalf("NewAuthorizationService constructor should not have errored!")
+			}
+
+			result := authService.GetPermissions()
 			assert.Equal(t, tC.expected, result)
 		})
 	}

@@ -17,19 +17,7 @@ func UseAuthorization(db *gorm.DB, action string) func(ctx *gin.Context) {
 			return
 		}
 
-		authSvc, err := authorization.NewAuthorizationService(db, username, authorization.ResourceAuthorizerMap{
-			"login": authorization.NewLoginAuthorizer(),
-			"user":  authorization.NewUserAuthorizer(),
-			"semester": authorization.NewSemesterAuthorizer(authorization.ResourceAuthorizerMap{
-				"rankings":    authorization.NewRankingsAuthorizer(),
-				"transaction": authorization.NewTransactionAuthorizer(),
-			}),
-			"membership": authorization.NewMembershipAuthorizer(),
-			"structure":  authorization.NewStructureAuthorizer(),
-			"event": authorization.NewEventAuthorizer(authorization.ResourceAuthorizerMap{
-				"participant": authorization.NewParticipantAuthorizer(),
-			}),
-		})
+		authSvc, err := authorization.NewAuthorizationService(db, username, authorization.DefaultAuthorizerMap)
 		if err != nil {
 			ctx.AbortWithStatusJSON(err.(errors.APIErrorResponse).Code, err)
 			return

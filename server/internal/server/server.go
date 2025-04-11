@@ -33,6 +33,14 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	// Middleware to set CORS policy
 	r.Use(middleware.CORSMiddleware)
 
+	r.Static("/assets", "./public/assets")
+	r.StaticFile("/crest.svg", "./public/crest.svg")
+	r.StaticFile("/root.css", "./public/root.css")
+
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./public/index.html")
+	})
+
 	s := &apiServer{Router: r, db: db}
 
 	// Initialize all routes

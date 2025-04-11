@@ -1,49 +1,20 @@
-FROM golang:1.24.0-bullseye AS build
+### ====================== SERVER BUILD IMAGE ======================
+FROM golang:1.24.2-bookworm AS server
 
-# Set Golang build environment variables
-ENV GO111MODULE=on
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-
-# Set directory to run app in
-WORKDIR /app
+WORKDIR /usr/server
 
 # Copy go.mod and go.sum files over
-COPY go.mod ./
-COPY go.sum ./
+COPY go.mod go.sum ./
 
 # Download dependencies
-RUN go mod download
-
-# Install development dependencies
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
-RUN go install github.com/pressly/goose/v3/cmd/goose@v3.15.1
-
-RUN go mod verify
+RUN go mod download && \
+    go install github.com/pressly/goose/v3/cmd/goose@v3.15.1 && \
+    go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Copy all other files
 COPY . .
 
-# Build executable
-RUN go build -buildvcs=false -o /app/server main.go
+# Compile server binary
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o api .
 
-EXPOSE 5000
-
-# ====================== THIN IMAGE ======================
-FROM alpine:3.21.3
-
-WORKDIR /app
-
-# Install bash for easy ssh
-RUN apk --no-cache add bash
-
-# Copy compiled executable
-COPY --from=build /app/server .
-
-# Copy migration files and goose binary
-COPY --from=build /go/bin/goose /bin
-COPY --from=build /app/migrations ./migrations
-
-RUN mkdir certs client-cert client-key
-
-CMD [ "/app/server", "start" ]
+CMD ["./api", "start"]

@@ -47,10 +47,11 @@ services:
     networks:
       - services
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U docker"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U docker -d uwpokerclub_development"]
+      interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
 volumes:
   postgres-data:
 networks:

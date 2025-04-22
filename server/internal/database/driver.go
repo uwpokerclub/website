@@ -20,9 +20,9 @@ func OpenConnection(runMigrations bool) (*gorm.DB, error) {
 		return nil, errors.New("environment variable 'DATABASE_URL' has not been set")
 	}
 
-	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
-		connectionUrl = connectionUrl + "?sslmode=require&sslrootcert=certs/server-ca.pem&sslcert=client-cert/client-cert.pem&sslkey=client-key/client-key.pem"
-	}
+	tlsParameters := os.Getenv("DATABASE_TLS_PARAMETERS")
+
+	connectionUrl = connectionUrl + tlsParameters
 
 	db, err := gorm.Open(postgres.Open(connectionUrl), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),

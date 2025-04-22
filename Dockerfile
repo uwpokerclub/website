@@ -58,4 +58,4 @@ COPY --from=server --chown=runner:runner /usr/server/migrations ./migrations
 USER runner
 
 # Start the server
-CMD ["./server" , "start"]
+CMD ["./server", "start", "--run-migrations"]

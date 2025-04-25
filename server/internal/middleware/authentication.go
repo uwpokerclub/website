@@ -25,6 +25,7 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		if err != nil {
 			// Cookie not present in the request. Return 401
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
+			return
 		}
 		// Ensure cookie is a valid UUID
 		err = uuid.Validate(cookie)

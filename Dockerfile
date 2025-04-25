@@ -27,8 +27,7 @@ WORKDIR /usr/server
 COPY server/go.mod server/go.sum ./
 
 # Download dependencies
-RUN go mod download && \
-    go install github.com/pressly/goose/v3/cmd/goose@v3.15.1
+RUN go mod download
 
 # Copy all other files
 COPY server .
@@ -51,7 +50,6 @@ RUN chown runner:runner certs client-cert client-key
 # Copy the built application
 COPY --from=webapp --chown=runner:runner /usr/app/dist ./public
 COPY --from=server --chown=runner:runner /usr/server/server .
-COPY --from=server --chown=runner:runner /go/bin/goose /bin
 COPY --from=server --chown=runner:runner /usr/server/migrations ./migrations
 
 # Switch to non-root user

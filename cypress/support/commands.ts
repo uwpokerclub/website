@@ -41,8 +41,6 @@ declare namespace Cypress {
   interface Chainable {
     getByData(dataTestAttribute: string): Chainable<JQuery<HTMLElement>>;
     login(username: string, password: string): Chainable<void>;
-    setupLogin(username: string, password: string): Chainable<void>;
-    resetDB(): Chainable<void>;
   }
 }
 
@@ -51,21 +49,10 @@ Cypress.Commands.add("getByData", (selector) => {
 });
 
 Cypress.Commands.add("login", (username, password) => {
-  cy.request("POST", "http://localhost:5000/session", {
+  cy.request("POST", "/api/session", {
     username,
     password,
   });
   cy.getCookie("uwpsc-dev-session-id").should("exist");
 });
 
-Cypress.Commands.add("setupLogin", (username, password, role = "webmaster") => {
-  cy.request("POST", "http://localhost:5000/login", {
-    username,
-    password,
-    role,
-  });
-});
-
-Cypress.Commands.add("resetDB", () => {
-  cy.request("POST", "http://localhost:5000/database/reset");
-});

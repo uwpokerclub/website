@@ -1,0 +1,28 @@
+{
+  "name": "website",
+  "version": "",
+  "main": "",
+  "description": "This package is simply a wrapper around the cypress package. It is used to run cypress tests in the CI pipeline.",
+  "private": true,
+  "scripts": {
+    "test": "cypress run",
+    "cy:open": "cypress open",
+    "db:seed": "PGPASSWORD=password psql -h localhost -U docker -d uwpokerclub -f ./cypress/seed.sql",
+    "db:reset": "PGPASSWORD=password psql -h localhost -U docker -d uwpokerclub -c \"TRUNCATE blinds, events, logins, memberships, participants, rankings, semesters, sessions, structures, transactions, users RESTART IDENTITY CASCADE\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uwpokerclub/website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/uwpokerclub/website/issues"
+  },
+  "homepage": "https://github.com/uwpokerclub/website#readme",
+  "devDependencies": {
+    "cypress": "^14.3.1",
+    "typescript": "^5.8.3"
+  }
+}

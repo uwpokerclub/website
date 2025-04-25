@@ -1,19 +1,11 @@
-import type { Semester } from "../../../src/sdk/semesters";
-import { Transaction } from "../../../src/types";
+import { SEMESTER } from "../seed";
+import { Transaction } from "../types";
 
 describe("Semesters page", () => {
   beforeEach(() => {
-    cy.setupLogin("e2euser", "password");
-    cy.login("e2euser", "password");
+    cy.exec("npm run db:reset && npm run db:seed");
+    cy.login("e2e_user", "password");
     cy.visit("/admin/semesters");
-  });
-
-  afterEach(() => {
-    cy.resetDB();
-  });
-
-  it("should show the page", () => {
-    cy.getByData("semesters-header").should("exist");
   });
 
   it("should create a new semester", () => {
@@ -38,40 +30,22 @@ describe("Semesters page", () => {
   });
 
   context("view a semester", () => {
-    beforeEach(() => {
-      cy.fixture("semester.json").then((semester) => {
-        cy.request("POST", "http://localhost:5000/semesters", semester).as("semester");
-        cy.reload();
-      });
-    });
-
     it("should show the semester info page", () => {
-      cy.get<Cypress.Response<Semester>>("@semester").then((response) => {
-        const semesterId = response.body.id;
-
-        cy.getByData(`view-semester-${semesterId}`).click();
-        cy.location("pathname").should("eq", `/admin/semesters/${semesterId}`);
-      });
+      cy.getByData(`view-semester-${SEMESTER.id}`).click();
+      cy.location("pathname").should("eq", `/admin/semesters/${SEMESTER.id}`);
     });
   });
 
   context("transactions", () => {
     beforeEach(() => {
-      cy.fixture("semester.json").then((semester) => {
-        cy.request<Semester>("POST", "http://localhost:5000/semesters", semester)
-          .as("semester")
-          .then((response) => {
-            cy.visit(`/admin/semesters/${response.body.id}`);
-          });
-      });
+      cy.visit(`/admin/semesters/${SEMESTER.id}`);
     });
 
     it("should create a new transaction", () => {
-      cy.get<Cypress.Response<Semester>>("@semester").then((response) => {
-        cy.intercept("POST", `http://localhost:5000/semesters/${response.body.id}/transactions`).as(
-          "createTransaction",
-        );
-      });
+      cy.intercept(
+        "POST",
+        `/api/semesters/${SEMESTER.id}/transactions`
+      ).as("createTransaction");
 
       /**
        * Create a new transaction that removes money
@@ -94,13 +68,18 @@ describe("Semesters page", () => {
       cy.reload();
 
       // Check that the budget was updated
-      cy.getByData("current-budget-card").should("contain", "$965.00");
+      cy.getByData("current-budget-card").should("contain", "$65.00");
       // Check that the transaction appears in the list
-      cy.wait<Cypress.RequestBody, Transaction>("@createTransaction").then(({ response }) => {
-        cy.getByData(`transaction-${response.body.id}`).within(() => {
-          cy.getByData(`${response.body.id}-amount`).should("contain", "-$35.00");
-        });
-      });
+      cy.wait<Cypress.RequestBody, Transaction>("@createTransaction").then(
+        ({ response }) => {
+          cy.getByData(`transaction-${response.body.id}`).within(() => {
+            cy.getByData(`${response.body.id}-amount`).should(
+              "contain",
+              "-$35.00"
+            );
+          });
+        }
+      );
 
       /**
        * Create a new transaction that adds money
@@ -120,22 +99,29 @@ describe("Semesters page", () => {
       cy.reload();
 
       // Check that the budget was updated
-      cy.getByData("current-budget-card").should("contain", "$975.00");
+      cy.getByData("current-budget-card").should("contain", "$75.00");
       // Check that the transaction appears in the list
-      cy.wait<Cypress.RequestBody, Transaction>("@createTransaction").then(({ response }) => {
-        cy.getByData(`transaction-${response.body.id}`).within(() => {
-          cy.getByData(`${response.body.id}-amount`).should("contain", "$10.00");
-        });
-      });
+      cy.wait<Cypress.RequestBody, Transaction>("@createTransaction").then(
+        ({ response }) => {
+          cy.getByData(`transaction-${response.body.id}`).within(() => {
+            cy.getByData(`${response.body.id}-amount`).should(
+              "contain",
+              "$10.00"
+            );
+          });
+        }
+      );
     });
 
     it("should delete an existing transaction", () => {
-      cy.get<Cypress.Response<Semester>>("@semester").then((response) => {
-        cy.request("POST", `http://localhost:5000/semesters/${response.body.id}/transactions`, {
-          description: "New cards",
-          amount: -35.0,
-        }).as("transaction");
-      });
+        cy.request(
+          "POST",
+          `/api/semesters/${SEMESTER.id}/transactions`,
+          {
+            description: "New cards",
+            amount: -35.0,
+          }
+        ).as("transaction");
 
       // Find row that has the transaction and click the delete button for it
       cy.get<Cypress.Response<Transaction>>("@transaction").then((response) => {

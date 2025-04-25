@@ -1,16 +1,12 @@
 describe("Login page", () => {
   beforeEach(() => {
-    cy.setupLogin("e2euser", "password");
+    cy.exec("npm run db:reset && npm run db:seed");
     cy.visit("/admin/login");
-  });
-
-  afterEach(() => {
-    cy.resetDB();
   });
 
   it("should successfully login", () => {
     // Input username
-    cy.get("input[name=username]").type("e2euser");
+    cy.get("input[name=username]").type("e2e_user");
 
     // Input password
     cy.get("input[name=password]").type("password");

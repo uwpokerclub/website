@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Build image
-        run: docker build -t website:${{ github.ref_name }} -t website:${{ github.sha }} .
+        run: docker build -t website:${{ github.sha }} .
       - name: Save image
         run: docker save -o website.tar website:${{ github.sha }}
       - name: Upload image to cache

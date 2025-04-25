@@ -111,7 +111,7 @@ export function EventDetails() {
 
   return (
     <>
-      {event !== undefined && !isLoading && (
+      {event !== undefined && !isLoading && structure !== undefined && (
         <div>
           {event.state === 1 && (
             <div data-qa="event-ended-banner" className="alert alert-danger">

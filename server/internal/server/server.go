@@ -3,6 +3,7 @@ package server
 import (
 	"api/internal/middleware"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -56,6 +57,10 @@ func (s *apiServer) Run(port string) {
 
 func (s *apiServer) SetupRoutes() {
 	apiRoute := s.Router.Group("/api")
+
+	apiRoute.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	loginRoute := apiRoute.Group("/login", middleware.UseAuthentication(s.db))
 	{

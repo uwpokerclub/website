@@ -7,8 +7,8 @@
   "scripts": {
     "test": "cypress run",
     "cy:open": "cypress open",
-    "db:seed": "PGPASSWORD=password psql -h localhost -U docker -d uwpokerclub -f ./cypress/seed.sql",
-    "db:reset": "PGPASSWORD=password psql -h localhost -U docker -d uwpokerclub -c \"TRUNCATE blinds, events, logins, memberships, participants, rankings, semesters, sessions, structures, transactions, users RESTART IDENTITY CASCADE\""
+    "db:seed": "PGPASSWORD=password psql -h localhost -U postgres -d uwpokerclub -f ./cypress/seed.sql",
+    "db:reset": "PGPASSWORD=password psql -h localhost -U postgres -d uwpokerclub -c \"TRUNCATE blinds, events, logins, memberships, participants, rankings, semesters, sessions, structures, transactions, users RESTART IDENTITY CASCADE\""
   },
   "repository": {
     "type": "git",

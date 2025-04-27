@@ -1,0 +1,43 @@
+version: 2
+updates:
+  - package-ecosystem: docker
+    directories:
+      - "/"
+      - "/server"
+      - "/webapp"
+    schedule:
+      interval: daily
+    reviewers:
+      - asmahood
+    labels:
+      - "type::Dependencies"
+      - "dep::Docker"
+  - package-ecosystem: gomod
+    directory: "/server"
+    schedule:
+      interval: daily
+    reviewers:
+      - asmahood
+    labels:
+      - "type::Dependencies"
+      - "dep::Go"    
+  - package-ecosystem: npm
+    allow:
+      - dependency-type: production
+    directory: "/webapp"
+    schedule:
+      interval: daily
+    reviewers:
+      - asmahood
+    labels:
+      - "type::Dependencies"
+      - "dep::Javascript"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: daily
+    reviewers:
+      - asmahood
+    labels:
+      - "type::Dependencies"
+      - "dep::Github Actions"

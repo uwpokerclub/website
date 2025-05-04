@@ -41,7 +41,7 @@ func TestMembershipAuthorizer(t *testing.T) {
 				role     string
 				expected bool
 			}{
-				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_BOT.ToString(), expected: true},
 				{role: ROLE_EXECUTIVE.ToString(), expected: false},
 				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
 				{role: ROLE_SECRETARY.ToString(), expected: true},

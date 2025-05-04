@@ -16,7 +16,7 @@ func NewMembershipAuthorizer() ResourceAuthorizer {
 func (svc *membershipAuthorizer) IsAuthorized(role string, action string) bool {
 	switch action {
 	case "create":
-		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role) || HasRole(ROLE_BOT, role)
 	case "get":
 		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "list":

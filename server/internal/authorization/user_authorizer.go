@@ -20,7 +20,7 @@ func (svc *userAuthorizer) IsAuthorized(role string, action string) bool {
 	case "get":
 		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "list":
-		return HasAtleastRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_BOT, role)
 	case "edit":
 		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	case "delete":

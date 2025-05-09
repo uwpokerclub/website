@@ -167,9 +167,7 @@ jobs:
       run: gcloud auth configure-docker us-east1-docker.pkg.dev
     - name: Tag the image
       run: |
-        docker tag website:${{ github.sha }} us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_SHA:0:8}
         docker tag website:${{ github.sha }} us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:$(echo ${{ github.ref_name }} | tr '/' '-')
     - name: Push the image
       run: |
-        docker push us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_SHA:0:8}
         docker push us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:$(echo ${{ github.ref_name }} | tr '/' '-')

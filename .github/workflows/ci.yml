@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "**"
+  merge_group:
 
 jobs:
   build:

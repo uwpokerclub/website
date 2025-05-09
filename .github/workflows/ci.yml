@@ -144,6 +144,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   push:
+    if: github.event_name == 'push'
     needs: e2e
     runs-on: ubuntu-latest
     permissions:

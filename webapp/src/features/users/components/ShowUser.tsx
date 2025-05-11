@@ -1,8 +1,10 @@
 import { Link, useParams } from "react-router-dom";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "@/hooks";
 import { User } from "../../../types";
 
 export function ShowUser() {
+  const { hasPermission } = useAuth();
+
   const { userId } = useParams<{ userId: string }>();
 
   const { data: user, isLoading } = useFetch<User>(`users/${userId}`);
@@ -25,27 +27,27 @@ export function ShowUser() {
           <form>
             <div className="mb-3">
               <label htmlFor="first_name">First Name:</label>
-              <input type="text" name="first_name" value={user.firstName} className="form-control" readOnly></input>
+              <input type="text" name="first_name" value={user.firstName} className="form-control" disabled></input>
             </div>
 
             <div className="mb-3">
               <label htmlFor="last_name">Last Name:</label>
-              <input type="text" name="last_name" value={user.lastName} className="form-control" readOnly></input>
+              <input type="text" name="last_name" value={user.lastName} className="form-control" disabled></input>
             </div>
 
             <div className="mb-3">
               <label htmlFor="email">Email:</label>
-              <input type="text" name="email" value={user.email} className="form-control" readOnly></input>
+              <input type="text" name="email" value={user.email} className="form-control" disabled></input>
             </div>
 
             <div className="mb-3">
               <label htmlFor="faculty">Faculty</label>
-              <input type="text" name="faculty" value={user.faculty} className="form-control" readOnly></input>
+              <input type="text" name="faculty" value={user.faculty} className="form-control" disabled></input>
             </div>
 
             <div className="mb-3">
               <label htmlFor="id">Student Number:</label>
-              <input type="text" name="id" value={user.id} className="form-control" readOnly></input>
+              <input type="text" name="id" value={user.id} className="form-control" disabled></input>
             </div>
 
             <div className="mb-3">
@@ -60,15 +62,17 @@ export function ShowUser() {
                   day: "numeric",
                 })}
                 className="form-control"
-                readOnly
+                disabled
               ></input>
             </div>
 
-            <div className="mb-3 text-center">
-              <Link to={`edit`} className="btn btn-success">
-                Update
-              </Link>
-            </div>
+            {hasPermission("edit", "user") && (
+              <div className="mb-3 text-center">
+                <Link to={`edit`} className="btn btn-success">
+                  Update
+                </Link>
+              </div>
+            )}
           </form>
         </div>
       </div>

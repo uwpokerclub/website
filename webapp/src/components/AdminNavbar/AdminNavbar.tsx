@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts";
+import { useAuth } from "@/hooks";
 
 export function AdminNavbar() {
   const navigate = useNavigate();
-  const auth = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
-    auth.signOut(() => {
+    logout(() => {
       navigate("/admin/login");
     });
   };

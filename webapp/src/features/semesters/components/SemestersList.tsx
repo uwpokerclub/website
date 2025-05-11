@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "../../../hooks";
 import { Semester } from "../../../types";
 
 export function SemestersList() {
   const { data: semesters } = useFetch<Semester[]>("semesters");
+  const { hasPermission } = useAuth();
 
   // TODO: Need design for case where there are no semesters / error returned by API
   if (!semesters) {
@@ -13,9 +14,11 @@ export function SemestersList() {
   return (
     <div>
       <h1 data-qa="semesters-header">Semesters</h1>
-      <Link data-qa="create-semester-btn" to="new" className="btn btn-primary btn-responsive">
-        Create a Semester
-      </Link>
+      {hasPermission("create", "semester") && (
+        <Link data-qa="create-semester-btn" to="new" className="btn btn-primary btn-responsive">
+          Create a Semester
+        </Link>
+      )}
       <div className="table-responsive">
         <table className="table">
           <thead>
@@ -48,9 +51,11 @@ export function SemestersList() {
                 </td>
 
                 <td>
-                  <Link data-qa={`view-semester-${semester.id}`} to={`${semester.id}`} className="btn btn-primary">
-                    View
-                  </Link>
+                  {hasPermission("get", "semester") && (
+                    <Link data-qa={`view-semester-${semester.id}`} to={`${semester.id}`} className="btn btn-primary">
+                      View
+                    </Link>
+                  )}
                 </td>
               </tr>
             ))}

@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "@/hooks";
 import { User } from "../../../types";
 import { Link } from "react-router-dom";
 
 export function ListUsers() {
+  const { hasPermission } = useAuth();
+
   const { data: users } = useFetch<User[]>("users");
 
   const [query, setQuery] = useState("");
@@ -20,9 +22,11 @@ export function ListUsers() {
 
       <div className="row">
         <div className="col-lg-6 col-md-6 col-sm-6">
-          <Link to={`new`} className="btn btn-primary btn-responsive">
-            Add Members
-          </Link>
+          {hasPermission("create", "user") && (
+            <Link to={`new`} className="btn btn-primary btn-responsive">
+              Add Members
+            </Link>
+          )}
         </div>
 
         <div className="col-lg-6 col-md-6 col-sm-6">
@@ -68,9 +72,7 @@ export function ListUsers() {
           <tbody>
             {filteredUsers.map((u) => (
               <tr key={u.id}>
-                <td className="studentno">
-                  <Link to={`${u.id}`}>{u.id}</Link>
-                </td>
+                <td className="studentno">{hasPermission("get", "user") && <Link to={`${u.id}`}>{u.id}</Link>}</td>
                 <td className="fname">{u.firstName}</td>
                 <td className="lname">{u.lastName}</td>
                 <td className="email">{u.email}</td>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "../../../hooks";
 import { sendAPIRequest } from "../../../lib";
 import { Transaction } from "../../../types";
 import { NewTransactionModal } from "./NewTransactionModal";
@@ -14,6 +14,7 @@ export function TransactionsTable({ semesterId }: TransactionsTableProps) {
   const { data: transactions, setData: setTransactions } = useFetch<Transaction[]>(
     `semesters/${semesterId}/transactions`,
   );
+  const { hasPermission } = useAuth();
 
   const [showModal, setShowModal] = useState(false);
 
@@ -31,14 +32,16 @@ export function TransactionsTable({ semesterId }: TransactionsTableProps) {
     <>
       <div className={styles.header}>
         <h3>Transactions</h3>
-        <button
-          data-qa="new-transaction-btn"
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setShowModal(true)}
-        >
-          New transaction
-        </button>
+        {hasPermission("create", "semester", "transaction") && (
+          <button
+            data-qa="new-transaction-btn"
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowModal(true)}
+          >
+            New transaction
+          </button>
+        )}
       </div>
       <table className="table">
         <thead>
@@ -63,14 +66,16 @@ export function TransactionsTable({ semesterId }: TransactionsTableProps) {
               </td>
 
               <td style={{ textAlign: "right" }}>
-                <button
-                  data-qa={`${t.id}-delete-btn`}
-                  type="button"
-                  className="btn btn-outline-danger btn-sm"
-                  onClick={() => handleDelete(t.id)}
-                >
-                  Delete
-                </button>
+                {hasPermission("delete", "semester", "transaction") && (
+                  <button
+                    data-qa={`${t.id}-delete-btn`}
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => handleDelete(t.id)}
+                  >
+                    Delete
+                  </button>
+                )}
               </td>
             </tr>
           )) || <></>}

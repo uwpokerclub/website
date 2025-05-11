@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "@/hooks";
 import { Membership } from "../../../types";
 import { sendAPIRequest } from "../../../lib";
 import { NewMembershipModal } from "./NewMembershipModal";
@@ -13,6 +13,7 @@ type MembershipsTableProps = {
 export function MembershipsTable({ semesterId }: MembershipsTableProps) {
   const [query, setQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const { hasPermission } = useAuth();
 
   const { data: memberships, setData: setMemberships } = useFetch<Membership[]>(`memberships?semesterId=${semesterId}`);
   const filteredMemberships = useMemo(() => {
@@ -57,14 +58,16 @@ export function MembershipsTable({ semesterId }: MembershipsTableProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           ></input>
-          <button
-            data-qa="new-member-btn"
-            type="button"
-            className=" btn btn-primary"
-            onClick={() => setShowModal(true)}
-          >
-            New member
-          </button>
+          {hasPermission("create", "membership") && (
+            <button
+              data-qa="new-member-btn"
+              type="button"
+              className=" btn btn-primary"
+              onClick={() => setShowModal(true)}
+            >
+              New member
+            </button>
+          )}
         </div>
       </div>
       <div className="table-responsive">
@@ -99,21 +102,24 @@ export function MembershipsTable({ semesterId }: MembershipsTableProps) {
                 <td>{m.discounted ? "Yes" : "No"}</td>
 
                 <td>
-                  <button
-                    data-qa="set-paid-btn"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => updateMembership(m.id, !m.paid, m.discounted)}
-                  >
-                    Set {m.paid ? "Unpaid" : "Paid"}
-                  </button>
-
-                  <button
-                    data-qa="set-discounted-btn"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => updateMembership(m.id, m.paid, !m.discounted)}
-                  >
-                    {m.discounted ? "Remove Discount" : "Discount"}
-                  </button>
+                  {hasPermission("edit", "membership") && (
+                    <>
+                      <button
+                        data-qa="set-paid-btn"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => updateMembership(m.id, !m.paid, m.discounted)}
+                      >
+                        Set {m.paid ? "Unpaid" : "Paid"}
+                      </button>
+                      <button
+                        data-qa="set-discounted-btn"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => updateMembership(m.id, m.paid, !m.discounted)}
+                      >
+                        {m.discounted ? "Remove Discount" : "Discount"}
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

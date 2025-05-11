@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "../../../hooks";
 import { APIErrorResponse, Entry, Event, StructureWithBlinds } from "../../../types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sendAPIRequest } from "../../../lib";
@@ -12,6 +12,7 @@ import { EndEventModal } from "./EndEventModal";
 export function EventDetails() {
   const [showModal, setShowModal] = useState(false);
   const { eventId = "" } = useParams<{ eventId: string }>();
+  const { hasPermission } = useAuth();
 
   const { data: event, setData: setEvent, isLoading } = useFetch<Event>(`events/${eventId}`);
   const { data: entries, setData: setEntries } = useFetch<Entry[]>(`participants?eventId=${eventId}`);
@@ -164,26 +165,32 @@ export function EventDetails() {
                 <section className={styles.actions}>
                   {event.state !== 1 && (
                     <>
-                      <Link data-qa="register-members-btn" to={`register`} className="btn btn-primary">
-                        Register Members
-                      </Link>
+                      {hasPermission("signin", "event", "participant") && (
+                        <Link data-qa="register-members-btn" to={`register`} className="btn btn-primary">
+                          Register Members
+                        </Link>
+                      )}
 
-                      <button data-qa="rebuy-btn" onClick={handleRebuy} type="button" className="btn btn-success">
-                        Rebuy
-                      </button>
+                      {hasPermission("rebuy", "event") && (
+                        <button data-qa="rebuy-btn" onClick={handleRebuy} type="button" className="btn btn-success">
+                          Rebuy
+                        </button>
+                      )}
 
-                      <button
-                        ref={endEventBtnRef}
-                        data-qa="end-event-btn"
-                        onClick={handleEndEventClick}
-                        type="button"
-                        className="btn btn-danger"
-                      >
-                        End Event
-                      </button>
+                      {hasPermission("end", "event") && (
+                        <button
+                          ref={endEventBtnRef}
+                          data-qa="end-event-btn"
+                          onClick={handleEndEventClick}
+                          type="button"
+                          className="btn btn-danger"
+                        >
+                          End Event
+                        </button>
+                      )}
                     </>
                   )}
-                  {event.state === 1 && (
+                  {event.state === 1 && hasPermission("restart", "event") && (
                     <>
                       <button
                         ref={restartEventBtnRef}
@@ -206,15 +213,17 @@ export function EventDetails() {
                 >
                   Entries
                 </div>
-                <div
-                  onClick={() => setShowEntries(false)}
-                  className={`${styles.tab} ${!showEntries ? styles.tabActive : ""}`}
-                >
-                  Structure
-                </div>
+                {hasPermission("get", "structure") && (
+                  <div
+                    onClick={() => setShowEntries(false)}
+                    className={`${styles.tab} ${!showEntries ? styles.tabActive : ""}`}
+                  >
+                    Structure
+                  </div>
+                )}
               </section>
 
-              {showEntries ? (
+              {hasPermission("list", "event", "participant") && showEntries ? (
                 <EntriesTable entries={entries || []} event={event} updateParticipants={updateParticipants} />
               ) : (
                 <>

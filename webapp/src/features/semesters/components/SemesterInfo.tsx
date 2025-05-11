@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "../../../hooks";
 import { Semester } from "../../../types";
 import { MembershipsTable } from "./MembershipsTable";
 import { TransactionsTable } from "./TransactionsTable";
@@ -8,6 +8,7 @@ import styles from "./SemesterInfo.module.css";
 
 export function SemesterInfo() {
   const { semesterId = "" } = useParams<{ semesterId: string }>();
+  const { hasPermission } = useAuth();
 
   const { data: semester } = useFetch<Semester>(`semesters/${semesterId}`);
 
@@ -73,9 +74,9 @@ export function SemesterInfo() {
         </div>
       </div>
 
-      <MembershipsTable semesterId={semesterId} />
+      {hasPermission("list", "membership") && <MembershipsTable semesterId={semesterId} />}
 
-      <TransactionsTable semesterId={semesterId} />
+      {hasPermission("list", "semester", "transaction") && <TransactionsTable semesterId={semesterId} />}
     </>
   );
 }

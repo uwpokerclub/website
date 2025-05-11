@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "../../../hooks";
 import { User } from "../../../types";
 import { useEffect, useState } from "react";
 import { sendAPIRequest } from "../../../lib";
@@ -8,6 +8,7 @@ import { FACULTIES } from "../../../data";
 export function EditUser() {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
+  const { hasPermission } = useAuth();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -142,9 +143,11 @@ export function EditUser() {
                     Save
                   </button>
 
-                  <button type="button" className="btn btn-danger" onClick={() => handleDelete()}>
-                    Delete Member
-                  </button>
+                  {hasPermission("delete", "user") && (
+                    <button type="button" className="btn btn-danger" onClick={() => handleDelete()}>
+                      Delete Member
+                    </button>
+                  )}
                 </div>
               </form>
             </div>

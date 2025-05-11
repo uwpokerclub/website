@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "../../../hooks";
 import { Blind, Semester, Structure, StructureWithBlinds } from "../../../types";
 import { sendAPIRequest } from "../../../lib";
 
@@ -8,6 +8,7 @@ import styles from "./NewEvent.module.css";
 
 export function NewEvent() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
 
   const { data: semesters } = useFetch<Semester[]>("semesters");
   const { data: structures } = useFetch<Structure[]>("structures");
@@ -197,13 +198,15 @@ export function NewEvent() {
                       <span>Select a structure</span>
                     </div>
                   )}
-                  <div
-                    data-qa="tab-new-structure"
-                    className={`${styles.tab} ${showSelectStructure ? "" : styles.tabActive}`}
-                    onClick={() => setShowSelectStructure(false)}
-                  >
-                    <span>Create a new structure</span>
-                  </div>
+                  {hasPermission("create", "structure") && (
+                    <div
+                      data-qa="tab-new-structure"
+                      className={`${styles.tab} ${showSelectStructure ? "" : styles.tabActive}`}
+                      onClick={() => setShowSelectStructure(false)}
+                    >
+                      <span>Create a new structure</span>
+                    </div>
+                  )}
                 </header>
                 {showSelectStructure ? (
                   <select

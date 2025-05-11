@@ -1,6 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { CreateLogin, NewSession } from "../features/login";
-import { RequireAuth } from "../contexts";
+import { RequireAuth, RequirePermission } from "@/components";
 
 export function Login() {
   return (
@@ -13,7 +13,9 @@ export function Login() {
             path="/new"
             element={
               <RequireAuth>
-                <CreateLogin />
+                <RequirePermission resource="login" action="create">
+                  <CreateLogin />
+                </RequirePermission>
               </RequireAuth>
             }
           />

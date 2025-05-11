@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { useFetch } from "../../../hooks";
+import { useAuth, useFetch } from "@/hooks";
 import { Semester, Event } from "../../../types";
 
 import styles from "./ListEvent.module.css";
@@ -9,6 +9,7 @@ import { EventState } from "../../../sdk/events";
 export function ListEvents() {
   const { data: events, isLoading } = useFetch<Event[]>("events");
   const { data: semesters } = useFetch<Semester[]>("semesters");
+  const { hasPermission } = useAuth();
 
   const [semesterId, setSemesterId] = useState("");
 
@@ -22,14 +23,16 @@ export function ListEvents() {
 
           <div className="row">
             <div className="col-md-6">
-              <Link data-qa="create-event-btn" to="new" className="btn btn-primary btn-responsive">
-                Create an Event
-              </Link>
+              {hasPermission("create", "event") && (
+                <Link data-qa="create-event-btn" to="new" className="btn btn-primary btn-responsive">
+                  Create an Event
+                </Link>
+              )}
             </div>
 
             <div className="col-md-6">
               <div className="mb-3">
-                {semesters && (
+                {hasPermission("list", "semester") && semesters && (
                   <select className="form-control" value={semesterId} onChange={(e) => setSemesterId(e.target.value)}>
                     <option value="">All</option>
                     {semesters.map((semester) => (
@@ -46,33 +49,17 @@ export function ListEvents() {
           <div className="list-group">
             {filteredEvents.map((event) => (
               <div key={event.id} data-qa={`event-${event.id}-card`} className={`${styles.card} list-group-item`}>
-                <Link key={event.id} to={`${event.id}`} className="text-decoration-none text-reset flex-grow-1">
-                  <h4 data-qa={`${event.id}-name`} className="list-group-item-heading bold">
-                    {event.name}
-                  </h4>
-
-                  <div className="list-group-item-text">
-                    <p data-qa={`${event.id}-format`}>
-                      <strong>Format:</strong> {event.format}
-                    </p>
-                    <p data-qa={`${event.id}-date`}>
-                      <strong>Date:</strong>{" "}
-                      {new Date(event.startDate).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "numeric",
-                      })}
-                    </p>
-                    <p data-qa={`${event.id}-additional-details`}>
-                      <strong>Additional Details:</strong> {event.notes}
-                    </p>
-                    <p> {event.count || "No"} Entries </p>
+                {hasPermission("get", "event") ? (
+                  <Link to={`${event.id}`} className="text-decoration-none text-reset flex-grow-1">
+                    <EventDetails event={event} />
+                  </Link>
+                ) : (
+                  <div className="text-decoration-none text-reset flex-grow-1">
+                    <EventDetails event={event} />
                   </div>
-                </Link>
-                {event.state !== EventState.Ended && (
+                )}
+
+                {hasPermission("edit", "event") && event.state !== EventState.Ended && (
                   <div data-qa="actions" className={`${styles.actions} me-4`}>
                     <Link data-qa="edit-event-btn" to={`${event.id}/edit`}>
                       <svg
@@ -97,6 +84,36 @@ export function ListEvents() {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+function EventDetails({ event }: { event: Event }) {
+  return (
+    <>
+      <h4 data-qa={`${event.id}-name`} className="list-group-item-heading bold">
+        {event.name}
+      </h4>
+      <div className="list-group-item-text">
+        <p data-qa={`${event.id}-format`}>
+          <strong>Format:</strong> {event.format}
+        </p>
+        <p data-qa={`${event.id}-date`}>
+          <strong>Date:</strong>{" "}
+          {new Date(event.startDate).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+          })}
+        </p>
+        <p data-qa={`${event.id}-additional-details`}>
+          <strong>Additional Details:</strong> {event.notes}
+        </p>
+        <p> {event.count || "No"} Entries </p>
+      </div>
     </>
   );
 }

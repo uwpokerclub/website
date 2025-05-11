@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { Admin, Index, Login } from "./pages";
-import { AuthProvider, RequireAuth } from "./contexts";
+import { AuthProvider, RequireAuth } from "@/components";
 
 function App() {
   return (

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Entry, Event } from "../../../types";
 import { sendAPIRequest } from "../../../lib";
+import { useAuth } from "@/hooks";
+import { EventState } from "@/sdk/events";
 
 type EntriesTableProps = {
   entries: Entry[];
@@ -10,6 +12,7 @@ type EntriesTableProps = {
 
 export function EntriesTable({ entries, event, updateParticipants }: EntriesTableProps) {
   const [query, setQuery] = useState("");
+  const { hasPermission } = useAuth();
 
   const updateParticipant = async (membershipId: string, action: string) => {
     const { status } = await sendAPIRequest(`participants/${action}`, "POST", {
@@ -108,9 +111,9 @@ export function EntriesTable({ entries, event, updateParticipants }: EntriesTabl
                   </td>
 
                   <td data-qa={`actions`} className="center">
-                    {event.state !== 1 && (
+                    {event.state !== EventState.Ended && (
                       <div className="btn-group">
-                        {entry.signedOutAt ? (
+                        {hasPermission("signin", "event", "participant") && entry.signedOutAt && (
                           <button
                             data-qa="sign-in-btn"
                             type="submit"
@@ -119,7 +122,8 @@ export function EntriesTable({ entries, event, updateParticipants }: EntriesTabl
                           >
                             Sign Back In
                           </button>
-                        ) : (
+                        )}
+                        {hasPermission("signout", "event", "participant") && !entry.signedOutAt && (
                           <button
                             data-qa="sign-out-btn"
                             type="submit"
@@ -129,14 +133,16 @@ export function EntriesTable({ entries, event, updateParticipants }: EntriesTabl
                             Sign Out
                           </button>
                         )}
-                        <button
-                          data-qa="remove-btn"
-                          type="submit"
-                          className="btn btn-warning"
-                          onClick={() => deleteParticipant(entry.membershipId)}
-                        >
-                          Remove
-                        </button>
+                        {hasPermission("delete", "event", "participant") && (
+                          <button
+                            data-qa="remove-btn"
+                            type="submit"
+                            className="btn btn-warning"
+                            onClick={() => deleteParticipant(entry.membershipId)}
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>

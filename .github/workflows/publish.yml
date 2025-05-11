@@ -29,6 +29,9 @@ jobs:
   deploy:
     name: Deploy version to Google Cloud
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     needs: push
     steps:
       - name: Authenticate to GCP

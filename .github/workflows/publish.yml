@@ -40,4 +40,4 @@ jobs:
           workload_identity_provider: '${{ secrets.GCP_WIP }}'
           service_account: '${{ secrets.GCP_SA }}'
       - name: Deploy
-        run: gcloud run deploy website --image=us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_REF##*/}
+        run: gcloud run deploy website --region=us-east1 --image=us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_REF##*/}

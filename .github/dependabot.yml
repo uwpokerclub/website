@@ -6,18 +6,20 @@ updates:
       - "/server"
       - "/webapp"
     schedule:
-      interval: daily
-    reviewers:
-      - asmahood
+      interval: weekly
     labels:
       - "type::Dependencies"
       - "dep::Docker"
   - package-ecosystem: gomod
     directory: "/server"
     schedule:
-      interval: daily
-    reviewers:
-      - asmahood
+      interval: weekly
+    groups:
+      golang:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "type::Dependencies"
       - "dep::Go"    
@@ -26,18 +28,20 @@ updates:
       - dependency-type: production
     directory: "/webapp"
     schedule:
-      interval: daily
-    reviewers:
-      - asmahood
+      interval: weekly
+    groups:
+      npm:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "type::Dependencies"
       - "dep::Javascript"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: daily
-    reviewers:
-      - asmahood
+      interval: weekly
     labels:
       - "type::Dependencies"
       - "dep::Github Actions"

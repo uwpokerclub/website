@@ -6,15 +6,15 @@ toolchain go1.23.2
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/google/uuid v1.6.0
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.38.0
-	gorm.io/driver/postgres v1.5.11
-	gorm.io/gorm v1.26.1
+	gorm.io/driver/postgres v1.6.0
+	gorm.io/gorm v1.30.0
 )
 
 require (

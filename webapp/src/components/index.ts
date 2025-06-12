@@ -9,5 +9,6 @@ export * from "./SelectSearch";
 import AuthProvider from "./AuthProvider";
 import RequireAuth from "./RequireAuth";
 import RequirePermission from "./RequirePermission";
+import SemesterProvider from "./SemesterProvider";
 
-export { AuthProvider, RequireAuth, RequirePermission };
+export { AuthProvider, RequireAuth, RequirePermission, SemesterProvider };

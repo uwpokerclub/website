@@ -1,0 +1,55 @@
+.navItem {
+  width: 80%;
+  position: relative;
+}
+
+
+.navItem a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0.9375rem 1.25rem;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.navItem:hover a {
+  color: var(--white);
+  background-color: #1c1c20;
+}
+
+.navItem a.active {
+  color: var(--primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.navItem a.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0.25rem;
+  background-color: var(--primary);
+}
+
+.icon {
+  margin-right: 0.9375rem;
+  font-size: 1.1rem;
+  min-width: 2.5rem; /* Match toggle button width */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label.collapsed {
+  display: none;
+}
+
+@media screen and (min-width: 48.0625rem) {
+  .navItem {
+    width: 100%;
+    position: relative;
+  }
+}

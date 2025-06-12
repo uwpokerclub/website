@@ -2,6 +2,8 @@
  * @fileoverview This file contains the interfaces for the API responses on the /api/session endpoint.
  */
 
+import { Role } from "@/types/roles";
+
 /**
  * @interface Permissions
  * @description This interface defines all the available permissions for all resources.
@@ -59,6 +61,6 @@ export type SubResources = "participant" | "rankings" | "transaction";
  */
 export interface UserSession {
   username: string;
-  role: string;
+  role: Role;
   permissions: PermissionList;
 }

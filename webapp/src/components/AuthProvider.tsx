@@ -1,5 +1,6 @@
 import { AuthContext } from "@/contexts";
 import { Actions, APIError, Resources, SubResources, UserSession } from "@/interfaces/responses";
+import { Role } from "@/types/roles";
 import { ReactNode, useEffect, useState } from "react";
 
 interface AuthProviderProps {
@@ -61,7 +62,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         setError(data.message);
       }
     } catch (err) {
-      if (!(err instanceof DOMException && err.name === "AbortErrorr")) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
         setError("Network error during login. Please contact the webmaster.");
       }
     } finally {
@@ -108,6 +109,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     return resourcePerm?.[action] ?? false;
   };
 
+  const hasRoles = (roles: Role[]) => {
+    if (!user || !user.role) {
+      return false;
+    }
+
+    return roles.some((role) => user.role === role);
+  };
+
   const value = {
     user,
     loading,
@@ -115,6 +124,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     hasPermission,
+    hasRoles,
   };
 
   useEffect(() => {

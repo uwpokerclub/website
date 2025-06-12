@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { Admin, Index, Login } from "./pages";
-import { AuthProvider, RequireAuth } from "@/components";
+import { AuthProvider, RequireAuth, SemesterProvider } from "@/components";
 
 function App() {
   return (
@@ -13,7 +13,9 @@ function App() {
             path="/admin/*"
             element={
               <RequireAuth>
-                <Admin />
+                <SemesterProvider>
+                  <Admin />
+                </SemesterProvider>
               </RequireAuth>
             }
           />

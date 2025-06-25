@@ -18,22 +18,26 @@ ENV NODE_ENV=production
 # Build the React app for production
 RUN npm run build
 
-### ====================== SERVER BUILD IMAGE ======================
-FROM golang:1.24.2-bookworm AS server
+### ====================== SETUP IMAGE ======================
+FROM golang:1.24.2-bookworm AS setup
 
 WORKDIR /usr/server
 
-# Copy go.mod and go.sum files over
-COPY server/go.mod server/go.sum ./
+COPY server .
+
+### ====================== SERVER BUILD IMAGE ======================
+FROM setup AS server
+
+WORKDIR /usr/server
+
+# Copy files over
+COPY --from=setup /usr/server .
 
 # Download dependencies
 RUN go mod download
 
-# Copy all other files
-COPY server .
-
 # Compile server binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o server .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /tmp/server .
 
 ### ======================= FINAL IMAGE ========================
 FROM debian:bookworm-slim
@@ -57,3 +61,15 @@ USER runner
 
 # Start the server
 CMD ["./server", "start", "--run-migrations"]
+
+
+### ====================== API DOC GENERATION ======================
+FROM setup AS generate-api-docs
+
+WORKDIR /usr/server
+
+COPY --from=setup /usr/server .
+
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
+ENTRYPOINT [ "swag", "init", "--parseDependency" ]

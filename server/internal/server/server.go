@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 )
 
@@ -41,6 +43,9 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./public/index.html")
 	})
+
+	// Server Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	s := &apiServer{Router: r, db: db}
 

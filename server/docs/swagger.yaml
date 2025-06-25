@@ -1,0 +1,12 @@
+info:
+  contact:
+    email: uwaterloopoker@gmail.com
+    name: UWPSC Development Team
+  description: This is the API for the UWPSC website.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: UWPSC API
+  version: "1.0"
+paths: {}
+swagger: "2.0"

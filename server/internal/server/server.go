@@ -1,6 +1,7 @@
 package server
 
 import (
+	"api/internal/controller"
 	"api/internal/middleware"
 	"fmt"
 	"net/http"
@@ -44,13 +45,13 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 		c.File("./public/index.html")
 	})
 
-	// Server Swagger documentation
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
 	s := &apiServer{Router: r, db: db}
 
 	// Initialize all routes
 	s.SetupRoutes()
+
+	// Setup V2 routes
+	s.SetupV2Routes()
 
 	return s
 }
@@ -139,5 +140,21 @@ func (s *apiServer) SetupRoutes() {
 		structuresRoute.GET("", middleware.UseAuthorization(s.db, "structure.create"), s.ListStructures)
 		structuresRoute.GET(":id", middleware.UseAuthorization(s.db, "structure.get"), s.GetStructure)
 		structuresRoute.PUT(":id", middleware.UseAuthorization(s.db, "structure.edit"), s.UpdateStructure)
+	}
+}
+
+func (s *apiServer) SetupV2Routes() {
+	apiV2Route := s.Router.Group("/api/v2")
+
+	// Serve Swagger documentation
+	apiV2Route.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Load routes from controllers
+	controllers := []controller.Controller{
+		controller.NewHealthController(),
+	}
+
+	for _, controller := range controllers {
+		controller.LoadRoutes(apiV2Route)
 	}
 }

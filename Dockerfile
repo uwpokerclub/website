@@ -43,6 +43,9 @@ WORKDIR /server
 # Create a non-root user and group
 RUN groupadd -r runner && useradd -r -g runner runner
 
+# Change ownership of the working directory
+RUN chown runner:runner /server
+
 # Setup certifcates and keys folders
 RUN mkdir certs client-cert client-key
 RUN chown runner:runner certs client-cert client-key

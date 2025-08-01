@@ -26,7 +26,7 @@ func (ss *structureService) CreateStructure(req *models.CreateStructureRequest) 
 			Big:   blind.Big,
 			Ante:  blind.Ante,
 			Time:  blind.Time,
-			Index: i,
+			Index: int8(i),
 		}
 	}
 
@@ -64,7 +64,7 @@ func (ss *structureService) ListStructures() ([]models.Structure, error) {
 	return structures, nil
 }
 
-func (ss *structureService) GetStructure(id uint64) (*models.Structure, error) {
+func (ss *structureService) GetStructure(id uint) (*models.Structure, error) {
 	structure := models.Structure{
 		ID: id,
 	}
@@ -119,7 +119,7 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 			Ante:        blind.Ante,
 			Time:        blind.Time,
 			StructureId: structure.ID,
-			Index:       i,
+			Index:       int8(i),
 		}
 	}
 	err := ss.db.Model(&structure).Association("Blinds").Replace(blinds)

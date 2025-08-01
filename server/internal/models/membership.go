@@ -3,13 +3,13 @@ package models
 import "github.com/google/uuid"
 
 type Membership struct {
-	ID         uuid.UUID `json:"id" gorm:"type:uuid;default:uuid_generate_v4()"`
-	UserID     uint64    `json:"userId"`
+	ID         uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID     uint64    `json:"userId" gorm:"uniqueIndex:user_semester_unique"`
 	User       User      `json:"user"`
-	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid"`
+	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique"`
 	Semester   Semester  `json:"semester"`
-	Paid       bool      `json:"paid"`
-	Discounted bool      `json:"discounted"`
+	Paid       bool      `json:"paid" gorm:"not null;default:false"`
+	Discounted bool      `json:"discounted" gorm:"not null;default:false"`
 	Ranking    Ranking   `json:"ranking"`
 }
 

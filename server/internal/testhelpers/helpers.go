@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateSemester(db *gorm.DB, id uuid.UUID, name string, meta string, startDate time.Time, endDate time.Time, startingBudget float64, currentBudget float64, membershipFee int8, discountFee int8, rebuyFee int8) (*models.Semester, error) {
+func CreateSemester(db *gorm.DB, id uuid.UUID, name string, meta string, startDate time.Time, endDate time.Time, startingBudget float32, currentBudget float32, membershipFee uint8, discountFee uint8, rebuyFee uint8) (*models.Semester, error) {
 	semester := models.Semester{
 		ID:                    id,
 		Name:                  name,
@@ -93,7 +93,7 @@ func CreateMembership(db *gorm.DB, userId uint64, semesterId uuid.UUID, paid boo
 	return &membership, nil
 }
 
-func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId uint64, placement uint32, signedOutAt *time.Time) (*models.Participant, error) {
+func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId uint, placement uint16, signedOutAt *time.Time) (*models.Participant, error) {
 	entry := models.Participant{
 		MembershipID: membershipId,
 		EventID:      eventId,

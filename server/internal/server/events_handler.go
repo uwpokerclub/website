@@ -42,14 +42,14 @@ func (s *apiServer) CreateEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) GetEvent(ctx *gin.Context) {
-	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 64)
+	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
 	}
 
 	svc := services.NewEventService(s.db)
-	event, err := svc.GetEvent(eventId)
+	event, err := svc.GetEvent(uint(eventId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -59,7 +59,7 @@ func (s *apiServer) GetEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) UpdateEvent(ctx *gin.Context) {
-	eventID, err := strconv.ParseUint(ctx.Param("eventId"), 10, 64)
+	eventID, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
@@ -73,7 +73,7 @@ func (s *apiServer) UpdateEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	event, err := svc.UpdateEvent(eventID, &req)
+	event, err := svc.UpdateEvent(uint(eventID), &req)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -90,7 +90,7 @@ func (s *apiServer) UndoEndEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	err = svc.UndoEndEvent(eventId)
+	err = svc.UndoEndEvent(uint(eventId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -107,7 +107,7 @@ func (s *apiServer) EndEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	err = svc.EndEvent(eventId)
+	err = svc.EndEvent(uint(eventId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -124,7 +124,7 @@ func (s *apiServer) NewRebuy(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	err = svc.NewRebuy(eventId)
+	err = svc.NewRebuy(uint(eventId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return

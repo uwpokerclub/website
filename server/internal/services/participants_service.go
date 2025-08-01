@@ -46,7 +46,7 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 	return &participant, nil
 }
 
-func (svc *participantsService) ListParticipants(eventId uint64) ([]models.ListParticipantsResult, error) {
+func (svc *participantsService) ListParticipants(eventId uint) ([]models.ListParticipantsResult, error) {
 	ret := []models.ListParticipantsResult{}
 
 	// TODO: Update this query eventually to return a specific array of objects

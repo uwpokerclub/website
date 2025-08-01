@@ -39,30 +39,6 @@ RUN go mod download
 # Compile server binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /tmp/server .
 
-### ======================= FINAL IMAGE ========================
-FROM debian:bookworm-slim
-
-WORKDIR /server
-
-# Create a non-root user and group
-RUN groupadd -r runner && useradd -r -g runner runner
-
-# Setup certifcates and keys folders
-RUN mkdir certs client-cert client-key
-RUN chown runner:runner certs client-cert client-key
-
-# Copy the built application
-COPY --from=webapp --chown=runner:runner /usr/app/dist ./public
-COPY --from=server --chown=runner:runner /usr/server/server .
-COPY --from=server --chown=runner:runner /usr/server/migrations ./migrations
-
-# Switch to non-root user
-USER runner
-
-# Start the server
-CMD ["./server", "start", "--run-migrations"]
-
-
 ### ====================== API DOC GENERATION ======================
 FROM setup AS generate-api-docs
 
@@ -73,3 +49,43 @@ COPY --from=setup /usr/server .
 RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 ENTRYPOINT [ "swag", "init", "--parseDependency" ]
+
+### ====================== ATLAS MIGRATION ======================
+FROM setup AS atlas-migrate
+
+WORKDIR /usr/server
+
+COPY --from=setup /usr/server .
+
+RUN curl -sSf https://atlasgo.sh | sh
+
+# Make the migration script executable (it should already be copied from setup stage)
+RUN chmod +x /usr/server/scripts/atlas_migrate.sh
+
+ENTRYPOINT [ "/usr/server/scripts/atlas_migrate.sh" ]
+
+### ======================= FINAL IMAGE ========================
+FROM debian:bookworm-slim
+
+WORKDIR /server
+
+# Create a non-root user and group
+RUN groupadd -r runner && useradd -r -g runner runner
+
+# Change ownership of the working directory
+RUN chown runner:runner /server
+
+# Setup certifcates and keys folders
+RUN mkdir certs client-cert client-key
+RUN chown runner:runner certs client-cert client-key
+
+# Copy the built application
+COPY --from=webapp --chown=runner:runner /usr/app/dist ./public
+COPY --from=server --chown=runner:runner /tmp/server ./server
+COPY --from=server --chown=runner:runner /usr/server/migrations ./migrations
+
+# Switch to non-root user
+USER runner
+
+# Start the server
+CMD ["./server", "start", "--run-migrations"]

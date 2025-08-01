@@ -45,7 +45,7 @@ func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Eve
 	return &event, nil
 }
 
-func (es *eventService) GetEvent(eventId uint64) (*models.Event, error) {
+func (es *eventService) GetEvent(eventId uint) (*models.Event, error) {
 	event := models.Event{ID: eventId}
 
 	res := es.db.Joins("Semester").Joins("Structure").Preload("Entries").First(&event)
@@ -90,7 +90,7 @@ func (es *eventService) ListEvents(semesterId string) ([]models.ListEventsRespon
 	return events, nil
 }
 
-func (svc *eventService) UpdateEvent(eventID uint64, req *models.UpdateEventRequest) (*models.Event, error) {
+func (svc *eventService) UpdateEvent(eventID uint, req *models.UpdateEventRequest) (*models.Event, error) {
 	event := models.Event{ID: eventID}
 
 	// Query DB for this event
@@ -142,7 +142,7 @@ func (svc *eventService) UpdateEvent(eventID uint64, req *models.UpdateEventRequ
 	return &event, nil
 }
 
-func (es *eventService) EndEvent(eventId uint64) error {
+func (es *eventService) EndEvent(eventId uint) error {
 	// Retrieve the event first
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)
@@ -203,7 +203,7 @@ func (es *eventService) EndEvent(eventId uint64) error {
 			return err
 		}
 
-		entry.Placement = uint32(i + 1)
+		entry.Placement = uint16(i + 1)
 
 		tx.Save(&entry)
 		if err := tx.Error; err != nil {
@@ -222,7 +222,7 @@ func (es *eventService) EndEvent(eventId uint64) error {
 	return nil
 }
 
-func (es *eventService) UndoEndEvent(eventId uint64) error {
+func (es *eventService) UndoEndEvent(eventId uint) error {
 	// Retrieve event
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)
@@ -293,7 +293,7 @@ func (es *eventService) UndoEndEvent(eventId uint64) error {
 	return nil
 }
 
-func (es *eventService) NewRebuy(eventId uint64) error {
+func (es *eventService) NewRebuy(eventId uint) error {
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)
 
@@ -322,7 +322,7 @@ func (es *eventService) NewRebuy(eventId uint64) error {
 		return err
 	}
 
-	err = semesterService.UpdateBudget(event.SemesterID, float64(semester.RebuyFee))
+	err = semesterService.UpdateBudget(event.SemesterID, float32(semester.RebuyFee))
 	if err != nil {
 		tx.Rollback()
 		return err

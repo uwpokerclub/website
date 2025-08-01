@@ -93,7 +93,7 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 	return rankings, nil
 }
 
-func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float64) error {
+func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {
 	semester := models.Semester{ID: id}
 
 	res := ss.db.First(&semester)

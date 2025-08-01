@@ -18,7 +18,7 @@ services:
     security_opt:
       - "seccomp:unconfined"
   db:
-    image: postgres:13.7-alpine
+    image: postgres:17
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password

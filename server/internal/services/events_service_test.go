@@ -146,8 +146,8 @@ func TestEventsService(s *testing.T) {
 		events, err := eventService.ListEvents(semester1.ID.String())
 		assert.NoError(t, err, "eventService.ListEvents()")
 
-		expIds := []uint64{event3.ID, event2.ID, event1.ID}
-		accIds := make([]uint64, len(events))
+		expIds := []uint{event3.ID, event2.ID, event1.ID}
+		accIds := make([]uint, len(events))
 		for i, e := range events {
 			accIds[i] = e.ID
 		}
@@ -480,7 +480,7 @@ func TestEventsService(s *testing.T) {
 		updatedSemester := models.Semester{ID: semester1.ID}
 		res = db.First(&updatedSemester)
 		assert.NoError(t, res.Error, "Retrieve updated semester")
-		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float64(semester1.RebuyFee), 0.001)
+		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float32(semester1.RebuyFee), 0.001)
 	})
 
 	s.Run("UndoEndEvent", func(t *testing.T) {

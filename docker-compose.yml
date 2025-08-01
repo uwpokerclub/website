@@ -34,7 +34,7 @@ services:
     security_opt:
       - "seccomp:unconfined"
   db:
-    image: postgres:13.7-alpine
+    image: postgres:17
     volumes:
       - ./server/scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
       - postgres-data:/var/lib/postgresql/data/
@@ -60,6 +60,21 @@ services:
       target: generate-api-docs
     volumes:
       - ./server:/usr/server:rw,delegated
+  
+  atlas-migrate:
+    build:
+      context: .
+      target: atlas-migrate
+    volumes:
+      - ./server:/usr/server:rw,delegated
+    environment:
+      - DATABASE_URL=postgres://docker:password@db:5432/uwpokerclub_development?sslmode=disable
+      - TEST_DATABASE_URL=postgres://docker:password@db:5432/uwpokerclub_test?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - services
 
 volumes:
   postgres-data:

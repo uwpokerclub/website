@@ -15,6 +15,6 @@ type RankingResponse struct {
 }
 
 type GetRankingResponse struct {
-	Points   int32 `json:"points" gorm:"column:points"`
-	Position int32 `json:"position" gorm:"column:position"`
+	Points   int32 `json:"points"`
+	Position int32 `json:"position"`
 }

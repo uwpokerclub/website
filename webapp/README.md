@@ -1,78 +1,63 @@
-# UWPSC Admin App
+# UWPSC Web Application
 
-## Table of Contents
+> **📖 For complete documentation, please refer to the main [README.md](../README.md)**
 
-- [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-  - [Clone the repository](#clone-the-repository)
-- [Development](#development)
-  - [Starting the app](#starting-the-app)
-  - [Running tests](#running-tests)
-- [Production](#production)
-- [Contributing](#contributing)
-- [Licence](#licence)
+This directory contains the React TypeScript frontend for the UWPSC Website.
 
-## Installation
+## Quick Start
 
-Before starting development or usage of the frontend app, ensure you have all of the prerequiste software installed below.
+From the root directory:
+```bash
+# Start all services including the webapp
+docker compose up -d
 
-### Prerequisites
-
-- [Docker](https://www.docker.com/) (with Docker Compose)
-- [NodeJS](https://nodejs.org/en/)
-
-### Clone the repository
-
-Clone the repository to your local development environment using:
-
-```sh
-# HTTPS
-git clone https://github.com/uwpokerclub/app.git
-# SSH
-git clone git@github.com:uwpokerclub/app.git
-# GH CLI
-gh repo clone uwpokerclub/app
-
-# Change into project directory
-cd app
-## first time installation
+# Or run the webapp locally for development
+cd webapp
 npm install
+npm run dev
 ```
+
+## Key Information
+
+- **Port**: 5173
+- **Technology**: React + TypeScript + Vite
+- **Testing**: `npm test`
+- **Build**: `npm run build`
+
+## Directory Structure
+
+- `public/` - Static assets (favicon, images, etc.)
+- `src/` - Source code
+  - `components/` - Reusable React components
+  - `pages/` - Route-level page components
+  - `hooks/` - Custom React hooks
+  - `contexts/` - React context providers
+  - `sdk/` - API client for backend communication
+  - `types/` - TypeScript type definitions
+  - `utils/` - Utility functions
 
 ## Development
 
-### Starting the app
-
-To start the app for local development you can run the following command:
-
-```sh
-npm start
+**Local Development:**
+```bash
+cd webapp
+npm install
+npm run dev
 ```
 
-**_Note: If you are working on the admin portion of the app, you will also need to have the [API server](https://github.com/uwpokerclub/api) running locally as well._**
-
-This will start the React development server on [http://localhost:3000](http://localhost:3000). The development server will also hot reload for almost all code changes so you can continue to develop without restarting the application.
-
-### Running tests
-
-To run tests, run the following command:
-
-```sh
-npm test
+**Testing:**
+```bash
+npm test              # Run tests
+npm run test:watch    # Interactive testing
 ```
 
-## Production
-
-To build a production ready version of the application, you can build the Docker image with the Dockerfile provided in this repository. This will internally run `yarn build` which will create a production ready build of the React app, and copy the build files into a thin nginx image.
-
-```sh
-docker build .
+**Production Build:**
+```bash
+npm run build
 ```
 
-## Contributing
+For complete setup instructions, database management, and deployment information, see the main [README.md](../README.md).
 
-TBD
+## License
 
-## Licence
-
-The UWPSC Admin App is licensed under the terms of the Apache 2.0 License and can be found [here](LICENSE).
+Licensed under the Apache 2.0 License - see the [LICENSE](../LICENSE) file for details.

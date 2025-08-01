@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download && \
-    go install github.com/pressly/goose/v3/cmd/goose@v3.15.1 && \
+    go install ariga.io/atlas/cmd/atlas@latest && \
     go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Copy all other files

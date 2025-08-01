@@ -18,7 +18,7 @@ func (s *apiServer) ListParticipants(ctx *gin.Context) {
 	}
 
 	svc := services.NewParticipantsService(s.db)
-	participants, err := svc.ListParticipants(uint64(eventId))
+	participants, err := svc.ListParticipants(uint(eventId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return

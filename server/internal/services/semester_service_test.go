@@ -58,10 +58,10 @@ func TestSemesterService(t *testing.T) {
 	}
 }
 
-const float64EqualityThreshold = 1e-9
+const float32EqualityThreshold = 1e-9
 
-func almostEqual(a, b float64) bool {
-	return math.Abs(a-b) <= float64EqualityThreshold
+func almostEqual(a, b float32) bool {
+	return math.Abs(float64(a-b)) <= float32EqualityThreshold
 }
 
 func CreateSemesterTest() func(*testing.T) {

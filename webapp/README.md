@@ -6,13 +6,8 @@ This directory contains the React TypeScript frontend for the UWPSC Website.
 
 ## Quick Start
 
-From the root directory:
+From the webapp directory:
 ```bash
-# Start all services including the webapp
-docker compose up -d
-
-# Or run the webapp locally for development
-cd webapp
 npm install
 npm run dev
 ```
@@ -40,7 +35,6 @@ npm run dev
 
 **Local Development:**
 ```bash
-cd webapp
 npm install
 npm run dev
 ```

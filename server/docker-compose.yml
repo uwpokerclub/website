@@ -1,0 +1,51 @@
+services:
+  server:
+    build:
+      context: .
+    command: sh -c 'go build -ldflags="-w -s" -o api . && /usr/server/api start'
+    volumes:
+      - ./server:/usr/server
+    ports:
+      - 5000:5000
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - CGO_ENABLED=0
+      - GOOS=linux
+      - ENVIRONMENT=development
+      - PORT=5000
+      - DATABASE_URL=postgres://docker:password@db:5432/uwpokerclub_development
+      - TEST_DATABASE_URL=postgres://docker:password@db:5432/uwpokerclub_test
+      - HOSTNAME=localhost:5000
+    networks:
+      - services
+    security_opt:
+      - "seccomp:unconfined"
+  db:
+    image: postgres:17
+    volumes:
+      - ./server/scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
+      - postgres-data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=password
+      - DATABASES=uwpokerclub
+      - DATABASE_ENVS=development,test
+    ports:
+      - 5432:5432
+    networks:
+      - services
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docker -d uwpokerclub_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres-data:
+networks:
+  services:
+    name: uwpokerclub_services_network
+    external: true

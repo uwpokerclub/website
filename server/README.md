@@ -9,10 +9,10 @@ This directory contains the Go API server for the UWPSC Website.
 From the root directory:
 ```bash
 # Start all services including the API server
+docker compose network create uwpokerclub_services_network
 docker compose up -d
 
 # Or run the server locally for development
-cd server
 go run main.go start
 ```
 
@@ -54,31 +54,16 @@ The server uses [Atlas](https://atlasgo.io/) for database schema management.
 
 **Automatic migrations from GORM model changes:**
 ```bash
-# From root directory
-make generate-migration
-
-# Or run Atlas directly (from server directory)
-cd server
 atlas migrate diff --config "file://atlas/atlas.hcl" --env gorm
 ```
 
 **Manual migrations for custom SQL:**
 ```bash
-# From root directory
-make generate-manual-migration NAME=your_migration_name
-
-# Or run Atlas directly (from server directory)
-cd server
 atlas migrate new your_migration_name --config "file://atlas/atlas.hcl" --env gorm
 ```
 
 **Applying migrations:**
 ```bash
-# From root directory
-make migrate
-
-# Or run Atlas directly (from server directory)
-cd server
 atlas migrate apply \
   --config "file://atlas/atlas.hcl" \
   --env gorm \

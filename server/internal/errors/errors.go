@@ -13,7 +13,7 @@ type APIErrorResponse struct {
 	Type string `json:"type"`
 	// Message is a more descriptive error message.
 	Message string `json:"message"`
-}
+} //@name ErrorResponse
 
 // Error returns a string corresponding to the type of error and a detailed error message.
 func (e APIErrorResponse) Error() string {

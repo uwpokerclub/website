@@ -44,6 +44,267 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/semesters": {
+            "get": {
+                "description": "List all semesters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Semesters"
+                ],
+                "summary": "List Semesters",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Semester"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new semester",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Semesters"
+                ],
+                "summary": "Create Semester",
+                "parameters": [
+                    {
+                        "description": "Semester data",
+                        "name": "semester",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateSemesterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/Semester"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{id}": {
+            "get": {
+                "description": "Get a specific semester by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Semesters"
+                ],
+                "summary": "Get Semester",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Semester"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "CreateSemesterRequest": {
+            "type": "object",
+            "required": [
+                "endDate",
+                "membershipDiscountFee",
+                "membershipFee",
+                "name",
+                "rebuyFee",
+                "startDate"
+            ],
+            "properties": {
+                "endDate": {
+                    "type": "string",
+                    "example": "2023-12-31T23:59:59Z"
+                },
+                "membershipDiscountFee": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 5
+                },
+                "membershipFee": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 10
+                },
+                "meta": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fall 2023"
+                },
+                "rebuyFee": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 2
+                },
+                "startDate": {
+                    "type": "string",
+                    "example": "2023-09-01T00:00:00Z"
+                },
+                "startingBudget": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 100
+                }
+            }
+        },
+        "ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Code is the HTTP status code for the error.",
+                    "type": "integer"
+                },
+                "message": {
+                    "description": "Message is a more descriptive error message.",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type is the name of the HTTP status code.",
+                    "type": "string"
+                }
+            }
+        },
+        "Semester": {
+            "type": "object",
+            "properties": {
+                "currentBudget": {
+                    "type": "number",
+                    "example": 100
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2023-12-31T23:59:59Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "membershipDiscountFee": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "membershipFee": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "meta": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fall 2023"
+                },
+                "rebuyFee": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "startDate": {
+                    "type": "string",
+                    "example": "2023-09-01T00:00:00Z"
+                },
+                "startingBudget": {
+                    "type": "number",
+                    "example": 100
+                }
+            }
         }
     }
 }`

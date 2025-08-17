@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func assertBlindsEqual(t *testing.T, expected models.BlindJSON, actual models.Blind, msg string) {
@@ -154,12 +155,12 @@ func TestStructureService(t *testing.T) {
 			Name: "Test Structure A",
 		}
 		res := db.Create(&testStructure)
-		assert.NoError(t, res.Error)
+		require.NoError(t, res.Error)
 		fakeStructure := models.Structure{
 			Name: "Test Structure B",
 		}
 		res = db.Create(&fakeStructure)
-		assert.NoError(t, res.Error)
+		require.NoError(t, res.Error)
 
 		testBlinds := [3]models.Blind{
 			{
@@ -188,7 +189,7 @@ func TestStructureService(t *testing.T) {
 			},
 		}
 		res = db.Create(&testBlinds)
-		assert.NoError(t, res.Error)
+		require.NoError(t, res.Error)
 
 		req := models.UpdateStructureRequest{
 			ID:   testStructure.ID,
@@ -210,7 +211,7 @@ func TestStructureService(t *testing.T) {
 		}
 
 		structure, err := structureService.UpdateStructure(&req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testStructure.ID, structure.ID)
 		assert.Equal(t, req.Name, structure.Name)
 		assert.Len(t, structure.Blinds, 2)

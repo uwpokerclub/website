@@ -16,7 +16,7 @@ func TestParticipantsService_CreateParticipant(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -58,7 +58,7 @@ func TestParticipantsService_ListParticipants(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -117,7 +117,7 @@ func TestParticipantsService_UpdateParticipant_SignIn(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -161,7 +161,7 @@ func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -205,7 +205,7 @@ func TestParticipantsService_DeleteParticipant(t *testing.T) {
 
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 

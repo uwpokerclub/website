@@ -46,7 +46,7 @@ func CreateTransactionTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -112,7 +112,7 @@ func GetTransactionTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -161,7 +161,7 @@ func ListTransactionTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -221,7 +221,7 @@ func UpdateTransactionTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -292,7 +292,7 @@ func DeleteTransactionTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 

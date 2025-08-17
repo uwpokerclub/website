@@ -35,7 +35,12 @@ generate-manual-migration:
 	fi
 	cd server && atlas migrate new $(NAME) --config "file://atlas/atlas.hcl" --env gorm
 
+migrate-hash:
+	cd server && atlas migrate hash --config "file://atlas/atlas.hcl" --env gorm
+
 # =================== MIGRATIONS ==================
 # Apply Atlas migrations to both development and test databases
 migrate:
 	docker compose run --rm atlas-migrate
+
+

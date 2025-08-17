@@ -3,7 +3,7 @@ package models
 import "github.com/google/uuid"
 
 type Transaction struct {
-	ID          uint      `json:"id" gorm:"type:serial;primaryKey"`
+	ID          int32     `json:"id" gorm:"type:integer;primaryKey;autoIncrement"`
 	SemesterID  uuid.UUID `json:"semesterId" gorm:"type:uuid"`
 	Semester    Semester  `json:"semester"`
 	Amount      float32   `json:"amount" gorm:"not null;default:0"`
@@ -16,7 +16,7 @@ type CreateTransactionRequest struct {
 }
 
 type UpdateTransactionRequest struct {
-	ID          uint
+	ID          int32
 	Amount      float32 `json:"amount"`
 	Description string  `json:"description"`
 }

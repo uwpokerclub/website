@@ -69,7 +69,7 @@ func CreateUserTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -112,7 +112,7 @@ func ListUsersTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -173,12 +173,12 @@ func ListUsersTest() func(*testing.T) {
 		}
 
 		// Workaround since timestamps cannot be deep equality checked
-		user1.CreatedAt = users[0].CreatedAt
+		user1.CreatedAt = users[2].CreatedAt
 		user2.CreatedAt = users[1].CreatedAt
-		user3.CreatedAt = users[2].CreatedAt
+		user3.CreatedAt = users[0].CreatedAt
 
-		// Array should have each user
-		expUsers := []models.User{user1, user2, user3}
+		// Array should have each user, in order of newest to oldest (by created_at)
+		expUsers := []models.User{user3, user2, user1}
 		if !reflect.DeepEqual(expUsers, users) {
 			t.Errorf("Expected return and actual return does not match. Expected: %v, Got: %v", expUsers, users)
 			return
@@ -189,7 +189,7 @@ func ListUsersTest() func(*testing.T) {
 func ListUsers_FilterIDTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -252,7 +252,7 @@ func ListUsers_FilterIDTest(t *testing.T) {
 func ListUsers_FilterNameTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -315,7 +315,7 @@ func ListUsers_FilterNameTest(t *testing.T) {
 func ListUsers_FilterEmailTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -378,7 +378,7 @@ func ListUsers_FilterEmailTest(t *testing.T) {
 func ListUsers_FilterFacultyTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -443,7 +443,7 @@ func GetUserTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -485,7 +485,7 @@ func GetUserNotFoundTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -504,7 +504,7 @@ func UpdateUserTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -562,7 +562,7 @@ func DeleteUserTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 

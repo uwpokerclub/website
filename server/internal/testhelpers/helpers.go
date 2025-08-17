@@ -93,7 +93,7 @@ func CreateMembership(db *gorm.DB, userId uint64, semesterId uuid.UUID, paid boo
 	return &membership, nil
 }
 
-func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId uint, placement uint16, signedOutAt *time.Time) (*models.Participant, error) {
+func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId int32, placement uint16, signedOutAt *time.Time) (*models.Participant, error) {
 	entry := models.Participant{
 		MembershipID: membershipId,
 		EventID:      eventId,

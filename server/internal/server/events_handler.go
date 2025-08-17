@@ -49,7 +49,7 @@ func (s *apiServer) GetEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	event, err := svc.GetEvent(uint(eventId))
+	event, err := svc.GetEvent(int32(eventId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -73,7 +73,7 @@ func (s *apiServer) UpdateEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	event, err := svc.UpdateEvent(uint(eventID), &req)
+	event, err := svc.UpdateEvent(int32(eventID), &req)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -90,7 +90,7 @@ func (s *apiServer) UndoEndEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	err = svc.UndoEndEvent(uint(eventId))
+	err = svc.UndoEndEvent(int32(eventId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -107,7 +107,7 @@ func (s *apiServer) EndEvent(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	err = svc.EndEvent(uint(eventId))
+	err = svc.EndEvent(int32(eventId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -124,7 +124,7 @@ func (s *apiServer) NewRebuy(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventService(s.db)
-	err = svc.NewRebuy(uint(eventId))
+	err = svc.NewRebuy(int32(eventId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return

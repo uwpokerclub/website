@@ -20,4 +20,10 @@ env "gorm" {
       diff = "{{ sql . \"  \" }}"
     }
   }
+  diff {
+    concurrent_index {
+      create = true
+      drop   = true
+    }
+  }
 }

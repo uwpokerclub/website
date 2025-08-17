@@ -1,19 +1,19 @@
 package models
 
 type Structure struct {
-	ID     uint    `json:"id" gorm:"type:serial;primaryKey"`
+	ID     int32   `json:"id" gorm:"type:integer;primaryKey;autoIncrement"`
 	Name   string  `json:"name" gorm:"not null"`
-	Blinds []Blind `json:"blinds"`
+	Blinds []Blind `json:"blinds" gorm:"foreignKey:StructureId"`
 }
 
 type Blind struct {
-	ID          uint  `json:"-" gorm:"type:serial;primaryKey"`
+	ID          int32 `json:"-" gorm:"type:integer;primaryKey;autoIncrement"`
 	Small       int32 `json:"small" gorm:"not null"`
 	Big         int32 `json:"big" gorm:"not null"`
 	Ante        int32 `json:"ante" gorm:"not null"`
 	Time        int8  `json:"time" gorm:"not null"`
 	Index       int8  `json:"-" gorm:"not null"`
-	StructureId uint  `json:"-"`
+	StructureId int32 `json:"-" gorm:"type:integer;not null;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
 type BlindJSON struct {
@@ -29,7 +29,7 @@ type CreateStructureRequest struct {
 }
 
 type UpdateStructureRequest struct {
-	ID     uint
+	ID     int32
 	Name   string      `json:"name" binding:"required"`
 	Blinds []BlindJSON `json:"blinds" binding:"required,dive"`
 }

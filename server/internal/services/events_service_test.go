@@ -72,7 +72,7 @@ func TestEventsService(s *testing.T) {
 		assert.Equal(t, req.Name, event.Name, "Event.Name")
 		assert.Equal(t, req.Format, event.Format, "Event.Format")
 		assert.Equal(t, semester1.ID.String(), event.SemesterID.String(), "Event.SemesterID")
-		assert.True(t, event.StartDate.Equal(date), "Event.StartDate")
+		assert.WithinDuration(t, date, event.StartDate, time.Second, "Event.StartDate")
 		assert.Equal(t, structure.ID, event.StructureID, "Event.StructureID")
 		assert.EqualValues(t, 0, event.Rebuys, "Event.Rebuys")
 		assert.InDelta(t, 2.3, event.PointsMultiplier, 0.01, "Event.PointsMultiplier")
@@ -146,8 +146,8 @@ func TestEventsService(s *testing.T) {
 		events, err := eventService.ListEvents(semester1.ID.String())
 		assert.NoError(t, err, "eventService.ListEvents()")
 
-		expIds := []uint{event3.ID, event2.ID, event1.ID}
-		accIds := make([]uint, len(events))
+		expIds := []int32{event3.ID, event2.ID, event1.ID}
+		accIds := make([]int32, len(events))
 		for i, e := range events {
 			accIds[i] = e.ID
 		}
@@ -338,22 +338,28 @@ func TestEventsService(s *testing.T) {
 			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, now)
 			assert.NoError(t, err, "Event creation")
 
-			firstSignoutTime := now.Add(time.Minute * 5)
-			_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &firstSignoutTime)
+			// Enable debug logging to see SQL queries
+			debugDB := db.Debug()
+
+			firstSignoutTime := event.StartDate.Add(time.Minute * 5)
+			t.Logf("Creating first participant with MembershipID: %s, EventID: %d", set.Memberships[0].ID, event.ID)
+			_, err = testhelpers.CreateParticipant(debugDB, set.Memberships[0].ID, event.ID, 0, &firstSignoutTime)
 			assert.NoError(t, err, "Adding first entry")
 
-			secondSignoutTime := now.Add(time.Minute * 30)
-			_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &secondSignoutTime)
+			secondSignoutTime := event.StartDate.Add(time.Minute * 30)
+			t.Logf("Creating second participant with MembershipID: %s, EventID: %d", set.Memberships[1].ID, event.ID)
+			_, err = testhelpers.CreateParticipant(debugDB, set.Memberships[1].ID, event.ID, 0, &secondSignoutTime)
 			assert.NoError(t, err, "Adding second entry")
 
-			entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil)
+			t.Logf("Creating third participant with MembershipID: %s, EventID: %d", set.Memberships[2].ID, event.ID)
+			entry3, err := testhelpers.CreateParticipant(debugDB, set.Memberships[2].ID, event.ID, 0, nil)
 			assert.NoError(t, err, "Adding third entry")
 
 			err = eventService.EndEvent(event.ID)
 			assert.NoError(t, err, "EventService.EndEvent()")
 
 			// Check that entry3's signed_out_at field is set to the start time of the event
-			foundEntry := models.Participant{ID: entry3.ID}
+			foundEntry := models.Participant{MembershipID: entry3.MembershipID}
 			res := db.First(&foundEntry)
 			assert.NoError(t, res.Error, "Getting third entry from DB")
 			assert.WithinDuration(t, event.StartDate, *foundEntry.SignedOutAt, time.Second, "Signout time check")

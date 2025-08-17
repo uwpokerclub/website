@@ -173,12 +173,12 @@ func ListUsersTest() func(*testing.T) {
 		}
 
 		// Workaround since timestamps cannot be deep equality checked
-		user1.CreatedAt = users[0].CreatedAt
+		user1.CreatedAt = users[2].CreatedAt
 		user2.CreatedAt = users[1].CreatedAt
-		user3.CreatedAt = users[2].CreatedAt
+		user3.CreatedAt = users[0].CreatedAt
 
-		// Array should have each user
-		expUsers := []models.User{user1, user2, user3}
+		// Array should have each user, in order of newest to oldest (by created_at)
+		expUsers := []models.User{user3, user2, user1}
 		if !reflect.DeepEqual(expUsers, users) {
 			t.Errorf("Expected return and actual return does not match. Expected: %v, Got: %v", expUsers, users)
 			return

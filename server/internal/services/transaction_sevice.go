@@ -55,7 +55,7 @@ func (ts *transactionService) CreateTransaction(semesterId uuid.UUID, req *model
 	return &transaction, nil
 }
 
-func (ts *transactionService) GetTransaction(semesterId uuid.UUID, transactionId uint) (*models.Transaction, error) {
+func (ts *transactionService) GetTransaction(semesterId uuid.UUID, transactionId int32) (*models.Transaction, error) {
 	transaction := models.Transaction{
 		ID:         transactionId,
 		SemesterID: semesterId,
@@ -145,7 +145,7 @@ func (ts *transactionService) UpdateTransaction(semesterId uuid.UUID, req *model
 	return &transaction, nil
 }
 
-func (ts *transactionService) DeleteTransaction(semesterId uuid.UUID, transactionId uint) error {
+func (ts *transactionService) DeleteTransaction(semesterId uuid.UUID, transactionId int32) error {
 	transaction := models.Transaction{
 		ID:         transactionId,
 		SemesterID: semesterId,

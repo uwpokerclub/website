@@ -47,7 +47,7 @@ func (s *apiServer) GetStructure(ctx *gin.Context) {
 	}
 
 	svc := services.NewStructureService(s.db)
-	structure, err := svc.GetStructure(uint(structureId))
+	structure, err := svc.GetStructure(int32(structureId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -69,7 +69,7 @@ func (s *apiServer) UpdateStructure(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
 		return
 	}
-	req.ID = uint(structureId)
+	req.ID = int32(structureId)
 
 	svc := services.NewStructureService(s.db)
 	structure, err := svc.UpdateStructure(&req)

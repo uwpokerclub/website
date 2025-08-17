@@ -69,7 +69,7 @@ func (s *apiServer) GetTransaction(ctx *gin.Context) {
 	}
 
 	svc := services.NewTransactionService(s.db)
-	transaction, err := svc.GetTransaction(id, uint(transactionId))
+	transaction, err := svc.GetTransaction(id, int32(transactionId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -98,7 +98,7 @@ func (s *apiServer) UpdateTransaction(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
 		return
 	}
-	req.ID = uint(transactionId)
+	req.ID = int32(transactionId)
 
 	svc := services.NewTransactionService(s.db)
 	transaction, err := svc.UpdateTransaction(id, &req)
@@ -125,7 +125,7 @@ func (s *apiServer) DeleteTransaction(ctx *gin.Context) {
 	}
 
 	svc := services.NewTransactionService(s.db)
-	err = svc.DeleteTransaction(id, uint(transactionId))
+	err = svc.DeleteTransaction(id, int32(transactionId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
 		return

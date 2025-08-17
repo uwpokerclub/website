@@ -45,7 +45,7 @@ func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Eve
 	return &event, nil
 }
 
-func (es *eventService) GetEvent(eventId uint) (*models.Event, error) {
+func (es *eventService) GetEvent(eventId int32) (*models.Event, error) {
 	event := models.Event{ID: eventId}
 
 	res := es.db.Joins("Semester").Joins("Structure").Preload("Entries").First(&event)
@@ -90,7 +90,7 @@ func (es *eventService) ListEvents(semesterId string) ([]models.ListEventsRespon
 	return events, nil
 }
 
-func (svc *eventService) UpdateEvent(eventID uint, req *models.UpdateEventRequest) (*models.Event, error) {
+func (svc *eventService) UpdateEvent(eventID int32, req *models.UpdateEventRequest) (*models.Event, error) {
 	event := models.Event{ID: eventID}
 
 	// Query DB for this event
@@ -142,7 +142,7 @@ func (svc *eventService) UpdateEvent(eventID uint, req *models.UpdateEventReques
 	return &event, nil
 }
 
-func (es *eventService) EndEvent(eventId uint) error {
+func (es *eventService) EndEvent(eventId int32) error {
 	// Retrieve the event first
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)
@@ -222,7 +222,7 @@ func (es *eventService) EndEvent(eventId uint) error {
 	return nil
 }
 
-func (es *eventService) UndoEndEvent(eventId uint) error {
+func (es *eventService) UndoEndEvent(eventId int32) error {
 	// Retrieve event
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)
@@ -293,7 +293,7 @@ func (es *eventService) UndoEndEvent(eventId uint) error {
 	return nil
 }
 
-func (es *eventService) NewRebuy(eventId uint) error {
+func (es *eventService) NewRebuy(eventId int32) error {
 	event := models.Event{ID: eventId}
 	res := es.db.First(&event)
 

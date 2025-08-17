@@ -12,7 +12,7 @@ const (
 )
 
 type Event struct {
-	ID               uint          `json:"id" gorm:"type:serial;primaryKey"`
+	ID               int32         `json:"id" gorm:"type:integer;primaryKey;autoIncrement"`
 	Name             string        `json:"name"`
 	Format           string        `json:"format"`
 	Notes            string        `json:"notes"`
@@ -20,11 +20,11 @@ type Event struct {
 	Semester         Semester      `json:"semester"`
 	StartDate        time.Time     `json:"startDate" gorm:"not null;default:CURRENT_TIMESTAMP"`
 	State            uint8         `json:"state" gorm:"default:0"`
-	StructureID      uint          `json:"structureId"`
+	StructureID      int32         `json:"structureId" gorm:"type:integer;not null;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Structure        Structure     `json:"structure"`
 	Rebuys           uint8         `json:"rebuys" gorm:"not null;default:0"`
 	PointsMultiplier float32       `json:"pointsMultiplier" gorm:"not null;default:1"`
-	Entries          []Participant `json:"entries"`
+	Entries          []Participant `json:"entries" gorm:"foreignKey:EventID"`
 }
 
 type CreateEventRequest struct {
@@ -33,7 +33,7 @@ type CreateEventRequest struct {
 	Notes            string    `json:"notes"`
 	SemesterID       string    `json:"semesterId" binding:"required"`
 	StartDate        time.Time `json:"startDate" binding:"required"`
-	StructureID      uint      `json:"structureId" binding:"required"`
+	StructureID      int32     `json:"structureId" binding:"required"`
 	PointsMultiplier float32   `json:"pointsMultiplier" binding:"required"`
 }
 
@@ -46,7 +46,7 @@ type UpdateEventRequest struct {
 }
 
 type ListEventsResponse struct {
-	ID         uint      `json:"id"`
+	ID         int32     `json:"id"`
 	Name       string    `json:"name"`
 	Format     string    `json:"format"`
 	Notes      string    `json:"notes"`

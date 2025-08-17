@@ -108,7 +108,7 @@ func CreateSemesterTest() func(*testing.T) {
 		}
 
 		require.True(t, res.StartDate.Equal(time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local)))
-		require.True(t, res.StartDate.Equal(time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local)))
+		require.True(t, res.EndDate.Equal(time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local)))
 
 		if res.StartingBudget != 105.57 {
 			t.Errorf("SemesterService.CreateSemester().StartingBudget = %v, wanted = %v", res.Meta, 105.57)

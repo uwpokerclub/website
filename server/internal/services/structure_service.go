@@ -64,7 +64,7 @@ func (ss *structureService) ListStructures() ([]models.Structure, error) {
 	return structures, nil
 }
 
-func (ss *structureService) GetStructure(id uint) (*models.Structure, error) {
+func (ss *structureService) GetStructure(id int32) (*models.Structure, error) {
 	structure := models.Structure{
 		ID: id,
 	}
@@ -108,7 +108,29 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 		return nil, e.InternalServerError(err.Error())
 	}
 
+	// Use a transaction to ensure atomicity
+	tx := ss.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	structure.Name = req.Name
+
+	// Update the structure first
+	err := tx.Updates(&structure).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	// Delete existing blinds
+	err = tx.Where("structure_id = ?", structure.ID).Delete(&models.Blind{}).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, e.InternalServerError(err.Error())
+	}
 
 	// Insert new levels
 	blinds := make([]models.Blind, len(req.Blinds))
@@ -122,12 +144,28 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 			Index:       int8(i),
 		}
 	}
-	err := ss.db.Model(&structure).Association("Blinds").Replace(blinds)
+
+	// Create new blinds
+	if len(blinds) > 0 {
+		err = tx.Create(&blinds).Error
+		if err != nil {
+			tx.Rollback()
+			return nil, e.InternalServerError(err.Error())
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit().Error
 	if err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	ss.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&structure)
+	// Reload with blinds using a fresh query
+	result := models.Structure{}
+	err = ss.db.Where("id = ?", structure.ID).Preload("Blinds").First(&result).Error
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
 
-	return &structure, nil
+	return &result, nil
 }

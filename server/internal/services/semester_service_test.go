@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSemesterService(t *testing.T) {
@@ -106,15 +107,8 @@ func CreateSemesterTest() func(*testing.T) {
 			return
 		}
 
-		if res.StartDate != time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC) {
-			t.Errorf("SemesterService.CreateSemester().StartDate = %v, wanted = %v", res.StartDate, time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local))
-			return
-		}
-
-		if res.EndDate != time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC) {
-			t.Errorf("SemesterService.CreateSemester().EndDate = %v, wanted = %v", res.StartDate, time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local))
-			return
-		}
+		require.True(t, res.StartDate.Equal(time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local)))
+		require.True(t, res.StartDate.Equal(time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local)))
 
 		if res.StartingBudget != 105.57 {
 			t.Errorf("SemesterService.CreateSemester().StartingBudget = %v, wanted = %v", res.Meta, 105.57)

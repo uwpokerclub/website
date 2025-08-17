@@ -68,7 +68,7 @@ func CreateSemesterTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -147,7 +147,7 @@ func GetSemesterTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -185,7 +185,7 @@ func ListSemesterTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -253,7 +253,7 @@ func GetRankingsTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -366,7 +366,7 @@ func UpdateBudget_Positive() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -412,7 +412,7 @@ func UpdateBudget_Negative() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -457,7 +457,7 @@ func UpdateBudget_Negative() func(*testing.T) {
 func ExportRankingsTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if !assert.NoError(t, err, "Failed to initialize the database") {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -520,5 +520,5 @@ func ExportRankingsTest(t *testing.T) {
 	assert.ElementsMatch(t, expectedRecords, records)
 
 	// Remove file
-	os.Remove(fp)
+	_ = os.Remove(fp)
 }

@@ -77,8 +77,8 @@ func CreateSemesterTest() func(*testing.T) {
 		req := &models.CreateSemesterRequest{
 			Name:                  "Spring 2022",
 			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
+			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local),
+			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local),
 			StartingBudget:        105.57,
 			MembershipFee:         10,
 			MembershipDiscountFee: 5,
@@ -107,12 +107,12 @@ func CreateSemesterTest() func(*testing.T) {
 		}
 
 		if res.StartDate != time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC) {
-			t.Errorf("SemesterService.CreateSemester().StartDate = %v, wanted = %v", res.StartDate, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC))
+			t.Errorf("SemesterService.CreateSemester().StartDate = %v, wanted = %v", res.StartDate, time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local))
 			return
 		}
 
 		if res.EndDate != time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC) {
-			t.Errorf("SemesterService.CreateSemester().EndDate = %v, wanted = %v", res.StartDate, time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC))
+			t.Errorf("SemesterService.CreateSemester().EndDate = %v, wanted = %v", res.StartDate, time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local))
 			return
 		}
 

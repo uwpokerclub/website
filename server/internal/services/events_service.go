@@ -4,9 +4,11 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type eventService struct {
@@ -90,7 +92,10 @@ func (es *eventService) ListEvents(semesterId string) ([]models.ListEventsRespon
 	return events, nil
 }
 
-func (svc *eventService) UpdateEvent(eventID int32, req *models.UpdateEventRequest) (*models.Event, error) {
+func (svc *eventService) UpdateEvent(
+	eventID int32,
+	req *models.UpdateEventRequest,
+) (*models.Event, error) {
 	event := models.Event{ID: eventID}
 
 	// Query DB for this event
@@ -169,7 +174,9 @@ func (es *eventService) EndEvent(eventId int32) error {
 	}
 
 	// Update all entries who are not signed out to sign them out in last place
-	res = tx.Model(&models.Participant{}).Where("event_id = ? AND signed_out_at IS NULL", event.ID).Update("signed_out_at", event.StartDate)
+	res = tx.Model(&models.Participant{}).
+		Where("event_id = ? AND signed_out_at IS NULL", event.ID).
+		Update("signed_out_at", event.StartDate)
 	if err := res.Error; err != nil {
 		tx.Rollback()
 		return e.InternalServerError(err.Error())
@@ -338,6 +345,78 @@ func (es *eventService) NewRebuy(eventId int32) error {
 	if err := res.Error; err != nil {
 		tx.Rollback()
 		return e.InternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+func (svc *eventService) CreateEventV2(
+	semesterID uuid.UUID,
+	req *models.CreateEventRequest,
+) (*models.Event, error) {
+	event := models.Event{
+		Name:             req.Name,
+		Format:           req.Format,
+		Notes:            req.Notes,
+		SemesterID:       semesterID,
+		StartDate:        req.StartDate,
+		State:            models.EventStateStarted,
+		StructureID:      req.StructureID,
+		Rebuys:           0,
+		PointsMultiplier: req.PointsMultiplier,
+	}
+
+	res := svc.db.Create(&event)
+	if err := res.Error; err != nil {
+		return nil, err
+	}
+
+	return &event, nil
+}
+
+func (svc *eventService) ListEventsV2(semesterID uuid.UUID) ([]models.Event, error) {
+	events := make([]models.Event, 0)
+
+	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{}).
+		Where("semester_id = ?", semesterID).
+		Order("start_date DESC").
+		Find(&events).
+		Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to list events: %w", err)
+	}
+
+	return events, nil
+}
+
+func (svc *eventService) GetEventByID(semesterID uuid.UUID, eventID int32) (*models.Event, error) {
+	var event models.Event
+
+	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Semester: true, Structure: true, Entries: true}).
+		Where("\"Semester\".\"id\" = ?", semesterID).
+		Where("events.id = ?", eventID).
+		First(&event).
+		Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event: %w", err)
+	}
+
+	return &event, nil
+}
+
+func (svc *eventService) UpdateEventV2(event *models.Event, updateValues map[string]any) error {
+	result := svc.db.Omit(clause.Associations).Model(event).Updates(updateValues)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update event: %w", result.Error)
+	}
+
+	// Retrieve updated event
+	_, err := svc.GetEventByID(event.SemesterID, event.ID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve updated event: %w", err)
 	}
 
 	return nil

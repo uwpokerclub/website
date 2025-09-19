@@ -25,7 +25,7 @@ func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters", middleware.UseAuthentication(s.db))
 	group.POST("", middleware.UseAuthorization(s.db, "semester.create"), s.createSemester)
 	group.GET("", middleware.UseAuthorization(s.db, "semester.list"), s.listSemesters)
-	group.GET(":id", middleware.UseAuthorization(s.db, "semester.get"), s.getSemester)
+	group.GET(":semesterId", middleware.UseAuthorization(s.db, "semester.get"), s.getSemester)
 }
 
 // createSemester handles the creation of a new semester.
@@ -109,7 +109,7 @@ func (s *semestersController) listSemesters(ctx *gin.Context) {
 // @Router /semesters/{id} [get]
 func (s *semestersController) getSemester(c *gin.Context) {
 	// Retrieve semester UUID from query parameters
-	semesterId := c.Param("id")
+	semesterId := c.Param("semesterId")
 	id, err := uuid.Parse(semesterId)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, apierrors.InvalidRequest("Invalid UUID for semester ID"))

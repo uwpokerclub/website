@@ -152,7 +152,9 @@ func (s *apiServer) SetupV2Routes() {
 	// Load routes from controllers
 	controllers := []controller.Controller{
 		controller.NewHealthController(),
+		controller.NewAuthenticationController(s.db),
 		controller.NewSemestersController(s.db),
+		controller.NewEventsController(s.db),
 	}
 
 	for _, controller := range controllers {

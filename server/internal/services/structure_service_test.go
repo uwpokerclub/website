@@ -94,7 +94,12 @@ func TestStructureService(t *testing.T) {
 		structures, err := structureService.ListStructures()
 		assert.NoError(t, err, "Should not return an error")
 		assert.Len(t, structures, 3, "Should return 3 structures")
-		assert.Equal(t, structures, []models.Structure{testStructureC, testStructureB, testStructureA})
+		expectedStructures := []models.Structure{
+			{ID: testStructureC.ID, Name: testStructureC.Name, Blinds: nil},
+			{ID: testStructureB.ID, Name: testStructureB.Name, Blinds: nil},
+			{ID: testStructureA.ID, Name: testStructureA.Name, Blinds: nil},
+		}
+		assert.Equal(t, expectedStructures, structures)
 	})
 	t.Run("GetStructure", func(t *testing.T) {
 		t.Cleanup(wipeDB)

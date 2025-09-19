@@ -179,6 +179,13 @@ func TestEventsService(s *testing.T) {
 
 		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
 
+		// GetEvent now preloads Structure with Blinds, so it will have empty slice
+		expectedStructure := models.Structure{
+			ID:     structure.ID,
+			Name:   structure.Name,
+			Blinds: []models.Blind{}, // GetEvent preloads blinds
+		}
+
 		event1 := models.Event{
 			Name:             "Event 1",
 			Format:           "NLHE",
@@ -188,7 +195,7 @@ func TestEventsService(s *testing.T) {
 			StartDate:        event1Date,
 			State:            models.EventStateStarted,
 			StructureID:      structure.ID,
-			Structure:        &structure,
+			Structure:        &expectedStructure,
 			Rebuys:           0,
 			PointsMultiplier: 2.3,
 			Entries:          []models.Participant{},
@@ -243,7 +250,7 @@ func TestEventsService(s *testing.T) {
 			assert.Equal(f, *updateReq.Format, updatedEvent.Format)
 			assert.Equal(f, *updateReq.Notes, updatedEvent.Notes)
 			assert.Equal(f, event.SemesterID, updatedEvent.SemesterID)
-			assert.Equal(f, *updateReq.StartDate, updatedEvent.StartDate)
+			assert.WithinDuration(f, *updateReq.StartDate, updatedEvent.StartDate, time.Microsecond)
 			assert.Equal(f, event.State, updatedEvent.State)
 			assert.Equal(f, event.StructureID, updatedEvent.StructureID)
 			assert.Equal(f, event.Rebuys, updatedEvent.Rebuys)

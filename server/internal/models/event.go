@@ -47,7 +47,7 @@ func (Event) Preload(tx *gorm.DB, options EventPreloadOptions) *gorm.DB {
 
 	if options.Structure {
 		ret = ret.Preload("Structure", func(db *gorm.DB) *gorm.DB {
-			return Structure{}.Preload(db)
+			return Structure{}.Preload(db, StructurePreloadOptions{Blinds: true})
 		})
 	}
 

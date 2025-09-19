@@ -12,12 +12,28 @@ func (Structure) TableName() string {
 	return "structures"
 }
 
-func (Structure) Preload(tx *gorm.DB) *gorm.DB {
-	return tx.Preload("Blinds")
+type StructurePreloadOptions struct {
+	Blinds bool
+}
+
+func (Structure) Preload(tx *gorm.DB, options ...StructurePreloadOptions) *gorm.DB {
+	ret := tx
+
+	// Default options if none provided
+	opts := StructurePreloadOptions{Blinds: false}
+	if len(options) > 0 {
+		opts = options[0]
+	}
+
+	if opts.Blinds {
+		ret = ret.Preload("Blinds")
+	}
+
+	return ret
 }
 
 func (s *Structure) AfterSave(tx *gorm.DB) (err error) {
-	err = s.Preload(tx).Find(s).Error
+	err = s.Preload(tx, StructurePreloadOptions{Blinds: true}).Find(s).Error
 	return
 }
 

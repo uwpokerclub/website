@@ -69,7 +69,7 @@ func (ss *structureService) GetStructure(id int32) (*models.Structure, error) {
 		ID: id,
 	}
 
-	res := ss.db.Model(&structure).Preload("Blinds").First(&structure)
+	res := structure.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.NotFound(err.Error())
 	} else if err := res.Error; err != nil {
@@ -100,7 +100,7 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 		ID: req.ID,
 	}
 
-	res := ss.db.Model(&structure).Preload("Blinds").First(&structure)
+	res := structure.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)
 
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.NotFound(err.Error())
@@ -162,7 +162,7 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 
 	// Reload with blinds using a fresh query
 	result := models.Structure{}
-	err = ss.db.Where("id = ?", structure.ID).Preload("Blinds").First(&result).Error
+	err = result.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).Where("id = ?", structure.ID).First(&result).Error
 	if err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}

@@ -417,11 +417,5 @@ func (svc *eventService) UpdateEventV2(event *models.Event, updateValues map[str
 		return fmt.Errorf("failed to update event: %w", result.Error)
 	}
 
-	// Retrieve updated event
-	_, err := svc.GetEventByID(event.SemesterID, event.ID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve updated event: %w", err)
-	}
-
 	return nil
 }

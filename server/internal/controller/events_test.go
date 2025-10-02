@@ -407,7 +407,7 @@ func TestListEvents(t *testing.T) {
 			// Reset database for clean state
 			require.NoError(t, container.ResetDatabase(ctx))
 
-			testutils.SeedEvents(db)
+			testutils.SeedEvents(db, true)
 
 			// Setup authentication
 			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
@@ -763,7 +763,7 @@ func TestUpdateEvent(t *testing.T) {
 			var eventID string = "1"
 			if tc.setupEvent {
 				// Seed test events
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 
 				// Build expected response dynamically for successful cases
 				if !tc.expectError && tc.expectedResponse == nil {
@@ -989,7 +989,7 @@ func TestGetEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 
 				// if we expect an event to exist, find it and set the expected response
 				if !tc.expectError {
@@ -1161,7 +1161,7 @@ func TestEndEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 			}
 
 			// Setup authentication
@@ -1303,7 +1303,7 @@ func TestRestartEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 			}
 
 			// Setup authentication
@@ -1446,7 +1446,7 @@ func TestRebuyEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 			}
 
 			// Setup authentication

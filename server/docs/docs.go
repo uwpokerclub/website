@@ -528,6 +528,361 @@ const docTemplate = `{
                 }
             }
         },
+        "/semesters/{semesterId}/events/{eventId}/entries": {
+            "get": {
+                "description": "Retrieve a list of participant entries for a specific event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entries"
+                ],
+                "summary": "List Entries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "eventId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ListParticipantsResult"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new participant entry for an event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entries"
+                ],
+                "summary": "Create Entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "eventId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Entry data",
+                        "name": "entry",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateParticipantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/Participant"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/events/{eventId}/entries/{entryId}": {
+            "delete": {
+                "description": "Delete a participant entry from an event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entries"
+                ],
+                "summary": "Delete Entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "eventId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entry ID (Membership ID)",
+                        "name": "entryId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/events/{eventId}/entries/{entryId}/sign-in": {
+            "post": {
+                "description": "Sign in a participant to an event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entries"
+                ],
+                "summary": "Sign In Entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "eventId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entry ID (Membership ID)",
+                        "name": "entryId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Participant"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/events/{eventId}/entries/{entryId}/sign-out": {
+            "post": {
+                "description": "Sign out a participant from an event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entries"
+                ],
+                "summary": "Sign Out Entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Event ID",
+                        "name": "eventId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entry ID (Membership ID)",
+                        "name": "entryId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Participant"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/events/{eventId}/rebuy": {
             "post": {
                 "description": "Add a new rebuy entry to an event",
@@ -669,7 +1024,7 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Get current getSession",
+                "summary": "Get current session",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -776,6 +1131,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "Blind": {
+            "type": "object",
+            "properties": {
+                "ante": {
+                    "type": "integer"
+                },
+                "big": {
+                    "type": "integer"
+                },
+                "small": {
+                    "type": "integer"
+                },
+                "time": {
+                    "type": "integer"
+                }
+            }
+        },
         "CreateEventRequest": {
             "type": "object",
             "required": [
@@ -807,6 +1179,21 @@ const docTemplate = `{
                 },
                 "structureId": {
                     "type": "integer"
+                }
+            }
+        },
+        "CreateParticipantRequest": {
+            "type": "object",
+            "required": [
+                "eventId",
+                "membershipId"
+            ],
+            "properties": {
+                "eventId": {
+                    "type": "integer"
+                },
+                "membershipId": {
+                    "type": "string"
                 }
             }
         },
@@ -881,7 +1268,7 @@ const docTemplate = `{
                 "entries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.Participant"
+                        "$ref": "#/definitions/Participant"
                     }
                 },
                 "format": {
@@ -915,7 +1302,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "structure": {
-                    "$ref": "#/definitions/models.Structure"
+                    "$ref": "#/definitions/Structure"
                 },
                 "structureId": {
                     "type": "integer"
@@ -940,6 +1327,29 @@ const docTemplate = `{
                 }
             }
         },
+        "ListParticipantsResult": {
+            "type": "object",
+            "properties": {
+                "firstName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "membershipId": {
+                    "type": "string"
+                },
+                "placement": {
+                    "type": "integer"
+                },
+                "signedOutAt": {
+                    "type": "string"
+                }
+            }
+        },
         "NewSessionRequest": {
             "type": "object",
             "required": [
@@ -951,6 +1361,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "Participant": {
+            "type": "object",
+            "properties": {
+                "eventId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "membership": {
+                    "$ref": "#/definitions/models.Membership"
+                },
+                "membershipId": {
+                    "type": "string"
+                },
+                "placement": {
+                    "type": "integer"
+                },
+                "signedOutAt": {
                     "type": "string"
                 }
             }
@@ -999,6 +1432,23 @@ const docTemplate = `{
                 }
             }
         },
+        "Structure": {
+            "type": "object",
+            "properties": {
+                "blinds": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Blind"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "UpdateEventRequestV2": {
             "type": "object",
             "properties": {
@@ -1024,23 +1474,6 @@ const docTemplate = `{
                 "startDate": {
                     "type": "string",
                     "example": "2023-10-01T18:00:00Z"
-                }
-            }
-        },
-        "models.Blind": {
-            "type": "object",
-            "properties": {
-                "ante": {
-                    "type": "integer"
-                },
-                "big": {
-                    "type": "integer"
-                },
-                "small": {
-                    "type": "integer"
-                },
-                "time": {
-                    "type": "integer"
                 }
             }
         },
@@ -1073,29 +1506,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Participant": {
-            "type": "object",
-            "properties": {
-                "eventId": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "membership": {
-                    "$ref": "#/definitions/models.Membership"
-                },
-                "membershipId": {
-                    "type": "string"
-                },
-                "placement": {
-                    "type": "integer"
-                },
-                "signedOutAt": {
-                    "type": "string"
-                }
-            }
-        },
         "models.Ranking": {
             "type": "object",
             "properties": {
@@ -1105,23 +1515,6 @@ const docTemplate = `{
                 "points": {
                     "type": "integer",
                     "format": "int32"
-                }
-            }
-        },
-        "models.Structure": {
-            "type": "object",
-            "properties": {
-                "blinds": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Blind"
-                    }
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
                 }
             }
         },

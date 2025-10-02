@@ -48,14 +48,16 @@ var TEST_EVENTS = []models.Event{
 	},
 }
 
-func SeedEvents(db *gorm.DB) error {
-	// Seed related structures and semesters first
-	if err := SeedStructures(db); err != nil {
-		return err
-	}
+func SeedEvents(db *gorm.DB, seedDependencies bool) error {
+	// Seed related structures and semesters first if requested
+	if seedDependencies {
+		if err := SeedStructures(db); err != nil {
+			return err
+		}
 
-	if err := SeedSemesters(db); err != nil {
-		return err
+		if err := SeedSemesters(db); err != nil {
+			return err
+		}
 	}
 
 	for _, event := range TEST_EVENTS {

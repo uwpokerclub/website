@@ -10,6 +10,18 @@ definitions:
       time:
         type: integer
     type: object
+  CreateEntryResult:
+    properties:
+      error:
+        type: string
+      membershipId:
+        type: string
+      participant:
+        $ref: '#/definitions/Participant'
+      status:
+        description: '"created" or "error"'
+        type: string
+    type: object
   CreateEventRequest:
     properties:
       format:
@@ -33,16 +45,6 @@ definitions:
     - semesterId
     - startDate
     - structureId
-    type: object
-  CreateParticipantRequest:
-    properties:
-      eventId:
-        type: integer
-      membershipId:
-        type: string
-    required:
-    - eventId
-    - membershipId
     type: object
   CreateSemesterRequest:
     properties:
@@ -690,7 +692,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new participant entry for an event
+      description: Create new participant entries for an event
       parameters:
       - description: Semester ID
         in: path
@@ -702,19 +704,23 @@ paths:
         name: eventId
         required: true
         type: string
-      - description: Entry data
+      - description: Array of membership UUIDs
         in: body
-        name: entry
+        name: membershipIds
         required: true
         schema:
-          $ref: '#/definitions/CreateParticipantRequest'
+          items:
+            type: string
+          type: array
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "207":
+          description: Multi-Status
           schema:
-            $ref: '#/definitions/Participant'
+            items:
+              $ref: '#/definitions/CreateEntryResult'
+            type: array
         "400":
           description: Bad Request
           schema:
@@ -731,7 +737,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: Create Entry
+      summary: Create Entries
       tags:
       - Entries
   /semesters/{semesterId}/events/{eventId}/entries/{entryId}:
@@ -750,7 +756,7 @@ paths:
         name: eventId
         required: true
         type: string
-      - description: Entry ID (Membership ID)
+      - description: Membership ID (UUID format)
         in: path
         name: entryId
         required: true
@@ -770,6 +776,10 @@ paths:
             $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/ErrorResponse'
         "500":
@@ -795,7 +805,7 @@ paths:
         name: eventId
         required: true
         type: string
-      - description: Entry ID (Membership ID)
+      - description: Membership ID (UUID format)
         in: path
         name: entryId
         required: true
@@ -846,7 +856,7 @@ paths:
         name: eventId
         required: true
         type: string
-      - description: Entry ID (Membership ID)
+      - description: Membership ID (UUID format)
         in: path
         name: entryId
         required: true

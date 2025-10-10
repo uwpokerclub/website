@@ -18,6 +18,8 @@ type entriesController struct {
 	db *gorm.DB
 }
 
+// NewEntriesController creates a new instance of the entries controller
+// with the provided database connection.
 func NewEntriesController(db *gorm.DB) Controller {
 	return &entriesController{db: db}
 }
@@ -31,18 +33,44 @@ func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {
 	group.DELETE(":entryId", middleware.UseAuthorization(c.db, "event.participant.delete"), c.deleteEntry)
 }
 
-// createEntry handles the creation of a new participant entry for an event.
-// It expects a CreateParticipantRequest in the request body and returns the created Participant.
+// validateSemesterID validates and returns the semester UUID from the path parameter.
+// It returns uuid.Nil and an API error if validation fails.
+func (c *entriesController) validateSemesterID(ctx *gin.Context) (uuid.UUID, error) {
+	semesterID := ctx.Param("semesterId")
+	semesterUUID, err := uuid.Parse(semesterID)
+	if err != nil {
+		return uuid.Nil, apierrors.InvalidRequest(
+			fmt.Sprintf("Semester ID '%s' is not a valid UUID", semesterID),
+		)
+	}
+	return semesterUUID, nil
+}
+
+// validateEventID validates and returns the event ID as int32 from the path parameter.
+// It returns 0 and an API error if validation fails.
+func (c *entriesController) validateEventID(ctx *gin.Context) (int32, error) {
+	eventIDStr := ctx.Param("eventId")
+	eventIDInt, err := strconv.ParseInt(eventIDStr, 10, 32)
+	if err != nil {
+		return 0, apierrors.InvalidRequest(
+			fmt.Sprintf("Event ID '%s' is not a valid integer", eventIDStr),
+		)
+	}
+	return int32(eventIDInt), nil
+}
+
+// createEntry handles the creation of new participant entries for an event.
+// It expects an array of membership UUIDs in the request body and returns the results.
 //
-// @Summary Create Entry
-// @Description Create a new participant entry for an event
+// @Summary Create Entries
+// @Description Create new participant entries for an event
 // @Tags Entries
 // @Accept json
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
-// @Param entry body CreateParticipantRequest true "Entry data"
-// @Success 201 {object} Participant
+// @Param membershipIds body []string true "Array of membership UUIDs"
+// @Success 207 {array} CreateEntryResult
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -50,52 +78,83 @@ func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {
 // @Router /semesters/{semesterId}/events/{eventId}/entries [post]
 func (c *entriesController) createEntry(ctx *gin.Context) {
 	// Validate semester ID
-	semesterId := ctx.Param("semesterId")
-	if _, err := uuid.Parse(semesterId); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Semester ID '%s' is not a valid UUID", semesterId),
-			),
-		)
+	if _, err := c.validateSemesterID(ctx); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate event ID
-	eventId := ctx.Param("eventId")
-	if _, err := strconv.ParseInt(eventId, 10, 32); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Event ID '%s' is not a valid integer", eventId),
-			),
-		)
+	eventID, err := c.validateEventID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
-	// Bind request body
-	var req models.CreateParticipantRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	// Bind request body - array of UUID strings
+	var membershipIdStrs []string
+	if err := ctx.ShouldBindJSON(&membershipIdStrs); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
 		return
 	}
 
-	// Create participant
-	svc := services.NewParticipantsService(c.db)
-	participant, err := svc.CreateParticipant(&req)
-	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
+	// Validate array is not empty
+	if len(membershipIdStrs) == 0 {
 		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
-			apierrors.InternalServerError(err.Error()),
+			http.StatusBadRequest,
+			apierrors.InvalidRequest("Array of membership IDs cannot be empty"),
 		)
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, participant)
+	// Parse membership UUIDs
+	membershipIds := make([]uuid.UUID, 0, len(membershipIdStrs))
+	for _, idStr := range membershipIdStrs {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			ctx.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				apierrors.InvalidRequest(
+					fmt.Sprintf("Invalid UUID format: '%s'", idStr),
+				),
+			)
+			return
+		}
+		membershipIds = append(membershipIds, id)
+	}
+
+	// Create participants and collect results
+	svc := services.NewParticipantsService(c.db)
+	results := make([]models.CreateEntryResult, 0, len(membershipIds))
+
+	for _, membershipId := range membershipIds {
+		req := models.CreateParticipantRequest{
+			MembershipID: membershipId,
+			EventID:      eventID,
+		}
+
+		participant, err := svc.CreateParticipant(&req)
+		if err != nil {
+			// Collect error but continue processing
+			errMsg := err.Error()
+			if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
+				errMsg = apiErr.Message
+			}
+			results = append(results, models.CreateEntryResult{
+				MembershipID: membershipId,
+				Status:       "error",
+				Error:        errMsg,
+			})
+		} else {
+			// Success
+			results = append(results, models.CreateEntryResult{
+				MembershipID: membershipId,
+				Status:       "created",
+				Participant:  participant,
+			})
+		}
+	}
+
+	ctx.JSON(http.StatusMultiStatus, results)
 }
 
 // listEntries handles the retrieval of all participant entries for a specific event.
@@ -115,34 +174,22 @@ func (c *entriesController) createEntry(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/events/{eventId}/entries [get]
 func (c *entriesController) listEntries(ctx *gin.Context) {
-	// Validate semester ID
-	semesterId := ctx.Param("semesterId")
-	if _, err := uuid.Parse(semesterId); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Semester ID '%s' is not a valid UUID", semesterId),
-			),
-		)
+	// Validate semester ID (validates URL structure but not used by service layer)
+	if _, err := c.validateSemesterID(ctx); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate event ID
-	eventId := ctx.Param("eventId")
-	eventIdInt, err := strconv.ParseInt(eventId, 10, 32)
+	eventID, err := c.validateEventID(ctx)
 	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Event ID '%s' is not a valid integer", eventId),
-			),
-		)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// List participants
 	svc := services.NewParticipantsService(c.db)
-	participants, err := svc.ListParticipants(int32(eventIdInt))
+	participants, err := svc.ListParticipants(eventID)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -168,7 +215,7 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
-// @Param entryId path string true "Entry ID (Membership ID)"
+// @Param entryId path string true "Membership ID (UUID format)"
 // @Success 200 {object} Participant
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -178,38 +225,26 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 // @Router /semesters/{semesterId}/events/{eventId}/entries/{entryId}/sign-out [post]
 func (c *entriesController) signOutEntry(ctx *gin.Context) {
 	// Validate semester ID
-	semesterId := ctx.Param("semesterId")
-	if _, err := uuid.Parse(semesterId); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Semester ID '%s' is not a valid UUID", semesterId),
-			),
-		)
+	if _, err := c.validateSemesterID(ctx); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate event ID
-	eventId := ctx.Param("eventId")
-	eventIdInt, err := strconv.ParseInt(eventId, 10, 32)
+	eventID, err := c.validateEventID(ctx)
 	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Event ID '%s' is not a valid integer", eventId),
-			),
-		)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate entry ID (membership ID)
-	entryId := ctx.Param("entryId")
-	membershipId, err := uuid.Parse(entryId)
+	entryID := ctx.Param("entryId")
+	membershipID, err := uuid.Parse(entryID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusBadRequest,
 			apierrors.InvalidRequest(
-				fmt.Sprintf("Entry ID '%s' is not a valid UUID", entryId),
+				fmt.Sprintf("Entry ID '%s' is not a valid UUID", entryID),
 			),
 		)
 		return
@@ -218,8 +253,8 @@ func (c *entriesController) signOutEntry(ctx *gin.Context) {
 	// Update participant
 	svc := services.NewParticipantsService(c.db)
 	req := models.UpdateParticipantRequest{
-		MembershipID: membershipId,
-		EventID:      int32(eventIdInt),
+		MembershipID: membershipID,
+		EventID:      eventID,
 		SignOut:      true,
 		SignIn:       false,
 	}
@@ -250,7 +285,7 @@ func (c *entriesController) signOutEntry(ctx *gin.Context) {
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
-// @Param entryId path string true "Entry ID (Membership ID)"
+// @Param entryId path string true "Membership ID (UUID format)"
 // @Success 200 {object} Participant
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -260,38 +295,26 @@ func (c *entriesController) signOutEntry(ctx *gin.Context) {
 // @Router /semesters/{semesterId}/events/{eventId}/entries/{entryId}/sign-in [post]
 func (c *entriesController) signInEntry(ctx *gin.Context) {
 	// Validate semester ID
-	semesterId := ctx.Param("semesterId")
-	if _, err := uuid.Parse(semesterId); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Semester ID '%s' is not a valid UUID", semesterId),
-			),
-		)
+	if _, err := c.validateSemesterID(ctx); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate event ID
-	eventId := ctx.Param("eventId")
-	eventIdInt, err := strconv.ParseInt(eventId, 10, 32)
+	eventID, err := c.validateEventID(ctx)
 	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Event ID '%s' is not a valid integer", eventId),
-			),
-		)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate entry ID (membership ID)
-	entryId := ctx.Param("entryId")
-	membershipId, err := uuid.Parse(entryId)
+	entryID := ctx.Param("entryId")
+	membershipID, err := uuid.Parse(entryID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusBadRequest,
 			apierrors.InvalidRequest(
-				fmt.Sprintf("Entry ID '%s' is not a valid UUID", entryId),
+				fmt.Sprintf("Entry ID '%s' is not a valid UUID", entryID),
 			),
 		)
 		return
@@ -300,8 +323,8 @@ func (c *entriesController) signInEntry(ctx *gin.Context) {
 	// Update participant
 	svc := services.NewParticipantsService(c.db)
 	req := models.UpdateParticipantRequest{
-		MembershipID: membershipId,
-		EventID:      int32(eventIdInt),
+		MembershipID: membershipID,
+		EventID:      eventID,
 		SignIn:       true,
 		SignOut:      false,
 	}
@@ -332,47 +355,36 @@ func (c *entriesController) signInEntry(ctx *gin.Context) {
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
-// @Param entryId path string true "Entry ID (Membership ID)"
+// @Param entryId path string true "Membership ID (UUID format)"
 // @Success 204
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/events/{eventId}/entries/{entryId} [delete]
 func (c *entriesController) deleteEntry(ctx *gin.Context) {
-	// Validate semester ID
-	semesterId := ctx.Param("semesterId")
-	if _, err := uuid.Parse(semesterId); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Semester ID '%s' is not a valid UUID", semesterId),
-			),
-		)
+	// Validate semester ID (validates URL structure but not used by service layer)
+	if _, err := c.validateSemesterID(ctx); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate event ID
-	eventId := ctx.Param("eventId")
-	eventIdInt, err := strconv.ParseInt(eventId, 10, 32)
+	eventID, err := c.validateEventID(ctx)
 	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Event ID '%s' is not a valid integer", eventId),
-			),
-		)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
 
 	// Validate entry ID (membership ID)
-	entryId := ctx.Param("entryId")
-	membershipId, err := uuid.Parse(entryId)
+	entryID := ctx.Param("entryId")
+	membershipID, err := uuid.Parse(entryID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusBadRequest,
 			apierrors.InvalidRequest(
-				fmt.Sprintf("Entry ID '%s' is not a valid UUID", entryId),
+				fmt.Sprintf("Entry ID '%s' is not a valid UUID", entryID),
 			),
 		)
 		return
@@ -381,8 +393,8 @@ func (c *entriesController) deleteEntry(ctx *gin.Context) {
 	// Delete participant
 	svc := services.NewParticipantsService(c.db)
 	req := models.DeleteParticipantRequest{
-		MembershipID: membershipId,
-		EventID:      int32(eventIdInt),
+		MembershipID: membershipID,
+		EventID:      eventID,
 	}
 
 	err = svc.DeleteParticipant(&req)

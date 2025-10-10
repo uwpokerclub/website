@@ -594,7 +594,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Create a new participant entry for an event",
+                "description": "Create new participant entries for an event",
                 "consumes": [
                     "application/json"
                 ],
@@ -604,7 +604,7 @@ const docTemplate = `{
                 "tags": [
                     "Entries"
                 ],
-                "summary": "Create Entry",
+                "summary": "Create Entries",
                 "parameters": [
                     {
                         "type": "string",
@@ -621,20 +621,26 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Entry data",
-                        "name": "entry",
+                        "description": "Array of membership UUIDs",
+                        "name": "membershipIds",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/CreateParticipantRequest"
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "207": {
+                        "description": "Multi-Status",
                         "schema": {
-                            "$ref": "#/definitions/Participant"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/CreateEntryResult"
+                            }
                         }
                     },
                     "400": {
@@ -694,7 +700,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Entry ID (Membership ID)",
+                        "description": "Membership ID (UUID format)",
                         "name": "entryId",
                         "in": "path",
                         "required": true
@@ -718,6 +724,12 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -761,7 +773,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Entry ID (Membership ID)",
+                        "description": "Membership ID (UUID format)",
                         "name": "entryId",
                         "in": "path",
                         "required": true
@@ -837,7 +849,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Entry ID (Membership ID)",
+                        "description": "Membership ID (UUID format)",
                         "name": "entryId",
                         "in": "path",
                         "required": true
@@ -1148,6 +1160,24 @@ const docTemplate = `{
                 }
             }
         },
+        "CreateEntryResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "membershipId": {
+                    "type": "string"
+                },
+                "participant": {
+                    "$ref": "#/definitions/Participant"
+                },
+                "status": {
+                    "description": "\"created\" or \"error\"",
+                    "type": "string"
+                }
+            }
+        },
         "CreateEventRequest": {
             "type": "object",
             "required": [
@@ -1179,21 +1209,6 @@ const docTemplate = `{
                 },
                 "structureId": {
                     "type": "integer"
-                }
-            }
-        },
-        "CreateParticipantRequest": {
-            "type": "object",
-            "required": [
-                "eventId",
-                "membershipId"
-            ],
-            "properties": {
-                "eventId": {
-                    "type": "integer"
-                },
-                "membershipId": {
-                    "type": "string"
                 }
             }
         },

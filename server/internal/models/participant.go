@@ -51,3 +51,10 @@ type ListParticipantsResult struct {
 	SignedOutAt  *time.Time `json:"signedOutAt"`
 	Placement    uint16     `json:"placement"`
 } //@name ListParticipantsResult
+
+type CreateEntryResult struct {
+	MembershipID uuid.UUID    `json:"membershipId"`
+	Status       string       `json:"status"` // "created" or "error"
+	Participant  *Participant `json:"participant,omitempty"`
+	Error        string       `json:"error,omitempty"`
+} //@name CreateEntryResult

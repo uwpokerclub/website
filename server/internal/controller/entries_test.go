@@ -39,52 +39,66 @@ func TestCreateEntry(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		userRole             string
-		requestBody          map[string]any
+		requestBody          any
 		expectedStatus       int
 		expectError          bool
 		expectedErrorMessage string
-		expectedResponse     map[string]any
+		expectedResponse     []map[string]any
 		useSemesterID        string
 		useEventID           string
 	}{
 		{
-			name:     "successful request",
+			name:     "successful request single entry",
 			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
-				"eventId":      float64(2),
+			requestBody: []string{
+				testutils.TEST_MEMBERSHIPS[1].ID.String(),
 			},
-			expectedStatus: http.StatusCreated,
+			expectedStatus: http.StatusMultiStatus,
 			expectError:    false,
-			expectedResponse: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
-				"eventId":      float64(2),
-				"placement":    float64(0),
-				"signedOutAt":  nil,
+			expectedResponse: []map[string]any{
+				{
+					"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
+					"status":       "created",
+					"participant": map[string]any{
+						"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
+						"eventId":      float64(2),
+						"placement":    float64(0),
+						"signedOutAt":  nil,
+					},
+				},
 			},
 		},
 		{
-			name:     "missing required membershipId field",
+			name:     "partial success - one duplicate",
 			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody: map[string]any{
-				"eventId": float64(2),
+			requestBody: []string{
+				testutils.TEST_MEMBERSHIPS[0].ID.String(), // Already in event 2
+				testutils.TEST_MEMBERSHIPS[1].ID.String(),
+			},
+			expectedStatus: http.StatusMultiStatus,
+			expectError:    false,
+			// expectedResponse will be validated separately for mixed results
+		},
+		{
+			name:                 "empty array",
+			userRole:             authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody:          []string{},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "Array of membership IDs cannot be empty",
+		},
+		{
+			name:     "invalid UUID in array",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody: []string{
+				"invalid-uuid",
 			},
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
-			expectedErrorMessage: "Key: 'CreateParticipantRequest.MembershipID' Error:Field validation for 'MembershipID' failed on the 'required' tag",
+			expectedErrorMessage: "Invalid UUID format: 'invalid-uuid'",
 		},
 		{
-			name:     "missing required eventId field",
-			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
-			},
-			expectedStatus:       http.StatusBadRequest,
-			expectError:          true,
-			expectedErrorMessage: "Key: 'CreateParticipantRequest.EventID' Error:Field validation for 'EventID' failed on the 'required' tag",
-		},
-		{
-			name:                 "invalid request empty body",
+			name:                 "invalid request - null body",
 			userRole:             authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
 			requestBody:          nil,
 			expectedStatus:       http.StatusBadRequest,
@@ -94,9 +108,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name:     "invalid semester ID in path",
 			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
-				"eventId":      float64(2),
+			requestBody: []string{
+				testutils.TEST_MEMBERSHIPS[0].ID.String(),
 			},
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
@@ -106,9 +119,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name:     "invalid event ID in path",
 			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
-				"eventId":      float64(2),
+			requestBody: []string{
+				testutils.TEST_MEMBERSHIPS[0].ID.String(),
 			},
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
@@ -118,13 +130,13 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name:     "event already ended - cannot create entry",
 			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
-				"eventId":      float64(1),
+			requestBody: []string{
+				testutils.TEST_MEMBERSHIPS[1].ID.String(),
 			},
-			expectedStatus:       http.StatusForbidden,
-			expectError:          true,
-			expectedErrorMessage: "Modification of a completed event is forbidden",
+			expectedStatus: http.StatusMultiStatus,
+			expectError:    false,
+			useEventID:     "1",
+			// Will validate error in results
 		},
 	}
 
@@ -141,27 +153,32 @@ func TestCreateEntry(t *testing.T) {
 		testCases = append(testCases, struct {
 			name                 string
 			userRole             string
-			requestBody          map[string]any
+			requestBody          any
 			expectedStatus       int
 			expectError          bool
 			expectedErrorMessage string
-			expectedResponse     map[string]any
+			expectedResponse     []map[string]any
 			useSemesterID        string
 			useEventID           string
 		}{
 			name:     fmt.Sprintf("successful request with role %s", role),
 			userRole: role,
-			requestBody: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
-				"eventId":      float64(2),
+			requestBody: []string{
+				testutils.TEST_MEMBERSHIPS[1].ID.String(),
 			},
-			expectedStatus: http.StatusCreated,
+			expectedStatus: http.StatusMultiStatus,
 			expectError:    false,
-			expectedResponse: map[string]any{
-				"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
-				"eventId":      float64(2),
-				"placement":    float64(0),
-				"signedOutAt":  nil,
+			expectedResponse: []map[string]any{
+				{
+					"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
+					"status":       "created",
+					"participant": map[string]any{
+						"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
+						"eventId":      float64(2),
+						"placement":    float64(0),
+						"signedOutAt":  nil,
+					},
+				},
 			},
 		})
 	}
@@ -207,14 +224,45 @@ func TestCreateEntry(t *testing.T) {
 			if tc.expectError {
 				testutils.AssertErrorResponse(t, w, tc.expectedStatus, tc.expectedErrorMessage)
 			} else {
-				// Parse response to get the auto-generated ID
-				var actualResponse map[string]any
+				// Parse response to get the results
+				var actualResponse []map[string]any
 				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &actualResponse))
 
-				// Set the actual ID in the expected response
-				tc.expectedResponse["id"] = actualResponse["id"]
+				// Verify status code
+				require.Equal(t, tc.expectedStatus, w.Code)
 
-				testutils.AssertSuccessResponse(t, w, tc.expectedStatus, tc.expectedResponse)
+				// Special handling for specific test cases
+				switch tc.name {
+				case "partial success - one duplicate":
+					// Validate mixed results
+					require.Len(t, actualResponse, 2)
+					// First should be error (duplicate)
+					require.Equal(t, testutils.TEST_MEMBERSHIPS[0].ID.String(), actualResponse[0]["membershipId"])
+					require.Equal(t, "error", actualResponse[0]["status"])
+					require.NotEmpty(t, actualResponse[0]["error"])
+					// Second should be success
+					require.Equal(t, testutils.TEST_MEMBERSHIPS[1].ID.String(), actualResponse[1]["membershipId"])
+					require.Equal(t, "created", actualResponse[1]["status"])
+					require.NotNil(t, actualResponse[1]["participant"])
+
+				case "event already ended - cannot create entry":
+					// All should be errors
+					require.Len(t, actualResponse, 1)
+					require.Equal(t, "error", actualResponse[0]["status"])
+					require.Contains(t, actualResponse[0]["error"], "Modification of a completed event is forbidden")
+
+				default:
+					// For standard success cases, set the auto-generated IDs
+					require.Len(t, actualResponse, len(tc.expectedResponse))
+					for i := range actualResponse {
+						if participant, ok := actualResponse[i]["participant"].(map[string]any); ok {
+							if expectedParticipant, ok := tc.expectedResponse[i]["participant"].(map[string]any); ok {
+								expectedParticipant["id"] = participant["id"]
+							}
+						}
+					}
+					testutils.AssertSuccessResponse(t, w, tc.expectedStatus, tc.expectedResponse)
+				}
 			}
 		})
 	}

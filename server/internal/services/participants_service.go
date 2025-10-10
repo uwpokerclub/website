@@ -135,5 +135,10 @@ func (svc *participantsService) DeleteParticipant(req *models.DeleteParticipantR
 		return e.InternalServerError(err.Error())
 	}
 
+	// Check if any rows were actually deleted
+	if res.RowsAffected == 0 {
+		return e.NotFound("Entry not found")
+	}
+
 	return nil
 }

@@ -30,13 +30,13 @@ func SetAuthCookie(req *http.Request, sessionID uuid.UUID) {
 }
 
 // TestUnauthenticatedEndpoint tests that an endpoint requires authentication
-func TestUnauthenticatedEndpoint(t *testing.T, container *PostgresTestContainer, apiServer *gin.Engine, method, endpoint string, requestBody ...map[string]interface{}) {
+func TestUnauthenticatedEndpoint(t *testing.T, container *PostgresTestContainer, apiServer *gin.Engine, method, endpoint string, requestBody ...any) {
 	// Reset database for clean state
 	ctx := context.Background()
 	require.NoError(t, container.ResetDatabase(ctx))
 
 	// Create request without authentication (use empty body if none provided)
-	var body map[string]interface{}
+	var body any
 	if len(requestBody) > 0 {
 		body = requestBody[0]
 	}
@@ -52,7 +52,7 @@ func TestUnauthenticatedEndpoint(t *testing.T, container *PostgresTestContainer,
 }
 
 // TestUnauthorizedEndpoint tests that an endpoint properly checks authorization for different roles
-func TestUnauthorizedEndpoint(t *testing.T, container *PostgresTestContainer, apiServer *gin.Engine, method, endpoint string, unauthorizedRoles []string, requestBody ...map[string]interface{}) {
+func TestUnauthorizedEndpoint(t *testing.T, container *PostgresTestContainer, apiServer *gin.Engine, method, endpoint string, unauthorizedRoles []string, requestBody ...any) {
 	for _, role := range unauthorizedRoles {
 		t.Run("unauthorized_role_"+role, func(t *testing.T) {
 			// Reset database for clean state
@@ -65,7 +65,7 @@ func TestUnauthorizedEndpoint(t *testing.T, container *PostgresTestContainer, ap
 			require.NoError(t, err)
 
 			// Create request with authentication but unauthorized role (use empty body if none provided)
-			var body map[string]interface{}
+			var body any
 			if len(requestBody) > 0 {
 				body = requestBody[0]
 			}
@@ -84,7 +84,7 @@ func TestUnauthorizedEndpoint(t *testing.T, container *PostgresTestContainer, ap
 }
 
 // TestInvalidAuthForEndpoint combines both unauthenticated and unauthorized tests
-func TestInvalidAuthForEndpoint(t *testing.T, container *PostgresTestContainer, apiServer *gin.Engine, method, endpoint string, unauthorizedRoles []string, requestBody ...map[string]interface{}) {
+func TestInvalidAuthForEndpoint(t *testing.T, container *PostgresTestContainer, apiServer *gin.Engine, method, endpoint string, unauthorizedRoles []string, requestBody ...any) {
 	t.Run("unauthenticated", func(t *testing.T) {
 		TestUnauthenticatedEndpoint(t, container, apiServer, method, endpoint, requestBody...)
 	})
@@ -154,7 +154,7 @@ func AssertSuccessResponse(t *testing.T, w *httptest.ResponseRecorder, expectedS
 }
 
 // MakeJSONRequest creates an HTTP request with JSON body
-func MakeJSONRequest(method, url string, body map[string]interface{}) (*http.Request, error) {
+func MakeJSONRequest(method, url string, body any) (*http.Request, error) {
 	var requestBody []byte
 	if body != nil {
 		var err error

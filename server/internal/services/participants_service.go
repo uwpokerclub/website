@@ -73,10 +73,11 @@ func (svc *participantsService) ListParticipants(eventId int32) ([]models.ListPa
 func (svc *participantsService) ListParticipantsV2(eventId int32) ([]models.Participant, error) {
 	var participants []models.Participant
 
-	// Preload nested associations: Membership -> User and Semester
+	// Preload nested associations: Membership -> User, Semester, and Ranking
 	res := svc.db.
 		Preload("Membership.User").
 		Preload("Membership.Semester").
+		Preload("Membership.Ranking").
 		Where("event_id = ?", eventId).
 		Order("signed_out_at DESC").
 		Find(&participants)

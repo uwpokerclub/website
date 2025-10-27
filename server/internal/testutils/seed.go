@@ -28,6 +28,9 @@ func SeedAll(db *gorm.DB) error {
 	if err := SeedMemberships(db, false); err != nil {
 		return err
 	}
+	if err := SeedRankings(db, false); err != nil {
+		return err
+	}
 	if err := SeedParticipants(db, false); err != nil {
 		return err
 	}

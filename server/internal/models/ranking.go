@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 type Ranking struct {
 	MembershipID uuid.UUID `json:"membershipId" gorm:"type:uuid;primaryKey"`
 	Points       int32     `json:"points"`
-	Attendance   int32     `json:"attendance"`
+	Attendance   int32     `json:"attendance" gorm:"not null;default:0"`
 }
 
 type RankingResponse struct {

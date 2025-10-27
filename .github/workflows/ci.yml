@@ -70,11 +70,10 @@ jobs:
       - name: Install dependencies
         run: |
           go mod download
-          go install github.com/pressly/goose/v3/cmd/goose@v3.15.1
           curl -sSf https://atlasgo.sh | sh
 
       - name: Run database migrations
-        run: ./scripts/migrate.sh --test up
+        run: atlas migrate apply --dir "file://atlas/migrations" --url "postgres://postgres:password@localhost:5432/uwpokerclub_test?sslmode=disable"
         env:
           TEST_DATABASE_URL: postgres://postgres:password@localhost:5432/uwpokerclub_test
       - name: Run tests

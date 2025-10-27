@@ -371,7 +371,7 @@ func TestListEntries(t *testing.T) {
 
 			// Build expected response for tests that expect entries
 			if !tc.expectError && tc.expectedResponse == nil {
-				// For event 2, we expect 2 participants
+				// For event 2, we expect 2 participants with nested membership and user
 				user0, err := testutils.FindUserByID(testutils.TEST_USERS[0].ID)
 				require.NoError(t, err)
 				user2, err := testutils.FindUserByID(testutils.TEST_USERS[2].ID)
@@ -379,20 +379,86 @@ func TestListEntries(t *testing.T) {
 
 				tc.expectedResponse = []map[string]any{
 					{
-						"id":           float64(testutils.TEST_USERS[2].ID),
+						// Participant fields
 						"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
-						"firstName":    user2.FirstName,
-						"lastName":     user2.LastName,
-						"signedOutAt":  nil,
+						"eventId":      float64(2),
 						"placement":    float64(0),
+						"signedOutAt":  nil,
+						// Nested membership with nested user
+						"membership": map[string]any{
+							"id":         testutils.TEST_MEMBERSHIPS[2].ID.String(),
+							"userId":     float64(testutils.TEST_USERS[2].ID),
+							"semesterId": testutils.TEST_SEMESTERS[0].ID.String(),
+							"paid":       testutils.TEST_MEMBERSHIPS[2].Paid,
+							"discounted": testutils.TEST_MEMBERSHIPS[2].Discounted,
+							"user": map[string]any{
+								"id":        float64(user2.ID),
+								"firstName": user2.FirstName,
+								"lastName":  user2.LastName,
+								"email":     user2.Email,
+								"faculty":   user2.Faculty,
+								"questId":   user2.QuestID,
+								"createdAt": user2.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+							},
+							"semester": map[string]any{
+								"id":                    testutils.TEST_SEMESTERS[0].ID.String(),
+								"name":                  testutils.TEST_SEMESTERS[0].Name,
+								"meta":                  testutils.TEST_SEMESTERS[0].Meta,
+								"startDate":             testutils.TEST_SEMESTERS[0].StartDate.Format("2006-01-02T15:04:05.999999999Z07:00"),
+								"endDate":               testutils.TEST_SEMESTERS[0].EndDate.Format("2006-01-02T15:04:05.999999999Z07:00"),
+								"startingBudget":        float64(testutils.TEST_SEMESTERS[0].StartingBudget),
+								"currentBudget":         float64(testutils.TEST_SEMESTERS[0].CurrentBudget),
+								"membershipFee":         float64(testutils.TEST_SEMESTERS[0].MembershipFee),
+								"membershipDiscountFee": float64(testutils.TEST_SEMESTERS[0].MembershipDiscountFee),
+								"rebuyFee":              float64(testutils.TEST_SEMESTERS[0].RebuyFee),
+							},
+							"ranking": map[string]any{
+								"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
+								"points":       float64(0),
+								"attendance":   float64(0),
+							},
+						},
 					},
 					{
-						"id":           float64(testutils.TEST_USERS[0].ID),
+						// Participant fields
 						"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
-						"firstName":    user0.FirstName,
-						"lastName":     user0.LastName,
-						"signedOutAt":  "2023-10-20T20:00:00-04:00",
+						"eventId":      float64(2),
 						"placement":    float64(0),
+						"signedOutAt":  "2023-10-20T20:00:00-04:00",
+						// Nested membership with nested user
+						"membership": map[string]any{
+							"id":         testutils.TEST_MEMBERSHIPS[0].ID.String(),
+							"userId":     float64(testutils.TEST_USERS[0].ID),
+							"semesterId": testutils.TEST_SEMESTERS[0].ID.String(),
+							"paid":       testutils.TEST_MEMBERSHIPS[0].Paid,
+							"discounted": testutils.TEST_MEMBERSHIPS[0].Discounted,
+							"user": map[string]any{
+								"id":        float64(user0.ID),
+								"firstName": user0.FirstName,
+								"lastName":  user0.LastName,
+								"email":     user0.Email,
+								"faculty":   user0.Faculty,
+								"questId":   user0.QuestID,
+								"createdAt": user0.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+							},
+							"semester": map[string]any{
+								"id":                    testutils.TEST_SEMESTERS[0].ID.String(),
+								"name":                  testutils.TEST_SEMESTERS[0].Name,
+								"meta":                  testutils.TEST_SEMESTERS[0].Meta,
+								"startDate":             testutils.TEST_SEMESTERS[0].StartDate.Format("2006-01-02T15:04:05.999999999Z07:00"),
+								"endDate":               testutils.TEST_SEMESTERS[0].EndDate.Format("2006-01-02T15:04:05.999999999Z07:00"),
+								"startingBudget":        float64(testutils.TEST_SEMESTERS[0].StartingBudget),
+								"currentBudget":         float64(testutils.TEST_SEMESTERS[0].CurrentBudget),
+								"membershipFee":         float64(testutils.TEST_SEMESTERS[0].MembershipFee),
+								"membershipDiscountFee": float64(testutils.TEST_SEMESTERS[0].MembershipDiscountFee),
+								"rebuyFee":              float64(testutils.TEST_SEMESTERS[0].RebuyFee),
+							},
+							"ranking": map[string]any{
+								"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
+								"points":       float64(0),
+								"attendance":   float64(0),
+							},
+						},
 					},
 				}
 			}
@@ -419,6 +485,38 @@ func TestListEntries(t *testing.T) {
 			if tc.expectError {
 				testutils.AssertErrorResponse(t, w, tc.expectedStatus, tc.expectedErrorMsg)
 			} else {
+				// Parse response to get the actual participant IDs (auto-generated)
+				var actualResponse []map[string]any
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &actualResponse))
+
+				// Set the auto-generated fields in expected response
+				for i := range actualResponse {
+					if i < len(tc.expectedResponse) {
+						// Set auto-generated participant ID
+						tc.expectedResponse[i]["id"] = actualResponse[i]["id"]
+
+						// Set actual createdAt timestamp for user
+						if membership, ok := actualResponse[i]["membership"].(map[string]any); ok {
+							if user, ok := membership["user"].(map[string]any); ok {
+								if expectedMembership, ok := tc.expectedResponse[i]["membership"].(map[string]any); ok {
+									if expectedUser, ok := expectedMembership["user"].(map[string]any); ok {
+										expectedUser["createdAt"] = user["createdAt"]
+									}
+								}
+							}
+
+							// Set actual ranking membershipId (may be zero-value UUID)
+							if ranking, ok := membership["ranking"].(map[string]any); ok {
+								if expectedMembership, ok := tc.expectedResponse[i]["membership"].(map[string]any); ok {
+									if expectedRanking, ok := expectedMembership["ranking"].(map[string]any); ok {
+										expectedRanking["membershipId"] = ranking["membershipId"]
+									}
+								}
+							}
+						}
+					}
+				}
+
 				testutils.AssertSuccessResponse(t, w, tc.expectedStatus, tc.expectedResponse)
 			}
 		})

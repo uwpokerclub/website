@@ -167,7 +167,7 @@ func (c *entriesController) createEntry(ctx *gin.Context) {
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
-// @Success 200 {array} ListParticipantsResult
+// @Success 200 {array} Participant
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -189,7 +189,7 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 
 	// List participants
 	svc := services.NewParticipantsService(c.db)
-	participants, err := svc.ListParticipants(eventID)
+	participants, err := svc.ListParticipantsV2(eventID)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

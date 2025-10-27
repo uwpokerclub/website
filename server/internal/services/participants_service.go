@@ -70,6 +70,24 @@ func (svc *participantsService) ListParticipants(eventId int32) ([]models.ListPa
 	return ret, nil
 }
 
+func (svc *participantsService) ListParticipantsV2(eventId int32) ([]models.Participant, error) {
+	var participants []models.Participant
+
+	// Preload nested associations: Membership -> User and Semester
+	res := svc.db.
+		Preload("Membership.User").
+		Preload("Membership.Semester").
+		Where("event_id = ?", eventId).
+		Order("signed_out_at DESC").
+		Find(&participants)
+
+	if err := res.Error; err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	return participants, nil
+}
+
 func (svc *participantsService) UpdateParticipant(req *models.UpdateParticipantRequest) (*models.Participant, error) {
 	eventService := NewEventService(svc.db)
 

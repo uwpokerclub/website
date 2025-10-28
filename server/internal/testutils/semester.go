@@ -11,7 +11,7 @@ import (
 
 var TEST_SEMESTERS = []models.Semester{
 	{
-		ID:                    uuid.New(),
+		ID:                    uuid.MustParse("f74be353-7855-4b05-875c-1b6eaa3cdcbf"),
 		Name:                  "Fall 2023",
 		Meta:                  "Earlier semester",
 		StartDate:             time.Date(2023, 9, 1, 0, 0, 0, 0, time.Now().Local().Location()),
@@ -23,7 +23,7 @@ var TEST_SEMESTERS = []models.Semester{
 		RebuyFee:              1,
 	},
 	{
-		ID:                    uuid.New(),
+		ID:                    uuid.MustParse("a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
 		Name:                  "Spring 2024",
 		Meta:                  "Middle semester",
 		StartDate:             time.Date(2024, 1, 15, 0, 0, 0, 0, time.Now().Local().Location()),
@@ -35,7 +35,7 @@ var TEST_SEMESTERS = []models.Semester{
 		RebuyFee:              3,
 	},
 	{
-		ID:                    uuid.New(),
+		ID:                    uuid.MustParse("b2c3d4e5-f6a7-8901-bcde-f12345678901"),
 		Name:                  "Fall 2024",
 		Meta:                  "Latest semester",
 		StartDate:             time.Date(2024, 9, 1, 0, 0, 0, 0, time.Now().Local().Location()),

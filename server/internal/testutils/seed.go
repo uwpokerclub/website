@@ -8,6 +8,36 @@ import (
 	"gorm.io/gorm"
 )
 
+// SeedAll seeds all test data in the correct order without duplicates
+func SeedAll(db *gorm.DB) error {
+	// Seed base data first
+	if err := SeedStructures(db); err != nil {
+		return err
+	}
+	if err := SeedSemesters(db); err != nil {
+		return err
+	}
+	if err := SeedUsers(db); err != nil {
+		return err
+	}
+
+	// Then seed dependent data (don't re-seed dependencies)
+	if err := SeedEvents(db, false); err != nil {
+		return err
+	}
+	if err := SeedMemberships(db, false); err != nil {
+		return err
+	}
+	if err := SeedRankings(db, false); err != nil {
+		return err
+	}
+	if err := SeedParticipants(db, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CreateTestSession creates a session for testing authenticated endpoints
 func CreateTestSession(db *gorm.DB, username string, role string) (uuid.UUID, error) {
 	// Create login record

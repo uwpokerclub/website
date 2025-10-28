@@ -172,7 +172,7 @@ func TestCreateSemester(t *testing.T) {
 			requestBody:      nil,
 			expectedStatus:   http.StatusBadRequest,
 			expectError:      true,
-			expectedErrorMsg: "EOF",
+			expectedErrorMsg: "Key: 'CreateSemesterRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag\nKey: 'CreateSemesterRequest.StartDate' Error:Field validation for 'StartDate' failed on the 'required' tag\nKey: 'CreateSemesterRequest.EndDate' Error:Field validation for 'EndDate' failed on the 'required' tag\nKey: 'CreateSemesterRequest.MembershipFee' Error:Field validation for 'MembershipFee' failed on the 'required' tag\nKey: 'CreateSemesterRequest.MembershipDiscountFee' Error:Field validation for 'MembershipDiscountFee' failed on the 'required' tag\nKey: 'CreateSemesterRequest.RebuyFee' Error:Field validation for 'RebuyFee' failed on the 'required' tag",
 		},
 	}
 

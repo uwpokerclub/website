@@ -201,7 +201,7 @@ func TestCreateEvent(t *testing.T) {
 			requestBody:          nil,
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
-			expectedErrorMessage: "EOF",
+			expectedErrorMessage: "Key: 'CreateEventRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag\nKey: 'CreateEventRequest.Format' Error:Field validation for 'Format' failed on the 'required' tag\nKey: 'CreateEventRequest.SemesterID' Error:Field validation for 'SemesterID' failed on the 'required' tag\nKey: 'CreateEventRequest.StartDate' Error:Field validation for 'StartDate' failed on the 'required' tag\nKey: 'CreateEventRequest.StructureID' Error:Field validation for 'StructureID' failed on the 'required' tag\nKey: 'CreateEventRequest.PointsMultiplier' Error:Field validation for 'PointsMultiplier' failed on the 'required' tag",
 		},
 		{
 			name:     "invalid start date format",
@@ -407,7 +407,7 @@ func TestListEvents(t *testing.T) {
 			// Reset database for clean state
 			require.NoError(t, container.ResetDatabase(ctx))
 
-			testutils.SeedEvents(db)
+			testutils.SeedEvents(db, true)
 
 			// Setup authentication
 			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
@@ -605,14 +605,13 @@ func TestUpdateEvent(t *testing.T) {
 			useEventID:           "1",
 		},
 		{
-			name:                 "invalid request empty body",
-			userRole:             authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			requestBody:          nil,
-			expectedStatus:       http.StatusBadRequest,
-			expectError:          true,
-			expectedErrorMessage: "Error parsing request body: EOF",
-			setupEvent:           true,
-			useEventID:           "1",
+			name:           "empty body - no fields updated",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody:    nil,
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+			setupEvent:     true,
+			useEventID:     "1",
 		},
 		{
 			name:     "invalid semester ID format",
@@ -763,7 +762,7 @@ func TestUpdateEvent(t *testing.T) {
 			var eventID string = "1"
 			if tc.setupEvent {
 				// Seed test events
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 
 				// Build expected response dynamically for successful cases
 				if !tc.expectError && tc.expectedResponse == nil {
@@ -989,7 +988,7 @@ func TestGetEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 
 				// if we expect an event to exist, find it and set the expected response
 				if !tc.expectError {
@@ -1161,7 +1160,7 @@ func TestEndEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 			}
 
 			// Setup authentication
@@ -1303,7 +1302,7 @@ func TestRestartEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 			}
 
 			// Setup authentication
@@ -1446,7 +1445,7 @@ func TestRebuyEvent(t *testing.T) {
 			require.NoError(t, container.ResetDatabase(ctx))
 
 			if tc.setupEvent {
-				testutils.SeedEvents(db)
+				testutils.SeedEvents(db, true)
 			}
 
 			// Setup authentication

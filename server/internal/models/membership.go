@@ -13,7 +13,7 @@ type Membership struct {
 	Semester   *Semester `json:"semester"`
 	Paid       bool      `json:"paid" gorm:"not null;default:false"`
 	Discounted bool      `json:"discounted" gorm:"not null;default:false"`
-	Ranking    Ranking   `json:"ranking"`
+	Ranking    *Ranking  `json:"ranking"`
 }
 
 func (Membership) TableName() string {

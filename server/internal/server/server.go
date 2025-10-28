@@ -155,6 +155,7 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewAuthenticationController(s.db),
 		controller.NewSemestersController(s.db),
 		controller.NewEventsController(s.db),
+		controller.NewEntriesController(s.db),
 	}
 
 	for _, controller := range controllers {

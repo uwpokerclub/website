@@ -112,6 +112,98 @@ func TestParticipantsService_ListParticipants(t *testing.T) {
 	}
 }
 
+func TestParticipantsService_ListParticipantsV2(t *testing.T) {
+	t.Setenv("ENVIRONMENT", "TEST")
+
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	set, err := testhelpers.SetupSemester(db, "Fall 2022")
+	if err != nil {
+		t.Fatalf("Failed to setup test environment: %v", err)
+	}
+
+	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("Failed to setup event: %v", err)
+	}
+
+	now := time.Now().UTC()
+	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	next := now.Add(time.Minute * 30)
+	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 2, &next)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 1, nil)
+	if err != nil {
+		t.Fatalf("Failed to add entry: %v", err)
+	}
+
+	svc := NewParticipantsService(db)
+	res, err := svc.ListParticipantsV2(event.ID)
+	if err != nil {
+		t.Errorf("ListParticipantsV2() error = %v", err)
+		return
+	}
+
+	// Verify we got 3 participants
+	if len(res) != 3 {
+		t.Errorf("ListParticipantsV2() returned %d participants, expected 3", len(res))
+		return
+	}
+
+	// Verify order: should be sorted by signed_out_at DESC (nulls first)
+	if res[0].MembershipID != entry3.MembershipID {
+		t.Errorf("ListParticipantsV2() result order incorrect, got[0]: %v, wanted: %v", res[0].MembershipID, entry3.MembershipID)
+		return
+	}
+
+	if res[1].MembershipID != entry2.MembershipID {
+		t.Errorf("ListParticipantsV2() result order incorrect, got[1]: %v, wanted: %v", res[1].MembershipID, entry2.MembershipID)
+		return
+	}
+
+	if res[2].MembershipID != entry1.MembershipID {
+		t.Errorf("ListParticipantsV2() result order incorrect, got[2]: %v, wanted: %v", res[2].MembershipID, entry1.MembershipID)
+		return
+	}
+
+	// Verify nested Membership is loaded
+	for i, participant := range res {
+		if participant.Membership == nil {
+			t.Errorf("ListParticipantsV2() participant[%d] has nil Membership", i)
+			return
+		}
+
+		// Verify Membership ID matches
+		if participant.Membership.ID != participant.MembershipID {
+			t.Errorf("ListParticipantsV2() participant[%d] membership ID mismatch: got %v, want %v", i, participant.Membership.ID, participant.MembershipID)
+			return
+		}
+
+		// Verify nested User is loaded
+		if participant.Membership.User == nil {
+			t.Errorf("ListParticipantsV2() participant[%d] has nil User in Membership", i)
+			return
+		}
+
+		// Verify User ID matches
+		if participant.Membership.User.ID != participant.Membership.UserID {
+			t.Errorf("ListParticipantsV2() participant[%d] user ID mismatch: got %v, want %v", i, participant.Membership.User.ID, participant.Membership.UserID)
+			return
+		}
+	}
+}
+
 func TestParticipantsService_UpdateParticipant_SignIn(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "TEST")
 

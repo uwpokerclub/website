@@ -1,4 +1,27 @@
 definitions:
+  Blind:
+    properties:
+      ante:
+        type: integer
+      big:
+        type: integer
+      small:
+        type: integer
+      time:
+        type: integer
+    type: object
+  CreateEntryResult:
+    properties:
+      error:
+        type: string
+      membershipId:
+        type: string
+      participant:
+        $ref: '#/definitions/Participant'
+      status:
+        description: '"created" or "error"'
+        type: string
+    type: object
   CreateEventRequest:
     properties:
       format:
@@ -76,7 +99,7 @@ definitions:
     properties:
       entries:
         items:
-          $ref: '#/definitions/models.Participant'
+          $ref: '#/definitions/Participant'
         type: array
       format:
         type: string
@@ -99,7 +122,7 @@ definitions:
       state:
         type: integer
       structure:
-        $ref: '#/definitions/models.Structure'
+        $ref: '#/definitions/Structure'
       structureId:
         type: integer
     type: object
@@ -115,6 +138,21 @@ definitions:
       username:
         type: string
     type: object
+  ListParticipantsResult:
+    properties:
+      firstName:
+        type: string
+      id:
+        type: integer
+      lastName:
+        type: string
+      membershipId:
+        type: string
+      placement:
+        type: integer
+      signedOutAt:
+        type: string
+    type: object
   NewSessionRequest:
     properties:
       password:
@@ -124,6 +162,21 @@ definitions:
     required:
     - password
     - username
+    type: object
+  Participant:
+    properties:
+      eventId:
+        type: integer
+      id:
+        type: integer
+      membership:
+        $ref: '#/definitions/models.Membership'
+      membershipId:
+        type: string
+      placement:
+        type: integer
+      signedOutAt:
+        type: string
     type: object
   Semester:
     properties:
@@ -157,6 +210,17 @@ definitions:
         example: 100
         type: number
     type: object
+  Structure:
+    properties:
+      blinds:
+        items:
+          $ref: '#/definitions/Blind'
+        type: array
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   UpdateEventRequestV2:
     properties:
       format:
@@ -178,17 +242,6 @@ definitions:
         example: "2023-10-01T18:00:00Z"
         type: string
     type: object
-  models.Blind:
-    properties:
-      ante:
-        type: integer
-      big:
-        type: integer
-      small:
-        type: integer
-      time:
-        type: integer
-    type: object
   models.Membership:
     properties:
       discounted:
@@ -208,21 +261,6 @@ definitions:
       userId:
         type: integer
     type: object
-  models.Participant:
-    properties:
-      eventId:
-        type: integer
-      id:
-        type: integer
-      membership:
-        $ref: '#/definitions/models.Membership'
-      membershipId:
-        type: string
-      placement:
-        type: integer
-      signedOutAt:
-        type: string
-    type: object
   models.Ranking:
     properties:
       membershipID:
@@ -230,17 +268,6 @@ definitions:
       points:
         format: int32
         type: integer
-    type: object
-  models.Structure:
-    properties:
-      blinds:
-        items:
-          $ref: '#/definitions/models.Blind'
-        type: array
-      id:
-        type: integer
-      name:
-        type: string
     type: object
   models.User:
     properties:
@@ -618,6 +645,252 @@ paths:
       summary: End Event
       tags:
       - Events
+  /semesters/{semesterId}/events/{eventId}/entries:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of participant entries for a specific event
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ListParticipantsResult'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: List Entries
+      tags:
+      - Entries
+    post:
+      consumes:
+      - application/json
+      description: Create new participant entries for an event
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      - description: Array of membership UUIDs
+        in: body
+        name: membershipIds
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses:
+        "207":
+          description: Multi-Status
+          schema:
+            items:
+              $ref: '#/definitions/CreateEntryResult'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Create Entries
+      tags:
+      - Entries
+  /semesters/{semesterId}/events/{eventId}/entries/{entryId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a participant entry from an event
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      - description: Membership ID (UUID format)
+        in: path
+        name: entryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Delete Entry
+      tags:
+      - Entries
+  /semesters/{semesterId}/events/{eventId}/entries/{entryId}/sign-in:
+    post:
+      consumes:
+      - application/json
+      description: Sign in a participant to an event
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      - description: Membership ID (UUID format)
+        in: path
+        name: entryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Participant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Sign In Entry
+      tags:
+      - Entries
+  /semesters/{semesterId}/events/{eventId}/entries/{entryId}/sign-out:
+    post:
+      consumes:
+      - application/json
+      description: Sign out a participant from an event
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      - description: Membership ID (UUID format)
+        in: path
+        name: entryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Participant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Sign Out Entry
+      tags:
+      - Entries
   /semesters/{semesterId}/events/{eventId}/rebuy:
     post:
       consumes:
@@ -724,7 +997,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: Get current getSession
+      summary: Get current session
       tags:
       - Authentication
     post:

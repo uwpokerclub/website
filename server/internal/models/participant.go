@@ -14,7 +14,7 @@ type Participant struct {
 	EventID      int32       `json:"eventId" gorm:"type:integer;primaryKey;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Placement    uint16      `json:"placement"`
 	SignedOutAt  *time.Time  `json:"signedOutAt"`
-}
+} //@name Participant
 
 func (Participant) TableName() string {
 	return "participants"
@@ -29,7 +29,7 @@ func (Participant) Preload(tx *gorm.DB) *gorm.DB {
 type CreateParticipantRequest struct {
 	MembershipID uuid.UUID `json:"membershipId" binding:"required"`
 	EventID      int32     `json:"eventId" binding:"required"`
-}
+} //@name CreateParticipantRequest
 
 type UpdateParticipantRequest struct {
 	MembershipID uuid.UUID `json:"membershipId" binding:"required"`
@@ -50,4 +50,11 @@ type ListParticipantsResult struct {
 	LastName     string     `json:"lastName"`
 	SignedOutAt  *time.Time `json:"signedOutAt"`
 	Placement    uint16     `json:"placement"`
-}
+} //@name ListParticipantsResult
+
+type CreateEntryResult struct {
+	MembershipID uuid.UUID    `json:"membershipId"`
+	Status       string       `json:"status"` // "created" or "error"
+	Participant  *Participant `json:"participant,omitempty"`
+	Error        string       `json:"error,omitempty"`
+} //@name CreateEntryResult

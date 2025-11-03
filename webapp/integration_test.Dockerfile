@@ -1,4 +1,4 @@
-FROM node:24.9.0-alpine AS node_stage
+FROM node:24.11.0-alpine AS node_stage
 
 WORKDIR /usr/app
 

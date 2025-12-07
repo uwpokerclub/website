@@ -4,7 +4,6 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"errors"
-	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -43,23 +42,23 @@ func (u *userService) ListUsers(filter *models.ListUsersFilter) ([]models.User, 
 
 	// Add filter to SQL query if they are present
 	if filter.ID != nil {
-		res.Where("id = ?", *filter.ID)
+		res = res.Where("id = ?", *filter.ID)
 	}
 
 	if filter.Name != nil {
-		res.Where("first_name || ' ' || last_name ILIKE ?", fmt.Sprintf("%%%s%%", *filter.Name))
+		res = res.Where("first_name || ' ' || last_name ILIKE ?", "%"+*filter.Name+"%")
 	}
 
 	if filter.Email != nil {
-		res.Where("email ILIKE ?", fmt.Sprintf("%%%s%%", *filter.Email))
+		res = res.Where("email ILIKE ?", "%"+*filter.Email+"%")
 	}
 
 	if filter.Faculty != nil {
-		res.Where("faculty = ?", *filter.Faculty)
+		res = res.Where("faculty = ?", *filter.Faculty)
 	}
 
 	// Find all results matching the query
-	res.Find(&users)
+	res = res.Find(&users)
 	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
@@ -130,7 +129,17 @@ func (u *userService) UpdateUser(id uint64, req *models.UpdateUserRequest) (*mod
 func (u *userService) DeleteUser(id uint64) error {
 	user := models.User{ID: id}
 
-	res := u.db.Delete(&user)
+	// Check if user exists first
+	res := u.db.First(&user)
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return e.NotFound(err.Error())
+	}
+	if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	// Delete the user
+	res = u.db.Delete(&user)
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
 	}

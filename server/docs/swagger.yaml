@@ -46,6 +46,33 @@ definitions:
     - startDate
     - structureId
     type: object
+  CreateMemberRequest:
+    properties:
+      email:
+        type: string
+      faculty:
+        enum:
+        - AHS
+        - Arts
+        - Engineering
+        - Environment
+        - Math
+        - Science
+        type: string
+      firstName:
+        type: string
+      id:
+        type: integer
+      lastName:
+        type: string
+      questId:
+        type: string
+    required:
+    - email
+    - firstName
+    - id
+    - lastName
+    type: object
   CreateSemesterRequest:
     properties:
       endDate:
@@ -138,20 +165,34 @@ definitions:
       username:
         type: string
     type: object
-  ListParticipantsResult:
+  Member:
     properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      faculty:
+        enum:
+        - AHS
+        - Arts
+        - Engineering
+        - Environment
+        - Math
+        - Science
+        type: string
       firstName:
         type: string
       id:
         type: integer
       lastName:
         type: string
-      membershipId:
+      questId:
         type: string
-      placement:
-        type: integer
-      signedOutAt:
-        type: string
+    required:
+    - email
+    - firstName
+    - id
+    - lastName
     type: object
   NewSessionRequest:
     properties:
@@ -242,6 +283,26 @@ definitions:
         example: "2023-10-01T18:00:00Z"
         type: string
     type: object
+  UpdateMemberRequest:
+    properties:
+      email:
+        type: string
+      faculty:
+        enum:
+        - AHS
+        - Arts
+        - Engineering
+        - Environment
+        - Math
+        - Science
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      questId:
+        type: string
+    type: object
   models.Membership:
     properties:
       discounted:
@@ -257,46 +318,18 @@ definitions:
       semesterId:
         type: string
       user:
-        $ref: '#/definitions/models.User'
+        $ref: '#/definitions/Member'
       userId:
         type: integer
     type: object
   models.Ranking:
     properties:
-      membershipID:
+      attendance:
+        type: integer
+      membershipId:
         type: string
       points:
-        format: int32
         type: integer
-    type: object
-  models.User:
-    properties:
-      createdAt:
-        type: string
-      email:
-        type: string
-      faculty:
-        enum:
-        - AHS
-        - Arts
-        - Engineering
-        - Environment
-        - Math
-        - Science
-        type: string
-      firstName:
-        type: string
-      id:
-        type: integer
-      lastName:
-        type: string
-      questId:
-        type: string
-    required:
-    - email
-    - firstName
-    - id
-    - lastName
     type: object
 info:
   contact:
@@ -324,6 +357,218 @@ paths:
       summary: Health Check
       tags:
       - Health
+  /members:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of Members with optional filters
+      parameters:
+      - description: Filter by Member ID
+        in: query
+        name: id
+        type: integer
+      - description: Filter by Member Email
+        in: query
+        name: email
+        type: string
+      - description: Filter by Member Name
+        in: query
+        name: name
+        type: string
+      - description: Filter by Member Faculty
+        in: query
+        name: faculty
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Member'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: List Members
+      tags:
+      - Members
+    post:
+      consumes:
+      - application/json
+      description: Create a new Member with the provided details
+      parameters:
+      - description: Member details
+        in: body
+        name: member
+        required: true
+        schema:
+          $ref: '#/definitions/CreateMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Member'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Create a new Member
+      tags:
+      - Members
+  /members/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a Member by their ID
+      parameters:
+      - description: Member ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Delete Member by ID
+      tags:
+      - Members
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a Member by their ID
+      parameters:
+      - description: Member ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Member'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get Member by ID
+      tags:
+      - Members
+    patch:
+      consumes:
+      - application/json
+      description: Update a Member's details by their ID
+      parameters:
+      - description: Member ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated Member details
+        in: body
+        name: member
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Member'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Update Member by ID
+      tags:
+      - Members
   /semesters:
     get:
       description: List all semesters
@@ -668,7 +913,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/ListParticipantsResult'
+              $ref: '#/definitions/Participant'
             type: array
         "400":
           description: Bad Request

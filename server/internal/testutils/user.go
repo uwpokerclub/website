@@ -32,6 +32,15 @@ var TEST_USERS = []models.User{
 		Faculty:   models.FacultyScience,
 		QuestID:   "bjohnson",
 	},
+	{
+		// User with no memberships - safe for deletion tests
+		ID:        20780651,
+		FirstName: "Alice",
+		LastName:  "Williams",
+		Email:     "alice.williams@example.com",
+		Faculty:   models.FacultyArts,
+		QuestID:   "awilliams",
+	},
 }
 
 func SeedUsers(db *gorm.DB) error {

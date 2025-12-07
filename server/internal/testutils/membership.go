@@ -20,7 +20,7 @@ var TEST_MEMBERSHIPS = []models.Membership{
 		ID:         uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 		UserID:     TEST_USERS[1].ID,
 		SemesterID: TEST_SEMESTERS[0].ID,
-		Paid:       false,
+		Paid:       true,
 		Discounted: true,
 	},
 	{

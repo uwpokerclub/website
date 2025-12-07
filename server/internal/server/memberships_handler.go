@@ -41,8 +41,8 @@ func parseListMembershipFilter(ctx *gin.Context) *models.ListMembershipsFilter {
 	}
 
 	// Retrieve the userId parameter from the query string
-	var userID *int64
-	userIDVal, err := strconv.ParseInt(ctx.Query("userId"), 10, 64)
+	var userID *uint64
+	userIDVal, err := strconv.ParseUint(ctx.Query("userId"), 10, 64)
 	if err == nil {
 		userID = &userIDVal
 	}

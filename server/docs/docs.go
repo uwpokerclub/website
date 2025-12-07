@@ -1347,6 +1347,273 @@ const docTemplate = `{
                 }
             }
         },
+        "/semesters/{semesterId}/memberships": {
+            "get": {
+                "description": "Retrieve a list of all Memberships",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Memberships"
+                ],
+                "summary": "List all Memberships",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Membership"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new Membership with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Memberships"
+                ],
+                "summary": "Create a new Membership",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Membership details",
+                        "name": "membership",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateMembershipRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/Membership"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/memberships/{id}": {
+            "get": {
+                "description": "Retrieve details of a specific Membership by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Memberships"
+                ],
+                "summary": "Get a Membership",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Membership ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Membership"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update details of a specific Membership by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Memberships"
+                ],
+                "summary": "Update a Membership",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Membership ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated Membership details",
+                        "name": "membership",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateMembershipRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Membership"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/session": {
             "get": {
                 "description": "Retrieve current user's session information",
@@ -1569,6 +1836,23 @@ const docTemplate = `{
                 }
             }
         },
+        "CreateMembershipRequest": {
+            "type": "object",
+            "required": [
+                "userId"
+            ],
+            "properties": {
+                "discounted": {
+                    "type": "boolean"
+                },
+                "paid": {
+                    "type": "boolean"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
         "CreateSemesterRequest": {
             "type": "object",
             "required": [
@@ -1739,6 +2023,35 @@ const docTemplate = `{
                 }
             }
         },
+        "Membership": {
+            "type": "object",
+            "properties": {
+                "discounted": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "paid": {
+                    "type": "boolean"
+                },
+                "ranking": {
+                    "$ref": "#/definitions/models.Ranking"
+                },
+                "semester": {
+                    "$ref": "#/definitions/Semester"
+                },
+                "semesterId": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/Member"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
         "NewSessionRequest": {
             "type": "object",
             "required": [
@@ -1764,7 +2077,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "membership": {
-                    "$ref": "#/definitions/models.Membership"
+                    "$ref": "#/definitions/Membership"
                 },
                 "membershipId": {
                     "type": "string"
@@ -1894,32 +2207,14 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Membership": {
+        "UpdateMembershipRequest": {
             "type": "object",
             "properties": {
                 "discounted": {
                     "type": "boolean"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "paid": {
                     "type": "boolean"
-                },
-                "ranking": {
-                    "$ref": "#/definitions/models.Ranking"
-                },
-                "semester": {
-                    "$ref": "#/definitions/Semester"
-                },
-                "semesterId": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/Member"
-                },
-                "userId": {
-                    "type": "integer"
                 }
             }
         },

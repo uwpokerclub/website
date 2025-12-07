@@ -810,7 +810,7 @@ func TestMembershipService_ListMemberships_UserIDFilter(t *testing.T) {
 
 	membershipService := NewMembershipService(db)
 
-	userID := int64(user1.ID)
+	userID := uint64(user1.ID)
 	filter := models.ListMembershipsFilter{
 		SemesterID: &semester1.ID,
 		UserID:     &userID,

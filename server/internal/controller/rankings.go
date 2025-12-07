@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type rankingsController struct{
+type rankingsController struct {
 	db *gorm.DB
 }
 
@@ -26,9 +26,9 @@ func NewRankingsController(db *gorm.DB) Controller {
 
 func (c *rankingsController) LoadRoutes(router *gin.RouterGroup) {
 	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.db))
-  rankings.GET("", middleware.UseAuthorization(c.db, "semester.rankings.list"), c.listRankings)
-	rankings.GET(":membershipId", middleware.UseAuthorization(c.db, "semester.rankings.get"), c.getRanking)
+	rankings.GET("", middleware.UseAuthorization(c.db, "semester.rankings.list"), c.listRankings)
 	rankings.GET("export", middleware.UseAuthorization(c.db, "semester.rankings.export"), c.exportRankings)
+	rankings.GET(":membershipId", middleware.UseAuthorization(c.db, "semester.rankings.get"), c.getRanking)
 }
 
 func validateUUIDParam(ctx *gin.Context, paramName string) (uuid.UUID, error) {
@@ -45,12 +45,12 @@ func validateUUIDParam(ctx *gin.Context, paramName string) (uuid.UUID, error) {
 
 // listRankings handles listing the current rankings for a semester
 //
-// @Summary List listRankings
+// @Summary List rankings
 // @Description List the current rankings for a semester
 // @Tags Rankings
 // @Produce json
 // @Param semesterId path string true "Semester ID"
-// @Success 200 {array} RankingResponse 
+// @Success 200 {array} RankingResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -80,7 +80,7 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 
 // getRanking handles retrieving the ranking for a specific membership in a semester
 //
-// @Summary Get getRanking
+// @Summary Get ranking
 // @Description Get the ranking for a specific membership in a semester
 // @Tags Rankings
 // @Produce json
@@ -122,7 +122,7 @@ func (c *rankingsController) getRanking(ctx *gin.Context) {
 
 // exportRankings handles exporting the rankings for a semester
 //
-// @Summary Export exportRankings
+// @Summary Export rankings
 // @Description Export the rankings for a semester
 // @Tags Rankings
 // @Produce octet-stream

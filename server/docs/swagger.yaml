@@ -1472,7 +1472,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: List listRankings
+      summary: List rankings
       tags:
       - Rankings
   /semesters/{semesterId}/rankings/{membershipId}:
@@ -1512,7 +1512,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: Get getRanking
+      summary: Get ranking
       tags:
       - Rankings
   /semesters/{semesterId}/rankings/export:
@@ -1547,7 +1547,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: Export exportRankings
+      summary: Export rankings
       tags:
       - Rankings
   /session:

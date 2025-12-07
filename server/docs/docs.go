@@ -1623,7 +1623,7 @@ const docTemplate = `{
                 "tags": [
                     "Rankings"
                 ],
-                "summary": "List listRankings",
+                "summary": "List rankings",
                 "parameters": [
                     {
                         "type": "string",
@@ -1679,7 +1679,7 @@ const docTemplate = `{
                 "tags": [
                     "Rankings"
                 ],
-                "summary": "Export exportRankings",
+                "summary": "Export rankings",
                 "parameters": [
                     {
                         "type": "string",
@@ -1732,7 +1732,7 @@ const docTemplate = `{
                 "tags": [
                     "Rankings"
                 ],
-                "summary": "Get getRanking",
+                "summary": "Get ranking",
                 "parameters": [
                     {
                         "type": "string",

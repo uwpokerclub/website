@@ -1615,7 +1615,7 @@
                 "tags": [
                     "Rankings"
                 ],
-                "summary": "List listRankings",
+                "summary": "List rankings",
                 "parameters": [
                     {
                         "type": "string",
@@ -1671,7 +1671,7 @@
                 "tags": [
                     "Rankings"
                 ],
-                "summary": "Export exportRankings",
+                "summary": "Export rankings",
                 "parameters": [
                     {
                         "type": "string",
@@ -1724,7 +1724,7 @@
                 "tags": [
                     "Rankings"
                 ],
-                "summary": "Get getRanking",
+                "summary": "Get ranking",
                 "parameters": [
                     {
                         "type": "string",

@@ -158,6 +158,7 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewEntriesController(s.db),
 		controller.NewMembersController(s.db),
 		controller.NewMembershipsController(s.db),
+		controller.NewRankingsController(s.db),
 	}
 
 	for _, controller := range controllers {

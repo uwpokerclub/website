@@ -33,6 +33,7 @@ var TEST_USERS = []models.User{
 		QuestID:   "bjohnson",
 	},
 	{
+		// User with no memberships - safe for deletion tests
 		ID:        20780651,
 		FirstName: "Alice",
 		LastName:  "Williams",

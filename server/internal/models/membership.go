@@ -6,15 +6,15 @@ import (
 )
 
 type Membership struct {
-	ID         uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	UserID     uint64    `json:"userId" gorm:"uniqueIndex:user_semester_unique"`
+	ID         uuid.UUID `json:"id"         gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID     uint64    `json:"userId"     gorm:"uniqueIndex:user_semester_unique"`
 	User       *User     `json:"user"`
 	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique"`
 	Semester   *Semester `json:"semester"`
-	Paid       bool      `json:"paid" gorm:"not null;default:false"`
+	Paid       bool      `json:"paid"       gorm:"not null;default:false"`
 	Discounted bool      `json:"discounted" gorm:"not null;default:false"`
 	Ranking    *Ranking  `json:"ranking"`
-}
+} //@name Membership
 
 func (Membership) TableName() string {
 	return "memberships"
@@ -25,15 +25,15 @@ func (Membership) Preload(tx *gorm.DB) *gorm.DB {
 }
 
 type CreateMembershipRequest struct {
-	UserID     uint64 `json:"userId" binding:"required"`
+	UserID     uint64 `json:"userId"     binding:"required"`
 	SemesterID string `json:"semesterId" binding:"required"`
-	Paid       bool   `json:"paid" binding:"omitempty,required_with=Discounted"`
+	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
 	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
 }
 
 type UpdateMembershipRequest struct {
 	ID         uuid.UUID
-	Paid       bool `json:"paid" binding:"omitempty,required"`
+	Paid       bool `json:"paid"       binding:"omitempty,required"`
 	Discounted bool `json:"discounted" binding:"omitempty,required"`
 }
 
@@ -66,3 +66,14 @@ type ListMembershipsFilter struct {
 	// UserID will filter for memberships that are only held by this specified user.
 	UserID *int64
 }
+
+type CreateMembershipRequestV2 struct {
+	UserID     uint64 `json:"userId"     binding:"required"`
+	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
+	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
+} // @name CreateMembershipRequest
+
+type UpdateMembershipRequestV2 struct {
+	Paid       *bool `json:"paid"       binding:"omitempty,required"`
+	Discounted *bool `json:"discounted" binding:"omitempty,required"`
+} // @name UpdateMembershipRequest

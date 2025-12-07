@@ -1614,6 +1614,175 @@ const docTemplate = `{
                 }
             }
         },
+        "/semesters/{semesterId}/rankings": {
+            "get": {
+                "description": "List the current rankings for a semester",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rankings"
+                ],
+                "summary": "List rankings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/RankingResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/rankings/export": {
+            "get": {
+                "description": "Export the rankings for a semester",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Rankings"
+                ],
+                "summary": "Export rankings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rankings exported successfully",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/rankings/{membershipId}": {
+            "get": {
+                "description": "Get the ranking for a specific membership in a semester",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rankings"
+                ],
+                "summary": "Get ranking",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Membership ID",
+                        "name": "membershipId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/GetRankingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/session": {
             "get": {
                 "description": "Retrieve current user's session information",
@@ -1965,6 +2134,17 @@ const docTemplate = `{
                 }
             }
         },
+        "GetRankingResponse": {
+            "type": "object",
+            "properties": {
+                "points": {
+                    "type": "integer"
+                },
+                "position": {
+                    "type": "integer"
+                }
+            }
+        },
         "GetSessionResponse": {
             "type": "object",
             "properties": {
@@ -2036,7 +2216,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "ranking": {
-                    "$ref": "#/definitions/models.Ranking"
+                    "$ref": "#/definitions/Ranking"
                 },
                 "semester": {
                     "$ref": "#/definitions/Semester"
@@ -2087,6 +2267,37 @@ const docTemplate = `{
                 },
                 "signedOutAt": {
                     "type": "string"
+                }
+            }
+        },
+        "Ranking": {
+            "type": "object",
+            "properties": {
+                "attendance": {
+                    "type": "integer"
+                },
+                "membershipId": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "integer"
+                }
+            }
+        },
+        "RankingResponse": {
+            "type": "object",
+            "properties": {
+                "firstName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "integer"
                 }
             }
         },
@@ -2215,20 +2426,6 @@ const docTemplate = `{
                 },
                 "paid": {
                     "type": "boolean"
-                }
-            }
-        },
-        "models.Ranking": {
-            "type": "object",
-            "properties": {
-                "attendance": {
-                    "type": "integer"
-                },
-                "membershipId": {
-                    "type": "string"
-                },
-                "points": {
-                    "type": "integer"
                 }
             }
         }

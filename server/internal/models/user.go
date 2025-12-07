@@ -19,7 +19,7 @@ type User struct {
 	Faculty   string    `json:"faculty" binding:"oneof=AHS Arts Engineering Environment Math Science"`
 	QuestID   string    `json:"questId"`
 	CreatedAt time.Time `json:"createdAt" gorm:"type:timestamp;not null;default:LOCALTIMESTAMP"`
-}
+} //@name Member
 
 type CreateUserRequest struct {
 	ID        uint64 `json:"id" binding:"required"`
@@ -28,7 +28,7 @@ type CreateUserRequest struct {
 	Email     string `json:"email" binding:"required"`
 	Faculty   string `json:"faculty" binding:"oneof=AHS Arts Engineering Environment Math Science"`
 	QuestID   string `json:"questId"`
-}
+} //@name CreateMemberRequest
 
 type UpdateUserRequest struct {
 	FirstName string `json:"firstName"`
@@ -36,7 +36,7 @@ type UpdateUserRequest struct {
 	Email     string `json:"email"`
 	Faculty   string `json:"faculty" binding:"omitempty,oneof=AHS Arts Engineering Environment Math Science"`
 	QuestID   string `json:"questId"`
-}
+} //@name UpdateMemberRequest
 
 type ListUsersFilter struct {
 	ID      *uint64

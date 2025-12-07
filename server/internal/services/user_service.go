@@ -130,7 +130,17 @@ func (u *userService) UpdateUser(id uint64, req *models.UpdateUserRequest) (*mod
 func (u *userService) DeleteUser(id uint64) error {
 	user := models.User{ID: id}
 
-	res := u.db.Delete(&user)
+	// Check if user exists first
+	res := u.db.First(&user)
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return e.NotFound(err.Error())
+	}
+	if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	// Delete the user
+	res = u.db.Delete(&user)
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
 	}

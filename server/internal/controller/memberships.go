@@ -58,7 +58,7 @@ func validateMembershipID(ctx *gin.Context) (uuid.UUID, error) {
 	return id, nil
 }
 
-// createMembership handles the creation of a new createMembership
+// createMembership handles the creation of a new Membership
 //
 // @Summary Create a new Membership
 // @Description Create a new Membership with the provided details
@@ -91,6 +91,16 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+			return
+		}
+
+		// Check for validation errors
+		errMsg := err.Error()
+		if errMsg == "cannot create membership that is not paid and discounted" {
+			ctx.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				apierrors.InvalidRequest(errMsg),
+			)
 			return
 		}
 
@@ -141,14 +151,14 @@ func (c *membershipsController) parseListMembershipsQueryParams(
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/memberships [get]
 func (c *membershipsController) listMemberships(ctx *gin.Context) {
-	semesterId, err := validateSemesterID(ctx)
+	semesterID, err := validateSemesterID(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
 		return
 	}
 
 	filter := c.parseListMembershipsQueryParams(ctx)
-	filter.SemesterID = &semesterId
+	filter.SemesterID = &semesterID
 
 	svc := services.NewMembershipService(c.db)
 	memberships, err := svc.ListMemberships(filter)
@@ -176,7 +186,7 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @param semesterId path string true "Semester ID"
-// @Param id path int true "Membership ID"
+// @Param id path string true "Membership ID"
 // @Success 200 {object} Membership
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -231,7 +241,7 @@ func (c *membershipsController) getMembership(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @param semesterId path string true "Semester ID"
-// @Param id path int true "Membership ID"
+// @Param id path string true "Membership ID"
 // @Param membership body UpdateMembershipRequest true "Updated Membership details"
 // @Success 200 {object} Membership
 // @Failure 400 {object} ErrorResponse
@@ -261,9 +271,19 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 
 	svc := services.NewMembershipService(c.db)
 	membership, err := svc.UpdateMembershipV2(membershipID, semesterID, &req)
-  if err != nil {
+	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+			return
+		}
+
+		// Check for validation errors
+		errMsg := err.Error()
+		if errMsg == "cannot set membership to not paid and discounted" {
+			ctx.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				apierrors.InvalidRequest(errMsg),
+			)
 			return
 		}
 
@@ -272,7 +292,7 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 			apierrors.InternalServerError(err.Error()),
 		)
 		return
-	} 
+	}
 
 	if membership == nil {
 		ctx.AbortWithStatusJSON(

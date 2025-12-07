@@ -94,26 +94,18 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 }
 
 func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {
-	semester := models.Semester{ID: id}
+	// Use atomic update to prevent race conditions
+	res := ss.db.Model(&models.Semester{}).
+		Where("id = ?", id).
+		Update("current_budget", gorm.Expr("current_budget + ?", amount))
 
-	res := ss.db.First(&semester)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Update budget by the new amount
-	semester.CurrentBudget += amount
-
-	res = ss.db.Save(&semester)
-	if err := res.Error; err != nil {
-		return e.InternalServerError(err.Error())
+	// Check if the semester was found (RowsAffected will be 0 if not found)
+	if res.RowsAffected == 0 {
+		return e.NotFound("semester not found")
 	}
 
 	return nil

@@ -339,9 +339,6 @@ definitions:
         type: boolean
       paid:
         type: boolean
-    required:
-    - discounted
-    - paid
     type: object
   models.Ranking:
     properties:
@@ -1341,7 +1338,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -1386,7 +1383,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       - description: Updated Membership details
         in: body
         name: membership

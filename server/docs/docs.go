@@ -1491,7 +1491,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Membership ID",
                         "name": "id",
                         "in": "path",
@@ -1558,7 +1558,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Membership ID",
                         "name": "id",
                         "in": "path",
@@ -2209,10 +2209,6 @@ const docTemplate = `{
         },
         "UpdateMembershipRequest": {
             "type": "object",
-            "required": [
-                "discounted",
-                "paid"
-            ],
             "properties": {
                 "discounted": {
                     "type": "boolean"

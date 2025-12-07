@@ -64,7 +64,7 @@ type ListMembershipsFilter struct {
 	SemesterID *uuid.UUID
 
 	// UserID will filter for memberships that are only held by this specified user.
-	UserID *int64
+	UserID *uint64
 }
 
 type CreateMembershipRequestV2 struct {
@@ -74,6 +74,6 @@ type CreateMembershipRequestV2 struct {
 } // @name CreateMembershipRequest
 
 type UpdateMembershipRequestV2 struct {
-	Paid       *bool `json:"paid"       binding:"omitempty,required"`
-	Discounted *bool `json:"discounted" binding:"omitempty,required"`
+	Paid       *bool `json:"paid"       binding:"omitempty"`
+	Discounted *bool `json:"discounted" binding:"omitempty"`
 } // @name UpdateMembershipRequest

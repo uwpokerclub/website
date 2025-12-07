@@ -1483,7 +1483,7 @@
                         "required": true
                     },
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Membership ID",
                         "name": "id",
                         "in": "path",
@@ -1550,7 +1550,7 @@
                         "required": true
                     },
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Membership ID",
                         "name": "id",
                         "in": "path",
@@ -2201,10 +2201,6 @@
         },
         "UpdateMembershipRequest": {
             "type": "object",
-            "required": [
-                "discounted",
-                "paid"
-            ],
             "properties": {
                 "discounted": {
                     "type": "boolean"

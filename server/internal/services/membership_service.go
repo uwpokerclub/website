@@ -389,34 +389,34 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 	}
 
 	// Determine budget adjustment based on original vs final state
-	budgetAdjustment := 0.0
+	var budgetAdjustment float32
 
 	// Membership changed from paid to not paid
 	if originalPaid && !finalPaid {
 		if originalDiscounted {
-			budgetAdjustment -= float64(semester.MembershipDiscountFee)
+			budgetAdjustment -= float32(semester.MembershipDiscountFee)
 		} else {
-			budgetAdjustment -= float64(semester.MembershipFee)
+			budgetAdjustment -= float32(semester.MembershipFee)
 		}
 	} else if !originalPaid && finalPaid {
 		// Membership changed from not paid to paid
 		if finalDiscounted {
-			budgetAdjustment += float64(semester.MembershipDiscountFee)
+			budgetAdjustment += float32(semester.MembershipDiscountFee)
 		} else {
-			budgetAdjustment += float64(semester.MembershipFee)
+			budgetAdjustment += float32(semester.MembershipFee)
 		}
 	} else if originalPaid && finalPaid {
 		// Membership remained paid, check for discount changes
 		if originalDiscounted && !finalDiscounted {
-			budgetAdjustment += float64(semester.MembershipFee - semester.MembershipDiscountFee)
+			budgetAdjustment += float32(semester.MembershipFee - semester.MembershipDiscountFee)
 		} else if !originalDiscounted && finalDiscounted {
-			budgetAdjustment -= float64(semester.MembershipFee - semester.MembershipDiscountFee)
+			budgetAdjustment -= float32(semester.MembershipFee - semester.MembershipDiscountFee)
 		}
 	}
 
 	// Apply budget adjustment if needed
-	if budgetAdjustment != 0.0 {
-		err = ss.UpdateBudget(existingMembership.SemesterID, float32(budgetAdjustment))
+	if budgetAdjustment != 0 {
+		err = ss.UpdateBudget(existingMembership.SemesterID, budgetAdjustment)
 		if err != nil {
 			tx.Rollback()
 			return nil, err

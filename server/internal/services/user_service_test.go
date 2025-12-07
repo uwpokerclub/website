@@ -58,6 +58,10 @@ func TestUserService(t *testing.T) {
 			name: "DeleteUser",
 			test: DeleteUserTest(),
 		},
+		{
+			name: "DeleteUser_NotFound",
+			test: DeleteUserNotFoundTest(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -596,5 +600,25 @@ func DeleteUserTest() func(*testing.T) {
 			t.Errorf("UserService.DeleteUser() user was not deleted from the DB: %v", res.Error)
 			return
 		}
+	}
+}
+
+func DeleteUserNotFoundTest() func(*testing.T) {
+	return func(t *testing.T) {
+		db, err := database.OpenTestConnection()
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		defer database.WipeDB(db)
+
+		us := NewUserService(db)
+
+		err = us.DeleteUser(999)
+		if err == nil {
+			t.Errorf("UserService.DeleteUser() did not error when deleting non-existent user")
+			return
+		}
+
+		assert.Contains(t, err.Error(), "NOT_FOUND", "Error should be a NotFound error")
 	}
 }

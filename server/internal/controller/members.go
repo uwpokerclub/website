@@ -18,7 +18,7 @@ type membersController struct {
 }
 
 // NewMembersController creates a new instance of membersController
-func NewMembersController(db *gorm.DB) *membersController {
+func NewMembersController(db *gorm.DB) Controller {
 	return &membersController{db: db}
 }
 
@@ -36,7 +36,7 @@ func validateMemberID(ctx *gin.Context) (uint64, error) {
 	idInt, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
 		return 0, apierrors.InvalidRequest(
-			fmt.Sprintf("Member ID '%s' is not a valid positive integer", idParam),
+			fmt.Sprintf("Member ID '%s' is not a valid integer", idParam),
 		)
 	}
 

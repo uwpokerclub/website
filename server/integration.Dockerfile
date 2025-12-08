@@ -28,7 +28,7 @@ RUN go build -buildvcs=false -o /app/server -tags test main_integration.go
 EXPOSE 5000
 
 # ====================== THIN IMAGE ======================
-FROM alpine:3.22.2
+FROM alpine:3.23.0
 
 WORKDIR /app
 

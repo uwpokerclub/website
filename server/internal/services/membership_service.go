@@ -441,3 +441,40 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 
 	return &existingMembership, nil
 }
+
+// ListMembershipsV2 lists all memberships with extended information including email
+func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.ListMembershipsResponseV2, error) {
+	ret := []models.ListMembershipsResponseV2{}
+
+	// Find the amount of events each member has participated in the semester
+	attendanceQuery := ms.db.
+		Select("participants.membership_id, COUNT(*) as total").
+		Table("participants").
+		Joins("INNER JOIN events ON participants.event_id = events.id").
+		Where("events.semester_id = ?", filter.SemesterID).
+		Group("participants.membership_id")
+
+	// Get a list of all members in the semester with the number of events they have attended
+	// ordered by the members name. Includes email for V2.
+	res := ms.db.
+		Select([]string{
+			"memberships.id", "users.id as user_id", "users.first_name", "users.last_name", "users.email",
+			"memberships.paid", "memberships.discounted", "COALESCE(attendance.total, 0) as attendance",
+		}).
+		Table("memberships").
+		Joins("LEFT JOIN (?) as attendance ON memberships.id = attendance.membership_id", attendanceQuery).
+		Joins("INNER JOIN users ON memberships.user_id = users.id").
+		Where("memberships.semester_id = ?", filter.SemesterID).
+		Order("users.first_name ASC").
+		Order("users.last_name ASC")
+
+	res = addFilterClauses(res, filter)
+
+	// Fetch the results and return an error if one occured
+	res = res.Scan(&ret)
+	if err := res.Error; err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}

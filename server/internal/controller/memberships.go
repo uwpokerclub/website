@@ -139,12 +139,14 @@ func (c *membershipsController) parseListMembershipsQueryParams(
 // listMemberships handles listing all memberships
 //
 // @Summary List all Memberships
-// @Description Retrieve a list of all Memberships
+// @Description Retrieve a list of all Memberships with extended information including email
 // @Tags Memberships
 // @Accept json
 // @Produce json
 // @Param semesterId path string true "Semester ID"
-// @Success 200 {array} Membership
+// @Param limit query int false "Maximum number of results to return"
+// @Param offset query int false "Number of results to skip"
+// @Success 200 {array} ListMembershipsResponseV2
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -161,7 +163,7 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 	filter.SemesterID = &semesterID
 
 	svc := services.NewMembershipService(c.db)
-	memberships, err := svc.ListMemberships(filter)
+	memberships, err := svc.ListMembershipsV2(filter)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

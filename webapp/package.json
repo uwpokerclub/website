@@ -13,7 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@uwpokerclub/components": "^1.4.0",
+    "@uwpokerclub/components": "^1.6.1",
     "react": "^19.0.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",

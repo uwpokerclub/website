@@ -6,8 +6,14 @@ WORKDIR /usr/app
 # Copy package.json and package-lock.json files over
 COPY webapp/package.json webapp/package-lock.json ./
 
+# Copy .npmrc for GitHub packages authentication
+COPY webapp/.npmrc ./
+
+# Build argument for GitHub token
+ARG GITHUB_PACKAGE_TOKEN
+
 # Install dependencies
-RUN npm ci --omit-dev
+RUN GITHUB_PACKAGE_TOKEN=${GITHUB_PACKAGE_TOKEN} npm ci --omit-dev
 
 # Copy files into container
 COPY webapp .

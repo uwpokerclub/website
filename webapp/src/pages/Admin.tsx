@@ -4,6 +4,7 @@ import { Users } from "./Users";
 import { Semesters } from "./Semesters";
 import { Rankings } from "./Rankings";
 import { Events } from "./Events";
+import { Members } from "./Members";
 import AdminLayout from "@/layouts/AdminLayout";
 
 export function Admin() {
@@ -12,6 +13,7 @@ export function Admin() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/users/*" element={<Users />} />
+        <Route path="/members/*" element={<Members />} />
         <Route path="/events/*" element={<Events />} />
         <Route path="/semesters/*" element={<Semesters />} />
         <Route path="/rankings/*" element={<Rankings />} />

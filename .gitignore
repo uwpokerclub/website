@@ -23,7 +23,7 @@ go.work
 
 server/public
 
-api
+/api
 ## Webapp Ignore List
 
 # Logs

@@ -442,11 +442,23 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 	return &existingMembership, nil
 }
 
-// ListMembershipsV2 lists all memberships with extended information including email
-func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.ListMembershipsResponseV2, error) {
-	ret := []models.ListMembershipsResponseV2{}
+// ListMembershipsV2 lists all memberships with embedded User and computed attendance count
+func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, error) {
+	var memberships []models.Membership
 
-	// Find the amount of events each member has participated in the semester
+	// Query memberships with User joined
+	query := ms.db.Joins("User").
+		Where("memberships.semester_id = ?", filter.SemesterID).
+		Order("\"User\".first_name ASC").
+		Order("\"User\".last_name ASC")
+
+	query = addFilterClauses(query, filter)
+
+	if err := query.Find(&memberships).Error; err != nil {
+		return nil, err
+	}
+
+	// Build attendance map from subquery
 	attendanceQuery := ms.db.
 		Select("participants.membership_id, COUNT(*) as total").
 		Table("participants").
@@ -454,27 +466,28 @@ func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFil
 		Where("events.semester_id = ?", filter.SemesterID).
 		Group("participants.membership_id")
 
-	// Get a list of all members in the semester with the number of events they have attended
-	// ordered by the members name. Includes email for V2.
-	res := ms.db.
-		Select([]string{
-			"memberships.id", "users.id as user_id", "users.first_name", "users.last_name", "users.email",
-			"memberships.paid", "memberships.discounted", "COALESCE(attendance.total, 0) as attendance",
-		}).
-		Table("memberships").
-		Joins("LEFT JOIN (?) as attendance ON memberships.id = attendance.membership_id", attendanceQuery).
-		Joins("INNER JOIN users ON memberships.user_id = users.id").
-		Where("memberships.semester_id = ?", filter.SemesterID).
-		Order("users.first_name ASC").
-		Order("users.last_name ASC")
-
-	res = addFilterClauses(res, filter)
-
-	// Fetch the results and return an error if one occured
-	res = res.Scan(&ret)
-	if err := res.Error; err != nil {
+	type attendanceResult struct {
+		MembershipID uuid.UUID
+		Total        int
+	}
+	var attendanceResults []attendanceResult
+	if err := attendanceQuery.Scan(&attendanceResults).Error; err != nil {
 		return nil, err
 	}
 
-	return ret, nil
+	attendanceMap := make(map[uuid.UUID]int)
+	for _, ar := range attendanceResults {
+		attendanceMap[ar.MembershipID] = ar.Total
+	}
+
+	// Build response with attendance
+	result := make([]models.MembershipWithAttendance, len(memberships))
+	for i, m := range memberships {
+		result[i] = models.MembershipWithAttendance{
+			Membership: m,
+			Attendance: attendanceMap[m.ID],
+		}
+	}
+
+	return result, nil
 }

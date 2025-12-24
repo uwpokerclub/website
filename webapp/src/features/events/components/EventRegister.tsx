@@ -23,7 +23,7 @@ export function EventRegister() {
   }, [eventId]);
 
   const filteredMembers = members.filter((m) =>
-    `${m.firstName} ${m.lastName}`.toLowerCase().includes(query.toLowerCase()),
+    `${m.user.firstName} ${m.user.lastName}`.toLowerCase().includes(query.toLowerCase()),
   );
 
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,7 +104,7 @@ export function EventRegister() {
 
                     <div className={styles.itemTitle}>
                       <span>
-                        {member.firstName} {member.lastName}
+                        {member.user.firstName} {member.user.lastName}
                       </span>
                     </div>
 

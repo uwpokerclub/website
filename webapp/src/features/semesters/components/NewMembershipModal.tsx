@@ -44,7 +44,7 @@ export function NewMembershipModal({ show, onClose, semesterId }: NewMembershipM
     }
 
     const userIds = users.map((u) => u.id);
-    const memberIds = memberships.map((m) => m.userId);
+    const memberIds = memberships.map((m) => String(m.userId));
 
     const userSet = new Set(userIds);
     const memberSet = new Set(memberIds);

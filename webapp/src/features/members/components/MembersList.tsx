@@ -4,6 +4,7 @@ import { SemesterContext } from "@/contexts";
 import { Membership } from "@/types";
 import { useAuth } from "@/hooks";
 import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaUsers } from "react-icons/fa";
+import { RegisterMemberModal } from "./RegisterMemberModal";
 import styles from "./MembersList.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -18,6 +19,8 @@ export function MembersList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -61,7 +64,7 @@ export function MembersList() {
     };
 
     fetchMembers();
-  }, [semesterContext?.currentSemester]);
+  }, [semesterContext?.currentSemester, refreshTrigger]);
 
   // Filter members by search query
   const filteredMembers = useMemo(() => {
@@ -136,9 +139,14 @@ export function MembersList() {
     setSearchQuery("");
   };
 
-  // Handle register new member (placeholder)
+  // Handle register new member
   const handleRegisterMember = () => {
-    alert("Member registration functionality coming soon!");
+    setIsRegisterModalOpen(true);
+  };
+
+  // Handle successful registration
+  const handleRegistrationSuccess = () => {
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   // Handle member actions (placeholders)
@@ -350,6 +358,13 @@ export function MembersList() {
           />
         </div>
       )}
+
+      {/* Register Member Modal */}
+      <RegisterMemberModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onSuccess={handleRegistrationSuccess}
+      />
     </div>
   );
 }

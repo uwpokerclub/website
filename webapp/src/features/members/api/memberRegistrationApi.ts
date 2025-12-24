@@ -187,3 +187,91 @@ export async function registerNewMemberWithMembership(
     },
   };
 }
+
+/**
+ * Request type for updating a member
+ */
+export interface UpdateMemberRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  faculty: string;
+  questId: string;
+}
+
+/**
+ * Request type for updating a membership
+ */
+export interface UpdateMembershipRequest {
+  paid?: boolean;
+  discounted?: boolean;
+}
+
+/**
+ * Update an existing member's information
+ * @param memberId - The member's ID (student ID)
+ * @param data - Updated member data
+ * @returns Updated member or error
+ */
+export async function updateMember(memberId: string, data: UpdateMemberRequest): Promise<ApiResult<User>> {
+  const { status, data: responseData } = await sendAPIRequest<User | APIErrorResponse>(
+    `v2/members/${memberId}`,
+    "PATCH",
+    data as unknown as Record<string, unknown>,
+  );
+
+  if (status === 200) {
+    return { success: true, data: responseData as User };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Member not found" };
+  }
+
+  const errorResponse = responseData as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to update member",
+  };
+}
+
+/**
+ * Update an existing membership
+ * @param semesterId - The semester ID
+ * @param membershipId - The membership ID
+ * @param data - Updated membership data (paid, discounted)
+ * @returns Updated membership or error
+ */
+export async function updateMembership(
+  semesterId: string,
+  membershipId: string,
+  data: UpdateMembershipRequest,
+): Promise<ApiResult<Membership>> {
+  const { status, data: responseData } = await sendAPIRequest<Membership | APIErrorResponse>(
+    `v2/semesters/${semesterId}/memberships/${membershipId}`,
+    "PATCH",
+    data as unknown as Record<string, unknown>,
+  );
+
+  if (status === 200) {
+    return { success: true, data: responseData as Membership };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Membership not found" };
+  }
+
+  if (status === 400) {
+    const errorResponse = responseData as APIErrorResponse | undefined;
+    return {
+      success: false,
+      error: errorResponse?.message ?? "Invalid membership data",
+    };
+  }
+
+  const errorResponse = responseData as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to update membership",
+  };
+}

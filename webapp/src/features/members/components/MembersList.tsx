@@ -5,6 +5,7 @@ import { Membership } from "@/types";
 import { useAuth } from "@/hooks";
 import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaUsers } from "react-icons/fa";
 import { RegisterMemberModal } from "./RegisterMemberModal";
+import { EditMemberModal } from "./EditMemberModal";
 import styles from "./MembersList.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -20,6 +21,8 @@ export function MembersList() {
   const [sortKey, setSortKey] = useState<string | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Debounce search query
@@ -149,10 +152,21 @@ export function MembersList() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Handle member actions (placeholders)
-  const handleViewEdit = (memberId: string) => {
-    console.log("View/Edit member:", memberId);
-    alert("View/Edit functionality coming soon!");
+  // Handle edit member
+  const handleViewEdit = (membership: Membership) => {
+    setSelectedMembership(membership);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle edit modal close
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+    setSelectedMembership(null);
+  };
+
+  // Handle edit success
+  const handleEditSuccess = () => {
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleDelete = (memberId: string) => {
@@ -198,15 +212,16 @@ export function MembersList() {
       sortable: false,
       render: (_value, row) => (
         <div className={styles.actions}>
-          <button
-            className={styles.iconButton}
-            onClick={() => handleViewEdit(row.id)}
-            disabled
-            title="View/Edit member"
-            aria-label="View/Edit member"
-          >
-            <FaEdit />
-          </button>
+          {hasPermission("edit", "membership") && (
+            <button
+              className={styles.iconButton}
+              onClick={() => handleViewEdit(row)}
+              title="Edit member"
+              aria-label="Edit member"
+            >
+              <FaEdit />
+            </button>
+          )}
           <button
             className={`${styles.iconButton} ${styles.danger}`}
             onClick={() => handleDelete(row.id)}
@@ -364,6 +379,14 @@ export function MembersList() {
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
         onSuccess={handleRegistrationSuccess}
+      />
+
+      {/* Edit Member Modal */}
+      <EditMemberModal
+        isOpen={isEditModalOpen}
+        membership={selectedMembership}
+        onClose={handleEditModalClose}
+        onSuccess={handleEditSuccess}
       />
     </div>
   );

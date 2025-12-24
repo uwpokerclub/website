@@ -59,3 +59,22 @@ export const createModeSchema = z.object({
 });
 
 export type CreateModeFormData = z.infer<typeof createModeSchema>;
+
+// Schema for editing a member (no student ID - it's display only)
+export const editMemberSchema = z.object({
+  questId: z.string().optional(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email format"),
+  faculty: facultySchema.refine((val) => val !== "", { message: "Faculty is required" }),
+});
+
+export type EditMemberFormData = z.infer<typeof editMemberSchema>;
+
+// Combined schema for edit mode (member details + membership config)
+export const editMemberMembershipSchema = z.object({
+  member: editMemberSchema,
+  membership: membershipSchema,
+});
+
+export type EditMemberMembershipFormData = z.infer<typeof editMemberMembershipSchema>;

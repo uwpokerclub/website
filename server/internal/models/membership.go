@@ -78,15 +78,8 @@ type UpdateMembershipRequestV2 struct {
 	Discounted *bool `json:"discounted" binding:"omitempty"`
 } // @name UpdateMembershipRequest
 
-// ListMembershipsResponseV2 is the response structure for V2 list memberships endpoint
-// with additional fields like email
-type ListMembershipsResponseV2 struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uint64    `json:"userId"`
-	FirstName  string    `json:"firstName"`
-	LastName   string    `json:"lastName"`
-	Email      string    `json:"email"`
-	Paid       bool      `json:"paid"`
-	Discounted bool      `json:"discounted"`
-	Attendance int       `json:"attendance"`
-} // @name ListMembershipsResponseV2
+// MembershipWithAttendance embeds Membership with computed attendance count
+type MembershipWithAttendance struct {
+	Membership
+	Attendance int `json:"attendance"`
+} // @name MembershipWithAttendance

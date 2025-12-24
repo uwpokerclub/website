@@ -19,7 +19,7 @@ export function MembershipsTable({ semesterId }: MembershipsTableProps) {
   const filteredMemberships = useMemo(() => {
     return (
       memberships?.filter((member) =>
-        `${member.firstName} ${member.lastName}`.toLowerCase().includes(query.toLowerCase()),
+        `${member.user.firstName} ${member.user.lastName}`.toLowerCase().includes(query.toLowerCase()),
       ) || []
     );
   }, [query, memberships]);
@@ -93,9 +93,9 @@ export function MembershipsTable({ semesterId }: MembershipsTableProps) {
               <tr data-qa={`member-${m.id}`} key={m.id}>
                 <td data-qa={`member-userId-${m.userId}`}>{m.userId}</td>
 
-                <td>{m.firstName}</td>
+                <td>{m.user.firstName}</td>
 
-                <td>{m.lastName}</td>
+                <td>{m.user.lastName}</td>
 
                 <td>{m.paid ? "Yes" : "No"}</td>
 

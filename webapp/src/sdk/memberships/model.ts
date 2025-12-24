@@ -1,8 +1,10 @@
+import type { User } from "../../types/user";
+
 export interface Membership {
   id: string;
   userId: number;
-  firstName: string;
-  lastName: string;
+  user: User;
+  semesterId: string;
   paid: boolean;
   discounted: boolean;
   attendance: number;

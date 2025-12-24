@@ -2,6 +2,8 @@ services:
   webapp:
     build:
       context: ./webapp
+      args:
+        - GITHUB_PACKAGE_TOKEN=${GITHUB_PACKAGE_TOKEN}
     volumes:
       - ./webapp:/usr/app
     ports:

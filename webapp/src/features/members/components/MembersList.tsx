@@ -75,10 +75,10 @@ export function MembersList() {
     const query = debouncedSearchQuery.toLowerCase();
     return members.filter(
       (member) =>
-        member.firstName.toLowerCase().includes(query) ||
-        member.lastName.toLowerCase().includes(query) ||
-        member.email.toLowerCase().includes(query) ||
-        `${member.firstName} ${member.lastName}`.toLowerCase().includes(query),
+        member.user.firstName.toLowerCase().includes(query) ||
+        member.user.lastName.toLowerCase().includes(query) ||
+        member.user.email.toLowerCase().includes(query) ||
+        `${member.user.firstName} ${member.user.lastName}`.toLowerCase().includes(query),
     );
   }, [members, debouncedSearchQuery]);
 
@@ -98,12 +98,12 @@ export function MembersList() {
           bValue = b.userId;
           break;
         case "name":
-          aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
-          bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+          aValue = `${a.user.firstName} ${a.user.lastName}`.toLowerCase();
+          bValue = `${b.user.firstName} ${b.user.lastName}`.toLowerCase();
           break;
         case "email":
-          aValue = a.email.toLowerCase();
-          bValue = b.email.toLowerCase();
+          aValue = a.user.email.toLowerCase();
+          bValue = b.user.email.toLowerCase();
           break;
         case "status":
           aValue = a.paid ? (a.discounted ? "Discounted" : "Paid") : "Unpaid";
@@ -171,13 +171,13 @@ export function MembersList() {
     {
       key: "name",
       header: "Name",
-      accessor: (row) => `${row.firstName} ${row.lastName}`,
+      accessor: (row) => `${row.user.firstName} ${row.user.lastName}`,
       sortable: true,
     },
     {
       key: "email",
       header: "Email",
-      accessor: "email",
+      accessor: (row) => row.user.email,
       sortable: true,
     },
     {

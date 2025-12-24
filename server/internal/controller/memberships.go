@@ -146,7 +146,7 @@ func (c *membershipsController) parseListMembershipsQueryParams(
 // @Param semesterId path string true "Semester ID"
 // @Param limit query int false "Maximum number of results to return"
 // @Param offset query int false "Number of results to skip"
-// @Success 200 {array} ListMembershipsResponseV2
+// @Success 200 {array} MembershipWithAttendance
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse

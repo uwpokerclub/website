@@ -1349,7 +1349,7 @@ const docTemplate = `{
         },
         "/semesters/{semesterId}/memberships": {
             "get": {
-                "description": "Retrieve a list of all Memberships",
+                "description": "Retrieve a list of all Memberships with extended information including email",
                 "consumes": [
                     "application/json"
                 ],
@@ -1367,6 +1367,18 @@ const docTemplate = `{
                         "name": "semesterId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of results to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of results to skip",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1375,7 +1387,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/Membership"
+                                "$ref": "#/definitions/MembershipWithAttendance"
                             }
                         }
                     },
@@ -2206,6 +2218,38 @@ const docTemplate = `{
         "Membership": {
             "type": "object",
             "properties": {
+                "discounted": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "paid": {
+                    "type": "boolean"
+                },
+                "ranking": {
+                    "$ref": "#/definitions/Ranking"
+                },
+                "semester": {
+                    "$ref": "#/definitions/Semester"
+                },
+                "semesterId": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/Member"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "MembershipWithAttendance": {
+            "type": "object",
+            "properties": {
+                "attendance": {
+                    "type": "integer"
+                },
                 "discounted": {
                     "type": "boolean"
                 },

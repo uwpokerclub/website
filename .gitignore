@@ -22,8 +22,8 @@ go.work
 .vscode
 
 server/public
+server/api
 
-api
 ## Webapp Ignore List
 
 # Logs

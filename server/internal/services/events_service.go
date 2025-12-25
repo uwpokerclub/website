@@ -381,7 +381,7 @@ func (svc *eventService) CreateEventV2(
 func (svc *eventService) ListEventsV2(semesterID uuid.UUID) ([]models.Event, error) {
 	events := make([]models.Event, 0)
 
-	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{}).
+	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
 		Where("semester_id = ?", semesterID).
 		Order("start_date DESC").
 		Find(&events).

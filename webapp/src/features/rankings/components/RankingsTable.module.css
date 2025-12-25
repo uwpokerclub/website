@@ -1,0 +1,124 @@
+.container {
+  width: 100%;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.searchContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.searchInputWrapper {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+  max-width: 400px;
+}
+
+.clearButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-gray-500, #9e9e9e);
+  cursor: pointer;
+  transition: color 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.clearButton:hover {
+  color: var(--color-gray-700, #616161);
+}
+
+.clearButton:active {
+  color: var(--color-gray-900, #212121);
+}
+
+.resultsInfo {
+  color: var(--color-text-secondary, #666);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.resultsInfo p {
+  margin: 0;
+}
+
+.paginationContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  text-align: center;
+}
+
+.emptyIllustration {
+  color: var(--color-gray-300, #e0e0e0);
+  margin-bottom: 1rem;
+}
+
+.emptyState h3 {
+  font-size: 1.5rem;
+  color: var(--color-gray-900, #212121);
+  margin: 0;
+  font-weight: 600;
+}
+
+.emptyState p {
+  font-size: 1rem;
+  color: var(--color-gray-600, #757575);
+  margin: 0;
+  max-width: 400px;
+}
+
+.emptyHint {
+  font-size: 0.875rem !important;
+  color: var(--color-gray-500, #9e9e9e) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .searchContainer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInputWrapper {
+    max-width: 100%;
+  }
+
+  .resultsInfo {
+    font-size: 0.8rem;
+  }
+
+  .tableWrapper {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  .paginationContainer {
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+  }
+}

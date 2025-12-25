@@ -40,13 +40,7 @@ export function EventDetailsForm() {
 
       <FormField label="Start Date" htmlFor="startDate" required error={errors.startDate?.message}>
         {(props) => (
-          <Input
-            {...props}
-            {...register("startDate")}
-            type="datetime-local"
-            error={!!errors.startDate}
-            fullWidth
-          />
+          <Input {...props} {...register("startDate")} type="datetime-local" error={!!errors.startDate} fullWidth />
         )}
       </FormField>
 

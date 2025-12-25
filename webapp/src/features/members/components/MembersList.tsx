@@ -240,9 +240,6 @@ export function MembersList() {
   if (isLoading) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>Members</h1>
-        </div>
         <div className={styles.centerContent}>
           <Spinner size="lg" />
           <p>Loading members...</p>
@@ -255,9 +252,6 @@ export function MembersList() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>Members</h1>
-        </div>
         <div className={styles.errorState}>
           <p>Error: {error}</p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
@@ -270,9 +264,6 @@ export function MembersList() {
   if (!semesterContext?.currentSemester) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>Members</h1>
-        </div>
         <div className={styles.emptyState}>
           <p>Please select a semester to view members.</p>
         </div>
@@ -282,10 +273,6 @@ export function MembersList() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1>Members</h1>
-      </div>
-
       {/* Search and action bar */}
       <div className={styles.searchContainer}>
         <div className={styles.searchInputWrapper}>

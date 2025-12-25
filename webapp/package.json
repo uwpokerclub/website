@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@uwpokerclub/components": "^1.12.1",
+    "@uwpokerclub/components": "^1.13.0",
     "react": "^19.0.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.69.0",

@@ -1,11 +1,12 @@
 import { useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Table, TableColumn, Button, Input, Pagination, Spinner, useToast } from "@uwpokerclub/components";
+import { Table, TableColumn, Button, Input, Pagination, Spinner, useToast, Modal } from "@uwpokerclub/components";
 import { SemesterContext } from "@/contexts";
 import { useAuth } from "@/hooks";
 import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo } from "react-icons/fa";
 import { EventState } from "@/sdk/events";
 import { Participant } from "@/sdk/participants";
+import { CreateEventModal } from "./CreateEventModal";
 import styles from "./ListEvents.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -32,6 +33,7 @@ function EventActions({ event, onActionComplete }: EventActionsProps) {
   const { showToast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEndConfirmOpen, setIsEndConfirmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -45,13 +47,13 @@ function EventActions({ event, onActionComplete }: EventActionsProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleEndEvent = async () => {
-    if (!semesterContext?.currentSemester) return;
+  const handleEndEventClick = () => {
+    setIsMenuOpen(false);
+    setIsEndConfirmOpen(true);
+  };
 
-    const confirmed = window.confirm(
-      `Are you sure you want to end "${event.name}"? This will finalize the event results.`,
-    );
-    if (!confirmed) return;
+  const handleEndEventConfirm = async () => {
+    if (!semesterContext?.currentSemester) return;
 
     setIsProcessing(true);
     try {
@@ -76,7 +78,7 @@ function EventActions({ event, onActionComplete }: EventActionsProps) {
       });
     } finally {
       setIsProcessing(false);
-      setIsMenuOpen(false);
+      setIsEndConfirmOpen(false);
     }
   };
 
@@ -120,44 +122,67 @@ function EventActions({ event, onActionComplete }: EventActionsProps) {
   }
 
   return (
-    <div className={styles.actions} ref={menuRef}>
-      <div className={styles.menuWrapper}>
-        <button
-          className={styles.iconButton}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          title="Actions"
-          aria-label="Actions"
-          disabled={isProcessing}
-        >
-          {isProcessing ? <Spinner size="sm" /> : <FaEllipsisV />}
-        </button>
+    <>
+      <div className={styles.actions} ref={menuRef}>
+        <div className={styles.menuWrapper}>
+          <button
+            className={styles.iconButton}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            title="Actions"
+            aria-label="Actions"
+            disabled={isProcessing}
+          >
+            {isProcessing ? <Spinner size="sm" /> : <FaEllipsisV />}
+          </button>
 
-        {isMenuOpen && (
-          <div className={styles.dropdownMenu}>
-            {showEdit &&
-              (isEditDisabled ? (
-                <span className={`${styles.menuItem} ${styles.menuItemDisabled}`}>
-                  <FaPencilAlt /> Edit Event
-                </span>
-              ) : (
-                <Link to={`${event.id}/edit`} className={styles.menuItem}>
-                  <FaPencilAlt /> Edit Event
-                </Link>
-              ))}
-            {showEndEvent && (
-              <button className={styles.menuItem} onClick={handleEndEvent} disabled={isProcessing}>
-                <FaStop /> End Event
-              </button>
-            )}
-            {showRestartEvent && (
-              <button className={styles.menuItem} onClick={handleRestartEvent} disabled={isProcessing}>
-                <FaRedo /> Restart Event
-              </button>
-            )}
-          </div>
-        )}
+          {isMenuOpen && (
+            <div className={styles.dropdownMenu}>
+              {showEdit &&
+                (isEditDisabled ? (
+                  <span className={`${styles.menuItem} ${styles.menuItemDisabled}`}>
+                    <FaPencilAlt /> Edit Event
+                  </span>
+                ) : (
+                  <Link to={`${event.id}/edit`} className={styles.menuItem}>
+                    <FaPencilAlt /> Edit Event
+                  </Link>
+                ))}
+              {showEndEvent && (
+                <button className={styles.menuItem} onClick={handleEndEventClick} disabled={isProcessing}>
+                  <FaStop /> End Event
+                </button>
+              )}
+              {showRestartEvent && (
+                <button className={styles.menuItem} onClick={handleRestartEvent} disabled={isProcessing}>
+                  <FaRedo /> Restart Event
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <Modal
+        isOpen={isEndConfirmOpen}
+        onClose={() => setIsEndConfirmOpen(false)}
+        title="End Event"
+        size="sm"
+        footer={
+          <div className={styles.confirmFooter}>
+            <Button variant="tertiary" onClick={() => setIsEndConfirmOpen(false)} disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleEndEventConfirm} disabled={isProcessing}>
+              {isProcessing ? "Ending..." : "End Event"}
+            </Button>
+          </div>
+        }
+      >
+        <p>
+          Are you sure you want to end <strong>&quot;{event.name}&quot;</strong>? This will finalize the event results.
+        </p>
+      </Modal>
+    </>
   );
 }
 
@@ -179,6 +204,7 @@ export function ListEvents() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -386,7 +412,7 @@ export function ListEvents() {
           />
         </div>
         {hasPermission("create", "event") && (
-          <Button disabled title="Coming soon" iconBefore={<FaPlus />}>
+          <Button onClick={() => setIsCreateModalOpen(true)} iconBefore={<FaPlus />}>
             Create Event
           </Button>
         )}
@@ -440,6 +466,13 @@ export function ListEvents() {
           />
         </div>
       )}
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleRefresh}
+      />
     </div>
   );
 }

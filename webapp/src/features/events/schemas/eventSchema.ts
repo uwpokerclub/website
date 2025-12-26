@@ -53,3 +53,14 @@ export const createEventSchema = z.object({
 });
 
 export type CreateEventFormData = z.infer<typeof createEventSchema>;
+
+// Edit event schema (no structure editing)
+export const editEventSchema = z.object({
+  name: z.string().min(1, "Event name is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  format: formatSchema,
+  pointsMultiplier: z.number().min(0, "Points multiplier must be >= 0"),
+  notes: z.string().optional(),
+});
+
+export type EditEventFormData = z.infer<typeof editEventSchema>;

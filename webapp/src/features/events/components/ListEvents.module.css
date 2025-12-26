@@ -281,22 +281,18 @@
     width: 100%;
   }
 
+  /* Prevent text wrapping so table scrolls horizontally */
   .tableWrapper td,
   .tableWrapper th {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100px;
   }
 
-  .tableWrapper td:first-child {
-    max-width: 80px;
-  }
-
-  .eventLink {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  /* Larger touch target for mobile */
+  .iconButton {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .paginationContainer {

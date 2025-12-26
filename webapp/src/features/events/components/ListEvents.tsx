@@ -7,6 +7,7 @@ import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaS
 import { EventState } from "@/sdk/events";
 import { Participant } from "@/sdk/participants";
 import { CreateEventModal } from "./CreateEventModal";
+import { EditEventModal, type EventData } from "./EditEventModal";
 import styles from "./ListEvents.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -25,9 +26,10 @@ type ListEventsResponse = {
 type EventActionsProps = {
   event: ListEventsResponse;
   onActionComplete: () => void;
+  onEditClick: (event: ListEventsResponse) => void;
 };
 
-function EventActions({ event, onActionComplete }: EventActionsProps) {
+function EventActions({ event, onActionComplete, onEditClick }: EventActionsProps) {
   const { hasPermission } = useAuth();
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
@@ -126,6 +128,7 @@ function EventActions({ event, onActionComplete }: EventActionsProps) {
       <div className={styles.actions} ref={menuRef}>
         <div className={styles.menuWrapper}>
           <button
+            type="button"
             className={styles.iconButton}
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             title="Actions"
@@ -143,9 +146,16 @@ function EventActions({ event, onActionComplete }: EventActionsProps) {
                     <FaPencilAlt /> Edit Event
                   </span>
                 ) : (
-                  <Link to={`${event.id}/edit`} className={styles.menuItem}>
+                  <button
+                    type="button"
+                    className={styles.menuItem}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onEditClick(event);
+                    }}
+                  >
                     <FaPencilAlt /> Edit Event
-                  </Link>
+                  </button>
                 ))}
               {showEndEvent && (
                 <button className={styles.menuItem} onClick={handleEndEventClick} disabled={isProcessing}>
@@ -205,6 +215,8 @@ export function ListEvents() {
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
 
   // Debounce search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -284,6 +296,25 @@ export function ListEvents() {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
+  // Handle edit click
+  const handleEditClick = useCallback((event: ListEventsResponse) => {
+    setEditingEvent({
+      id: event.id,
+      name: event.name,
+      format: event.format,
+      notes: event.notes,
+      startDate: event.startDate,
+      state: event.state,
+    });
+    setIsEditModalOpen(true);
+  }, []);
+
+  // Handle edit modal close
+  const handleEditModalClose = useCallback(() => {
+    setIsEditModalOpen(false);
+    setEditingEvent(null);
+  }, []);
+
   // Check if user has any action permissions
   const hasAnyActionPermission = useMemo(
     () => hasPermission("edit", "event") || hasPermission("end", "event") || hasPermission("restart", "event"),
@@ -343,7 +374,7 @@ export function ListEvents() {
             accessor: () => "",
             sortable: false,
             render: (_value: unknown, row: ListEventsResponse) => (
-              <EventActions event={row} onActionComplete={handleRefresh} />
+              <EventActions event={row} onActionComplete={handleRefresh} onEditClick={handleEditClick} />
             ),
           },
         ]
@@ -471,6 +502,14 @@ export function ListEvents() {
       <CreateEventModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Edit Event Modal */}
+      <EditEventModal
+        isOpen={isEditModalOpen}
+        event={editingEvent}
+        onClose={handleEditModalClose}
         onSuccess={handleRefresh}
       />
     </div>

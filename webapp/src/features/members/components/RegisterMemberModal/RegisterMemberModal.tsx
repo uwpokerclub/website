@@ -3,7 +3,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { SemesterContext } from "../../../../contexts";
-import { MemberSearch } from "./MemberSearch";
+import { MemberSearch, type SelectedMemberData } from "./MemberSearch";
 import { NewMemberForm } from "./NewMemberForm";
 import { MembershipConfig } from "./MembershipConfig";
 import {
@@ -17,10 +17,21 @@ import styles from "./RegisterMemberModal.module.css";
 
 type Mode = "search" | "create";
 
+/**
+ * Data returned on successful member registration
+ */
+export interface RegistrationSuccessData {
+  membershipId: string;
+  userId: number;
+  firstName: string;
+  lastName: string;
+}
+
 export interface RegisterMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  /** Called on success. Optionally receives the created membership data. */
+  onSuccess: (data?: RegistrationSuccessData) => void;
 }
 
 /**
@@ -36,6 +47,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
   const [mode, setMode] = useState<Mode>("search");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [selectedMemberName, setSelectedMemberName] = useState<{ firstName: string; lastName: string } | null>(null);
 
   // Search mode form
   const searchForm = useForm<SearchModeFormData>({
@@ -73,6 +85,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     searchForm.reset();
     createForm.reset();
     setSubmitError(null);
+    setSelectedMemberName(null);
   }, [searchForm, createForm]);
 
   // Handle mode toggle
@@ -89,8 +102,13 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
   };
 
   // Handle search mode selection
-  const handleMemberSelect = (memberId: string | null) => {
-    searchForm.setValue("selectedMemberId", memberId ?? "", { shouldValidate: true });
+  const handleMemberSelect = (member: SelectedMemberData | null) => {
+    searchForm.setValue("selectedMemberId", member?.id ?? "", { shouldValidate: true });
+    if (member) {
+      setSelectedMemberName({ firstName: member.firstName, lastName: member.lastName });
+    } else {
+      setSelectedMemberName(null);
+    }
   };
 
   // Submit handler for search mode
@@ -119,7 +137,14 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         duration: 3000,
       });
       searchForm.reset();
-      onSuccess();
+      // Pass membership data to callback, using stored name from selection
+      onSuccess({
+        membershipId: result.data.id,
+        userId: result.data.userId,
+        firstName: selectedMemberName?.firstName ?? result.data.user?.firstName ?? "",
+        lastName: selectedMemberName?.lastName ?? result.data.user?.lastName ?? "",
+      });
+      setSelectedMemberName(null);
     } else {
       setSubmitError(result.error);
       showToast({
@@ -150,14 +175,20 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     setIsSubmitting(false);
 
     if (result.success) {
-      const { member } = result.data;
+      const { member, membership } = result.data;
       showToast({
         message: `${member.firstName} ${member.lastName} registered successfully!`,
         variant: "success",
         duration: 3000,
       });
       createForm.reset();
-      onSuccess();
+      // Pass membership data to callback
+      onSuccess({
+        membershipId: membership.id,
+        userId: membership.userId,
+        firstName: member.firstName,
+        lastName: member.lastName,
+      });
     } else {
       setSubmitError(result.error);
       showToast({

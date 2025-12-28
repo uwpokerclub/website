@@ -25,6 +25,7 @@ import styles from "./EventDetails.module.css";
 import { TournamentClock } from "../../tournament-clock";
 import { EndEventModal } from "./EndEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
+import { EventRegistrationModal } from "./EventRegistrationModal";
 import { DropdownMenu, type DropdownMenuItem } from "./DropdownMenu";
 import { EventResponse, fetchEvent } from "../api/eventApi";
 
@@ -50,6 +51,7 @@ export function EventDetails() {
   const [activeTab, setActiveTab] = useState<"info" | "clock">("info");
   const [activeSubTab, setActiveSubTab] = useState<"entries" | "structure">("entries");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const endEventBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -426,14 +428,15 @@ export function EventDetails() {
           {!isEventEnded && (
             <>
               {hasPermission("signin", "event", "participant") && (
-                <Link
+                <button
                   data-qa="register-members-btn"
-                  to="register"
+                  type="button"
+                  onClick={() => setIsRegistrationModalOpen(true)}
                   className={`${styles.actionButton} ${styles.actionPrimary}`}
                 >
                   <FaUserPlus />
                   Register Members
-                </Link>
+                </button>
               )}
 
               {hasPermission("rebuy", "event") && (
@@ -586,6 +589,14 @@ export function EventDetails() {
         event={editEventData}
         onClose={handleEditModalClose}
         onSuccess={handleEditSuccess}
+      />
+
+      <EventRegistrationModal
+        isOpen={isRegistrationModalOpen}
+        onClose={() => setIsRegistrationModalOpen(false)}
+        semesterId={currentSemester.id}
+        eventId={event.id}
+        onRegistrationChange={fetchEntries}
       />
     </>
   );

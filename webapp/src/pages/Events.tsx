@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import { EventDetails, EventRegister, ListEvents, NewEvent } from "../features/events";
+import { EventDetails, ListEvents, NewEvent } from "../features/events";
 import { EditEventPage } from "./events/EditEventPage";
 import { RequirePermission } from "@/components";
 
@@ -35,14 +35,6 @@ export function Events() {
         element={
           <RequirePermission resource="event" action="edit">
             <EditEventPage />
-          </RequirePermission>
-        }
-      />
-      <Route
-        path="/:eventId/register"
-        element={
-          <RequirePermission resource="event" subResource="participant" action="signin">
-            <EventRegister />
           </RequirePermission>
         }
       />

@@ -1,46 +1,70 @@
-import { useParams } from "react-router-dom";
-import { Modal } from "../../../components";
+import { Modal, Button } from "@uwpokerclub/components";
 import { useCallback, useState } from "react";
-import { endEvent } from "../../../sdk/events";
+
+import styles from "./EndEventModal.module.css";
 
 type EndEventModalProps = {
   show: boolean;
+  semesterId: string;
+  eventId: number;
   onClose: () => void;
   onSuccess: () => void;
 };
 
-export function EndEventModal({ show, onClose, onSuccess }: EndEventModalProps) {
-  const { eventId = "" } = useParams<{ eventId: string }>();
-
+export function EndEventModal({ show, semesterId, eventId, onClose, onSuccess }: EndEventModalProps) {
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = useCallback(async () => {
+    setIsSubmitting(true);
+    setError("");
+
     try {
-      await endEvent(eventId);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) {
-        setError((err as Error).message);
-        return;
+      const response = await fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/end`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || "Failed to end event");
       }
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to end event");
+    } finally {
+      setIsSubmitting(false);
     }
-    onSuccess();
+  }, [semesterId, eventId, onClose, onSuccess]);
+
+  const handleClose = useCallback(() => {
+    setError("");
     onClose();
-    setError(() => "");
-  }, [eventId, onClose, onSuccess]);
+  }, [onClose]);
+
+  const footer = (
+    <div className={styles.footer}>
+      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
+        Go back
+      </Button>
+      <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitting}>
+        {isSubmitting ? "Ending..." : "End event"}
+      </Button>
+    </div>
+  );
 
   return (
     <Modal
+      isOpen={show}
+      onClose={handleClose}
       title="Are you sure you want to end the event?"
-      show={show}
-      primaryButtonText="End event"
-      primaryButtonType="danger"
-      closeButtonText="Go back"
-      closeButtonType="outline-secondary"
-      onClose={onClose}
-      onSubmit={handleSubmit}
+      size="md"
+      footer={footer}
     >
       {error && (
-        <div className="alert alert-danger" role="alert">
+        <div className={styles.errorAlert} role="alert">
           {error}
         </div>
       )}

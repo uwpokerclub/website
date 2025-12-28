@@ -2,11 +2,20 @@ import { useState, useCallback } from "react";
 import { Combobox, type ComboboxOption } from "@uwpokerclub/components";
 import { useMemberSearch, type MemberSearchOption } from "../../hooks/useMemberSearch";
 
+/**
+ * Selected member data passed to onSelect callback
+ */
+export interface SelectedMemberData {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface MemberSearchProps {
   /**
-   * Callback when a member is selected
+   * Callback when a member is selected. Receives full member data or null if cleared.
    */
-  onSelect: (memberId: string | null) => void;
+  onSelect: (member: SelectedMemberData | null) => void;
   /**
    * Currently selected member ID
    */
@@ -26,6 +35,7 @@ export interface MemberSearchProps {
 export function MemberSearch({ onSelect, value, error: externalError }: MemberSearchProps) {
   const { searchMembers, isSearching, error: searchError, clearError } = useMemberSearch();
   const [options, setOptions] = useState<ComboboxOption[]>([]);
+  const [memberDataMap, setMemberDataMap] = useState<Map<string, SelectedMemberData>>(new Map());
 
   const handleSearch = useCallback(
     async (query: string) => {
@@ -38,15 +48,30 @@ export function MemberSearch({ onSelect, value, error: externalError }: MemberSe
           label: result.label,
         })),
       );
+      // Store member data for lookup when selected
+      const dataMap = new Map<string, SelectedMemberData>();
+      results.forEach((result: MemberSearchOption) => {
+        dataMap.set(result.value, {
+          id: result.value,
+          firstName: result.data.firstName,
+          lastName: result.data.lastName,
+        });
+      });
+      setMemberDataMap(dataMap);
     },
     [searchMembers, clearError],
   );
 
   const handleChange = useCallback(
     (selectedValue: string | null) => {
-      onSelect(selectedValue);
+      if (selectedValue === null) {
+        onSelect(null);
+      } else {
+        const memberData = memberDataMap.get(selectedValue);
+        onSelect(memberData ?? { id: selectedValue, firstName: "", lastName: "" });
+      }
     },
-    [onSelect],
+    [onSelect, memberDataMap],
   );
 
   // Combine external and search errors

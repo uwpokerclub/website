@@ -24,19 +24,19 @@ export function ClockActions({
   return (
     <div className={styles.row}>
       <span data-qa="prev-level-btn" onClick={onStepBack}>
-        <Icon iconType="backward_step" scale={4} />
+        <Icon iconType="backward_step" scale={1.5} />
       </span>
       <span data-qa="sub-btn" onClick={onSubtractTime}>
-        <Icon iconType="minus" scale={4} />
+        <Icon iconType="minus" scale={1.5} />
       </span>
       <span data-qa="toggle-timer-btn" onClick={isPaused ? onStart : onPause}>
-        {isPaused ? <Icon iconType="circle-play" scale={4} /> : <Icon iconType="circle-pause" scale={4} />}
+        {isPaused ? <Icon iconType="circle-play" scale={2} /> : <Icon iconType="circle-pause" scale={2} />}
       </span>
       <span data-qa="add-btn" onClick={onAddTime}>
-        <Icon iconType="plus" scale={4} />
+        <Icon iconType="plus" scale={1.5} />
       </span>
       <span data-qa="advance-level-btn" onClick={onStepForward}>
-        <Icon iconType="forward_step" scale={4} />
+        <Icon iconType="forward_step" scale={1.5} />
       </span>
     </div>
   );

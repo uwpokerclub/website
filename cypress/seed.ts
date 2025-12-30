@@ -205,6 +205,29 @@ export const USERS: User[] = [
   },
 ];
 
+// Users that exist in the database but do NOT have memberships for the current semester
+// Use these for testing member registration flows
+export const USERS_WITHOUT_MEMBERSHIPS: User[] = [
+  {
+    id: "11111111",
+    firstName: "Unregistered",
+    lastName: "TestUser",
+    email: "unregistered@test.com",
+    faculty: "Math",
+    questId: "unreg1",
+    createdAt: "2025-01-01",
+  },
+  {
+    id: "22222222",
+    firstName: "Another",
+    lastName: "Unregistered",
+    email: "another.unreg@test.com",
+    faculty: "Science",
+    questId: "unreg2",
+    createdAt: "2025-01-01",
+  },
+];
+
 export const ENDED_EVENT_PARTICIPANTS: Participant[] = [
   {
     id: 4,

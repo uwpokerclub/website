@@ -28,7 +28,7 @@ VALUES
 SELECT setval('events_id_seq', (SELECT MAX(id) FROM events));
 
 -- Seed users
-INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_at) VALUES 
+INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_at) VALUES
   (62958169, 'Heinrik', 'Drust', 'hdrust0@merriam-webster.com', 'AHS', 'hdrust0', '2025-04-18'),
   (20141158, 'Doretta', 'Housegoe', 'dhousegoe1@xinhuanet.com', 'AHS', 'dhousegoe1', '2025-04-19'),
   (85018940, 'Elita', 'Aucock', 'eaucock2@si.edu', 'Science', 'eaucock2', '2024-10-07'),
@@ -39,6 +39,11 @@ INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_
   (81085720, 'Oralie', 'Bunten', 'obunten7@dropbox.com', 'Science', 'obunten7', '2024-07-19'),
   (52873146, 'Kristel', 'Callan', 'kcallan8@arizona.edu', 'Math', 'kcallan8', '2024-06-27'),
   (75969632, 'Winslow', 'Josey', 'wjosey9@blogger.com', 'Environment', 'wjosey9', '2025-01-30');
+
+-- Seed users WITHOUT memberships (for testing registration flows)
+INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_at) VALUES
+  (11111111, 'Unregistered', 'TestUser', 'unregistered@test.com', 'Math', 'unreg1', '2025-01-01'),
+  (22222222, 'Another', 'Unregistered', 'another.unreg@test.com', 'Science', 'unreg2', '2025-01-01');
 
 -- Seed members into the seed semester
 INSERT INTO memberships (id, user_id, semester_id, paid, discounted) VALUES

@@ -93,18 +93,24 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
       header: "Rank",
       accessor: (row) => getRank(row),
       sortable: false,
+      headerProps: { "data-qa": "rank-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `ranking-rank-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "name",
       header: "Name",
       accessor: (row) => `${row.firstName} ${row.lastName}`,
       sortable: false,
+      headerProps: { "data-qa": "name-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `ranking-name-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "points",
       header: "Points",
       accessor: "points",
       sortable: false,
+      headerProps: { "data-qa": "points-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `ranking-points-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
   ];
 
@@ -114,6 +120,7 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
       <div className={styles.searchContainer}>
         <div className={styles.searchInputWrapper}>
           <Input
+            data-qa="input-rankings-search"
             type="search"
             placeholder="Search by name..."
             value={searchQuery}
@@ -126,6 +133,7 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
                   onClick={handleClearSearch}
                   className={styles.clearButton}
                   aria-label="Clear search"
+                  data-qa="clear-search-btn"
                 >
                   <FaTimes />
                 </button>
@@ -135,13 +143,13 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
           />
         </div>
         {hasPermission("export", "semester", "rankings") && (
-          <Button onClick={handleExport} iconBefore={<FaDownload />}>
+          <Button data-qa="export-rankings-btn" onClick={handleExport} iconBefore={<FaDownload />}>
             Export CSV
           </Button>
         )}
       </div>
 
-      <div className={styles.resultsInfo}>
+      <div className={styles.resultsInfo} data-qa="rankings-results-info">
         <p>
           Showing {paginatedRankings.length} of {filteredRankings.length} rankings
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
@@ -151,26 +159,28 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
       {/* Table */}
       <div className={styles.tableWrapper}>
         <Table
+          data-qa="rankings-table"
           variant="striped"
           headerVariant="primary"
           data={paginatedRankings}
           columns={columns}
+          rowProps={(row) => ({ "data-qa": `ranking-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
           emptyState={
             <div className={styles.emptyState}>
               <div className={styles.emptyIllustration}>
                 <FaTrophy size={64} />
               </div>
               {rankings.length === 0 ? (
-                <>
+                <div data-qa="rankings-empty">
                   <h3>No rankings yet</h3>
                   <p>No members have earned points this semester yet.</p>
-                </>
+                </div>
               ) : (
-                <>
+                <div data-qa="rankings-no-results">
                   <h3>No results found</h3>
                   <p>No rankings found matching &quot;{debouncedSearchQuery}&quot;</p>
                   <p className={styles.emptyHint}>Try adjusting your search terms</p>
-                </>
+                </div>
               )}
             </div>
           }
@@ -179,7 +189,7 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
 
       {/* Pagination */}
       {filteredRankings.length > ITEMS_PER_PAGE && (
-        <div className={styles.paginationContainer}>
+        <div className={styles.paginationContainer} data-qa="rankings-pagination">
           <Pagination
             variant="compact"
             totalItems={filteredRankings.length}

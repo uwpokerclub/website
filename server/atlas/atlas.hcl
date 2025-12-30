@@ -11,6 +11,7 @@ data "external_schema" "gorm" {
 }
 env "gorm" {
   src = data.external_schema.gorm.url
+  url = getenv("DATABASE_URL")
   dev = "docker://postgres/17/dev?search_path=public"
   migration {
     dir = "file://atlas/migrations"

@@ -75,8 +75,14 @@ FROM debian:bookworm-slim
 
 WORKDIR /server
 
-# Create a non-root user and group
-RUN groupadd -r runner && useradd -r -g runner runner
+# Install curl for atlas installation and ca-certificates for HTTPS
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Install atlas CLI
+RUN curl -sSf https://atlasgo.sh | sh
+
+# Create a non-root user and group with home directory
+RUN groupadd -r runner && useradd -r -g runner -m runner
 
 # Change ownership of the working directory
 RUN chown runner:runner /server
@@ -89,6 +95,7 @@ RUN chown runner:runner certs client-cert client-key
 COPY --from=webapp --chown=runner:runner /usr/app/dist ./public
 COPY --from=server --chown=runner:runner /tmp/server ./server
 COPY --from=server --chown=runner:runner /usr/server/migrations ./migrations
+COPY --from=server --chown=runner:runner /usr/server/atlas ./atlas
 
 # Switch to non-root user
 USER runner

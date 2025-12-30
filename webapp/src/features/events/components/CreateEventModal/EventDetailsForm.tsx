@@ -33,6 +33,7 @@ export function EventDetailsForm() {
               placeholder="e.g., Tournament #5"
               error={!!errors.name}
               fullWidth
+              data-qa="input-name"
             />
           )}
         </FormField>
@@ -40,7 +41,14 @@ export function EventDetailsForm() {
 
       <FormField label="Start Date" htmlFor="startDate" required error={errors.startDate?.message}>
         {(props) => (
-          <Input {...props} {...register("startDate")} type="datetime-local" error={!!errors.startDate} fullWidth />
+          <Input
+            {...props}
+            {...register("startDate")}
+            type="datetime-local"
+            error={!!errors.startDate}
+            fullWidth
+            data-qa="input-startDate"
+          />
         )}
       </FormField>
 
@@ -53,6 +61,7 @@ export function EventDetailsForm() {
             placeholder="Select a format"
             error={!!errors.format}
             fullWidth
+            data-qa="select-format"
           />
         )}
       </FormField>
@@ -68,6 +77,7 @@ export function EventDetailsForm() {
             placeholder="1"
             error={!!errors.pointsMultiplier}
             fullWidth
+            data-qa="input-pointsMultiplier"
           />
         )}
       </FormField>
@@ -81,6 +91,7 @@ export function EventDetailsForm() {
               placeholder="Optional notes about the event..."
               rows={3}
               fullWidth
+              data-qa="input-notes"
             />
           )}
         </FormField>

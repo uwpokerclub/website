@@ -360,12 +360,18 @@ export function EventRegistrationModal({
     const isDanger = isDangerMember(member);
 
     return (
-      <div key={member.id} className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}>
+      <div
+        key={member.id}
+        className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}
+        data-qa={`member-row-${member.id}`}
+      >
         <div className={styles.memberInfo}>
-          <span className={styles.memberName}>
+          <span className={styles.memberName} data-qa={`member-name-${member.id}`}>
             {member.user.firstName} {member.user.lastName}
           </span>
-          <span className={styles.memberStudentId}>{member.userId}</span>
+          <span className={styles.memberStudentId} data-qa={`member-studentId-${member.id}`}>
+            {member.userId}
+          </span>
         </div>
         <button
           type="button"
@@ -379,6 +385,7 @@ export function EventRegistrationModal({
               ? `Unregister ${member.user.firstName} ${member.user.lastName}`
               : `Register ${member.user.firstName} ${member.user.lastName}`
           }
+          data-qa={isRegistered ? `unregister-member-btn-${member.id}` : `register-member-btn-${member.id}`}
         >
           {isLoading ? (
             <Spinner size="sm" className={styles.actionButtonSpinner} />
@@ -398,21 +405,24 @@ export function EventRegistrationModal({
       available: {
         icon: <FaUserCheck />,
         text: "All members are registered for this event",
+        qaAttr: "event-registration-all-registered",
       },
       registered: {
         icon: <FaUsers />,
         text: "No members registered yet",
+        qaAttr: "event-registration-no-members",
       },
       "no-results": {
         icon: <FaSearch />,
         text: `No members match "${debouncedQuery}"`,
+        qaAttr: "event-registration-no-results",
       },
     };
 
     const config = configs[type];
 
     return (
-      <div className={styles.emptyState}>
+      <div className={styles.emptyState} data-qa={config.qaAttr}>
         <div className={styles.emptyIcon}>{config.icon}</div>
         <p className={styles.emptyText}>{config.text}</p>
         {showCreateButton && (
@@ -438,12 +448,22 @@ export function EventRegistrationModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Manage Event Registration" size="xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Manage Event Registration"
+      size="xl"
+      data-qa="event-registration-modal"
+    >
       <div className={styles.modalContent}>
-        {loadError && <div className={styles.errorAlert}>{loadError}</div>}
+        {loadError && (
+          <div className={styles.errorAlert} data-qa="event-registration-error-alert">
+            {loadError}
+          </div>
+        )}
 
         {isInitialLoading ? (
-          <div className={styles.loadingContainer}>
+          <div className={styles.loadingContainer} data-qa="event-registration-loading">
             <Spinner size="lg" />
             <p className={styles.loadingText}>Loading members...</p>
           </div>
@@ -460,13 +480,14 @@ export function EventRegistrationModal({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search members"
+                data-qa="input-event-registration-search"
               />
             </div>
 
             {/* Dual Panel Layout */}
             <div className={styles.panelsContainer}>
               {/* Available Members Panel */}
-              <div className={styles.panel}>
+              <div className={styles.panel} data-qa="panel-available">
                 <div className={styles.panelHeader}>
                   <span className={styles.panelTitle}>Available</span>
                   <div className={styles.panelHeaderActions}>
@@ -476,10 +497,13 @@ export function EventRegistrationModal({
                       onClick={() => setIsCreateMemberModalOpen(true)}
                       aria-label="Create new member"
                       title="Create new member"
+                      data-qa="add-member-btn"
                     >
                       <FaPlus />
                     </button>
-                    <span className={styles.panelCount}>{filteredAvailable.length}</span>
+                    <span className={styles.panelCount} data-qa="panel-available-count">
+                      {filteredAvailable.length}
+                    </span>
                   </div>
                 </div>
                 <div className={styles.panelList}>
@@ -492,10 +516,12 @@ export function EventRegistrationModal({
               </div>
 
               {/* Registered Members Panel */}
-              <div className={styles.panel}>
+              <div className={styles.panel} data-qa="panel-registered">
                 <div className={styles.panelHeader}>
                   <span className={styles.panelTitle}>Registered</span>
-                  <span className={styles.panelCount}>{filteredRegistered.length}</span>
+                  <span className={styles.panelCount} data-qa="panel-registered-count">
+                    {filteredRegistered.length}
+                  </span>
                 </div>
                 <div className={styles.panelList}>
                   {(() => {

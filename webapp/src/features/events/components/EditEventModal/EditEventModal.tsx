@@ -146,10 +146,20 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
   // Footer with actions
   const footer = (
     <div className={styles.footer}>
-      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting || isLoadingEvent}>
+      <Button
+        variant="tertiary"
+        onClick={handleClose}
+        disabled={isSubmitting || isLoadingEvent}
+        data-qa="edit-event-cancel-btn"
+      >
         Cancel
       </Button>
-      <Button type="submit" form="edit-event-form" disabled={isSubmitting || isLoadingEvent}>
+      <Button
+        type="submit"
+        form="edit-event-form"
+        disabled={isSubmitting || isLoadingEvent}
+        data-qa="edit-event-submit-btn"
+      >
         {isSubmitting ? "Saving..." : "Save Changes"}
       </Button>
     </div>
@@ -161,13 +171,24 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
   } = form;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Edit Event" size="lg" footer={footer}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Edit Event"
+      size="lg"
+      footer={footer}
+      data-qa="edit-event-modal"
+    >
       <div className={styles.content}>
         {/* Error display */}
-        {submitError && <div className={styles.errorAlert}>{submitError}</div>}
+        {submitError && (
+          <div className={styles.errorAlert} data-qa="edit-event-error-alert">
+            {submitError}
+          </div>
+        )}
 
         {isLoadingEvent ? (
-          <div className={styles.loadingState}>
+          <div className={styles.loadingState} data-qa="edit-event-loading">
             <Spinner size="lg" />
             <p>Loading event details...</p>
           </div>
@@ -184,6 +205,7 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
                       placeholder="e.g., Tournament #5"
                       error={!!errors.name}
                       fullWidth
+                      data-qa="input-name"
                     />
                   )}
                 </FormField>
@@ -197,6 +219,7 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
                     type="datetime-local"
                     error={!!errors.startDate}
                     fullWidth
+                    data-qa="input-startDate"
                   />
                 )}
               </FormField>
@@ -210,6 +233,7 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
                     placeholder="Select a format"
                     error={!!errors.format}
                     fullWidth
+                    data-qa="select-format"
                   />
                 )}
               </FormField>
@@ -230,6 +254,7 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
                     placeholder="1"
                     error={!!errors.pointsMultiplier}
                     fullWidth
+                    data-qa="input-pointsMultiplier"
                   />
                 )}
               </FormField>
@@ -243,6 +268,7 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
                       placeholder="Optional notes about the event..."
                       rows={3}
                       fullWidth
+                      data-qa="input-notes"
                     />
                   )}
                 </FormField>

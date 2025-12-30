@@ -69,6 +69,7 @@ export function StructureSelector({ structures, isLoadingStructures }: Structure
           onChange={() => handleModeChange("select")}
           disabled={structures.length === 0 && !isLoadingStructures}
           label="Select existing structure"
+          data-qa="radio-structure-mode-select"
         />
 
         {canCreateStructure && (
@@ -78,6 +79,7 @@ export function StructureSelector({ structures, isLoadingStructures }: Structure
             checked={structureMode === "create"}
             onChange={() => handleModeChange("create")}
             label="Create new structure"
+            data-qa="radio-structure-mode-create"
           />
         )}
       </div>
@@ -86,12 +88,12 @@ export function StructureSelector({ structures, isLoadingStructures }: Structure
         {structureMode === "select" ? (
           <>
             {isLoadingStructures ? (
-              <div className={styles.loadingContainer}>
+              <div className={styles.loadingContainer} data-qa="structures-loading">
                 <Spinner size="sm" />
                 <span>Loading structures...</span>
               </div>
             ) : structures.length === 0 ? (
-              <p className={styles.emptyMessage}>
+              <p className={styles.emptyMessage} data-qa="structures-empty">
                 No structures available.{" "}
                 {canCreateStructure ? "Please create a new structure." : "Contact an admin to create structures."}
               </p>
@@ -114,6 +116,7 @@ export function StructureSelector({ structures, isLoadingStructures }: Structure
                     placeholder="Select a structure"
                     error={!!selectError}
                     fullWidth
+                    data-qa="select-structureId"
                   />
                 )}
               </FormField>
@@ -135,6 +138,7 @@ export function StructureSelector({ structures, isLoadingStructures }: Structure
                   placeholder="e.g., Standard 15-min levels"
                   error={!!createNameError}
                   fullWidth
+                  data-qa="input-structure-name"
                 />
               )}
             </FormField>

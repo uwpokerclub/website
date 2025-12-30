@@ -49,12 +49,20 @@ export function MembershipConfig() {
       <p className={styles.description}>This section is only for executive members.</p>
 
       <div className={styles.checkboxGroup}>
-        <Checkbox {...register("membership.paid", { onChange: handlePaidChange })} label="Paid" />
+        <Checkbox
+          {...register("membership.paid", { onChange: handlePaidChange })}
+          data-qa="checkbox-paid"
+          label="Paid"
+        />
 
-        {isPaid && <Checkbox {...register("membership.discounted")} label="Discounted" />}
+        {isPaid && <Checkbox {...register("membership.discounted")} data-qa="checkbox-discounted" label="Discounted" />}
       </div>
 
-      {membershipErrors?.discounted?.message && <p className={styles.error}>{membershipErrors.discounted.message}</p>}
+      {membershipErrors?.discounted?.message && (
+        <p className={styles.error} data-qa="membership-error">
+          {membershipErrors.discounted.message}
+        </p>
+      )}
     </div>
   );
 }

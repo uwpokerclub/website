@@ -79,6 +79,7 @@ export function MemberSearch({ onSelect, value, error: externalError }: MemberSe
 
   return (
     <Combobox
+      data-qa="member-search-combobox"
       options={options}
       onSearch={handleSearch}
       onChange={handleChange}

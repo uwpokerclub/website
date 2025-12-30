@@ -30,12 +30,29 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
   return (
     <div className={styles.form}>
       <FormField label="Student ID" htmlFor="studentId-display">
-        {(props) => <Input {...props} id="studentId-display" type="text" value={studentId} disabled fullWidth />}
+        {(props) => (
+          <Input
+            {...props}
+            id="studentId-display"
+            data-qa="display-studentId"
+            type="text"
+            value={studentId}
+            disabled
+            fullWidth
+          />
+        )}
       </FormField>
 
       <FormField label="Quest ID" htmlFor="member.questId">
         {(props) => (
-          <Input {...props} {...register("member.questId")} type="text" placeholder="e.g., asmahood" fullWidth />
+          <Input
+            {...props}
+            {...register("member.questId")}
+            data-qa="input-questId"
+            type="text"
+            placeholder="e.g., asmahood"
+            fullWidth
+          />
         )}
       </FormField>
 
@@ -44,6 +61,7 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
           <Input
             {...props}
             {...register("member.firstName")}
+            data-qa="input-firstName"
             type="text"
             placeholder="e.g., Adam"
             error={!!errors.member?.firstName}
@@ -57,6 +75,7 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
           <Input
             {...props}
             {...register("member.lastName")}
+            data-qa="input-lastName"
             type="text"
             placeholder="e.g., Mahood"
             error={!!errors.member?.lastName}
@@ -70,6 +89,7 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
           <Input
             {...props}
             {...register("member.email")}
+            data-qa="input-email"
             type="email"
             placeholder="e.g., asmahood@uwaterloo.ca"
             error={!!errors.member?.email}
@@ -83,6 +103,7 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
           <Select
             {...props}
             {...register("member.faculty")}
+            data-qa="select-faculty"
             options={facultyOptions}
             placeholder="Select a faculty"
             error={!!errors.member?.faculty}

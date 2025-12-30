@@ -181,18 +181,24 @@ export function MembersList() {
       header: "Student ID",
       accessor: "userId",
       sortable: true,
+      headerProps: { "data-qa": "sort-userId-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `member-userId-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "name",
       header: "Name",
       accessor: (row) => `${row.user.firstName} ${row.user.lastName}`,
       sortable: true,
+      headerProps: { "data-qa": "sort-name-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `member-name-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "email",
       header: "Email",
       accessor: (row) => row.user.email,
       sortable: true,
+      headerProps: { "data-qa": "sort-email-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `member-email-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "status",
@@ -204,6 +210,8 @@ export function MembersList() {
         return "Unpaid";
       },
       sortable: true,
+      headerProps: { "data-qa": "sort-status-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) => ({ "data-qa": `member-status-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "actions",
@@ -218,6 +226,7 @@ export function MembersList() {
               onClick={() => handleViewEdit(row)}
               title="Edit member"
               aria-label="Edit member"
+              data-qa={`edit-member-btn-${row.id}`}
             >
               <FaEdit />
             </button>
@@ -228,6 +237,7 @@ export function MembersList() {
             disabled
             title="Delete member"
             aria-label="Delete member"
+            data-qa={`delete-member-btn-${row.id}`}
           >
             <FaTrash />
           </button>
@@ -240,7 +250,7 @@ export function MembersList() {
   if (isLoading) {
     return (
       <div className={styles.container}>
-        <div className={styles.centerContent}>
+        <div className={styles.centerContent} data-qa="members-loading">
           <Spinner size="lg" />
           <p>Loading members...</p>
         </div>
@@ -252,9 +262,11 @@ export function MembersList() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.errorState}>
+        <div className={styles.errorState} data-qa="members-error">
           <p>Error: {error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -264,7 +276,7 @@ export function MembersList() {
   if (!semesterContext?.currentSemester) {
     return (
       <div className={styles.container}>
-        <div className={styles.emptyState}>
+        <div className={styles.emptyState} data-qa="members-no-semester">
           <p>Please select a semester to view members.</p>
         </div>
       </div>
@@ -277,6 +289,7 @@ export function MembersList() {
       <div className={styles.searchContainer}>
         <div className={styles.searchInputWrapper}>
           <Input
+            data-qa="input-members-search"
             type="search"
             placeholder="Search by name or email..."
             value={searchQuery}
@@ -289,6 +302,7 @@ export function MembersList() {
                   onClick={handleClearSearch}
                   className={styles.clearButton}
                   aria-label="Clear search"
+                  data-qa="clear-search-btn"
                 >
                   <FaTimes />
                 </button>
@@ -298,13 +312,13 @@ export function MembersList() {
           />
         </div>
         {hasPermission("create", "membership") && (
-          <Button onClick={handleRegisterMember} iconBefore={<FaPlus />}>
+          <Button data-qa="register-member-btn" onClick={handleRegisterMember} iconBefore={<FaPlus />}>
             Register New Member
           </Button>
         )}
       </div>
 
-      <div className={styles.resultsInfo}>
+      <div className={styles.resultsInfo} data-qa="members-results-info">
         <p>
           Showing {paginatedMembers.length} of {sortedMembers.length} members
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
@@ -314,6 +328,7 @@ export function MembersList() {
       {/* Table */}
       <div className={styles.tableWrapper}>
         <Table
+          data-qa="members-table"
           variant="striped"
           headerVariant="primary"
           data={paginatedMembers}
@@ -321,27 +336,28 @@ export function MembersList() {
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSort={handleSort}
+          rowProps={(row) => ({ "data-qa": `member-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
           emptyState={
             <div className={styles.emptyState}>
               <div className={styles.emptyIllustration}>
                 <FaUsers size={64} />
               </div>
               {members.length === 0 ? (
-                <>
+                <div data-qa="members-empty">
                   <h3>No members yet</h3>
                   <p>No members have been registered for this semester yet.</p>
                   {hasPermission("create", "membership") && (
-                    <Button onClick={handleRegisterMember} iconBefore={<FaPlus />}>
+                    <Button data-qa="register-first-member-btn" onClick={handleRegisterMember} iconBefore={<FaPlus />}>
                       Register First Member
                     </Button>
                   )}
-                </>
+                </div>
               ) : (
-                <>
+                <div data-qa="members-no-results">
                   <h3>No results found</h3>
                   <p>No members found matching &quot;{debouncedSearchQuery}&quot;</p>
                   <p className={styles.emptyHint}>Try adjusting your search terms</p>
-                </>
+                </div>
               )}
             </div>
           }
@@ -350,7 +366,7 @@ export function MembersList() {
 
       {/* Pagination */}
       {sortedMembers.length > ITEMS_PER_PAGE && (
-        <div className={styles.paginationContainer}>
+        <div className={styles.paginationContainer} data-qa="members-pagination">
           <Pagination
             variant="compact"
             totalItems={sortedMembers.length}

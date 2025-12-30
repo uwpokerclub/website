@@ -29,6 +29,7 @@ export function NewMemberForm() {
           <Input
             {...props}
             {...register("newMember.id")}
+            data-qa="input-studentId"
             type="text"
             placeholder="e.g., 20780648"
             error={!!errors.newMember?.id}
@@ -39,7 +40,14 @@ export function NewMemberForm() {
 
       <FormField label="Quest ID" htmlFor="newMember.questId">
         {(props) => (
-          <Input {...props} {...register("newMember.questId")} type="text" placeholder="e.g., asmahood" fullWidth />
+          <Input
+            {...props}
+            {...register("newMember.questId")}
+            data-qa="input-questId"
+            type="text"
+            placeholder="e.g., asmahood"
+            fullWidth
+          />
         )}
       </FormField>
 
@@ -48,6 +56,7 @@ export function NewMemberForm() {
           <Input
             {...props}
             {...register("newMember.firstName")}
+            data-qa="input-firstName"
             type="text"
             placeholder="e.g., Adam"
             error={!!errors.newMember?.firstName}
@@ -61,6 +70,7 @@ export function NewMemberForm() {
           <Input
             {...props}
             {...register("newMember.lastName")}
+            data-qa="input-lastName"
             type="text"
             placeholder="e.g., Mahood"
             error={!!errors.newMember?.lastName}
@@ -74,6 +84,7 @@ export function NewMemberForm() {
           <Input
             {...props}
             {...register("newMember.email")}
+            data-qa="input-email"
             type="email"
             placeholder="e.g., asmahood@uwaterloo.ca"
             error={!!errors.newMember?.email}
@@ -87,6 +98,7 @@ export function NewMemberForm() {
           <Select
             {...props}
             {...register("newMember.faculty")}
+            data-qa="select-faculty"
             options={facultyOptions}
             placeholder="Select a faculty"
             error={!!errors.newMember?.faculty}

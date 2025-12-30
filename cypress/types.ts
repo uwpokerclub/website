@@ -54,3 +54,17 @@ export interface Transaction {
   createdAt: string;
   semesterId: string;
 }
+
+export interface Ranking {
+  membershipId: string;
+  points: number;
+  attendance: number;
+}
+
+export interface Participant {
+  id: number;
+  membershipId: string;
+  eventId: number;
+  placement: number;
+  signedOutAt: string | null;
+}

@@ -5,6 +5,7 @@ export * from "./AdminNavbar";
 export * from "./Modal";
 export * from "./LoadingScreen";
 export * from "./SelectSearch";
+export * from "./ComingSoon";
 
 import AuthProvider from "./AuthProvider";
 import RequireAuth from "./RequireAuth";

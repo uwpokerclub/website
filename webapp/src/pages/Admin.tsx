@@ -5,6 +5,9 @@ import { Semesters } from "./Semesters";
 import { Rankings } from "./Rankings";
 import { Events } from "./Events";
 import { Members } from "./Members";
+import { Inventory } from "./Inventory";
+import { Finances } from "./Finances";
+import { Executive } from "./Executive";
 import AdminLayout from "@/layouts/AdminLayout";
 
 export function Admin() {
@@ -17,6 +20,9 @@ export function Admin() {
         <Route path="/events/*" element={<Events />} />
         <Route path="/semesters/*" element={<Semesters />} />
         <Route path="/rankings/*" element={<Rankings />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/finances" element={<Finances />} />
+        <Route path="/executive" element={<Executive />} />
       </Routes>
     </AdminLayout>
   );

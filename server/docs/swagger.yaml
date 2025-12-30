@@ -388,6 +388,38 @@ definitions:
       paid:
         type: boolean
     type: object
+  models.BlindJSON:
+    properties:
+      ante:
+        minimum: 0
+        type: integer
+      big:
+        minimum: 0
+        type: integer
+      small:
+        minimum: 0
+        type: integer
+      time:
+        maximum: 60
+        type: integer
+    required:
+    - big
+    - small
+    - time
+    type: object
+  models.CreateStructureRequest:
+    properties:
+      blinds:
+        items:
+          $ref: '#/definitions/models.BlindJSON'
+        minItems: 1
+        type: array
+      name:
+        type: string
+    required:
+    - blinds
+    - name
+    type: object
 info:
   contact:
     email: uwaterloopoker@gmail.com
@@ -1655,4 +1687,195 @@ paths:
       summary: User logout
       tags:
       - Authentication
+  /structures:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all structures
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/Structure'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: List Structures
+      tags:
+      - Structures
+    post:
+      consumes:
+      - application/json
+      description: Create a new structure with blind levels
+      parameters:
+      - description: Structure data
+        in: body
+        name: structure
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateStructureRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/Structure'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Create Structure
+      tags:
+      - Structures
+  /structures/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing structure
+      parameters:
+      - description: Structure ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Delete Structure
+      tags:
+      - Structures
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific structure by its ID with blinds
+      parameters:
+      - description: Structure ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Structure'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get Structure
+      tags:
+      - Structures
+    patch:
+      consumes:
+      - application/json
+      description: Partially update an existing structure
+      parameters:
+      - description: Structure ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Partial structure data
+        in: body
+        name: structure
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Structure'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Update Structure
+      tags:
+      - Structures
 swagger: "2.0"

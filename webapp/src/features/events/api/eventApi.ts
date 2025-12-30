@@ -29,7 +29,7 @@ export type ApiResult<T> = { success: true; data: T } | { success: false; error:
  * @returns Array of structures or error
  */
 export async function fetchStructures(): Promise<ApiResult<Structure[]>> {
-  const { status, data } = await sendAPIRequest<Structure[] | APIErrorResponse>("structures");
+  const { status, data } = await sendAPIRequest<Structure[] | APIErrorResponse>("v2/structures");
 
   if (status >= 200 && status < 300) {
     return { success: true, data: (data as Structure[]) ?? [] };
@@ -43,13 +43,36 @@ export async function fetchStructures(): Promise<ApiResult<Structure[]>> {
 }
 
 /**
+ * Fetch a single structure by ID
+ * @param id - Structure ID
+ * @returns Structure with blinds or error
+ */
+export async function fetchStructure(id: number): Promise<ApiResult<StructureWithBlinds>> {
+  const { status, data } = await sendAPIRequest<StructureWithBlinds | APIErrorResponse>(`v2/structures/${id}`);
+
+  if (status >= 200 && status < 300) {
+    return { success: true, data: data as StructureWithBlinds };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Structure not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to fetch structure",
+  };
+}
+
+/**
  * Create a new structure with blind levels
  * @param name - Structure name
  * @param blinds - Array of blind levels
  * @returns Created structure or error
  */
 export async function createStructure(name: string, blinds: Blind[]): Promise<ApiResult<StructureWithBlinds>> {
-  const { status, data } = await sendAPIRequest<StructureWithBlinds | APIErrorResponse>("structures", "POST", {
+  const { status, data } = await sendAPIRequest<StructureWithBlinds | APIErrorResponse>("v2/structures", "POST", {
     name,
     blinds,
   });
@@ -62,6 +85,68 @@ export async function createStructure(name: string, blinds: Blind[]): Promise<Ap
   return {
     success: false,
     error: errorResponse?.message ?? "Failed to create structure",
+  };
+}
+
+/**
+ * Request type for updating a structure
+ */
+export interface UpdateStructureRequest {
+  name?: string;
+  blinds?: Blind[];
+}
+
+/**
+ * Update an existing structure (partial update)
+ * @param id - Structure ID
+ * @param updates - Partial structure data to update
+ * @returns Updated structure or error
+ */
+export async function updateStructure(
+  id: number,
+  updates: UpdateStructureRequest,
+): Promise<ApiResult<StructureWithBlinds>> {
+  const { status, data } = await sendAPIRequest<StructureWithBlinds | APIErrorResponse>(
+    `v2/structures/${id}`,
+    "PATCH",
+    updates as unknown as Record<string, unknown>,
+  );
+
+  if (status >= 200 && status < 300) {
+    return { success: true, data: data as StructureWithBlinds };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Structure not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to update structure",
+  };
+}
+
+/**
+ * Delete a structure
+ * @param id - Structure ID
+ * @returns Success or error
+ */
+export async function deleteStructure(id: number): Promise<ApiResult<void>> {
+  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(`v2/structures/${id}`, "DELETE");
+
+  if (status === 204) {
+    return { success: true, data: undefined };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Structure not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to delete structure",
   };
 }
 

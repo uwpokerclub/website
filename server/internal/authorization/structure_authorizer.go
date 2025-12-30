@@ -8,7 +8,7 @@ type structureAuthorizer struct {
 // NewStructureAuthorizer creates a new structure authorizer.
 func NewStructureAuthorizer() ResourceAuthorizer {
 	return &structureAuthorizer{
-		actions: []string{"create", "get", "list", "edit"},
+		actions: []string{"create", "get", "list", "edit", "delete"},
 	}
 }
 
@@ -22,6 +22,8 @@ func (svc *structureAuthorizer) IsAuthorized(role, action string) bool {
 	case "list":
 		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "edit":
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
+	case "delete":
 		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	}
 

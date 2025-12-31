@@ -21,11 +21,11 @@ function UserProfile({ isExpanded }: UserProfileProps) {
 
   if (!isExpanded) {
     return (
-      <div className={styles.userProfileCollapsed}>
+      <div className={styles.userProfileCollapsed} data-qa="user-profile">
         <div className={styles.userAvatarCollapsed}>
           <FaUserCircle />
         </div>
-        <button className={styles.logoutBtnCollapsed} onClick={handleLogout} aria-label="Logout">
+        <button className={styles.logoutBtnCollapsed} onClick={handleLogout} aria-label="Logout" data-qa="logout-btn">
           <FaSignOutAlt />
         </button>
       </div>
@@ -33,15 +33,15 @@ function UserProfile({ isExpanded }: UserProfileProps) {
   }
 
   return (
-    <div className={styles.userProfile}>
+    <div className={styles.userProfile} data-qa="user-profile">
       <div className={styles.userAvatar}>
         <FaUserCircle />
       </div>
       <div className={styles.userInfo}>
-        <span className={styles.userName}>{user!.username}</span>
-        <span className={styles.userRole}>{prettyPrintRole(user!.role)}</span>
+        <span className={styles.userName} data-qa="user-name">{user!.username}</span>
+        <span className={styles.userRole} data-qa="user-role">{prettyPrintRole(user!.role)}</span>
       </div>
-      <button className={styles.logoutBtn} onClick={handleLogout} aria-label="Logout">
+      <button className={styles.logoutBtn} onClick={handleLogout} aria-label="Logout" data-qa="logout-btn">
         <FaSignOutAlt />
       </button>
     </div>

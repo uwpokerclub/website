@@ -65,6 +65,6 @@ export interface Participant {
   id: number;
   membershipId: string;
   eventId: number;
-  placement: number;
-  signedOutAt: string | null;
+  placement?: number;
+  signedOutAt?: string;
 }

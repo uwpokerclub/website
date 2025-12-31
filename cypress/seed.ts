@@ -233,6 +233,24 @@ export const USERS_WITHOUT_MEMBERSHIPS: User[] = [
   },
 ];
 
+export const ACTIVE_EVENT_PARTICIPANTS: Participant[] = [
+  {
+    id: 1,
+    membershipId: "5d312426-ad56-4231-bb12-241acbfb91e2",
+    eventId: 1,
+  },
+  {
+    id: 2,
+    membershipId: "c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d",
+    eventId: 1,
+  },
+  {
+    id: 3,
+    membershipId: "b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e",
+    eventId: 1,
+  },
+];
+
 export const ENDED_EVENT_PARTICIPANTS: Participant[] = [
   {
     id: 4,

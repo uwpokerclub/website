@@ -129,10 +129,10 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
   // Footer with actions
   const footer = (
     <div className={styles.footer}>
-      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
+      <Button data-qa="edit-cancel-btn" variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
         Cancel
       </Button>
-      <Button type="submit" form="edit-member-form" disabled={isSubmitting}>
+      <Button data-qa="edit-submit-btn" type="submit" form="edit-member-form" disabled={isSubmitting}>
         {isSubmitting ? "Saving..." : "Save Changes"}
       </Button>
     </div>
@@ -140,9 +140,13 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Edit Member" size="lg" footer={footer}>
-      <div className={styles.content}>
+      <div className={styles.content} data-qa="edit-member-modal">
         {/* Error display */}
-        {submitError && <div className={styles.errorAlert}>{submitError}</div>}
+        {submitError && (
+          <div className={styles.errorAlert} data-qa="edit-error-alert">
+            {submitError}
+          </div>
+        )}
 
         <FormProvider {...form}>
           <form id="edit-member-form" onSubmit={form.handleSubmit(handleSubmit)} noValidate>

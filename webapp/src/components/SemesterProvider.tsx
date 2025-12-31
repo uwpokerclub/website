@@ -15,7 +15,7 @@ export default function SemesterProvider({ children }: SemesterProviderProps) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/semesters", {
+      const response = await fetch("/api/v2/semesters", {
         credentials: "include",
         signal: abortSignal,
       });

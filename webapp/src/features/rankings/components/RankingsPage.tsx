@@ -47,7 +47,7 @@ export function RankingsPage() {
   if (isLoading || semesterLoading) {
     return (
       <div className={styles.container}>
-        <div className={styles.centerContent}>
+        <div className={styles.centerContent} data-qa="rankings-loading">
           <Spinner size="lg" />
           <p>Loading rankings...</p>
         </div>
@@ -59,9 +59,11 @@ export function RankingsPage() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.errorState}>
+        <div className={styles.errorState} data-qa="rankings-error">
           <p>Error: {error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -71,7 +73,7 @@ export function RankingsPage() {
   if (!currentSemester) {
     return (
       <div className={styles.container}>
-        <div className={styles.emptyState}>
+        <div className={styles.emptyState} data-qa="rankings-no-semester">
           <p>Please select a semester to view rankings.</p>
         </div>
       </div>

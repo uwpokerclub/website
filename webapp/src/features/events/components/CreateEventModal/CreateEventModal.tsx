@@ -159,22 +159,35 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
   // Footer with actions
   const footer = (
     <div className={styles.footer}>
-      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
+      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting} data-qa="create-event-cancel-btn">
         Cancel
       </Button>
-      <Button type="submit" form="create-event-form" disabled={isSubmitting}>
+      <Button type="submit" form="create-event-form" disabled={isSubmitting} data-qa="create-event-submit-btn">
         {isSubmitting ? "Creating..." : "Create Event"}
       </Button>
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create Event" size="lg" footer={footer}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Create Event"
+      size="lg"
+      footer={footer}
+      data-qa="create-event-modal"
+    >
       <div className={styles.content}>
         {/* Error display */}
-        {submitError && <div className={styles.errorAlert}>{submitError}</div>}
+        {submitError && (
+          <div className={styles.errorAlert} data-qa="create-event-error-alert">
+            {submitError}
+          </div>
+        )}
         {structureFetchError && (
-          <div className={styles.errorAlert}>Failed to load structures: {structureFetchError}</div>
+          <div className={styles.errorAlert} data-qa="create-event-structure-error-alert">
+            Failed to load structures: {structureFetchError}
+          </div>
         )}
 
         <FormProvider {...form}>

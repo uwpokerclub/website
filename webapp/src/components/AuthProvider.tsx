@@ -16,7 +16,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/session", {
+      const response = await fetch("/api/v2/session", {
         credentials: "include",
         signal: abortSignal,
       });
@@ -43,7 +43,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     const abortController = new AbortController();
     setLoading(true);
     try {
-      const response = await fetch("/api/session", {
+      const response = await fetch("/api/v2/session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,7 +76,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     const abortController = new AbortController();
     try {
-      const response = await fetch("/api/session/logout", {
+      const response = await fetch("/api/v2/session/logout", {
         method: "POST",
         credentials: "include",
         signal: abortController.signal,

@@ -86,10 +86,6 @@ jobs:
     needs: [build, webapp-tests, server-tests]
     env:
       TZ: America/New_York
-    strategy:
-      fail-fast: false
-      matrix:
-        containers: [1, 2]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -108,7 +104,7 @@ jobs:
       - name: Setup Docker network
         run: docker network create uwpokerclub_services_network
       - name: Start PostgreSQL container
-        run: docker run --name postgres --network uwpokerclub_services_network -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub -e TZ=America/New_York -p 5432:5432 -d postgres:13.7-alpine
+        run: docker run --name postgres --network uwpokerclub_services_network -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
       - name: Wait for PostgreSQL to be ready
         run: |
           ready=false
@@ -124,7 +120,7 @@ jobs:
             exit 1
           fi
       - name: Start server
-        run: docker run --name server --network uwpokerclub_services_network -e DATABASE_URL=postgres://postgres:password@postgres:5432/uwpokerclub -e DATABASE_TLS_PARAMETERS=?sslmode=disable -e ENVIRONMENT=test -e GIN_MODE=release -e PORT=5000 -p 5000:5000 -d website:${{ github.sha }}
+        run: docker run --name server --network uwpokerclub_services_network -e DATABASE_URL=postgres://postgres:password@postgres:5432/uwpokerclub?sslmode=disable -e ENVIRONMENT=test -e GIN_MODE=release -e PORT=5000 -p 5000:5000 -d website:${{ github.sha }}
       - name: Wait for server to be ready
         run: |
           ready=false
@@ -137,16 +133,12 @@ jobs:
           done
           if [ "$ready" = false ]; then
             echo "Server not ready after 30 seconds"
+            echo "=== Server logs ==="
+            docker logs server
             exit 1
           fi
       - name: Run E2E tests
         uses: cypress-io/github-action@v6
-        with:
-          record: true
-          parallel: true
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   push:
     if: github.event_name == 'push'

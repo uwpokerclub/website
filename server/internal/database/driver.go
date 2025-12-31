@@ -70,10 +70,13 @@ func OpenConnection(runMigrations bool) (*gorm.DB, error) {
 		}
 
 		// Apply pending migrations
+		// BaselineVersion skips migrations up to and including this version
+		// since goose already created the base schema
 		_, err = client.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
-			Env:       "gorm",
-			ConfigURL: "file://atlas/atlas.hcl",
-			DirURL:    "file://atlas/migrations",
+			Env:             "gorm",
+			ConfigURL:       "file://atlas/atlas.hcl",
+			DirURL:          "file://atlas/migrations",
+			BaselineVersion: "20250726011345",
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply atlas migrations: %s", err.Error())

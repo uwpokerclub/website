@@ -83,7 +83,7 @@ function SideNav() {
   return (
     <div className={styles.sidenavContainer}>
       {/* Main navigation */}
-      <nav className={sidenavClasses}>
+      <nav className={sidenavClasses} data-qa="sidenav">
         <div className={styles.sidenavHeader}>
           <div className={styles.logoContainer}>
             <img
@@ -111,7 +111,7 @@ function SideNav() {
         {hasRoles([ROLES.WEBMASTER, ROLES.PRESIDENT, ROLES.VICE_PRESIDENT, ROLES.TREASURER, ROLES.SECRETARY]) && (
           <>
             {/* Additional navigation section with separator */}
-            <div className={styles.navSeparator}>
+            <div className={styles.navSeparator} data-qa="sidenav-officers-section">
               <span>Officers</span>
             </div>
 
@@ -122,14 +122,24 @@ function SideNav() {
 
         {/* Desktop toggle button */}
         <div className={styles.navFooter}>
-          <button className={styles.toggleBtn} onClick={toggleNav} aria-label="Toggle navigation">
+          <button
+            className={styles.toggleBtn}
+            onClick={toggleNav}
+            aria-label="Toggle navigation"
+            data-qa="sidenav-toggle"
+          >
             {isExpanded ? <FaChevronLeft /> : <FaChevronRight />}
           </button>
         </div>
       </nav>
 
       {/* Mobile-only elements - CSS will hide/show these based on screen size */}
-      <button className={styles.mobileToggle} onClick={() => setIsExpanded(true)} aria-label="Open navigation">
+      <button
+        className={styles.mobileToggle}
+        onClick={() => setIsExpanded(true)}
+        aria-label="Open navigation"
+        data-qa="sidenav-mobile-open"
+      >
         <FaBars />
       </button>
 
@@ -137,10 +147,16 @@ function SideNav() {
       <div
         className={`${styles.overlay} ${isExpanded ? styles.visible : ""}`}
         onClick={() => setIsExpanded(false)}
+        data-qa="sidenav-overlay"
       ></div>
 
       {/* Mobile close button */}
-      <button className={styles.closeBtn} onClick={() => setIsExpanded(false)} aria-label="Close navigation">
+      <button
+        className={styles.closeBtn}
+        onClick={() => setIsExpanded(false)}
+        aria-label="Close navigation"
+        data-qa="sidenav-mobile-close"
+      >
         <FaTimes />
       </button>
     </div>

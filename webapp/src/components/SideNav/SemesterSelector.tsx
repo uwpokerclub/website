@@ -19,7 +19,7 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
   useEffect(() => {
     const abortController = new AbortController();
     const fetchSemesters = async () => {
-      const response = await fetch("/api/semesters", {
+      const response = await fetch("/api/v2/semesters", {
         credentials: "include",
         signal: abortController.signal,
       });
@@ -50,18 +50,28 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
 
   if (!isExpanded) {
     return (
-      <button className={styles.semesterSelectorCollapsed} title="Change the current semester" onClick={onIconClick}>
+      <button
+        className={styles.semesterSelectorCollapsed}
+        title="Change the current semester"
+        onClick={onIconClick}
+        data-qa="semester-selector"
+      >
         <FaGraduationCap />
       </button>
     );
   }
 
   return (
-    <div className={styles.semesterSelector}>
+    <div className={styles.semesterSelector} data-qa="semester-selector">
       <div className={styles.semesterLabel}>
         <span>Viewing Semester</span>
       </div>
-      <select value={currentSemester?.id || ""} onChange={handleChange} className={styles.semesterDropdown}>
+      <select
+        value={currentSemester?.id || ""}
+        onChange={handleChange}
+        className={styles.semesterDropdown}
+        data-qa="semester-dropdown"
+      >
         {semesters.map((semester) => (
           <option key={semester.id} value={semester.id}>
             {semester.name}

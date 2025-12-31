@@ -95,6 +95,7 @@ export function BlindLevelsTable() {
                 min={0}
                 error={!!blindsErrors?.[index]?.small}
                 fullWidth
+                data-qa={`blind-${index}-small`}
               />
             </div>
             <div className={styles.cell}>
@@ -104,6 +105,7 @@ export function BlindLevelsTable() {
                 min={0}
                 error={!!blindsErrors?.[index]?.big}
                 fullWidth
+                data-qa={`blind-${index}-big`}
               />
             </div>
             <div className={styles.cell}>
@@ -113,6 +115,7 @@ export function BlindLevelsTable() {
                 min={0}
                 error={!!blindsErrors?.[index]?.ante}
                 fullWidth
+                data-qa={`blind-${index}-ante`}
               />
             </div>
             <div className={styles.cell}>
@@ -122,18 +125,31 @@ export function BlindLevelsTable() {
                 min={1}
                 error={!!blindsErrors?.[index]?.time}
                 fullWidth
+                data-qa={`blind-${index}-time`}
               />
             </div>
           </div>
           {fields.length > 1 && (
-            <button type="button" className={styles.removeButton} onClick={() => remove(index)} title="Remove level">
+            <button
+              type="button"
+              className={styles.removeButton}
+              onClick={() => remove(index)}
+              title="Remove level"
+              data-qa={`remove-blind-btn-${index}`}
+            >
               <FaTrash size={12} /> Remove
             </button>
           )}
         </div>
       ))}
 
-      <Button type="button" variant="secondary" onClick={handleAddLevel} iconBefore={<FaPlus />}>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={handleAddLevel}
+        iconBefore={<FaPlus />}
+        data-qa="add-blind-btn"
+      >
         Add Level
       </Button>
     </div>

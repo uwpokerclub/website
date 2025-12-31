@@ -46,10 +46,10 @@ export function EndEventModal({ show, semesterId, eventId, onClose, onSuccess }:
 
   const footer = (
     <div className={styles.footer}>
-      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
+      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting} data-qa="end-event-cancel-btn">
         Go back
       </Button>
-      <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitting}>
+      <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitting} data-qa="end-event-confirm-btn">
         {isSubmitting ? "Ending..." : "End event"}
       </Button>
     </div>
@@ -62,9 +62,10 @@ export function EndEventModal({ show, semesterId, eventId, onClose, onSuccess }:
       title="Are you sure you want to end the event?"
       size="md"
       footer={footer}
+      data-qa="end-event-modal"
     >
       {error && (
-        <div className={styles.errorAlert} role="alert">
+        <div className={styles.errorAlert} role="alert" data-qa="end-event-error-alert">
           {error}
         </div>
       )}

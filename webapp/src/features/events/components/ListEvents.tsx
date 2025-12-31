@@ -134,6 +134,7 @@ function EventActions({ event, onActionComplete, onEditClick }: EventActionsProp
             title="Actions"
             aria-label="Actions"
             disabled={isProcessing}
+            data-qa={`actions-menu-btn-${event.id}`}
           >
             {isProcessing ? <Spinner size="sm" /> : <FaEllipsisV />}
           </button>
@@ -153,17 +154,28 @@ function EventActions({ event, onActionComplete, onEditClick }: EventActionsProp
                       setIsMenuOpen(false);
                       onEditClick(event);
                     }}
+                    data-qa={`edit-event-btn-${event.id}`}
                   >
                     <FaPencilAlt /> Edit Event
                   </button>
                 ))}
               {showEndEvent && (
-                <button className={styles.menuItem} onClick={handleEndEventClick} disabled={isProcessing}>
+                <button
+                  className={styles.menuItem}
+                  onClick={handleEndEventClick}
+                  disabled={isProcessing}
+                  data-qa={`end-event-btn-${event.id}`}
+                >
                   <FaStop /> End Event
                 </button>
               )}
               {showRestartEvent && (
-                <button className={styles.menuItem} onClick={handleRestartEvent} disabled={isProcessing}>
+                <button
+                  className={styles.menuItem}
+                  onClick={handleRestartEvent}
+                  disabled={isProcessing}
+                  data-qa={`restart-event-btn-${event.id}`}
+                >
                   <FaRedo /> Restart Event
                 </button>
               )}
@@ -179,14 +191,25 @@ function EventActions({ event, onActionComplete, onEditClick }: EventActionsProp
         size="sm"
         footer={
           <div className={styles.confirmFooter}>
-            <Button variant="tertiary" onClick={() => setIsEndConfirmOpen(false)} disabled={isProcessing}>
+            <Button
+              variant="tertiary"
+              onClick={() => setIsEndConfirmOpen(false)}
+              disabled={isProcessing}
+              data-qa={`end-confirm-cancel-btn-${event.id}`}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleEndEventConfirm} disabled={isProcessing}>
+            <Button
+              variant="destructive"
+              onClick={handleEndEventConfirm}
+              disabled={isProcessing}
+              data-qa={`end-confirm-btn-${event.id}`}
+            >
               {isProcessing ? "Ending..." : "End Event"}
             </Button>
           </div>
         }
+        data-qa={`end-confirm-modal-${event.id}`}
       >
         <p>
           Are you sure you want to end <strong>&quot;{event.name}&quot;</strong>? This will finalize the event results.
@@ -330,11 +353,11 @@ export function ListEvents() {
       sortable: false,
       render: (_value, row) =>
         hasPermission("get", "event") ? (
-          <Link to={`${row.id}`} className={styles.eventLink}>
+          <Link to={`${row.id}`} className={styles.eventLink} data-qa={`event-name-${row.id}`}>
             {row.name}
           </Link>
         ) : (
-          <span>{row.name}</span>
+          <span data-qa={`event-name-${row.id}`}>{row.name}</span>
         ),
     },
     {
@@ -361,7 +384,10 @@ export function ListEvents() {
       accessor: (row) => row.state,
       sortable: false,
       render: (_value, row) => (
-        <span className={row.state === EventState.Started ? styles.statusActive : styles.statusEnded}>
+        <span
+          className={row.state === EventState.Started ? styles.statusActive : styles.statusEnded}
+          data-qa={`event-status-${row.id}`}
+        >
           {row.state === EventState.Started ? "Active" : "Ended"}
         </span>
       ),
@@ -384,7 +410,7 @@ export function ListEvents() {
   // Show loading state
   if (isLoading) {
     return (
-      <div className={styles.container}>
+      <div className={styles.container} data-qa="events-loading">
         <div className={styles.centerContent}>
           <Spinner size="lg" />
           <p>Loading events...</p>
@@ -396,10 +422,12 @@ export function ListEvents() {
   // Show error state
   if (error) {
     return (
-      <div className={styles.container}>
+      <div className={styles.container} data-qa="events-error">
         <div className={styles.errorState}>
           <p>Error: {error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button onClick={() => window.location.reload()} data-qa="events-retry-btn">
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -408,7 +436,7 @@ export function ListEvents() {
   // Show empty state when no semester is selected
   if (!semesterContext?.currentSemester) {
     return (
-      <div className={styles.container}>
+      <div className={styles.container} data-qa="events-no-semester">
         <div className={styles.emptyState}>
           <p>Please select a semester to view events.</p>
         </div>
@@ -434,22 +462,24 @@ export function ListEvents() {
                   onClick={handleClearSearch}
                   className={styles.clearButton}
                   aria-label="Clear search"
+                  data-qa="clear-search-btn"
                 >
                   <FaTimes />
                 </button>
               ) : null
             }
             fullWidth
+            data-qa="input-events-search"
           />
         </div>
         {hasPermission("create", "event") && (
-          <Button onClick={() => setIsCreateModalOpen(true)} iconBefore={<FaPlus />}>
+          <Button onClick={() => setIsCreateModalOpen(true)} iconBefore={<FaPlus />} data-qa="create-event-btn">
             Create Event
           </Button>
         )}
       </div>
 
-      <div className={styles.resultsInfo}>
+      <div className={styles.resultsInfo} data-qa="events-results-info">
         <p>
           Showing {paginatedEvents.length} of {filteredEvents.length} events
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
@@ -464,7 +494,7 @@ export function ListEvents() {
           data={paginatedEvents}
           columns={columns}
           emptyState={
-            <div className={styles.emptyState}>
+            <div className={styles.emptyState} data-qa={events.length === 0 ? "events-empty" : "events-no-results"}>
               <div className={styles.emptyIllustration}>
                 <FaCalendarAlt size={64} />
               </div>
@@ -482,12 +512,13 @@ export function ListEvents() {
               )}
             </div>
           }
+          data-qa="events-table"
         />
       </div>
 
       {/* Pagination */}
       {filteredEvents.length > ITEMS_PER_PAGE && (
-        <div className={styles.paginationContainer}>
+        <div className={styles.paginationContainer} data-qa="events-pagination">
           <Pagination
             variant="compact"
             totalItems={filteredEvents.length}

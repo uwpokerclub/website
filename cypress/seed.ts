@@ -1,4 +1,9 @@
-import { Event, Membership, User } from "./types";
+import { Event, Membership, Participant, Ranking, User } from "./types";
+
+export const STRUCTURE = {
+  id: 1,
+  name: "Structure A",
+};
 
 export const SEMESTER = {
   id: "84f026be-53e0-4759-ab89-131c4a66d649",
@@ -8,7 +13,7 @@ export const SEMESTER = {
   startingBudget: 100,
   currentBudget: 100,
   membershipFee: 10,
-  memershipDiscountFee: 7,
+  membershipDiscountFee: 7,
   rebuyFee: 2,
   meta: "Seed semester",
 };
@@ -24,6 +29,19 @@ export const EVENT: Event = {
   pointsMultiplier: 1.0,
   startDate: "2025-01-03T19:00:00.000Z",
   additionalDetails: "Seed event",
+};
+
+export const ENDED_EVENT: Event = {
+  id: "2",
+  name: "Winter 2025 Event #2",
+  format: "No Limit Hold'em",
+  semesterId: SEMESTER.id,
+  state: 1,
+  structureId: "1",
+  rebuys: 0,
+  pointsMultiplier: 1.0,
+  startDate: "2025-01-10T19:00:00.000Z",
+  additionalDetails: "Completed event",
 };
 
 export const MEMBERS: Membership[] = [
@@ -61,6 +79,41 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: true,
+  },
+  {
+    id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    userId: "39166759",
+    semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
+    paid: true,
+    discounted: false,
+  },
+  {
+    id: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    userId: "55686346",
+    semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
+    paid: true,
+    discounted: false,
+  },
+  {
+    id: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+    userId: "81085720",
+    semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
+    paid: true,
+    discounted: true,
+  },
+  {
+    id: "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+    userId: "52873146",
+    semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
+    paid: false,
+    discounted: false,
+  },
+  {
+    id: "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+    userId: "75969632",
+    semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
+    paid: true,
+    discounted: false,
   },
 ];
 
@@ -154,5 +207,112 @@ export const USERS: User[] = [
     faculty: "Environment",
     questId: "wjosey9",
     createdAt: "2025-01-30",
+  },
+];
+
+// Users that exist in the database but do NOT have memberships for the current semester
+// Use these for testing member registration flows
+export const USERS_WITHOUT_MEMBERSHIPS: User[] = [
+  {
+    id: "11111111",
+    firstName: "Unregistered",
+    lastName: "TestUser",
+    email: "unregistered@test.com",
+    faculty: "Math",
+    questId: "unreg1",
+    createdAt: "2025-01-01",
+  },
+  {
+    id: "22222222",
+    firstName: "Another",
+    lastName: "Unregistered",
+    email: "another.unreg@test.com",
+    faculty: "Science",
+    questId: "unreg2",
+    createdAt: "2025-01-01",
+  },
+];
+
+export const ACTIVE_EVENT_PARTICIPANTS: Participant[] = [
+  {
+    id: 1,
+    membershipId: "5d312426-ad56-4231-bb12-241acbfb91e2",
+    eventId: 1,
+  },
+  {
+    id: 2,
+    membershipId: "c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d",
+    eventId: 1,
+  },
+  {
+    id: 3,
+    membershipId: "b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e",
+    eventId: 1,
+  },
+];
+
+export const ENDED_EVENT_PARTICIPANTS: Participant[] = [
+  {
+    id: 4,
+    membershipId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    eventId: 2,
+    placement: 1,
+    signedOutAt: "2025-01-10T23:30:00.000Z",
+  },
+  {
+    id: 5,
+    membershipId: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    eventId: 2,
+    placement: 2,
+    signedOutAt: "2025-01-10T23:25:00.000Z",
+  },
+  {
+    id: 6,
+    membershipId: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+    eventId: 2,
+    placement: 3,
+    signedOutAt: "2025-01-10T23:00:00.000Z",
+  },
+  {
+    id: 7,
+    membershipId: "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+    eventId: 2,
+    placement: 4,
+    signedOutAt: "2025-01-10T22:30:00.000Z",
+  },
+  {
+    id: 8,
+    membershipId: "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+    eventId: 2,
+    placement: 5,
+    signedOutAt: "2025-01-10T22:00:00.000Z",
+  },
+];
+
+export const RANKINGS: Ranking[] = [
+  {
+    membershipId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    points: 4,
+    attendance: 1,
+  },
+  {
+    membershipId: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    points: 3,
+    attendance: 1,
+  },
+  {
+    membershipId: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+    points: 3,
+    attendance: 1,
+  },
+  {
+    membershipId: "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+    points: 3,
+    attendance: 1,
+  },
+  {
+    membershipId: "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+    points: 2,
+    attendance: 1,
   },
 ];

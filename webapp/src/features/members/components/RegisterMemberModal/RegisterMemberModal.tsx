@@ -202,10 +202,15 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
   // Footer with actions
   const footer = (
     <div className={styles.footer}>
-      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
+      <Button data-qa="register-cancel-btn" variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
         Cancel
       </Button>
-      <Button type="submit" form={mode === "search" ? "search-form" : "create-form"} disabled={isSubmitting}>
+      <Button
+        data-qa="register-submit-btn"
+        type="submit"
+        form={mode === "search" ? "search-form" : "create-form"}
+        disabled={isSubmitting}
+      >
         {isSubmitting ? "Registering..." : "Register Member"}
       </Button>
     </div>
@@ -213,22 +218,31 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Semester Registration" size="lg" footer={footer}>
-      <div className={styles.content}>
+      <div className={styles.content} data-qa="register-member-modal">
         {/* Mode toggle */}
         <div className={styles.modeToggle}>
           {mode === "search" ? (
-            <button type="button" onClick={handleModeToggle} className={styles.modeLink}>
+            <button
+              type="button"
+              onClick={handleModeToggle}
+              className={styles.modeLink}
+              data-qa="toggle-new-member-btn"
+            >
               Can&apos;t find the member you are looking for? Create a new member
             </button>
           ) : (
-            <button type="button" onClick={handleModeToggle} className={styles.modeLink}>
+            <button type="button" onClick={handleModeToggle} className={styles.modeLink} data-qa="toggle-search-btn">
               &larr; Back to search
             </button>
           )}
         </div>
 
         {/* Error display */}
-        {submitError && <div className={styles.errorAlert}>{submitError}</div>}
+        {submitError && (
+          <div className={styles.errorAlert} data-qa="register-error-alert">
+            {submitError}
+          </div>
+        )}
 
         {/* Search mode */}
         {mode === "search" && (

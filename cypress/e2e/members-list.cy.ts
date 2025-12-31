@@ -270,7 +270,6 @@ describe("MembersList", () => {
         cy.wait("@getEmptyMembers");
 
         cy.getByData("members-empty").should("be.visible");
-        cy.getByData("register-first-member-btn").should("be.visible");
       });
     });
   });

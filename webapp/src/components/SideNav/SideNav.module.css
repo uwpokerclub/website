@@ -82,6 +82,14 @@
   display: none;
 }
 
+/* Scrollable container for nav links */
+.navScrollContainer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* Required for flex child to scroll */
+}
+
 /* Center mobile nav links */
 .navLinks {
   display: flex;
@@ -111,6 +119,7 @@
   justify-content: center;
   padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 /* Toggle button within navbar (desktop only) */
@@ -247,6 +256,6 @@
     justify-content: center;
     padding: 0.5rem 0;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin-top: auto; /* Push to bottom */
+    flex-shrink: 0; /* Prevent footer from shrinking */
   }
 }

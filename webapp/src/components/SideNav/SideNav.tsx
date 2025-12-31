@@ -105,20 +105,23 @@ function SideNav() {
         {/* Semester selector */}
         <SemesterSelector isExpanded={isExpanded} onIconClick={toggleNav} />
 
-        {/* Main navigation links */}
-        <ul className={styles.navLinks}>{renderNavItems(mainNavItems)}</ul>
+        {/* Scrollable nav section */}
+        <div className={styles.navScrollContainer}>
+          {/* Main navigation links */}
+          <ul className={styles.navLinks}>{renderNavItems(mainNavItems)}</ul>
 
-        {hasRoles([ROLES.WEBMASTER, ROLES.PRESIDENT, ROLES.VICE_PRESIDENT, ROLES.TREASURER, ROLES.SECRETARY]) && (
-          <>
-            {/* Additional navigation section with separator */}
-            <div className={styles.navSeparator} data-qa="sidenav-officers-section">
-              <span>Officers</span>
-            </div>
+          {hasRoles([ROLES.WEBMASTER, ROLES.PRESIDENT, ROLES.VICE_PRESIDENT, ROLES.TREASURER, ROLES.SECRETARY]) && (
+            <>
+              {/* Additional navigation section with separator */}
+              <div className={styles.navSeparator} data-qa="sidenav-officers-section">
+                <span>Officers</span>
+              </div>
 
-            {/* Additional navigation links */}
-            <ul className={styles.navLinks}>{renderNavItems(additionalNavItems)}</ul>
-          </>
-        )}
+              {/* Additional navigation links */}
+              <ul className={styles.navLinks}>{renderNavItems(additionalNavItems)}</ul>
+            </>
+          )}
+        </div>
 
         {/* Desktop toggle button */}
         <div className={styles.navFooter}>

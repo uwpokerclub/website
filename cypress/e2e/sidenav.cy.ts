@@ -91,7 +91,7 @@ describe("SideNav", () => {
       cy.getByData("semester-dropdown").should("exist");
     });
 
-    it("should display current semester in dropdown", () => {
+    it("should display current semester in dropdown trigger", () => {
       cy.getByData("semester-dropdown").should("contain", SEMESTER.name);
     });
 
@@ -109,6 +109,19 @@ describe("SideNav", () => {
 
       // Verify semester is still selected
       cy.getByData("semester-dropdown").should("contain", SEMESTER.name);
+    });
+
+    it("should display create semester option in dropdown for users with permission", () => {
+      // Default e2e_user has WEBMASTER role with semester.create permission
+      // Open dropdown first
+      cy.getByData("semester-dropdown").click();
+      cy.getByData("create-semester-btn").should("exist");
+    });
+
+    it("should open create semester modal when option clicked", () => {
+      cy.getByData("semester-dropdown").click();
+      cy.getByData("create-semester-btn").click();
+      cy.getByData("create-semester-modal").should("exist");
     });
   });
 

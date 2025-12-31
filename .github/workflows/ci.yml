@@ -86,10 +86,6 @@ jobs:
     needs: [build, webapp-tests, server-tests]
     env:
       TZ: America/New_York
-    strategy:
-      fail-fast: false
-      matrix:
-        containers: [1, 2]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,12 +137,6 @@ jobs:
           fi
       - name: Run E2E tests
         uses: cypress-io/github-action@v6
-        with:
-          record: true
-          parallel: true
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   push:
     if: github.event_name == 'push'

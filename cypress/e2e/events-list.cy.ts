@@ -3,8 +3,8 @@ import { EVENT, ENDED_EVENT, SEMESTER } from "../seed";
 describe("ListEvents", () => {
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", []).as("getSemesters");
     });
@@ -17,8 +17,8 @@ describe("ListEvents", () => {
 
   context("error state", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
     });
 
     it("should display error message and retry button when API fails", () => {
@@ -37,8 +37,8 @@ describe("ListEvents", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
       cy.visit("/admin/events");
       // Wait for table to be visible (data loaded)
       cy.getByData("events-table").should("exist");

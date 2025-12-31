@@ -1,15 +1,11 @@
 import { MEMBERS, SEMESTER, USERS } from "../seed";
-
-// Helper to get user by membership
-const getUserForMember = (member: (typeof MEMBERS)[number]) => {
-  return USERS.find((u) => u.id === member.userId)!;
-};
+import { getUserForMember } from "../support/helpers";
 
 describe("MembersList", () => {
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", []).as("getSemesters");
     });
@@ -22,8 +18,8 @@ describe("MembersList", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
       cy.visit("/admin/members");
       // Wait for table to be visible (data loaded)
       cy.getByData("members-table").should("exist");

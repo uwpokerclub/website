@@ -13,7 +13,7 @@ export const SEMESTER = {
   startingBudget: 100,
   currentBudget: 100,
   membershipFee: 10,
-  memershipDiscountFee: 7,
+  membershipDiscountFee: 7,
   rebuyFee: 2,
   meta: "Seed semester",
 };

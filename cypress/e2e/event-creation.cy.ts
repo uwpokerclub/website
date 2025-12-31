@@ -1,9 +1,10 @@
 import { SEMESTER, STRUCTURE } from "../seed";
+import { DEFAULT_BLIND_LEVEL } from "../support/helpers";
 
 describe("CreateEventModal", () => {
   beforeEach(() => {
-    cy.exec("npm run db:reset && npm run db:seed");
-    cy.login("e2e_user", "password");
+    cy.resetDatabase();
+    cy.login();
     cy.visit("/admin/events");
     cy.intercept("GET", "/api/v2/structures").as("getStructures");
     cy.getByData("create-event-btn").click();
@@ -141,10 +142,10 @@ describe("CreateEventModal", () => {
       cy.getByData("radio-structure-mode-create").click();
 
       // Verify default blind level values
-      cy.getByData("blind-0-small").should("have.value", "25");
-      cy.getByData("blind-0-big").should("have.value", "50");
-      cy.getByData("blind-0-ante").should("have.value", "0");
-      cy.getByData("blind-0-time").should("have.value", "15");
+      cy.getByData("blind-0-small").should("have.value", String(DEFAULT_BLIND_LEVEL.small));
+      cy.getByData("blind-0-big").should("have.value", String(DEFAULT_BLIND_LEVEL.big));
+      cy.getByData("blind-0-ante").should("have.value", String(DEFAULT_BLIND_LEVEL.ante));
+      cy.getByData("blind-0-time").should("have.value", String(DEFAULT_BLIND_LEVEL.time));
     });
 
     it("should fill structure name and validate required", () => {

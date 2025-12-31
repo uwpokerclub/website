@@ -3,16 +3,10 @@ import {
   EVENT,
   ENDED_EVENT,
   MEMBERS,
-  USERS,
   ACTIVE_EVENT_PARTICIPANTS,
   ENDED_EVENT_PARTICIPANTS,
 } from "../seed";
-
-// Helper to get user by membership
-const getUserForMember = (membershipId: string) => {
-  const member = MEMBERS.find((m) => m.id === membershipId);
-  return USERS.find((u) => u.id === member?.userId);
-};
+import { getUserForMember } from "../support/helpers";
 
 // Helper to visit event details page
 const visitEventDetails = (eventId: string) => {
@@ -21,8 +15,8 @@ const visitEventDetails = (eventId: string) => {
 
 describe("EventDetails", () => {
   beforeEach(() => {
-    cy.exec("npm run db:reset && npm run db:seed", { timeout: 30000 });
-    cy.login("e2e_user", "password");
+    cy.resetDatabase();
+    cy.login();
 
     // API intercepts
     cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events\/\d+$/).as("getEvent");

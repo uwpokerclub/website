@@ -1,14 +1,10 @@
-import { MEMBERS, USERS } from "../seed";
-
-// Helper to get user by membership
-const getUserForMember = (member: (typeof MEMBERS)[number]) => {
-  return USERS.find((u) => u.id === member.userId)!;
-};
-
-// Semantic aliases for test clarity
-const UNPAID_MEMBER = MEMBERS[0]; // Heinrik Drust - paid: false, discounted: false
-const PAID_MEMBER = MEMBERS[3]; // Khalil Duckham - paid: true, discounted: false
-const DISCOUNTED_MEMBER = MEMBERS[4]; // Amandie Libbis - paid: true, discounted: true
+import { MEMBERS } from "../seed";
+import {
+  getUserForMember,
+  UNPAID_MEMBER,
+  PAID_MEMBER,
+  DISCOUNTED_MEMBER,
+} from "../support/helpers";
 
 // Helper to open edit modal for a specific member
 const openEditModal = (memberId: string) => {
@@ -23,8 +19,8 @@ const openEditModal = (memberId: string) => {
 
 describe("EditMemberModal", () => {
   beforeEach(() => {
-    cy.exec("npm run db:reset && npm run db:seed", { timeout: 30000 });
-    cy.login("e2e_user", "password");
+    cy.resetDatabase();
+    cy.login();
     cy.visit("/admin/members");
     cy.getByData("members-table").should("exist");
 

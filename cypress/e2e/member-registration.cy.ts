@@ -7,8 +7,8 @@ const getMemberSearchInput = () => {
 
 describe("Member Registration", () => {
   beforeEach(() => {
-    cy.exec("npm run db:reset && npm run db:seed");
-    cy.login("e2e_user", "password");
+    cy.resetDatabase();
+    cy.login();
     cy.visit("/admin/members");
     cy.getByData("members-table").should("exist");
 

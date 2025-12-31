@@ -1,16 +1,10 @@
-import { MEMBERS, RANKINGS, SEMESTER, USERS } from "../seed";
-import { User } from "../types";
-
-// Helper function to get user for a ranking based on membershipId
-function getRankingUser(membershipId: string): User {
-  const membership = MEMBERS.find((m) => m.id === membershipId);
-  return USERS.find((u) => u.id === membership?.userId)!;
-}
+import { RANKINGS, SEMESTER } from "../seed";
+import { getUserForMember } from "../support/helpers";
 
 // Pre-computed sorted rankings with user info for easier test assertions
 // Note: The API returns user ID as the ranking id, not membershipId
 const SORTED_RANKINGS = RANKINGS.map((r) => {
-  const user = getRankingUser(r.membershipId);
+  const user = getUserForMember(r.membershipId);
   return {
     ...r,
     user,
@@ -21,8 +15,8 @@ const SORTED_RANKINGS = RANKINGS.map((r) => {
 describe("Rankings", () => {
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", []).as("getSemesters");
     });
@@ -35,8 +29,8 @@ describe("Rankings", () => {
 
   context("loading state", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
     });
 
     it("should display loading spinner while fetching rankings", () => {
@@ -56,8 +50,8 @@ describe("Rankings", () => {
 
   context("error state", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
     });
 
     it("should display error message and retry button when API fails", () => {
@@ -76,8 +70,8 @@ describe("Rankings", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.exec("npm run db:reset && npm run db:seed");
-      cy.login("e2e_user", "password");
+      cy.resetDatabase();
+      cy.login();
       cy.visit("/admin/rankings");
       // Wait for table to be visible (data loaded)
       cy.getByData("rankings-table").should("exist");

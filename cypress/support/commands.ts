@@ -1,58 +1,56 @@
 /// <reference types="cypress" />
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
-//
-// declare global {
-//   namespace Cypress {
-//     interface Chainable {
-//       login(email: string, password: string): Chainable<void>
-//       drag(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       dismiss(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       visit(originalFn: CommandOriginalFn, url: string, options: Partial<VisitOptions>): Chainable<Element>
-//     }
-//   }
-// }
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace Cypress {
   interface Chainable {
+    /**
+     * Get element by data-qa attribute
+     * @param dataTestAttribute - The value of the data-qa attribute
+     * @example cy.getByData("login-submit").click()
+     */
     getByData(dataTestAttribute: string): Chainable<JQuery<HTMLElement>>;
-    login(username: string, password: string): Chainable<void>;
+
+    /**
+     * Login to the application via API
+     * @param username - Username for authentication (defaults to TEST_USERNAME env var)
+     * @param password - Password for authentication (defaults to TEST_PASSWORD env var)
+     * @example cy.login("e2e_user", "password")
+     */
+    login(username?: string, password?: string): Chainable<void>;
+
+    /**
+     * Reset and seed the test database
+     * @example cy.resetDatabase()
+     */
+    resetDatabase(): Chainable<Cypress.Exec>;
   }
 }
 
-Cypress.Commands.add("getByData", (selector) => {
-  return cy.get(`[data-qa=${selector}]`);
+/**
+ * Get element by data-qa attribute
+ */
+Cypress.Commands.add("getByData", (selector: string) => {
+  return cy.get(`[data-qa="${selector}"]`);
 });
 
-Cypress.Commands.add("login", (username, password) => {
+/**
+ * Login to the application via API
+ * Uses environment variables if credentials not provided
+ */
+Cypress.Commands.add("login", (username?: string, password?: string) => {
+  const user = username ?? Cypress.env("TEST_USERNAME") ?? "e2e_user";
+  const pass = password ?? Cypress.env("TEST_PASSWORD") ?? "password";
+
   cy.request("POST", "/api/v2/session", {
-    username,
-    password,
+    username: user,
+    password: pass,
   });
   cy.getCookie("uwpsc-dev-session-id").should("exist");
 });
 
+/**
+ * Reset and seed the test database
+ */
+Cypress.Commands.add("resetDatabase", () => {
+  return cy.exec("npm run db:reset && npm run db:seed", { timeout: 30000 });
+});

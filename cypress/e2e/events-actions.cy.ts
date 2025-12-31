@@ -15,8 +15,8 @@ const openEditModal = (eventId: string) => {
 
 describe("Event Actions", () => {
   beforeEach(() => {
-    cy.exec("npm run db:reset && npm run db:seed", { timeout: 30000 });
-    cy.login("e2e_user", "password");
+    cy.resetDatabase();
+    cy.login();
     cy.visit("/admin/events");
     cy.getByData("events-table").should("exist");
 

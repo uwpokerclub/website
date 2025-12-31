@@ -343,21 +343,16 @@ export function MembersList() {
                 <FaUsers size={64} />
               </div>
               {members.length === 0 ? (
-                <div data-qa="members-empty">
-                  <h3>No members yet</h3>
+                <>
+                  <h3 data-qa="members-empty">No members yet</h3>
                   <p>No members have been registered for this semester yet.</p>
-                  {hasPermission("create", "membership") && (
-                    <Button data-qa="register-first-member-btn" onClick={handleRegisterMember} iconBefore={<FaPlus />}>
-                      Register First Member
-                    </Button>
-                  )}
-                </div>
+                </>
               ) : (
-                <div data-qa="members-no-results">
-                  <h3>No results found</h3>
+                <>
+                  <h3 data-qa="members-no-results">No results found</h3>
                   <p>No members found matching &quot;{debouncedSearchQuery}&quot;</p>
                   <p className={styles.emptyHint}>Try adjusting your search terms</p>
-                </div>
+                </>
               )}
             </div>
           }

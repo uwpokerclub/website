@@ -171,16 +171,16 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
                 <FaTrophy size={64} />
               </div>
               {rankings.length === 0 ? (
-                <div data-qa="rankings-empty">
-                  <h3>No rankings yet</h3>
+                <>
+                  <h3 data-qa="rankings-empty">No rankings yet</h3>
                   <p>No members have earned points this semester yet.</p>
-                </div>
+                </>
               ) : (
-                <div data-qa="rankings-no-results">
-                  <h3>No results found</h3>
+                <>
+                  <h3 data-qa="rankings-no-results">No results found</h3>
                   <p>No rankings found matching &quot;{debouncedSearchQuery}&quot;</p>
                   <p className={styles.emptyHint}>Try adjusting your search terms</p>
-                </div>
+                </>
               )}
             </div>
           }

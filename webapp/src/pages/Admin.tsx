@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { Home } from "./Home";
+import { Dashboard } from "./Dashboard";
 import { Users } from "./Users";
 import { Semesters } from "./Semesters";
 import { Rankings } from "./Rankings";
@@ -15,6 +16,7 @@ export function Admin() {
     <AdminLayout>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/users/*" element={<Users />} />
         <Route path="/members/*" element={<Members />} />
         <Route path="/events/*" element={<Events />} />

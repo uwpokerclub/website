@@ -1,0 +1,16 @@
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+/* Stack fields on mobile */
+@media (max-width: 600px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+}

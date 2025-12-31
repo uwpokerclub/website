@@ -104,7 +104,7 @@ jobs:
       - name: Setup Docker network
         run: docker network create uwpokerclub_services_network
       - name: Start PostgreSQL container
-        run: docker run --name postgres --network uwpokerclub_services_network -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub -e TZ=America/New_York -p 5432:5432 -d postgres:13.7-alpine
+        run: docker run --name postgres --network uwpokerclub_services_network -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
       - name: Wait for PostgreSQL to be ready
         run: |
           ready=false
@@ -133,6 +133,8 @@ jobs:
           done
           if [ "$ready" = false ]; then
             echo "Server not ready after 30 seconds"
+            echo "=== Server logs ==="
+            docker logs server
             exit 1
           fi
       - name: Run E2E tests

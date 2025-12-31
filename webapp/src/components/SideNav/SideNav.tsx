@@ -122,14 +122,24 @@ function SideNav() {
 
         {/* Desktop toggle button */}
         <div className={styles.navFooter}>
-          <button className={styles.toggleBtn} onClick={toggleNav} aria-label="Toggle navigation" data-qa="sidenav-toggle">
+          <button
+            className={styles.toggleBtn}
+            onClick={toggleNav}
+            aria-label="Toggle navigation"
+            data-qa="sidenav-toggle"
+          >
             {isExpanded ? <FaChevronLeft /> : <FaChevronRight />}
           </button>
         </div>
       </nav>
 
       {/* Mobile-only elements - CSS will hide/show these based on screen size */}
-      <button className={styles.mobileToggle} onClick={() => setIsExpanded(true)} aria-label="Open navigation" data-qa="sidenav-mobile-open">
+      <button
+        className={styles.mobileToggle}
+        onClick={() => setIsExpanded(true)}
+        aria-label="Open navigation"
+        data-qa="sidenav-mobile-open"
+      >
         <FaBars />
       </button>
 
@@ -141,7 +151,12 @@ function SideNav() {
       ></div>
 
       {/* Mobile close button */}
-      <button className={styles.closeBtn} onClick={() => setIsExpanded(false)} aria-label="Close navigation" data-qa="sidenav-mobile-close">
+      <button
+        className={styles.closeBtn}
+        onClick={() => setIsExpanded(false)}
+        aria-label="Close navigation"
+        data-qa="sidenav-mobile-close"
+      >
         <FaTimes />
       </button>
     </div>

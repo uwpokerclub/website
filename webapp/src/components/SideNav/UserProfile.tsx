@@ -38,8 +38,12 @@ function UserProfile({ isExpanded }: UserProfileProps) {
         <FaUserCircle />
       </div>
       <div className={styles.userInfo}>
-        <span className={styles.userName} data-qa="user-name">{user!.username}</span>
-        <span className={styles.userRole} data-qa="user-role">{prettyPrintRole(user!.role)}</span>
+        <span className={styles.userName} data-qa="user-name">
+          {user!.username}
+        </span>
+        <span className={styles.userRole} data-qa="user-role">
+          {prettyPrintRole(user!.role)}
+        </span>
       </div>
       <button className={styles.logoutBtn} onClick={handleLogout} aria-label="Logout" data-qa="logout-btn">
         <FaSignOutAlt />

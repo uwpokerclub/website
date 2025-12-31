@@ -50,7 +50,12 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
 
   if (!isExpanded) {
     return (
-      <button className={styles.semesterSelectorCollapsed} title="Change the current semester" onClick={onIconClick} data-qa="semester-selector">
+      <button
+        className={styles.semesterSelectorCollapsed}
+        title="Change the current semester"
+        onClick={onIconClick}
+        data-qa="semester-selector"
+      >
         <FaGraduationCap />
       </button>
     );
@@ -61,7 +66,12 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
       <div className={styles.semesterLabel}>
         <span>Viewing Semester</span>
       </div>
-      <select value={currentSemester?.id || ""} onChange={handleChange} className={styles.semesterDropdown} data-qa="semester-dropdown">
+      <select
+        value={currentSemester?.id || ""}
+        onChange={handleChange}
+        className={styles.semesterDropdown}
+        data-qa="semester-dropdown"
+      >
         {semesters.map((semester) => (
           <option key={semester.id} value={semester.id}>
             {semester.name}

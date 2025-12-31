@@ -49,7 +49,7 @@ Cypress.Commands.add("getByData", (selector) => {
 });
 
 Cypress.Commands.add("login", (username, password) => {
-  cy.request("POST", "/api/session", {
+  cy.request("POST", "/api/v2/session", {
     username,
     password,
   });

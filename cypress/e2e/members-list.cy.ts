@@ -11,7 +11,7 @@ describe("MembersList", () => {
       cy.exec("npm run db:reset && npm run db:seed");
       cy.login("e2e_user", "password");
       // Mock semesters API to return empty array so no semester is selected
-      cy.intercept("GET", "/api/semesters", []).as("getSemesters");
+      cy.intercept("GET", "/api/v2/semesters", []).as("getSemesters");
     });
 
     it("should display no semester selected message", () => {

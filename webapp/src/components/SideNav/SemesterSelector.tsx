@@ -19,7 +19,7 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
   useEffect(() => {
     const abortController = new AbortController();
     const fetchSemesters = async () => {
-      const response = await fetch("/api/semesters", {
+      const response = await fetch("/api/v2/semesters", {
         credentials: "include",
         signal: abortController.signal,
       });

@@ -1,5 +1,5 @@
 /**
- * @fileoverview This file contains the interfaces for the API responses on the /api/session endpoint.
+ * @fileoverview This file contains the interfaces for the API responses on the /api/v2/session endpoint.
  */
 
 import { Role } from "@/types/roles";
@@ -57,7 +57,7 @@ export type SubResources = "participant" | "rankings" | "transaction";
 
 /**
  * @interface UserSession
- * @description This interface defines the response for the GET /api/session endpoint.
+ * @description This interface defines the response for the GET /api/v2/session endpoint.
  */
 export interface UserSession {
   username: string;

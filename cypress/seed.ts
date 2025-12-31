@@ -1,5 +1,10 @@
 import { Event, Membership, Participant, Ranking, User } from "./types";
 
+export const STRUCTURE = {
+  id: 1,
+  name: "Structure A",
+};
+
 export const SEMESTER = {
   id: "84f026be-53e0-4759-ab89-131c4a66d649",
   name: "Winter 2025",

@@ -31,7 +31,7 @@ describe("Login page", () => {
     cy.getByData("login-submit").click();
 
     // Check that the banner is on the page
-    cy.getByData("login-error-banner").should("exist").contains("Invalid username/password provided");
+    cy.getByData("login-error-banner").should("exist").contains("Invalid username or password");
 
     cy.getCookie("uwpsc-dev-session-id").should("not.exist");
   });

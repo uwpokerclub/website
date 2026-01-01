@@ -9,6 +9,7 @@ jobs:
     permissions:
       contents: 'read'
       id-token: 'write'
+      packages: 'read'
     steps:
       - name: Check out the repo
         uses: actions/checkout@v5

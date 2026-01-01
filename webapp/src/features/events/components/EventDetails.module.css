@@ -48,7 +48,6 @@
   padding: 2rem 2.5rem;
   border-radius: var(--event-radius) var(--event-radius) 0 0;
   position: relative;
-  overflow: hidden;
 }
 
 .pageHeader::before {

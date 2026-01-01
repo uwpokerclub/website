@@ -40,7 +40,7 @@ export interface PermissionList {
   event: Pick<Permissions, "create" | "get" | "list" | "edit" | "end" | "restart" | "rebuy"> & {
     participant: Pick<Permissions, "create" | "get" | "list" | "signin" | "signout" | "delete">;
   };
-  login: Pick<Permissions, "create">;
+  login: Pick<Permissions, "create" | "list" | "get" | "edit" | "delete">;
   membership: Pick<Permissions, "create" | "get" | "list" | "edit">;
   semester: Pick<Permissions, "create" | "get" | "list" | "edit"> & {
     rankings: Pick<Permissions, "get" | "list" | "export">;

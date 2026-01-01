@@ -10,6 +10,14 @@ definitions:
       time:
         type: integer
     type: object
+  ChangePasswordRequest:
+    properties:
+      newPassword:
+        minLength: 8
+        type: string
+    required:
+    - newPassword
+    type: object
   CreateEntryResult:
     properties:
       error:
@@ -45,6 +53,29 @@ definitions:
     - semesterId
     - startDate
     - structureId
+    type: object
+  CreateLoginRequest:
+    properties:
+      password:
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - bot
+        - executive
+        - tournament_director
+        - secretary
+        - treasurer
+        - vice_president
+        - president
+        - webmaster
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - role
+    - username
     type: object
   CreateMemberRequest:
     properties:
@@ -178,6 +209,24 @@ definitions:
           additionalProperties: {}
           type: object
         type: object
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  LinkedMemberInfo:
+    properties:
+      firstName:
+        type: string
+      id:
+        type: integer
+      lastName:
+        type: string
+    type: object
+  LoginWithMember:
+    properties:
+      linkedMember:
+        $ref: '#/definitions/LinkedMemberInfo'
       role:
         type: string
       username:
@@ -446,6 +495,192 @@ paths:
       summary: Health Check
       tags:
       - Health
+  /logins:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all logins with their linked member information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/LoginWithMember'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: List all logins
+      tags:
+      - Logins
+    post:
+      consumes:
+      - application/json
+      description: Create a new login with the provided credentials
+      parameters:
+      - description: Login details
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/CreateLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/LoginWithMember'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Create a new login
+      tags:
+      - Logins
+  /logins/{username}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a login by username
+      parameters:
+      - description: Login username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Delete login by username
+      tags:
+      - Logins
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a login by username with linked member information
+      parameters:
+      - description: Login username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/LoginWithMember'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get login by username
+      tags:
+      - Logins
+  /logins/{username}/password:
+    patch:
+      consumes:
+      - application/json
+      description: Change the password for a login
+      parameters:
+      - description: Login username
+        in: path
+        name: username
+        required: true
+        type: string
+      - description: New password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Change login password
+      tags:
+      - Logins
   /members:
     get:
       consumes:

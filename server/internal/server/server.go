@@ -68,11 +68,6 @@ func (s *apiServer) SetupRoutes() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	loginRoute := apiRoute.Group("/login", middleware.UseAuthentication(s.db))
-	{
-		loginRoute.POST("", middleware.UseAuthorization(s.db, "login.create"), s.CreateLogin)
-	}
-
 	sessionRoute := apiRoute.Group("/session")
 	{
 		sessionRoute.POST("", s.SessionLoginHandler)
@@ -160,6 +155,7 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewMembershipsController(s.db),
 		controller.NewRankingsController(s.db),
 		controller.NewStructuresController(s.db),
+		controller.NewLoginsController(s.db),
 	}
 
 	for _, controller := range controllers {

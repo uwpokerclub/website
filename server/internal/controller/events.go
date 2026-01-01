@@ -240,23 +240,12 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 		return
 	}
 
-	// Ensure the request body is the correct structure
-	var req models.UpdateEventRequestV2
-	if err := ctx.ShouldBindBodyWithJSON(&req); err != nil {
+	// Parse request body once into a map for partial update handling
+	requestValues := make(map[string]any)
+	if err := ctx.ShouldBindJSON(&requestValues); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusBadRequest,
 			apierrors.InvalidRequest(fmt.Sprintf("Error parsing request body: %s", err.Error())),
-		)
-		return
-	}
-
-	requestValues := make(map[string]any)
-	if err := ctx.ShouldBindBodyWithJSON(&requestValues); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Error parsing request body to map: %s", err.Error()),
-			),
 		)
 		return
 	}
@@ -317,59 +306,70 @@ func (controller *eventsController) validateAndCreateEventUpdateMap(
 	for key, value := range requestValues {
 		switch key {
 		case "name":
-			if value != nil {
-				if strValue := value.(string); strValue != "" {
-					updateMap["name"] = strValue
-				} else {
-					return nil, errors.New("name must be a non-empty string")
-				}
-			} else {
+			if value == nil {
 				return nil, errors.New("name cannot be null")
 			}
+			strValue, ok := value.(string)
+			if !ok {
+				return nil, errors.New("name must be a string")
+			}
+			if strValue == "" {
+				return nil, errors.New("name must be a non-empty string")
+			}
+			updateMap["name"] = strValue
 		case "format":
-			if value != nil {
-				if strValue := value.(string); strValue != "" {
-					updateMap["format"] = strValue
-				} else {
-					return nil, errors.New("format must be a non-empty string")
-				}
-			} else {
+			if value == nil {
 				return nil, errors.New("format cannot be null")
 			}
+			strValue, ok := value.(string)
+			if !ok {
+				return nil, errors.New("format must be a string")
+			}
+			if strValue == "" {
+				return nil, errors.New("format must be a non-empty string")
+			}
+			updateMap["format"] = strValue
 		case "notes":
 			if value != nil {
-				strValue := value.(string)
+				strValue, ok := value.(string)
+				if !ok {
+					return nil, errors.New("notes must be a string")
+				}
 				updateMap["notes"] = strValue
 			} else {
 				updateMap["notes"] = nil
 			}
 		case "startDate":
-			if value != nil {
-				tmpTime, err := time.Parse(time.RFC3339, value.(string))
-				if err != nil {
-					return nil, errors.New("startDate must be in RFC3339 format")
-				}
-				updateMap["start_date"] = tmpTime
-			} else {
+			if value == nil {
 				return nil, errors.New("startDate cannot be null")
 			}
+			strValue, ok := value.(string)
+			if !ok {
+				return nil, errors.New("startDate must be a string")
+			}
+			tmpTime, err := time.Parse(time.RFC3339, strValue)
+			if err != nil {
+				return nil, errors.New("startDate must be in RFC3339 format")
+			}
+			updateMap["start_date"] = tmpTime
 		case "pointsMultiplier":
-			if value != nil {
-				if floatValue, ok := value.(float64); ok && floatValue >= 0 {
-					updateMap["points_multiplier"] = float32(floatValue)
-				} else {
-					return nil, errors.New("pointsMultiplier must be a non-negative number")
-				}
-			} else {
+			if value == nil {
 				return nil, errors.New("pointsMultiplier cannot be null")
 			}
+			floatValue, ok := value.(float64)
+			if !ok {
+				return nil, errors.New("pointsMultiplier must be a number")
+			}
+			if floatValue < 0 {
+				return nil, errors.New("pointsMultiplier must be a non-negative number")
+			}
+			updateMap["points_multiplier"] = float32(floatValue)
 		default:
 			return nil, fmt.Errorf(
 				"failed to validate event update request: unknown field: %s",
 				key,
 			)
 		}
-
 	}
 
 	return updateMap, nil

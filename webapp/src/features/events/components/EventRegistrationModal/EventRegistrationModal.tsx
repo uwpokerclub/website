@@ -453,6 +453,7 @@ export function EventRegistrationModal({
       onClose={handleClose}
       title="Manage Event Registration"
       size="xl"
+      closeOnEscape={!isCreateMemberModalOpen}
       data-qa="event-registration-modal"
     >
       <div className={styles.modalContent}>

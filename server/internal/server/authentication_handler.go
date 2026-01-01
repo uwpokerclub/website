@@ -5,7 +5,6 @@ import (
 	"api/internal/authorization"
 	e "api/internal/errors"
 	"api/internal/models"
-	"api/internal/services"
 	"net/http"
 	"os"
 	"strings"
@@ -22,24 +21,6 @@ func getCookieKey() string {
 	}
 
 	return "uwpsc-dev-session-id"
-}
-
-func (s *apiServer) CreateLogin(ctx *gin.Context) {
-	var req models.Login
-	err := ctx.ShouldBindJSON(&req)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
-		return
-	}
-
-	svc := services.NewLoginService(s.db)
-	err = svc.CreateLogin(req.Username, req.Password, req.Role)
-	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, "")
 }
 
 func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {

@@ -1,4 +1,4 @@
-import { Event, Membership, Participant, Ranking, User } from "./types";
+import { Event, Login, Membership, Participant, Ranking, User } from "./types";
 
 export const STRUCTURE = {
   id: 1,
@@ -314,5 +314,30 @@ export const RANKINGS: Ranking[] = [
     membershipId: "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
     points: 2,
     attendance: 1,
+  },
+];
+
+// Logins seeded for testing (e2e_user is the main test account)
+export const LOGINS: Login[] = [
+  {
+    username: "e2e_user",
+    role: "webmaster",
+  },
+  {
+    username: "test_president",
+    role: "president",
+  },
+  {
+    username: "test_executive",
+    role: "executive",
+  },
+  {
+    username: "hdrust0",
+    role: "executive",
+    linkedMember: {
+      id: "62958169",
+      firstName: "Heinrik",
+      lastName: "Drust",
+    },
   },
 ];

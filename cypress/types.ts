@@ -68,3 +68,13 @@ export interface Participant {
   placement?: number;
   signedOutAt?: string;
 }
+
+export interface Login {
+  username: string;
+  role: string;
+  linkedMember?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}

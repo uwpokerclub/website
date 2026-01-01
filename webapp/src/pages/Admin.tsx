@@ -9,6 +9,7 @@ import { Members } from "./Members";
 import { Inventory } from "./Inventory";
 import { Finances } from "./Finances";
 import { Executive } from "./Executive";
+import { Logins } from "./Logins";
 import AdminLayout from "@/layouts/AdminLayout";
 
 export function Admin() {
@@ -25,6 +26,7 @@ export function Admin() {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/finances" element={<Finances />} />
         <Route path="/executive" element={<Executive />} />
+        <Route path="/logins/*" element={<Logins />} />
       </Routes>
     </AdminLayout>
   );

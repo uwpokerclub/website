@@ -12,6 +12,7 @@ import {
   FaUserTie,
   FaChevronLeft,
   FaChevronRight,
+  FaKey,
 } from "react-icons/fa";
 import logoSvg from "@/assets/uwpsc_logo.svg";
 import crestSvg from "@/assets/crest.svg";
@@ -119,6 +120,27 @@ function SideNav() {
 
               {/* Additional navigation links */}
               <ul className={styles.navLinks}>{renderNavItems(additionalNavItems)}</ul>
+            </>
+          )}
+
+          {hasRoles([ROLES.WEBMASTER]) && (
+            <>
+              {/* Webmaster navigation section with separator */}
+              <div className={styles.navSeparator} data-qa="sidenav-webmaster-section">
+                <span>Webmaster</span>
+              </div>
+
+              {/* Webmaster navigation links */}
+              <ul className={styles.navLinks}>
+                <NavLink
+                  key="/admin/logins"
+                  icon={<FaKey />}
+                  label="Manage Logins"
+                  path="/admin/logins"
+                  isCollapsed={!isExpanded}
+                  onClick={handleNavLinkClick}
+                />
+              </ul>
             </>
           )}
         </div>

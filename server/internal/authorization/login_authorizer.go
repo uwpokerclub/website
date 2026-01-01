@@ -8,14 +8,14 @@ type loginAuthorizer struct {
 // NewLoginAuthorizer creates a new login authorizer.
 func NewLoginAuthorizer() ResourceAuthorizer {
 	return &loginAuthorizer{
-		actions: []string{"create"},
+		actions: []string{"create", "list", "get", "delete", "edit"},
 	}
 }
 
 // IsAuthorized checks if the user is authorized to perform the action.
 func (svc *loginAuthorizer) IsAuthorized(role string, action string) bool {
 	switch action {
-	case "create":
+	case "create", "list", "get", "delete", "edit":
 		return HasRole(ROLE_WEBMASTER, role)
 	}
 

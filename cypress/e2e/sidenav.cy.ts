@@ -240,6 +240,24 @@ describe("SideNav", () => {
       cy.getByData("nav-link-executive-team").should("exist");
     });
 
+    it("should display Webmaster section for webmaster role", () => {
+      // Default e2e_user has WEBMASTER role
+      cy.visit("/admin");
+      cy.getByData("sidenav").should("exist");
+
+      // Webmaster section should be visible
+      cy.getByData("sidenav-webmaster-section").should("exist");
+
+      // Manage Logins link should be visible
+      cy.getByData("nav-link-manage-logins").should("exist");
+    });
+
+    it("should navigate to manage logins when clicked", () => {
+      cy.visit("/admin");
+      cy.getByData("nav-link-manage-logins").click();
+      cy.location("pathname").should("eq", "/admin/logins");
+    });
+
     it("should navigate to inventory when clicked", () => {
       cy.visit("/admin");
       cy.getByData("nav-link-inventory").click();

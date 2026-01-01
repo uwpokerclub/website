@@ -1,5 +1,5 @@
 ### ====================== WEBAPP BUILD IMAGE ======================
-FROM node:24.0.1-alpine AS webapp
+FROM node:24.9.0-alpine AS webapp
 
 WORKDIR /usr/app
 
@@ -83,6 +83,9 @@ RUN curl -sSf https://atlasgo.sh | sh
 
 # Create a non-root user and group with home directory
 RUN groupadd -r runner && useradd -r -g runner -m runner
+
+# Change ownership of the working directory
+RUN chown runner:runner /server
 
 # Change ownership of the working directory
 RUN chown runner:runner /server

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func assertBlindsEqual(t *testing.T, expected models.BlindJSON, actual models.Blind, msg string) {
@@ -93,7 +94,12 @@ func TestStructureService(t *testing.T) {
 		structures, err := structureService.ListStructures()
 		assert.NoError(t, err, "Should not return an error")
 		assert.Len(t, structures, 3, "Should return 3 structures")
-		assert.Equal(t, structures, []models.Structure{testStructureC, testStructureB, testStructureA})
+		expectedStructures := []models.Structure{
+			{ID: testStructureC.ID, Name: testStructureC.Name, Blinds: nil},
+			{ID: testStructureB.ID, Name: testStructureB.Name, Blinds: nil},
+			{ID: testStructureA.ID, Name: testStructureA.Name, Blinds: nil},
+		}
+		assert.Equal(t, expectedStructures, structures)
 	})
 	t.Run("GetStructure", func(t *testing.T) {
 		t.Cleanup(wipeDB)
@@ -154,12 +160,12 @@ func TestStructureService(t *testing.T) {
 			Name: "Test Structure A",
 		}
 		res := db.Create(&testStructure)
-		assert.NoError(t, res.Error)
+		require.NoError(t, res.Error)
 		fakeStructure := models.Structure{
 			Name: "Test Structure B",
 		}
 		res = db.Create(&fakeStructure)
-		assert.NoError(t, res.Error)
+		require.NoError(t, res.Error)
 
 		testBlinds := [3]models.Blind{
 			{
@@ -188,7 +194,7 @@ func TestStructureService(t *testing.T) {
 			},
 		}
 		res = db.Create(&testBlinds)
-		assert.NoError(t, res.Error)
+		require.NoError(t, res.Error)
 
 		req := models.UpdateStructureRequest{
 			ID:   testStructure.ID,
@@ -210,7 +216,7 @@ func TestStructureService(t *testing.T) {
 		}
 
 		structure, err := structureService.UpdateStructure(&req)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testStructure.ID, structure.ID)
 		assert.Equal(t, req.Name, structure.Name)
 		assert.Len(t, structure.Blinds, 2)

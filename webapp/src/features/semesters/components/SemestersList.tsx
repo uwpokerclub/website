@@ -1,10 +1,30 @@
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth, useFetch } from "../../../hooks";
 import { Semester } from "../../../types";
+import { CreateSemesterModal } from "./CreateSemesterModal";
 
 export function SemestersList() {
-  const { data: semesters } = useFetch<Semester[]>("semesters");
+  const { data: semesters, setData: setSemesters } = useFetch<Semester[]>("semesters");
   const { hasPermission } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleCreateClick = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleCreateSuccess = useCallback(
+    (newSemester: Semester) => {
+      setIsModalOpen(false);
+      // Add new semester to the list (at the beginning since it's newest)
+      setSemesters((prev) => (prev ? [newSemester, ...prev] : [newSemester]));
+    },
+    [setSemesters],
+  );
 
   // TODO: Need design for case where there are no semesters / error returned by API
   if (!semesters) {
@@ -15,9 +35,14 @@ export function SemestersList() {
     <div>
       <h1 data-qa="semesters-header">Semesters</h1>
       {hasPermission("create", "semester") && (
-        <Link data-qa="create-semester-btn" to="new" className="btn btn-primary btn-responsive">
+        <button
+          data-qa="create-semester-btn"
+          onClick={handleCreateClick}
+          className="btn btn-primary btn-responsive"
+          type="button"
+        >
           Create a Semester
-        </Link>
+        </button>
       )}
       <div className="table-responsive">
         <table className="table">
@@ -62,6 +87,10 @@ export function SemestersList() {
           </tbody>
         </table>
       </div>
+
+      {hasPermission("create", "semester") && (
+        <CreateSemesterModal isOpen={isModalOpen} onClose={handleModalClose} onSuccess={handleCreateSuccess} />
+      )}
     </div>
   );
 }

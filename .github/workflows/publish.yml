@@ -21,7 +21,7 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker us-east1-docker.pkg.dev
       - name: Build the Docker image
-        run: docker build --rm --no-cache -t us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_REF##*/} -t us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:latest .
+        run: docker build --build-arg GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }} --rm --no-cache -t us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_REF##*/} -t us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:latest .
       - name: Push the tagged Docker image
         run: |
           docker push us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/uwpokerclub-docker/website:${GITHUB_REF##*/}

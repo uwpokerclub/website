@@ -1,0 +1,429 @@
+/* ===========================================
+   Event Registration Modal - Casino Elegance Theme
+   Extends the design language from EventDetails
+   =========================================== */
+
+/* CSS Custom Properties - inherited from Casino Elegance */
+.modalContent {
+  --event-gold: #f4b80f;
+  --event-gold-light: #fef3cd;
+  --event-gold-dark: #c49208;
+  --event-navy: #1a1f36;
+  --event-navy-light: #2d3348;
+  --event-slate: #4a5568;
+  --event-success: #10b981;
+  --event-danger: #ef4444;
+  --event-danger-light: #fee2e2;
+  --event-surface: #ffffff;
+  --event-surface-elevated: #f8fafc;
+  --event-border: #e2e8f0;
+  --event-text: #1e293b;
+  --event-text-muted: #64748b;
+  --event-radius: 12px;
+  --event-radius-sm: 8px;
+  --event-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --event-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 500px;
+}
+
+/* Search Section */
+.searchSection {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--event-text-muted);
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--event-border);
+  border-radius: var(--event-radius-sm);
+  background: var(--event-surface);
+  color: var(--event-text);
+  transition: all var(--event-transition);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--event-gold);
+  box-shadow: 0 0 0 3px rgba(244, 184, 15, 0.15);
+}
+
+.searchInput::placeholder {
+  color: var(--event-text-muted);
+}
+
+/* Dual Panel Layout */
+.panelsContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Individual Panel */
+.panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--event-border);
+  border-radius: var(--event-radius-sm);
+  overflow: hidden;
+  background: var(--event-surface);
+}
+
+/* Panel Header - Navy with gold accent */
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, var(--event-navy) 0%, var(--event-navy-light) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle gold glow on panel header */
+.panelHeader::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 100%;
+  background: radial-gradient(circle at 80% 50%, rgba(244, 184, 15, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.panelTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
+}
+
+.panelHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.addMemberButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all var(--event-transition);
+  font-size: 0.7rem;
+}
+
+.addMemberButton:hover {
+  background: var(--event-gold);
+  color: var(--event-navy);
+}
+
+.addMemberButton:focus-visible {
+  outline: 2px solid var(--event-gold);
+  outline-offset: 2px;
+}
+
+.panelCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 0.5rem;
+  background: var(--event-gold);
+  color: var(--event-navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 12px;
+}
+
+/* Panel List Container */
+.panelList {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+  min-height: 200px;
+}
+
+/* Custom scrollbar styling */
+.panelList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panelList::-webkit-scrollbar-track {
+  background: var(--event-surface-elevated);
+}
+
+.panelList::-webkit-scrollbar-thumb {
+  background: var(--event-border);
+  border-radius: 3px;
+}
+
+.panelList::-webkit-scrollbar-thumb:hover {
+  background: var(--event-slate);
+}
+
+/* Member Row */
+.memberRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--event-border);
+  transition: background var(--event-transition);
+  gap: 0.75rem;
+}
+
+.memberRow:last-child {
+  border-bottom: none;
+}
+
+.memberRow:nth-child(even) {
+  background: var(--event-surface-elevated);
+}
+
+.memberRow:hover {
+  background: var(--event-gold-light);
+}
+
+/* Danger state for unpaid members with 3+ attendance */
+.memberRowDanger {
+  background: var(--event-danger-light) !important;
+}
+
+.memberRowDanger:hover {
+  background: #fecaca !important;
+}
+
+/* Member Info */
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.memberName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--event-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberStudentId {
+  font-size: 0.75rem;
+  color: var(--event-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action Button - Circular with chevron */
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--event-transition);
+  flex-shrink: 0;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--event-gold);
+  outline-offset: 2px;
+}
+
+/* Register button (left panel) - Gold */
+.actionButtonRegister {
+  background: var(--event-gold);
+  color: var(--event-navy);
+}
+
+.actionButtonRegister:hover:not(:disabled) {
+  background: var(--event-gold-dark);
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(244, 184, 15, 0.4);
+}
+
+/* Unregister button (right panel) - Subtle */
+.actionButtonUnregister {
+  background: var(--event-surface-elevated);
+  color: var(--event-text-muted);
+  border: 1px solid var(--event-border);
+}
+
+.actionButtonUnregister:hover:not(:disabled) {
+  background: var(--event-surface);
+  color: var(--event-danger);
+  border-color: var(--event-danger);
+  transform: scale(1.1);
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.actionButtonSpinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Loading State */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.loadingText {
+  color: var(--event-text-muted);
+  font-size: 0.9rem;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--event-text-muted);
+  height: 100%;
+  min-height: 200px;
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--event-surface-elevated);
+  border-radius: 50%;
+  margin-bottom: 0.75rem;
+  color: var(--event-slate);
+  font-size: 1.25rem;
+}
+
+.emptyText {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-width: 200px;
+}
+
+.createMemberButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--event-gold);
+  color: var(--event-navy);
+  border: none;
+  border-radius: var(--event-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--event-transition);
+}
+
+.createMemberButton:hover {
+  background: var(--event-gold-dark);
+  transform: translateY(-1px);
+}
+
+.createMemberButton:focus-visible {
+  outline: 2px solid var(--event-gold);
+  outline-offset: 2px;
+}
+
+/* Error Alert */
+.errorAlert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--event-danger-light);
+  border: 1px solid var(--event-danger);
+  border-radius: var(--event-radius-sm);
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+/* Responsive - Stack panels vertically */
+@media (max-width: 768px) {
+  .modalContent {
+    min-height: auto;
+  }
+
+  .panelsContainer {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .panel {
+    max-height: none;
+  }
+
+  .panelList {
+    max-height: 250px;
+    min-height: 150px;
+  }
+
+  .memberRow {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .memberName {
+    font-size: 0.85rem;
+  }
+
+  .actionButton {
+    width: 28px;
+    height: 28px;
+  }
+}

@@ -1,119 +1,548 @@
+import { useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-import { useAuth, useFetch } from "@/hooks";
-import { Semester, Event } from "../../../types";
+import { Table, TableColumn, Button, Input, Pagination, Spinner, useToast, Modal } from "@uwpokerclub/components";
+import { SemesterContext } from "@/contexts";
+import { useAuth } from "@/hooks";
+import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo } from "react-icons/fa";
+import { EventState } from "@/sdk/events";
+import { Participant } from "@/sdk/participants";
+import { CreateEventModal } from "./CreateEventModal";
+import { EditEventModal, type EventData } from "./EditEventModal";
+import styles from "./ListEvents.module.css";
 
-import styles from "./ListEvent.module.css";
-import { EventState } from "../../../sdk/events";
+const ITEMS_PER_PAGE = 25;
 
-export function ListEvents() {
-  const { data: events, isLoading } = useFetch<Event[]>("events");
-  const { data: semesters } = useFetch<Semester[]>("semesters");
+type ListEventsResponse = {
+  id: number;
+  name: string;
+  format: string;
+  notes: string;
+  semesterId: string;
+  startDate: string;
+  state: number;
+  entries?: Participant[];
+};
+
+type EventActionsProps = {
+  event: ListEventsResponse;
+  onActionComplete: () => void;
+  onEditClick: (event: ListEventsResponse) => void;
+};
+
+function EventActions({ event, onActionComplete, onEditClick }: EventActionsProps) {
   const { hasPermission } = useAuth();
+  const semesterContext = useContext(SemesterContext);
+  const { showToast } = useToast();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isEndConfirmOpen, setIsEndConfirmOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const [semesterId, setSemesterId] = useState("");
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const filteredEvents = events?.filter((event) => (semesterId !== "" ? event.semesterId === semesterId : true)) || [];
+  const handleEndEventClick = () => {
+    setIsMenuOpen(false);
+    setIsEndConfirmOpen(true);
+  };
+
+  const handleEndEventConfirm = async () => {
+    if (!semesterContext?.currentSemester) return;
+
+    setIsProcessing(true);
+    try {
+      const response = await fetch(`/api/v2/semesters/${semesterContext.currentSemester.id}/events/${event.id}/end`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to end event: ${response.statusText}`);
+      }
+      showToast({
+        message: `"${event.name}" has been ended successfully`,
+        variant: "success",
+        duration: 3000,
+      });
+      onActionComplete();
+    } catch (err) {
+      showToast({
+        message: err instanceof Error ? err.message : "Failed to end event",
+        variant: "error",
+        duration: 5000,
+      });
+    } finally {
+      setIsProcessing(false);
+      setIsEndConfirmOpen(false);
+    }
+  };
+
+  const handleRestartEvent = async () => {
+    if (!semesterContext?.currentSemester) return;
+    setIsProcessing(true);
+    try {
+      const response = await fetch(
+        `/api/v2/semesters/${semesterContext.currentSemester.id}/events/${event.id}/restart`,
+        { method: "POST", credentials: "include" },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to restart event: ${response.statusText}`);
+      }
+      showToast({
+        message: `"${event.name}" has been restarted successfully`,
+        variant: "success",
+        duration: 3000,
+      });
+      onActionComplete();
+    } catch (err) {
+      showToast({
+        message: err instanceof Error ? err.message : "Failed to restart event",
+        variant: "error",
+        duration: 5000,
+      });
+    } finally {
+      setIsProcessing(false);
+      setIsMenuOpen(false);
+    }
+  };
+
+  const showEdit = hasPermission("edit", "event");
+  const isEditDisabled = event.state === EventState.Ended;
+  const showEndEvent = event.state === EventState.Started && hasPermission("end", "event");
+  const showRestartEvent = event.state === EventState.Ended && hasPermission("restart", "event");
+  const showMenu = showEdit || showEndEvent || showRestartEvent;
+
+  if (!showMenu) {
+    return null;
+  }
 
   return (
     <>
-      {!isLoading && (
-        <div>
-          <h1>Events</h1>
+      <div className={styles.actions} ref={menuRef}>
+        <div className={styles.menuWrapper}>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            title="Actions"
+            aria-label="Actions"
+            disabled={isProcessing}
+            data-qa={`actions-menu-btn-${event.id}`}
+          >
+            {isProcessing ? <Spinner size="sm" /> : <FaEllipsisV />}
+          </button>
 
-          <div className="row">
-            <div className="col-md-6">
-              {hasPermission("create", "event") && (
-                <Link data-qa="create-event-btn" to="new" className="btn btn-primary btn-responsive">
-                  Create an Event
-                </Link>
+          {isMenuOpen && (
+            <div className={styles.dropdownMenu}>
+              {showEdit &&
+                (isEditDisabled ? (
+                  <span className={`${styles.menuItem} ${styles.menuItemDisabled}`}>
+                    <FaPencilAlt /> Edit Event
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.menuItem}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onEditClick(event);
+                    }}
+                    data-qa={`edit-event-btn-${event.id}`}
+                  >
+                    <FaPencilAlt /> Edit Event
+                  </button>
+                ))}
+              {showEndEvent && (
+                <button
+                  className={styles.menuItem}
+                  onClick={handleEndEventClick}
+                  disabled={isProcessing}
+                  data-qa={`end-event-btn-${event.id}`}
+                >
+                  <FaStop /> End Event
+                </button>
+              )}
+              {showRestartEvent && (
+                <button
+                  className={styles.menuItem}
+                  onClick={handleRestartEvent}
+                  disabled={isProcessing}
+                  data-qa={`restart-event-btn-${event.id}`}
+                >
+                  <FaRedo /> Restart Event
+                </button>
               )}
             </div>
-
-            <div className="col-md-6">
-              <div className="mb-3">
-                {hasPermission("list", "semester") && semesters && (
-                  <select className="form-control" value={semesterId} onChange={(e) => setSemesterId(e.target.value)}>
-                    <option value="">All</option>
-                    {semesters.map((semester) => (
-                      <option key={semester.id} value={semester.id}>
-                        {semester.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="list-group">
-            {filteredEvents.map((event) => (
-              <div key={event.id} data-qa={`event-${event.id}-card`} className={`${styles.card} list-group-item`}>
-                {hasPermission("get", "event") ? (
-                  <Link to={`${event.id}`} className="text-decoration-none text-reset flex-grow-1">
-                    <EventDetails event={event} />
-                  </Link>
-                ) : (
-                  <div className="text-decoration-none text-reset flex-grow-1">
-                    <EventDetails event={event} />
-                  </div>
-                )}
-
-                {hasPermission("edit", "event") && event.state !== EventState.Ended && (
-                  <div data-qa="actions" className={`${styles.actions} me-4`}>
-                    <Link data-qa="edit-event-btn" to={`${event.id}/edit`}>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        fill="currentColor"
-                        className="bi bi-pencil-square"
-                        viewBox="0 0 16 16"
-                      >
-                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                        <path
-                          fillRule="evenodd"
-                          d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                        />
-                      </svg>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          )}
         </div>
-      )}
+      </div>
+
+      <Modal
+        isOpen={isEndConfirmOpen}
+        onClose={() => setIsEndConfirmOpen(false)}
+        title="End Event"
+        size="sm"
+        footer={
+          <div className={styles.confirmFooter}>
+            <Button
+              variant="tertiary"
+              onClick={() => setIsEndConfirmOpen(false)}
+              disabled={isProcessing}
+              data-qa={`end-confirm-cancel-btn-${event.id}`}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleEndEventConfirm}
+              disabled={isProcessing}
+              data-qa={`end-confirm-btn-${event.id}`}
+            >
+              {isProcessing ? "Ending..." : "End Event"}
+            </Button>
+          </div>
+        }
+        data-qa={`end-confirm-modal-${event.id}`}
+      >
+        <p>
+          Are you sure you want to end <strong>&quot;{event.name}&quot;</strong>? This will finalize the event results.
+        </p>
+      </Modal>
     </>
   );
 }
 
-function EventDetails({ event }: { event: Event }) {
-  return (
-    <>
-      <h4 data-qa={`${event.id}-name`} className="list-group-item-heading bold">
-        {event.name}
-      </h4>
-      <div className="list-group-item-text">
-        <p data-qa={`${event.id}-format`}>
-          <strong>Format:</strong> {event.format}
-        </p>
-        <p data-qa={`${event.id}-date`}>
-          <strong>Date:</strong>{" "}
-          {new Date(event.startDate).toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "numeric",
-          })}
-        </p>
-        <p data-qa={`${event.id}-additional-details`}>
-          <strong>Additional Details:</strong> {event.notes}
-        </p>
-        <p> {event.count || "No"} Entries </p>
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+export function ListEvents() {
+  const semesterContext = useContext(SemesterContext);
+  const { hasPermission } = useAuth();
+  const [events, setEvents] = useState<ListEventsResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
+
+  // Debounce search query
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch events from API
+  useEffect(() => {
+    if (!semesterContext?.currentSemester) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchEvents = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/v2/semesters/${semesterContext.currentSemester!.id}/events`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch events: ${response.statusText}`);
+        }
+
+        const data: ListEventsResponse[] = await response.json();
+        setEvents(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred while fetching events");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, [semesterContext?.currentSemester, refreshTrigger]);
+
+  // Reset pagination when semester changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
+  }, [semesterContext?.currentSemester?.id]);
+
+  // Filter events by search query
+  const filteredEvents = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return events;
+    }
+
+    const query = debouncedSearchQuery.toLowerCase();
+    return events.filter((event) => event.name.toLowerCase().includes(query));
+  }, [events, debouncedSearchQuery]);
+
+  // Paginate events
+  const paginatedEvents = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredEvents.slice(startIndex, endIndex);
+  }, [filteredEvents, currentPage]);
+
+  // Handle clear search
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
+
+  // Handle refresh after actions
+  const handleRefresh = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
+
+  // Handle edit click
+  const handleEditClick = useCallback((event: ListEventsResponse) => {
+    setEditingEvent({
+      id: event.id,
+      name: event.name,
+      format: event.format,
+      notes: event.notes,
+      startDate: event.startDate,
+      state: event.state,
+    });
+    setIsEditModalOpen(true);
+  }, []);
+
+  // Handle edit modal close
+  const handleEditModalClose = useCallback(() => {
+    setIsEditModalOpen(false);
+    setEditingEvent(null);
+  }, []);
+
+  // Check if user has any action permissions
+  const hasAnyActionPermission = useMemo(
+    () => hasPermission("edit", "event") || hasPermission("end", "event") || hasPermission("restart", "event"),
+    [hasPermission],
+  );
+
+  // Define table columns
+  const columns: TableColumn<ListEventsResponse>[] = [
+    {
+      key: "name",
+      header: "Name",
+      accessor: "name",
+      sortable: false,
+      render: (_value, row) =>
+        hasPermission("get", "event") ? (
+          <Link to={`${row.id}`} className={styles.eventLink} data-qa={`event-name-${row.id}`}>
+            {row.name}
+          </Link>
+        ) : (
+          <span data-qa={`event-name-${row.id}`}>{row.name}</span>
+        ),
+    },
+    {
+      key: "startDate",
+      header: "Date",
+      accessor: (row) => formatDate(row.startDate),
+      sortable: false,
+    },
+    {
+      key: "format",
+      header: "Format",
+      accessor: "format",
+      sortable: false,
+    },
+    {
+      key: "entries",
+      header: "Entry Count",
+      accessor: (row) => row.entries?.length ?? 0,
+      sortable: false,
+    },
+    {
+      key: "state",
+      header: "Status",
+      accessor: (row) => row.state,
+      sortable: false,
+      render: (_value, row) => (
+        <span
+          className={row.state === EventState.Started ? styles.statusActive : styles.statusEnded}
+          data-qa={`event-status-${row.id}`}
+        >
+          {row.state === EventState.Started ? "Active" : "Ended"}
+        </span>
+      ),
+    },
+    ...(hasAnyActionPermission
+      ? [
+          {
+            key: "actions",
+            header: "Actions",
+            accessor: () => "",
+            sortable: false,
+            render: (_value: unknown, row: ListEventsResponse) => (
+              <EventActions event={row} onActionComplete={handleRefresh} onEditClick={handleEditClick} />
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className={styles.container} data-qa="events-loading">
+        <div className={styles.centerContent}>
+          <Spinner size="lg" />
+          <p>Loading events...</p>
+        </div>
       </div>
-    </>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className={styles.container} data-qa="events-error">
+        <div className={styles.errorState}>
+          <p>Error: {error}</p>
+          <Button onClick={() => window.location.reload()} data-qa="events-retry-btn">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state when no semester is selected
+  if (!semesterContext?.currentSemester) {
+    return (
+      <div className={styles.container} data-qa="events-no-semester">
+        <div className={styles.emptyState}>
+          <p>Please select a semester to view events.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      {/* Search and action bar */}
+      <div className={styles.searchContainer}>
+        <div className={styles.searchInputWrapper}>
+          <Input
+            type="search"
+            placeholder="Search by event name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            prefix={<FaSearch />}
+            suffix={
+              searchQuery ? (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className={styles.clearButton}
+                  aria-label="Clear search"
+                  data-qa="clear-search-btn"
+                >
+                  <FaTimes />
+                </button>
+              ) : null
+            }
+            fullWidth
+            data-qa="input-events-search"
+          />
+        </div>
+        {hasPermission("create", "event") && (
+          <Button onClick={() => setIsCreateModalOpen(true)} iconBefore={<FaPlus />} data-qa="create-event-btn">
+            Create Event
+          </Button>
+        )}
+      </div>
+
+      <div className={styles.resultsInfo} data-qa="events-results-info">
+        <p>
+          Showing {paginatedEvents.length} of {filteredEvents.length} events
+          {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
+        </p>
+      </div>
+
+      {/* Table */}
+      <div className={styles.tableWrapper}>
+        <Table
+          variant="striped"
+          headerVariant="primary"
+          data={paginatedEvents}
+          columns={columns}
+          emptyState={
+            <div className={styles.emptyState} data-qa={events.length === 0 ? "events-empty" : "events-no-results"}>
+              <div className={styles.emptyIllustration}>
+                <FaCalendarAlt size={64} />
+              </div>
+              {events.length === 0 ? (
+                <>
+                  <h3>No events yet</h3>
+                  <p>No events have been created for this semester yet.</p>
+                </>
+              ) : (
+                <>
+                  <h3>No results found</h3>
+                  <p>No events found matching &quot;{debouncedSearchQuery}&quot;</p>
+                  <p className={styles.emptyHint}>Try adjusting your search terms</p>
+                </>
+              )}
+            </div>
+          }
+          data-qa="events-table"
+        />
+      </div>
+
+      {/* Pagination */}
+      {filteredEvents.length > ITEMS_PER_PAGE && (
+        <div className={styles.paginationContainer} data-qa="events-pagination">
+          <Pagination
+            variant="compact"
+            totalItems={filteredEvents.length}
+            pageSize={ITEMS_PER_PAGE}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Edit Event Modal */}
+      <EditEventModal
+        isOpen={isEditModalOpen}
+        event={editingEvent}
+        onClose={handleEditModalClose}
+        onSuccess={handleRefresh}
+      />
+    </div>
   );
 }

@@ -1,0 +1,12 @@
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Stack fields on mobile */
+@media (max-width: 600px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+}

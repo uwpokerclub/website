@@ -4,39 +4,57 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Participant struct {
-	ID           uint64     `json:"id"`
-	MembershipID uuid.UUID  `json:"membershipId" gorm:"type:uuid"`
-	Membership   Membership `json:"membership"`
-	EventID      uint64     `json:"eventId"`
-	Placement    uint32     `json:"placement"`
-	SignedOutAt  *time.Time `json:"signedOutAt"`
+	ID           int32       `json:"id" gorm:"type:integer;unique;autoIncrement"`
+	MembershipID uuid.UUID   `json:"membershipId" gorm:"type:uuid;primaryKey"`
+	Membership   *Membership `json:"membership,omitempty"`
+	EventID      int32       `json:"eventId" gorm:"type:integer;primaryKey;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Placement    uint16      `json:"placement"`
+	SignedOutAt  *time.Time  `json:"signedOutAt"`
+} //@name Participant
+
+func (Participant) TableName() string {
+	return "participants"
+}
+
+func (Participant) Preload(tx *gorm.DB) *gorm.DB {
+	return tx.Joins("Membership", func(db *gorm.DB) *gorm.DB {
+		return Membership{}.Preload(db)
+	})
 }
 
 type CreateParticipantRequest struct {
 	MembershipID uuid.UUID `json:"membershipId" binding:"required"`
-	EventID      uint64    `json:"eventId" binding:"required"`
-}
+	EventID      int32     `json:"eventId" binding:"required"`
+} //@name CreateParticipantRequest
 
 type UpdateParticipantRequest struct {
 	MembershipID uuid.UUID `json:"membershipId" binding:"required"`
-	EventID      uint64    `json:"eventId" binding:"required"`
+	EventID      int32     `json:"eventId" binding:"required"`
 	SignIn       bool
 	SignOut      bool
 }
 
 type DeleteParticipantRequest struct {
 	MembershipID uuid.UUID `json:"membershipId" binding:"required"`
-	EventID      uint64    `json:"eventId" binding:"required"`
+	EventID      int32     `json:"eventId" binding:"required"`
 }
 
 type ListParticipantsResult struct {
-	ID           uint64     `json:"id"`
+	ID           int32      `json:"id"`
 	MembershipId uuid.UUID  `json:"membershipId"`
 	FirstName    string     `json:"firstName"`
 	LastName     string     `json:"lastName"`
 	SignedOutAt  *time.Time `json:"signedOutAt"`
-	Placement    uint32     `json:"placement"`
-}
+	Placement    uint16     `json:"placement"`
+} //@name ListParticipantsResult
+
+type CreateEntryResult struct {
+	MembershipID uuid.UUID    `json:"membershipId"`
+	Status       string       `json:"status"` // "created" or "error"
+	Participant  *Participant `json:"participant,omitempty"`
+	Error        string       `json:"error,omitempty"`
+} //@name CreateEntryResult

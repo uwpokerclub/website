@@ -1,6 +1,8 @@
 /**
- * @fileoverview This file contains the interfaces for the API responses on the /api/session endpoint.
+ * @fileoverview This file contains the interfaces for the API responses on the /api/v2/session endpoint.
  */
+
+import { Role } from "@/types/roles";
 
 /**
  * @interface Permissions
@@ -38,7 +40,7 @@ export interface PermissionList {
   event: Pick<Permissions, "create" | "get" | "list" | "edit" | "end" | "restart" | "rebuy"> & {
     participant: Pick<Permissions, "create" | "get" | "list" | "signin" | "signout" | "delete">;
   };
-  login: Pick<Permissions, "create">;
+  login: Pick<Permissions, "create" | "list" | "get" | "edit" | "delete">;
   membership: Pick<Permissions, "create" | "get" | "list" | "edit">;
   semester: Pick<Permissions, "create" | "get" | "list" | "edit"> & {
     rankings: Pick<Permissions, "get" | "list" | "export">;
@@ -55,10 +57,10 @@ export type SubResources = "participant" | "rankings" | "transaction";
 
 /**
  * @interface UserSession
- * @description This interface defines the response for the GET /api/session endpoint.
+ * @description This interface defines the response for the GET /api/v2/session endpoint.
  */
 export interface UserSession {
   username: string;
-  role: string;
+  role: Role;
   permissions: PermissionList;
 }

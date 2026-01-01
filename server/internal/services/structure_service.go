@@ -26,7 +26,7 @@ func (ss *structureService) CreateStructure(req *models.CreateStructureRequest) 
 			Big:   blind.Big,
 			Ante:  blind.Ante,
 			Time:  blind.Time,
-			Index: i,
+			Index: int8(i),
 		}
 	}
 
@@ -64,12 +64,12 @@ func (ss *structureService) ListStructures() ([]models.Structure, error) {
 	return structures, nil
 }
 
-func (ss *structureService) GetStructure(id uint64) (*models.Structure, error) {
+func (ss *structureService) GetStructure(id int32) (*models.Structure, error) {
 	structure := models.Structure{
 		ID: id,
 	}
 
-	res := ss.db.Model(&structure).Preload("Blinds").First(&structure)
+	res := structure.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.NotFound(err.Error())
 	} else if err := res.Error; err != nil {
@@ -100,7 +100,7 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 		ID: req.ID,
 	}
 
-	res := ss.db.Model(&structure).Preload("Blinds").First(&structure)
+	res := structure.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)
 
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.NotFound(err.Error())
@@ -108,7 +108,29 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 		return nil, e.InternalServerError(err.Error())
 	}
 
+	// Use a transaction to ensure atomicity
+	tx := ss.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	structure.Name = req.Name
+
+	// Update the structure first
+	err := tx.Updates(&structure).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	// Delete existing blinds
+	err = tx.Where("structure_id = ?", structure.ID).Delete(&models.Blind{}).Error
+	if err != nil {
+		tx.Rollback()
+		return nil, e.InternalServerError(err.Error())
+	}
 
 	// Insert new levels
 	blinds := make([]models.Blind, len(req.Blinds))
@@ -119,15 +141,156 @@ func (ss *structureService) UpdateStructure(req *models.UpdateStructureRequest) 
 			Ante:        blind.Ante,
 			Time:        blind.Time,
 			StructureId: structure.ID,
-			Index:       i,
+			Index:       int8(i),
 		}
 	}
-	err := ss.db.Model(&structure).Association("Blinds").Replace(blinds)
+
+	// Create new blinds
+	if len(blinds) > 0 {
+		err = tx.Create(&blinds).Error
+		if err != nil {
+			tx.Rollback()
+			return nil, e.InternalServerError(err.Error())
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit().Error
 	if err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	ss.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&structure)
+	// Reload with blinds using a fresh query
+	result := models.Structure{}
+	err = result.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).Where("id = ?", structure.ID).First(&result).Error
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
 
-	return &structure, nil
+	return &result, nil
+}
+
+// UpdateStructureV2 performs a partial update - only updates fields that are provided in updateMap
+func (ss *structureService) UpdateStructureV2(id int32, updateMap map[string]any) (*models.Structure, error) {
+	structure := models.Structure{
+		ID: id,
+	}
+
+	res := structure.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, e.NotFound("Structure not found")
+	} else if err := res.Error; err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	// If nothing to update, return existing structure
+	if len(updateMap) == 0 {
+		return &structure, nil
+	}
+
+	// Use a transaction to ensure atomicity
+	tx := ss.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Update name if provided
+	if name, ok := updateMap["name"]; ok {
+		structure.Name = name.(string)
+		err := tx.Model(&structure).Update("name", name).Error
+		if err != nil {
+			tx.Rollback()
+			return nil, e.InternalServerError(err.Error())
+		}
+	}
+
+	// Update blinds if provided (full replacement)
+	if blindsData, ok := updateMap["blinds"]; ok {
+		// Delete existing blinds
+		err := tx.Where("structure_id = ?", structure.ID).Delete(&models.Blind{}).Error
+		if err != nil {
+			tx.Rollback()
+			return nil, e.InternalServerError(err.Error())
+		}
+
+		// Insert new blinds
+		blindsJSON := blindsData.([]models.BlindJSON)
+		blinds := make([]models.Blind, len(blindsJSON))
+		for i, b := range blindsJSON {
+			blinds[i] = models.Blind{
+				Small:       b.Small,
+				Big:         b.Big,
+				Ante:        b.Ante,
+				Time:        b.Time,
+				StructureId: structure.ID,
+				Index:       int8(i),
+			}
+		}
+
+		if len(blinds) > 0 {
+			err = tx.Create(&blinds).Error
+			if err != nil {
+				tx.Rollback()
+				return nil, e.InternalServerError(err.Error())
+			}
+		}
+	}
+
+	// Commit the transaction
+	err := tx.Commit().Error
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	// Reload with blinds using a fresh query
+	result := models.Structure{}
+	err = result.Preload(ss.db, models.StructurePreloadOptions{Blinds: true}).Where("id = ?", structure.ID).First(&result).Error
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	return &result, nil
+}
+
+// DeleteStructure deletes a structure by ID
+// Manually deletes associated blinds first since FK constraint is ON DELETE NO ACTION
+func (ss *structureService) DeleteStructure(id int32) error {
+	structure := models.Structure{
+		ID: id,
+	}
+
+	res := ss.db.First(&structure)
+	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return e.NotFound("Structure not found")
+	} else if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	// Use transaction to ensure atomicity
+	tx := ss.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Delete associated blinds first
+	if err := tx.Where("structure_id = ?", id).Delete(&models.Blind{}).Error; err != nil {
+		tx.Rollback()
+		return e.InternalServerError(err.Error())
+	}
+
+	// Delete the structure
+	if err := tx.Delete(&structure).Error; err != nil {
+		tx.Rollback()
+		return e.InternalServerError(err.Error())
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	return nil
 }

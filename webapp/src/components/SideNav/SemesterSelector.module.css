@@ -1,0 +1,177 @@
+/* Semester Selector Styles */
+.semesterSelector {
+  padding: 2rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 80%;
+  margin: 0 auto;
+  position: relative;
+  flex-shrink: 0; /* Prevent from shrinking when nav scrolls */
+}
+
+.semesterLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.semesterIcon {
+  font-size: 0.9rem;
+}
+
+/* Custom dropdown trigger button */
+.dropdownTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--white);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  width: 100%;
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.2s ease;
+  text-align: left;
+}
+
+.dropdownTrigger:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.dropdownTrigger:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.selectedValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.dropdownArrow {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.7);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.dropdownArrow.open {
+  transform: rotate(180deg);
+}
+
+/* Dropdown menu */
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  left: 1.25rem;
+  right: 1.25rem;
+  margin-top: 0.25rem;
+  background-color: var(--black);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdownOptions {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdownOption {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dropdownOption:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdownOption.selected {
+  background-color: rgba(255, 255, 255, 0.15);
+  font-weight: 500;
+}
+
+/* Divider in dropdown */
+.dropdownDivider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 0.25rem 0;
+}
+
+/* Create Semester option in dropdown */
+.createSemesterOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--color-primary, #4a90d9);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.createSemesterOption:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.createIcon {
+  font-size: 0.7rem;
+}
+
+.semesterSelectorCollapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0; /* Prevent from shrinking when nav scrolls */
+}
+
+.semesterSelectorCollapsed:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--white);
+}
+
+.semesterSelectorCollapsed svg {
+  font-size: 1.1rem;
+}
+
+@media screen and (min-width: 48.0625rem) { /* 769px and above */
+  /* Reset semester selector */
+  .semesterSelector {
+    width: auto;
+    margin: 0;
+    padding: 0.75rem 1.25rem;
+  }
+}

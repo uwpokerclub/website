@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSemesterService(t *testing.T) {
@@ -58,17 +59,17 @@ func TestSemesterService(t *testing.T) {
 	}
 }
 
-const float64EqualityThreshold = 1e-9
+const float32EqualityThreshold = 1e-9
 
-func almostEqual(a, b float64) bool {
-	return math.Abs(a-b) <= float64EqualityThreshold
+func almostEqual(a, b float32) bool {
+	return math.Abs(float64(a-b)) <= float32EqualityThreshold
 }
 
 func CreateSemesterTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -77,8 +78,8 @@ func CreateSemesterTest() func(*testing.T) {
 		req := &models.CreateSemesterRequest{
 			Name:                  "Spring 2022",
 			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
+			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local),
+			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local),
 			StartingBudget:        105.57,
 			MembershipFee:         10,
 			MembershipDiscountFee: 5,
@@ -106,15 +107,8 @@ func CreateSemesterTest() func(*testing.T) {
 			return
 		}
 
-		if res.StartDate != time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC) {
-			t.Errorf("SemesterService.CreateSemester().StartDate = %v, wanted = %v", res.StartDate, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC))
-			return
-		}
-
-		if res.EndDate != time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC) {
-			t.Errorf("SemesterService.CreateSemester().EndDate = %v, wanted = %v", res.StartDate, time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC))
-			return
-		}
+		require.True(t, res.StartDate.Equal(time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local)))
+		require.True(t, res.EndDate.Equal(time.Date(2022, 4, 1, 0, 0, 0, 0, time.Local)))
 
 		if res.StartingBudget != 105.57 {
 			t.Errorf("SemesterService.CreateSemester().StartingBudget = %v, wanted = %v", res.Meta, 105.57)
@@ -147,7 +141,7 @@ func GetSemesterTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -185,7 +179,7 @@ func ListSemesterTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -253,7 +247,7 @@ func GetRankingsTest() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -366,7 +360,7 @@ func UpdateBudget_Positive() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -412,7 +406,7 @@ func UpdateBudget_Negative() func(*testing.T) {
 	return func(t *testing.T) {
 		db, err := database.OpenTestConnection()
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		defer database.WipeDB(db)
 
@@ -457,7 +451,7 @@ func UpdateBudget_Negative() func(*testing.T) {
 func ExportRankingsTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if !assert.NoError(t, err, "Failed to initialize the database") {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer database.WipeDB(db)
 
@@ -520,5 +514,5 @@ func ExportRankingsTest(t *testing.T) {
 	assert.ElementsMatch(t, expectedRecords, records)
 
 	// Remove file
-	os.Remove(fp)
+	_ = os.Remove(fp)
 }

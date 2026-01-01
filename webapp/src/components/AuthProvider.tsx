@@ -1,5 +1,6 @@
 import { AuthContext } from "@/contexts";
 import { Actions, APIError, Resources, SubResources, UserSession } from "@/interfaces/responses";
+import { Role } from "@/types/roles";
 import { ReactNode, useEffect, useState } from "react";
 
 interface AuthProviderProps {
@@ -15,7 +16,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/session", {
+      const response = await fetch("/api/v2/session", {
         credentials: "include",
         signal: abortSignal,
       });
@@ -42,7 +43,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     const abortController = new AbortController();
     setLoading(true);
     try {
-      const response = await fetch("/api/session", {
+      const response = await fetch("/api/v2/session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +62,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         setError(data.message);
       }
     } catch (err) {
-      if (!(err instanceof DOMException && err.name === "AbortErrorr")) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
         setError("Network error during login. Please contact the webmaster.");
       }
     } finally {
@@ -75,7 +76,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true);
     const abortController = new AbortController();
     try {
-      const response = await fetch("/api/session/logout", {
+      const response = await fetch("/api/v2/session/logout", {
         method: "POST",
         credentials: "include",
         signal: abortController.signal,
@@ -108,6 +109,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     return resourcePerm?.[action] ?? false;
   };
 
+  const hasRoles = (roles: Role[]) => {
+    if (!user || !user.role) {
+      return false;
+    }
+
+    return roles.some((role) => user.role === role);
+  };
+
   const value = {
     user,
     loading,
@@ -115,6 +124,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     hasPermission,
+    hasRoles,
   };
 
   useEffect(() => {

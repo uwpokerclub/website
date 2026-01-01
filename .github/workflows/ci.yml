@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Build image
-        run: docker build -t website:${{ github.sha }} .
+        run: docker build --build-arg GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }} -t website:${{ github.sha }} .
       - name: Save image
         run: docker save -o website.tar website:${{ github.sha }}
       - name: Upload image to cache
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install dependencies
-        run: npm ci
+        run: GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }} npm ci
       - name: Lint source code
         run: npm run lint
       - name: Run tests
@@ -45,6 +45,8 @@ jobs:
   server-tests:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      TZ: America/New_York
     defaults:
       run:
         working-directory: server
@@ -56,7 +58,7 @@ jobs:
         with:
           go-version: "1.24"
       - name: Start PostgreSQL container
-        run: docker run --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub_test -p 5432:5432 -d postgres:13.7-alpine
+        run: docker run --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub_test -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
       - name: Wait for PostgreSQL to be ready
         run: |
           for i in {1..30}; do
@@ -68,23 +70,22 @@ jobs:
       - name: Install dependencies
         run: |
           go mod download
-          go install github.com/pressly/goose/v3/cmd/goose@v3.15.1
+          curl -sSf https://atlasgo.sh | sh
+
       - name: Run database migrations
-        run: ./scripts/migrate.sh --test up
+        run: atlas migrate apply --dir "file://atlas/migrations" --url "postgres://postgres:password@localhost:5432/uwpokerclub_test?sslmode=disable"
         env:
           TEST_DATABASE_URL: postgres://postgres:password@localhost:5432/uwpokerclub_test
       - name: Run tests
-        run: go test -v -p=1 ./internal/...
+        run: go test -p=1 ./internal/...
         env:
           TEST_DATABASE_URL: postgres://postgres:password@localhost:5432/uwpokerclub_test
 
   e2e:
     runs-on: ubuntu-latest
     needs: [build, webapp-tests, server-tests]
-    strategy:
-      fail-fast: false
-      matrix:
-        containers: [1, 2]
+    env:
+      TZ: America/New_York
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -93,7 +94,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install dependencies
-        run: npm ci
+        run: GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }} npm ci
       - name: Download image from cache
         uses: actions/download-artifact@v6
         with:
@@ -103,7 +104,7 @@ jobs:
       - name: Setup Docker network
         run: docker network create uwpokerclub_services_network
       - name: Start PostgreSQL container
-        run: docker run --name postgres --network uwpokerclub_services_network -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub -p 5432:5432 -d postgres:13.7-alpine
+        run: docker run --name postgres --network uwpokerclub_services_network -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
       - name: Wait for PostgreSQL to be ready
         run: |
           ready=false
@@ -119,7 +120,7 @@ jobs:
             exit 1
           fi
       - name: Start server
-        run: docker run --name server --network uwpokerclub_services_network -e DATABASE_URL=postgres://postgres:password@postgres:5432/uwpokerclub -e DATABASE_TLS_PARAMETERS=?sslmode=disable -e ENVIRONMENT=test -e GIN_MODE=release -e PORT=5000 -p 5000:5000 -d website:${{ github.sha }}
+        run: docker run --name server --network uwpokerclub_services_network -e DATABASE_URL=postgres://postgres:password@postgres:5432/uwpokerclub?sslmode=disable -e ENVIRONMENT=test -e GIN_MODE=release -e PORT=5000 -p 5000:5000 -d website:${{ github.sha }}
       - name: Wait for server to be ready
         run: |
           ready=false
@@ -132,16 +133,12 @@ jobs:
           done
           if [ "$ready" = false ]; then
             echo "Server not ready after 30 seconds"
+            echo "=== Server logs ==="
+            docker logs server
             exit 1
           fi
       - name: Run E2E tests
         uses: cypress-io/github-action@v6
-        with:
-          record: true
-          parallel: true
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   push:
     if: github.event_name == 'push'

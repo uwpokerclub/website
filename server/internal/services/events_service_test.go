@@ -72,7 +72,7 @@ func TestEventsService(s *testing.T) {
 		assert.Equal(t, req.Name, event.Name, "Event.Name")
 		assert.Equal(t, req.Format, event.Format, "Event.Format")
 		assert.Equal(t, semester1.ID.String(), event.SemesterID.String(), "Event.SemesterID")
-		assert.Equal(t, date, event.StartDate, "Event.StartDate")
+		assert.WithinDuration(t, date, event.StartDate, time.Second, "Event.StartDate")
 		assert.Equal(t, structure.ID, event.StructureID, "Event.StructureID")
 		assert.EqualValues(t, 0, event.Rebuys, "Event.Rebuys")
 		assert.InDelta(t, 2.3, event.PointsMultiplier, 0.01, "Event.PointsMultiplier")
@@ -101,9 +101,9 @@ func TestEventsService(s *testing.T) {
 		res = db.Create(&structure)
 		assert.NoError(t, res.Error, "ListEvents (create structure)")
 
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
-		event2Date := time.Date(2022, 1, 2, 7, 0, 0, 0, time.UTC)
-		event3Date := time.Date(2022, 1, 3, 7, 0, 0, 0, time.UTC)
+		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
+		event2Date := time.Date(2022, 1, 2, 7, 0, 0, 0, time.Local)
+		event3Date := time.Date(2022, 1, 3, 7, 0, 0, 0, time.Local)
 
 		event1 := models.Event{
 			Name:        "Event 1",
@@ -146,8 +146,8 @@ func TestEventsService(s *testing.T) {
 		events, err := eventService.ListEvents(semester1.ID.String())
 		assert.NoError(t, err, "eventService.ListEvents()")
 
-		expIds := []uint64{event3.ID, event2.ID, event1.ID}
-		accIds := make([]uint64, len(events))
+		expIds := []int32{event3.ID, event2.ID, event1.ID}
+		accIds := make([]int32, len(events))
 		for i, e := range events {
 			accIds[i] = e.ID
 		}
@@ -179,16 +179,23 @@ func TestEventsService(s *testing.T) {
 
 		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
 
+		// GetEvent now preloads Structure with Blinds, so it will have empty slice
+		expectedStructure := models.Structure{
+			ID:     structure.ID,
+			Name:   structure.Name,
+			Blinds: []models.Blind{}, // GetEvent preloads blinds
+		}
+
 		event1 := models.Event{
 			Name:             "Event 1",
 			Format:           "NLHE",
 			Notes:            "#1",
 			SemesterID:       semester1.ID,
-			Semester:         semester1,
+			Semester:         &semester1,
 			StartDate:        event1Date,
 			State:            models.EventStateStarted,
 			StructureID:      structure.ID,
-			Structure:        structure,
+			Structure:        &expectedStructure,
 			Rebuys:           0,
 			PointsMultiplier: 2.3,
 			Entries:          []models.Participant{},
@@ -243,7 +250,7 @@ func TestEventsService(s *testing.T) {
 			assert.Equal(f, *updateReq.Format, updatedEvent.Format)
 			assert.Equal(f, *updateReq.Notes, updatedEvent.Notes)
 			assert.Equal(f, event.SemesterID, updatedEvent.SemesterID)
-			assert.Equal(f, *updateReq.StartDate, updatedEvent.StartDate)
+			assert.WithinDuration(f, *updateReq.StartDate, updatedEvent.StartDate, time.Microsecond)
 			assert.Equal(f, event.State, updatedEvent.State)
 			assert.Equal(f, event.StructureID, updatedEvent.StructureID)
 			assert.Equal(f, event.Rebuys, updatedEvent.Rebuys)
@@ -333,25 +340,33 @@ func TestEventsService(s *testing.T) {
 			set, err := testhelpers.SetupSemester(db, "Fall 2022")
 			assert.NoError(t, err, "Semester setup")
 
-			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
+			now := time.Now()
+
+			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, now)
 			assert.NoError(t, err, "Event creation")
 
-			now := time.Now().UTC()
-			_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now)
+			// Enable debug logging to see SQL queries
+			debugDB := db.Debug()
+
+			firstSignoutTime := event.StartDate.Add(time.Minute * 5)
+			t.Logf("Creating first participant with MembershipID: %s, EventID: %d", set.Memberships[0].ID, event.ID)
+			_, err = testhelpers.CreateParticipant(debugDB, set.Memberships[0].ID, event.ID, 0, &firstSignoutTime)
 			assert.NoError(t, err, "Adding first entry")
 
-			next := now.Add(time.Minute * 30)
-			_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next)
+			secondSignoutTime := event.StartDate.Add(time.Minute * 30)
+			t.Logf("Creating second participant with MembershipID: %s, EventID: %d", set.Memberships[1].ID, event.ID)
+			_, err = testhelpers.CreateParticipant(debugDB, set.Memberships[1].ID, event.ID, 0, &secondSignoutTime)
 			assert.NoError(t, err, "Adding second entry")
 
-			entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil)
+			t.Logf("Creating third participant with MembershipID: %s, EventID: %d", set.Memberships[2].ID, event.ID)
+			entry3, err := testhelpers.CreateParticipant(debugDB, set.Memberships[2].ID, event.ID, 0, nil)
 			assert.NoError(t, err, "Adding third entry")
 
 			err = eventService.EndEvent(event.ID)
 			assert.NoError(t, err, "EventService.EndEvent()")
 
 			// Check that entry3's signed_out_at field is set to the start time of the event
-			foundEntry := models.Participant{ID: entry3.ID}
+			foundEntry := models.Participant{MembershipID: entry3.MembershipID}
 			res := db.First(&foundEntry)
 			assert.NoError(t, res.Error, "Getting third entry from DB")
 			assert.WithinDuration(t, event.StartDate, *foundEntry.SignedOutAt, time.Second, "Signout time check")
@@ -480,7 +495,7 @@ func TestEventsService(s *testing.T) {
 		updatedSemester := models.Semester{ID: semester1.ID}
 		res = db.First(&updatedSemester)
 		assert.NoError(t, res.Error, "Retrieve updated semester")
-		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float64(semester1.RebuyFee), 0.001)
+		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float32(semester1.RebuyFee), 0.001)
 	})
 
 	s.Run("UndoEndEvent", func(t *testing.T) {

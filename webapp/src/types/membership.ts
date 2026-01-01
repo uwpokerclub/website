@@ -1,10 +1,11 @@
+import type { User } from "./user";
+
 export type Membership = {
   id: string;
-  firstName: string;
-  lastName: string;
-  userId: string;
+  userId: number;
+  user: User;
   semesterId: string;
   paid: boolean;
   discounted: boolean;
-  attendance: string;
+  attendance: number;
 };

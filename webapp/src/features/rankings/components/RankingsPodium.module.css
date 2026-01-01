@@ -1,0 +1,134 @@
+.podiumContainer {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 2rem 1rem 1rem;
+  margin-bottom: 2rem;
+}
+
+.podiumPosition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.memberInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.memberName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-primary, #212121);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.points {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #666);
+  margin-top: 0.25rem;
+}
+
+.podiumBase {
+  width: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px 8px 0 0;
+  transition: transform 0.2s ease;
+}
+
+.podiumBase:hover {
+  transform: translateY(-4px);
+}
+
+.rank {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 1st place - tallest, gold */
+.first .podiumBase {
+  height: 120px;
+  background: linear-gradient(180deg, #ffd700 0%, #daa520 100%);
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+}
+
+/* 2nd place - medium, silver */
+.second .podiumBase {
+  height: 90px;
+  background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 100%);
+  box-shadow: 0 4px 15px rgba(192, 192, 192, 0.4);
+}
+
+/* 3rd place - shortest, bronze */
+.third .podiumBase {
+  height: 70px;
+  background: linear-gradient(180deg, #cd7f32 0%, #a0522d 100%);
+  box-shadow: 0 4px 15px rgba(205, 127, 50, 0.4);
+}
+
+/* Responsive - stack on mobile */
+@media (max-width: 480px) {
+  .podiumContainer {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .podiumPosition {
+    flex-direction: row;
+    gap: 1rem;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .memberInfo {
+    align-items: flex-start;
+    margin-bottom: 0;
+    flex: 1;
+  }
+
+  .memberName {
+    max-width: 160px;
+  }
+
+  .podiumBase {
+    width: 60px;
+    border-radius: 8px;
+  }
+
+  .first .podiumBase,
+  .second .podiumBase,
+  .third .podiumBase {
+    height: 60px;
+  }
+
+  .rank {
+    font-size: 1.5rem;
+  }
+
+  /* Reorder for mobile - 1st, 2nd, 3rd */
+  .first {
+    order: 1;
+  }
+
+  .second {
+    order: 2;
+  }
+
+  .third {
+    order: 3;
+  }
+}

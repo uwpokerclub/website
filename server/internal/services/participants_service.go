@@ -46,7 +46,7 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 	return &participant, nil
 }
 
-func (svc *participantsService) ListParticipants(eventId uint64) ([]models.ListParticipantsResult, error) {
+func (svc *participantsService) ListParticipants(eventId int32) ([]models.ListParticipantsResult, error) {
 	ret := []models.ListParticipantsResult{}
 
 	// TODO: Update this query eventually to return a specific array of objects
@@ -68,6 +68,25 @@ func (svc *participantsService) ListParticipants(eventId uint64) ([]models.ListP
 	}
 
 	return ret, nil
+}
+
+func (svc *participantsService) ListParticipantsV2(eventId int32) ([]models.Participant, error) {
+	var participants []models.Participant
+
+	// Preload nested associations: Membership -> User, Semester, and Ranking
+	res := svc.db.
+		Preload("Membership.User").
+		Preload("Membership.Semester").
+		Preload("Membership.Ranking").
+		Where("event_id = ?", eventId).
+		Order("signed_out_at DESC").
+		Find(&participants)
+
+	if err := res.Error; err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+
+	return participants, nil
 }
 
 func (svc *participantsService) UpdateParticipant(req *models.UpdateParticipantRequest) (*models.Participant, error) {
@@ -133,6 +152,11 @@ func (svc *participantsService) DeleteParticipant(req *models.DeleteParticipantR
 	res := svc.db.Where("membership_id = ? AND event_id = ?", req.MembershipID, req.EventID).Delete(models.Participant{})
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
+	}
+
+	// Check if any rows were actually deleted
+	if res.RowsAffected == 0 {
+		return e.NotFound("Entry not found")
 	}
 
 	return nil

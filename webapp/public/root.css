@@ -1,5 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap");
 
+:root {
+  --black: #101014;
+  --white: #e1e1e5;
+}
+
 html, body {
   overflow-x: hidden;
 }
@@ -14,15 +19,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
-}
-
-a {
-  color: #00b7ff;
-}
-
 .row {
   margin-left: 0;
   margin-right: 0;
@@ -34,4 +30,8 @@ a {
 
 .panel-heading > h3 {
   margin-top: 10px;
+}
+
+.layout {
+  display: flex;
 }

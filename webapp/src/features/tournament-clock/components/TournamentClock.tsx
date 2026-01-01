@@ -11,6 +11,19 @@ type Props = {
   levels: Blind[];
 };
 
+/**
+ * Formats a number for display, abbreviating values >= 10000 (5+ digits)
+ * Examples: 1000 → "1000", 5000 → "5000", 10000 → "10K", 50000 → "50K", 100000 → "100K"
+ */
+function formatChipValue(value: number): string {
+  if (value >= 10000) {
+    const kValue = value / 1000;
+    // Remove decimal if it's a whole number
+    return kValue % 1 === 0 ? `${kValue}K` : `${kValue.toFixed(1)}K`;
+  }
+  return String(value);
+}
+
 export function TournamentClock({ levels }: Props) {
   // The index of the current level, tracked in local storage
   const [levelIndex, setLevelIndex] = useLocalStorage(import.meta.env.VITE_LOCAL_STORAGE_KEY, 0);
@@ -108,17 +121,19 @@ export function TournamentClock({ levels }: Props) {
       <LevelInfo
         type="blinds"
         title="Blinds"
-        current={`${levels[levelIndex].small} / ${levels[levelIndex].big}`}
+        current={`${formatChipValue(levels[levelIndex].small)} / ${formatChipValue(levels[levelIndex].big)}`}
         next={
-          levelIndex < levels.length - 1 ? `${levels[levelIndex + 1].small} / ${levels[levelIndex + 1].big}` : undefined
+          levelIndex < levels.length - 1
+            ? `${formatChipValue(levels[levelIndex + 1].small)} / ${formatChipValue(levels[levelIndex + 1].big)}`
+            : undefined
         }
       />
 
       <LevelInfo
         type="ante"
         title="Ante"
-        current={`${levels[levelIndex].ante}`}
-        next={levelIndex < levels.length - 1 ? `${levels[levelIndex + 1].ante}` : undefined}
+        current={formatChipValue(levels[levelIndex].ante)}
+        next={levelIndex < levels.length - 1 ? formatChipValue(levels[levelIndex + 1].ante) : undefined}
       />
     </div>
   );

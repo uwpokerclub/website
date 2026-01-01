@@ -1,0 +1,86 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--color-gray-700, #616161);
+}
+
+.headerCell {
+  text-align: center;
+}
+
+.levelContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cell {
+  min-width: 0;
+}
+
+.cell input {
+  text-align: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+  color: var(--color-gray-500, #9e9e9e);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: color 0.15s ease;
+}
+
+.removeButton:hover {
+  color: var(--color-danger, #dc3545);
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 600px) {
+  .header {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .cell::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #757575);
+    font-weight: 500;
+  }
+}

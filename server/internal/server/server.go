@@ -1,6 +1,7 @@
 package server
 
 import (
+	"api/internal/controller"
 	"api/internal/middleware"
 	"fmt"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 )
 
@@ -47,6 +50,9 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	// Initialize all routes
 	s.SetupRoutes()
 
+	// Setup V2 routes
+	s.SetupV2Routes()
+
 	return s
 }
 
@@ -61,11 +67,6 @@ func (s *apiServer) SetupRoutes() {
 	apiRoute.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-
-	loginRoute := apiRoute.Group("/login", middleware.UseAuthentication(s.db))
-	{
-		loginRoute.POST("", middleware.UseAuthorization(s.db, "login.create"), s.CreateLogin)
-	}
 
 	sessionRoute := apiRoute.Group("/session")
 	{
@@ -134,5 +135,30 @@ func (s *apiServer) SetupRoutes() {
 		structuresRoute.GET("", middleware.UseAuthorization(s.db, "structure.create"), s.ListStructures)
 		structuresRoute.GET(":id", middleware.UseAuthorization(s.db, "structure.get"), s.GetStructure)
 		structuresRoute.PUT(":id", middleware.UseAuthorization(s.db, "structure.edit"), s.UpdateStructure)
+	}
+}
+
+func (s *apiServer) SetupV2Routes() {
+	apiV2Route := s.Router.Group("/api/v2")
+
+	// Serve Swagger documentation
+	apiV2Route.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Load routes from controllers
+	controllers := []controller.Controller{
+		controller.NewHealthController(),
+		controller.NewAuthenticationController(s.db),
+		controller.NewSemestersController(s.db),
+		controller.NewEventsController(s.db),
+		controller.NewEntriesController(s.db),
+		controller.NewMembersController(s.db),
+		controller.NewMembershipsController(s.db),
+		controller.NewRankingsController(s.db),
+		controller.NewStructuresController(s.db),
+		controller.NewLoginsController(s.db),
+	}
+
+	for _, controller := range controllers {
+		controller.LoadRoutes(apiV2Route)
 	}
 }

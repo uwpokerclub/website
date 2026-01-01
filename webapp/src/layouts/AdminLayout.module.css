@@ -1,0 +1,19 @@
+.layoutContainer {
+  display: flex;
+  height: 100vh; /* Take up full viewport height */
+  width: 100%;
+  overflow: hidden; /* Prevent scrolling of the entire page */
+}
+
+.mainContent {
+  flex: 1;
+  overflow-y: auto; /* Enable scrolling within the main content */
+  padding: 1.5rem;
+  height: 100vh;
+}
+
+@media screen and (max-width: 48rem) {
+  .mainContent {
+    padding: 0;
+  }
+}

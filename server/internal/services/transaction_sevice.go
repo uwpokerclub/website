@@ -55,7 +55,7 @@ func (ts *transactionService) CreateTransaction(semesterId uuid.UUID, req *model
 	return &transaction, nil
 }
 
-func (ts *transactionService) GetTransaction(semesterId uuid.UUID, transactionId uint32) (*models.Transaction, error) {
+func (ts *transactionService) GetTransaction(semesterId uuid.UUID, transactionId int32) (*models.Transaction, error) {
 	transaction := models.Transaction{
 		ID:         transactionId,
 		SemesterID: semesterId,
@@ -110,7 +110,7 @@ func (ts *transactionService) UpdateTransaction(semesterId uuid.UUID, req *model
 	}
 
 	// Perform updates to changed fields
-	oldAmount := 0.0
+	var oldAmount float32 = 0.0
 	if req.Amount != 0.0 {
 		oldAmount = transaction.Amount
 		transaction.Amount = req.Amount
@@ -145,7 +145,7 @@ func (ts *transactionService) UpdateTransaction(semesterId uuid.UUID, req *model
 	return &transaction, nil
 }
 
-func (ts *transactionService) DeleteTransaction(semesterId uuid.UUID, transactionId uint32) error {
+func (ts *transactionService) DeleteTransaction(semesterId uuid.UUID, transactionId int32) error {
 	transaction := models.Transaction{
 		ID:         transactionId,
 		SemesterID: semesterId,

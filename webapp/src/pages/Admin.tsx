@@ -1,29 +1,33 @@
 import { Route, Routes } from "react-router-dom";
-import { AdminNavbar } from "../components";
 import { Home } from "./Home";
+import { Dashboard } from "./Dashboard";
 import { Users } from "./Users";
 import { Semesters } from "./Semesters";
 import { Rankings } from "./Rankings";
 import { Events } from "./Events";
+import { Members } from "./Members";
+import { Inventory } from "./Inventory";
+import { Finances } from "./Finances";
+import { Executive } from "./Executive";
+import { Logins } from "./Logins";
+import AdminLayout from "@/layouts/AdminLayout";
 
 export function Admin() {
   return (
-    <>
-      <AdminNavbar />
-
-      <div className="row">
-        <div className="col-md-1"></div>
-        <div className="col-md-10">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/users/*" element={<Users />} />
-            <Route path="/events/*" element={<Events />} />
-            <Route path="/semesters/*" element={<Semesters />} />
-            <Route path="/rankings/*" element={<Rankings />} />
-          </Routes>
-        </div>
-        <div className="col-md-1"></div>
-      </div>
-    </>
+    <AdminLayout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/users/*" element={<Users />} />
+        <Route path="/members/*" element={<Members />} />
+        <Route path="/events/*" element={<Events />} />
+        <Route path="/semesters/*" element={<Semesters />} />
+        <Route path="/rankings/*" element={<Rankings />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/finances" element={<Finances />} />
+        <Route path="/executive" element={<Executive />} />
+        <Route path="/logins/*" element={<Logins />} />
+      </Routes>
+    </AdminLayout>
   );
 }

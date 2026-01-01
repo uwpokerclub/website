@@ -1,99 +1,78 @@
-# UWPSC Admin API
+# UWPSC API Server
 
-## Table of Contents
-- [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-  - [Clone the repository](#clone-the-repository)
-  - [Building](#building)
-- [Usage](#testing)
-  - [Starting the server](#starting-the-server)
-- [Migrations](#migrations)
-  - [Creating a new migration](#creating-a-new-migration)
-  - [Running migrations](#running-migrations)
-- [Testing](#testing)
-  - [Running all tests](#running-all-tests)
-  - [Running a subset of tests](#running-a-subset-of-tests)
-- [Contributing](#contributing)
-- [License](#license)
+> **📖 For complete documentation, please refer to the main [README.md](../README.md)**
 
-## Installation
-Before starting development or usage of the API, ensure you have all of the prerequiste software installed below.
+This directory contains the Go API server for the UWPSC Website.
 
-### Prerequisites
-- [Docker](https://www.docker.com/) (with Docker Compose)
-- [Golang](https://go.dev/) (version 1.18+)
+## Quick Start
 
-After installing both Docker and Golang, you are ready to begin.
+From the root directory:
+```bash
+# Start all services including the API server
+docker compose network create uwpokerclub_services_network
+docker compose up -d
 
-### Clone the repository
-Clone the repository to your local development environment using:
-```sh
-# HTTPS
-git clone https://github.com/uwpokerclub/api.git
-# SSH
-git clone git@github.com:uwpokerclub/api.git
-# GH CLI
-gh repo clone uwpokerclub/api
-
-# Change into project directory
-cd api
+# Or run the server locally for development
+go run main.go start
 ```
 
-### Building
-After cloning the repository, you will now need to build the container image with Docker Compose.
-```sh
-docker-compose build
-```
-This will build the image to run the API server in.
+## Key Information
 
-## Usage
+- **Port**: 5000
+- **API Documentation**: http://localhost:5000/swagger/index.html
+- **Technology**: Go + Gin framework + GORM + PostgreSQL
+- **Testing**: `docker compose exec server go test ./internal/... -v -p=1`
 
-### Starting the server
-To start the server, simply start the container using Docker Compose.
-```sh
-docker-compose up -d
-```
-This will start both the API server, and a PostgreSQL database along side.
+## Directory Structure
 
-## Migrations
+- `atlas/` - Database migration configuration (Atlas)
+- `cmd/` - CLI commands and application entry points
+- `docs/` - Generated API documentation (Swagger)
+- `internal/` - Private application code
+  - `models/` - GORM database models
+  - `services/` - Business logic layer
+  - `server/` - HTTP handlers and middleware
+  - `database/` - Database connection and utilities
+- `migrations/` - Legacy migrations (deprecated, use Atlas)
+- `scripts/` - Utility scripts
 
-### Creating a new migration
-To create a new migration, run the following command.
-```
-docker-compose exec server ./scripts/migrate.sh create add_column_to_database sql
+## Environment Variables
+
+Key environment variables for local development:
+
+```bash
+DATABASE_URL=postgres://docker:password@localhost:5432/uwpokerclub_development
+PORT=5000
+ENVIRONMENT=development
 ```
 
-### Running migrations
-To run the most recent migrations, you can run the command
-```
-docker-compose exec server ./scripts/migrate.sh up
-```
-This will run the migrations for the development database. To run migrations on the test database:
-```
-docker-compose exec server ./scripts/migrate.sh --test up
-```
-To view all possible migration options, you can list them by not specifying an option.
-```
-docker-compose exec server ./scripts/migrate.sh
-```
-## Testing
+## Database Migrations
 
-### Running all tests
-To run the entire unit test suite, use:
-```
-docker-compose exec server go test ./internal/... -v -p=1
-```
-Ensure that `-p=1` is set. This disables parallelization of the tests. This is crucial since the database is wiped after every test run.
+The server uses [Atlas](https://atlasgo.io/) for database schema management.
 
-### Running a subset of tests
-If you only want to run a subset of the test suite, you can use the `--run` option and specify text that matches a test name. For example:
-```
-docker-compose exec server go test ./internal/... -v -p=1 --run MembershipService
-```
-This will only run the membership service test suite.
+### Generating Migrations
 
-## Contributing
-TBD
+**Automatic migrations from GORM model changes:**
+```bash
+atlas migrate diff --config "file://atlas/atlas.hcl" --env gorm
+```
+
+**Manual migrations for custom SQL:**
+```bash
+atlas migrate new your_migration_name --config "file://atlas/atlas.hcl" --env gorm
+```
+
+**Applying migrations:**
+```bash
+atlas migrate apply \
+  --config "file://atlas/atlas.hcl" \
+  --env gorm \
+  --url "postgres://docker:password@localhost:5432/uwpokerclub_development?sslmode=disable"
+```
+
+For complete environment setup and database management, see the main [README.md](../README.md).
 
 ## License
-The UWPSC Admin API is licensed under the terms of the Apache 2.0 License and can be found [here](LICENSE).
+
+Licensed under the Apache 2.0 License - see the [LICENSE](../LICENSE) file for details.
+

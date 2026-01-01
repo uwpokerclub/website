@@ -1,0 +1,128 @@
+.userProfile {
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative; /* For absolute positioning of logout button */
+  width: 80%;
+  margin: 0 auto;
+  flex-shrink: 0; /* Prevent from shrinking when nav scrolls */
+}
+
+.userAvatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.userAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userAvatar svg {
+  width: 2rem;
+  height: 2rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-weight: 500;
+  color: var(--white);
+  font-size: 0.95rem;
+}
+
+.userRole {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+}
+
+/* Logout button - increased size */
+.logoutBtn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 0.75rem;  /* Increased padding */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  min-width: 2.5rem; /* Ensure minimum width */
+  min-height: 2.5rem; /* Ensure minimum height */
+}
+
+.logoutBtn svg {
+  width: 1.25rem; /* Increased icon size */
+  height: 1.25rem;
+}
+
+.logoutBtn:hover {
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Collapsed user profile */
+.userProfileCollapsed {
+  padding: 1rem 0;
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0; /* Prevent from shrinking when nav scrolls */
+}
+
+.userAvatarCollapsed {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.userAvatarCollapsed img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userAvatarCollapsed svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* For collapsed state - also increased size */
+.logoutBtnCollapsed {
+  display: none;
+}
+
+/* Optional: Add a subtle border to make button more visible */
+.logoutBtn, .logoutBtnCollapsed {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+@media screen and (min-width: 48.0625rem) { /* 769px and above */
+  /* Reset user profile */
+  .userProfile {
+    width: auto;
+    margin: 0;
+    padding: 0.5rem 1.25rem;  
+  }
+}

@@ -52,6 +52,54 @@ func TestLoginAuthorizer(t *testing.T) {
 			},
 			action: "create",
 		},
+		{
+			name: "List Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "list",
+		},
+		{
+			name: "Get Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "get",
+		},
+		{
+			name: "Delete Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "delete",
+		},
+		{
+			name: "Edit Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "edit",
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
@@ -75,6 +123,10 @@ func TestLoginAuthorizer_GetPermissions(t *testing.T) {
 			role: "tournament_director",
 			expected: map[string]any{
 				"create": false,
+				"list":   false,
+				"get":    false,
+				"delete": false,
+				"edit":   false,
 			},
 		},
 	}

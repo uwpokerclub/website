@@ -1,2 +1,2 @@
 -- Modify "rankings" table
-ALTER TABLE "rankings" ADD COLUMN "attendance" integer NOT NULL DEFAULT 0;
+ALTER TABLE "rankings" ADD COLUMN IF NOT EXISTS "attendance" integer NOT NULL DEFAULT 0;

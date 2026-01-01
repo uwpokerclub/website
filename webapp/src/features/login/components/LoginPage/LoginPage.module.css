@@ -1,0 +1,253 @@
+/* ===========================================
+   Login Page - Velvet Casino Lounge
+   Premium poker club aesthetic with
+   refined elegance and subtle luxury
+   =========================================== */
+
+.container {
+  /* Color palette */
+  --casino-navy: #0f1419;
+  --casino-navy-mid: #1a2332;
+  --casino-navy-light: #243447;
+  --casino-gold: #d4a84b;
+  --casino-gold-bright: #f4c563;
+  --casino-gold-dim: #8b7235;
+  --casino-cream: #faf9f7;
+  --casino-slate: #94a3b8;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 1.5rem;
+  background:
+    /* Subtle radial spotlight from top */
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212, 168, 75, 0.08) 0%, transparent 50%),
+    /* Subtle vignette */
+    radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%),
+    /* Base gradient */
+    linear-gradient(165deg, var(--casino-navy) 0%, var(--casino-navy-mid) 50%, var(--casino-navy-light) 100%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+/* Subtle diamond pattern overlay */
+.container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.02) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.02) 75%);
+  background-size: 60px 60px;
+  background-position: 0 0, 30px 0, 30px -30px, 0 30px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Floating gold ambient glow */
+.container::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(212, 168, 75, 0.12) 0%, transparent 60%);
+  pointer-events: none;
+  animation: breathe 8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -60%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -60%) scale(1.1); }
+}
+
+/* Logo Section */
+.logoContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 2;
+  animation: fadeDown 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo {
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.logo:hover {
+  transform: scale(1.03);
+}
+
+/* Card Container */
+.card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--casino-cream);
+  border-radius: 20px;
+  padding: 2.25rem 2rem 2rem;
+  position: relative;
+  z-index: 2;
+  animation: slideUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+  opacity: 0;
+
+  /* Layered shadow for depth */
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 8px 16px rgba(0, 0, 0, 0.1),
+    0 24px 48px rgba(0, 0, 0, 0.2),
+    0 48px 80px rgba(0, 0, 0, 0.15);
+}
+
+/* Subtle gold accent line at top */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--casino-gold), transparent);
+  border-radius: 0 0 4px 4px;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Section */
+.header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.title {
+  font-size: 1.625rem;
+  font-weight: 600;
+  color: var(--casino-navy);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--casino-slate);
+  margin: 0;
+  font-weight: 400;
+}
+
+/* Error Alert */
+.errorAlert {
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);
+  border: 1px solid #fecaca;
+  border-left: 3px solid #dc2626;
+  border-radius: 10px;
+  color: #991b1b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 500;
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+/* Footer */
+.footer {
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  animation: fadeIn 0.6s ease-out 0.5s forwards;
+  opacity: 0;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .logo {
+    width: 160px;
+  }
+
+  .logoContainer {
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: 16px;
+  }
+
+  .title {
+    font-size: 1.375rem;
+  }
+
+  .subtitle {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .container::after,
+  .logoContainer,
+  .card,
+  .footer,
+  .logo {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

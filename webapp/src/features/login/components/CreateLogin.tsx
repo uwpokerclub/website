@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { sendAPIRequest } from "../../../lib";
-import { LoginForm } from "./LoginForm";
+import { CreateLoginForm } from "./CreateLoginForm";
 
 export function CreateLogin() {
   const [errorMessage, setErrorMessage] = useState("");
@@ -50,7 +50,7 @@ export function CreateLogin() {
 
         <div className="col-md-4 col-lg-4 col-sm-6">
           <h1>Create a Login</h1>
-          <LoginForm create onSubmit={handleSubmit} />
+          <CreateLoginForm onSubmit={handleSubmit} />
         </div>
 
         <div className="col-md-4 col-lg-4 col-sm-3" />

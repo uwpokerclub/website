@@ -1,0 +1,28 @@
+/* ===========================================
+   Login Form - Casino Elegance
+   =========================================== */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  width: 100%;
+}
+
+.submitContainer {
+  margin-top: 0.625rem;
+  animation: fadeIn 0.4s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .submitContainer {
+    animation: none;
+    opacity: 1;
+  }
+}

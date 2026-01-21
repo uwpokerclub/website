@@ -22,7 +22,7 @@
     "react-photoswipe-gallery": "^2.2.7",
     "react-router-dom": "^7.12.0",
     "react-transition-group": "^4.4.5",
-    "zod": "^3.25.76"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",

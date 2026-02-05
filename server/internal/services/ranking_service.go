@@ -54,16 +54,10 @@ func (svc *rankingService) UpdateRanking(membershipId uuid.UUID, points int) err
 func (svc *rankingService) GetRanking(semesterID uuid.UUID, membershipID uuid.UUID) (*models.GetRankingResponse, error) {
 	ret := models.GetRankingResponse{}
 
-	rankingsTableQuery := svc.db.
-		Table("memberships").
-		Select("rankings.membership_id, rankings.points, ROW_NUMBER() OVER (ORDER BY rankings.points DESC) as position").
-		Joins("INNER JOIN rankings ON memberships.id = rankings.membership_id").
-		Where("memberships.semester_id = ?", semesterID)
-
 	res := svc.db.
-		Table("(?) as rankings", rankingsTableQuery).
+		Table(models.SemesterRankingsView).
 		Select("points", "position").
-		Where("membership_id = ?", membershipID).
+		Where("semester_id = ? AND membership_id = ?", semesterID, membershipID).
 		First(&ret)
 
 	// Check if the error is a not found error

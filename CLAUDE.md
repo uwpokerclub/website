@@ -156,3 +156,34 @@ When adding new endpoints, prefer the v2 controller pattern in `internal/control
 - Never: `go test ./internal/controller -v -p=1 -C` (incorrect - will fail)
 - The `-C` option changes to the specified directory before running tests
 - Always disable parallelization with `-p=1` due to shared database in tests
+
+## Jira CLI (jira-cli)
+- **Project**: UWPSC at https://uwpokerclub.atlassian.net
+- **Config**: `~/.config/.jira/.config.yml`
+
+### Creating Issues
+```bash
+# Create issue with template file for body
+jira issue create --type Task --parent "UWPSC-XX" --priority High --no-input \
+  --summary "Issue summary" \
+  --template /path/to/body.md
+
+# Create epic
+jira epic create --name "Epic Name" --summary "Epic summary" --priority High --no-input \
+  --body "Epic description"
+```
+
+### Custom Fields
+- **IMPORTANT**: Use dash-case field names, not field keys
+- Example: `--custom acceptance-criteria="criteria here"` (correct)
+- Not: `--custom customfield_10040="criteria here"` (incorrect - will be ignored)
+
+### Editing Issues
+```bash
+# Update description via pipe
+cat description.md | jira issue edit UWPSC-XX --no-input
+
+# Set custom fields
+jira issue edit UWPSC-XX --no-input --custom acceptance-criteria="- Criterion 1
+- Criterion 2"
+```

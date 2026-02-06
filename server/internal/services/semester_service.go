@@ -78,12 +78,10 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 	var rankings []models.RankingResponse
 
 	res := ss.db.
-		Table("memberships").
-		Select("users.id, users.first_name, users.last_name, rankings.points").
-		Joins("INNER JOIN users ON memberships.user_id = users.id").
-		Joins("INNER JOIN rankings ON memberships.id = rankings.membership_id").
-		Where("memberships.semester_id = ?", id).
-		Order("rankings.points DESC").
+		Table(models.SemesterRankingsView).
+		Select("user_id as id, first_name, last_name, points, position").
+		Where("semester_id = ?", id).
+		Order("position ASC, last_name ASC, first_name ASC").
 		Find(&rankings)
 
 	if err := res.Error; err != nil {
@@ -114,14 +112,12 @@ func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {
 func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 	var rankings []models.RankingResponse
 
-	// Get the top 100 rankings
+	// Get the top 100 rankings for export (limited to prevent excessive file sizes)
 	res := ss.db.
-		Table("memberships").
-		Select("users.id, users.first_name, users.last_name, rankings.points").
-		Joins("INNER JOIN users ON memberships.user_id = users.id").
-		Joins("INNER JOIN rankings on memberships.id = rankings.membership_id").
-		Where("memberships.semester_id = ?", id).
-		Order("rankings.points DESC").
+		Table(models.SemesterRankingsView).
+		Select("user_id as id, first_name, last_name, points, position").
+		Where("semester_id = ?", id).
+		Order("position ASC, last_name ASC, first_name ASC").
 		Limit(100).
 		Find(&rankings)
 
@@ -144,11 +140,12 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 	defer writer.Flush()
 
 	// Write headers to the file
-	writer.Write([]string{"id", "first_name", "last_name", "points"})
+	writer.Write([]string{"position", "id", "first_name", "last_name", "points"})
 
 	// Write each row from the database to the CSV
 	for _, ranking := range rankings {
 		record := []string{
+			strconv.FormatInt(int64(ranking.Position), 10),
 			strconv.FormatUint(ranking.ID, 10),
 			ranking.FirstName,
 			ranking.LastName,

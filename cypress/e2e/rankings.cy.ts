@@ -10,7 +10,12 @@ const SORTED_RANKINGS = RANKINGS.map((r) => {
     user,
     id: user.id, // API returns user ID as ranking.id
   };
-}).sort((a, b) => b.points - a.points);
+}).sort((a, b) => {
+  if (b.points !== a.points) return b.points - a.points;
+  const lastCmp = a.user.lastName.localeCompare(b.user.lastName);
+  if (lastCmp !== 0) return lastCmp;
+  return a.user.firstName.localeCompare(b.user.firstName);
+});
 
 describe("Rankings", () => {
   context("when no semester is selected", () => {

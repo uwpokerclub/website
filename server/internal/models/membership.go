@@ -9,7 +9,7 @@ type Membership struct {
 	ID         uuid.UUID `json:"id"         gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	UserID     uint64    `json:"userId"     gorm:"uniqueIndex:user_semester_unique"`
 	User       *User     `json:"user"`
-	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique"`
+	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique;index:idx_memberships_semester_id"`
 	Semester   *Semester `json:"semester"`
 	Paid       bool      `json:"paid"       gorm:"not null;default:false"`
 	Discounted bool      `json:"discounted" gorm:"not null;default:false"`

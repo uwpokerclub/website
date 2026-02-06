@@ -138,6 +138,7 @@ func TestListRankings(t *testing.T) {
 						require.NotEmpty(t, ranking.FirstName)
 						require.NotEmpty(t, ranking.LastName)
 						require.GreaterOrEqual(t, ranking.Points, int32(0))
+						require.GreaterOrEqual(t, ranking.Position, int32(1))
 					}
 
 					// Verify rankings are sorted by points descending
@@ -422,8 +423,8 @@ func TestExportRankings(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, records, "CSV should have at least a header row")
 
-				// Validate header row
-				require.Equal(t, []string{"id", "first_name", "last_name", "points"}, records[0],
+				// Validate header row (now includes position column)
+				require.Equal(t, []string{"position", "id", "first_name", "last_name", "points"}, records[0],
 					"CSV header should match expected format")
 
 				// For semesters with rankings, validate data rows
@@ -433,11 +434,12 @@ func TestExportRankings(t *testing.T) {
 
 					// Validate each data row has correct number of columns
 					for i := 1; i < len(records); i++ {
-						require.Len(t, records[i], 4, "Each CSV row should have 4 columns")
-						require.NotEmpty(t, records[i][0], "ID should not be empty")
-						require.NotEmpty(t, records[i][1], "First name should not be empty")
-						require.NotEmpty(t, records[i][2], "Last name should not be empty")
-						require.NotEmpty(t, records[i][3], "Points should not be empty")
+						require.Len(t, records[i], 5, "Each CSV row should have 5 columns")
+						require.NotEmpty(t, records[i][0], "Position should not be empty")
+						require.NotEmpty(t, records[i][1], "ID should not be empty")
+						require.NotEmpty(t, records[i][2], "First name should not be empty")
+						require.NotEmpty(t, records[i][3], "Last name should not be empty")
+						require.NotEmpty(t, records[i][4], "Points should not be empty")
 					}
 				} else {
 					// For semesters without rankings, should only have header

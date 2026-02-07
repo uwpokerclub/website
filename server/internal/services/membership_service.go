@@ -102,8 +102,6 @@ func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gor
 		query = query.Where("memberships.user_id = ?", *filter.UserID)
 	}
 
-	query = filter.Pagination.Apply(query)
-
 	return query
 }
 
@@ -134,6 +132,7 @@ func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilte
 		Order("users.last_name ASC")
 
 	res = addFilterClauses(res, filter)
+	res = filter.Pagination.Apply(res)
 
 	// Fetch the results and return an error if one occured
 	res = res.Scan(&ret)

@@ -102,6 +102,8 @@ func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gor
 		query = query.Where("memberships.user_id = ?", *filter.UserID)
 	}
 
+	query = filter.Pagination.Apply(query)
+
 	return query
 }
 

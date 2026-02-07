@@ -62,11 +62,10 @@ func OpenConnection(runMigrations bool) (*gorm.DB, error) {
 		}
 
 		_, err = client.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
-			Env:             "gorm",
-			ConfigURL:       "file://atlas/atlas.hcl",
-			URL:             connectionUrl,
-			DirURL:          "file://atlas/migrations",
-			BaselineVersion: "20250726011345",
+			Env:       "gorm",
+			ConfigURL: "file://atlas/atlas.hcl",
+			URL:       connectionUrl,
+			DirURL:    "file://atlas/migrations",
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply atlas migrations: %s", err.Error())

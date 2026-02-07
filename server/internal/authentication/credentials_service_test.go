@@ -17,7 +17,7 @@ func CreateTestLogin(db *gorm.DB, username, password string) error {
 	}
 
 	login := models.Login{
-		Username: "testuser",
+		Username: username,
 		Password: string(hash),
 	}
 
@@ -55,9 +55,10 @@ func TestCredentialsService(t *testing.T) {
 		err := CreateTestLogin(db, "testuser", "password")
 		assert.NoError(t, err)
 
-		valid, err := credSvc.Validate("nouser", "password")
+		valid, role, err := credSvc.Validate("nouser", "password")
 		assert.NoError(t, err)
 		assert.False(t, valid)
+		assert.Empty(t, role)
 	})
 
 	t.Run("Validate_IncorrectPassword", func(t *testing.T) {
@@ -67,9 +68,10 @@ func TestCredentialsService(t *testing.T) {
 		err := CreateTestLogin(db, "testuser", "password")
 		assert.NoError(t, err)
 
-		valid, err := credSvc.Validate("testuser", "wrongpassword")
+		valid, role, err := credSvc.Validate("testuser", "wrongpassword")
 		assert.NoError(t, err)
 		assert.False(t, valid)
+		assert.Empty(t, role)
 	})
 
 	t.Run("Validate_CorrectCredentials", func(t *testing.T) {
@@ -79,8 +81,9 @@ func TestCredentialsService(t *testing.T) {
 		err := CreateTestLogin(db, "testuser", "password")
 		assert.NoError(t, err)
 
-		valid, err := credSvc.Validate("testuser", "password")
+		valid, role, err := credSvc.Validate("testuser", "password")
 		assert.NoError(t, err)
 		assert.True(t, valid)
+		assert.Equal(t, "executive", role)
 	})
 }

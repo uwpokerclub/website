@@ -24,12 +24,12 @@ func NewMembershipsController(db *gorm.DB) Controller {
 
 func (c *membershipsController) LoadRoutes(router *gin.RouterGroup) {
 	memberships := router.Group("semesters/:semesterId/memberships", middleware.UseAuthentication(c.db))
-	memberships.POST("", middleware.UseAuthorization(c.db, "membership.create"), c.createMembership)
-	memberships.GET("", middleware.UseAuthorization(c.db, "membership.list"), c.listMemberships)
-	memberships.GET("/:id", middleware.UseAuthorization(c.db, "membership.get"), c.getMembership)
+	memberships.POST("", middleware.UseAuthorization("membership.create"), c.createMembership)
+	memberships.GET("", middleware.UseAuthorization("membership.list"), c.listMemberships)
+	memberships.GET("/:id", middleware.UseAuthorization("membership.get"), c.getMembership)
 	memberships.PATCH(
 		"/:id",
-		middleware.UseAuthorization(c.db, "membership.edit"),
+		middleware.UseAuthorization("membership.edit"),
 		c.updateMembership,
 	)
 }

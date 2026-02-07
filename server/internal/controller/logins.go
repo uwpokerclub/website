@@ -22,11 +22,11 @@ func NewLoginsController(db *gorm.DB) Controller {
 
 func (c *loginsController) LoadRoutes(router *gin.RouterGroup) {
 	logins := router.Group("logins", middleware.UseAuthentication(c.db))
-	logins.GET("", middleware.UseAuthorization(c.db, "login.list"), c.listLogins)
-	logins.GET("/:username", middleware.UseAuthorization(c.db, "login.get"), c.getLogin)
-	logins.POST("", middleware.UseAuthorization(c.db, "login.create"), c.createLogin)
-	logins.DELETE("/:username", middleware.UseAuthorization(c.db, "login.delete"), c.deleteLogin)
-	logins.PATCH("/:username/password", middleware.UseAuthorization(c.db, "login.edit"), c.changePassword)
+	logins.GET("", middleware.UseAuthorization("login.list"), c.listLogins)
+	logins.GET("/:username", middleware.UseAuthorization("login.get"), c.getLogin)
+	logins.POST("", middleware.UseAuthorization("login.create"), c.createLogin)
+	logins.DELETE("/:username", middleware.UseAuthorization("login.delete"), c.deleteLogin)
+	logins.PATCH("/:username/password", middleware.UseAuthorization("login.edit"), c.changePassword)
 }
 
 // listLogins handles listing all logins with linked member information

@@ -97,7 +97,6 @@ RUN chown runner:runner certs client-cert client-key
 # Copy the built application
 COPY --from=webapp --chown=runner:runner /usr/app/dist ./public
 COPY --from=server --chown=runner:runner /tmp/server ./server
-COPY --from=server --chown=runner:runner /usr/server/migrations ./migrations
 COPY --from=server --chown=runner:runner /usr/server/atlas ./atlas
 
 # Switch to non-root user

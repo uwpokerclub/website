@@ -1,12 +1,7 @@
 package authorization
 
 import (
-	e "api/internal/errors"
-	"api/internal/models"
-	"errors"
 	"strings"
-
-	"gorm.io/gorm"
 )
 
 type authorizationService struct {
@@ -14,25 +9,11 @@ type authorizationService struct {
 	resourceAuthorizers ResourceAuthorizerMap
 }
 
-func NewAuthorizationService(db *gorm.DB, username string, resourceAuthorizers ResourceAuthorizerMap) (*authorizationService, error) {
-	user := models.Login{Username: username}
-
-	// Attempt to find the users role
-	res := db.Find(&user)
-	err := res.Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, e.Unauthorized("You do not have permission to perform this action.")
-		}
-		return nil, e.InternalServerError("An internal problem has occurred. Please try again later.")
-	}
-
-	svc := authorizationService{
-		role:                user.Role,
+func NewAuthorizationService(role string, resourceAuthorizers ResourceAuthorizerMap) *authorizationService {
+	return &authorizationService{
+		role:                role,
 		resourceAuthorizers: resourceAuthorizers,
 	}
-
-	return &svc, nil
 }
 
 func (svc *authorizationService) IsAuthorized(action string) bool {

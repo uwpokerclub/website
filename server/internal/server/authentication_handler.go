@@ -34,7 +34,7 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 
 	// Valdiate that the credentials provided are valid credentials
 	credentialSvc := authentication.NewCredentialService(s.db)
-	valid, err := credentialSvc.Validate(req.Username, req.Password)
+	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -47,7 +47,7 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 
 	// Once credentials have been validated, create a new session in the database
 	sessionManager := authentication.NewSessionManager(s.db)
-	token, err := sessionManager.Create(req.Username)
+	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -98,12 +98,9 @@ func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
 
 func (s *apiServer) GetSessionHandler(ctx *gin.Context) {
 	username := ctx.GetString("username")
+	role := ctx.GetString("role")
 
-	svc, err := authorization.NewAuthorizationService(s.db, username, authorization.DefaultAuthorizerMap)
-	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
-		return
-	}
+	svc := authorization.NewAuthorizationService(role, authorization.DefaultAuthorizerMap)
 
 	ctx.JSON(http.StatusOK, models.GetSessionResponse{
 		Username:    username,

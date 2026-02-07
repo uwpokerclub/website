@@ -138,7 +138,7 @@ jobs:
             exit 1
           fi
       - name: Run E2E tests
-        uses: cypress-io/github-action@v6
+        uses: cypress-io/github-action@v7
 
   push:
     if: github.event_name == 'push'

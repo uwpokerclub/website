@@ -6,22 +6,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func UseAuthorization(db *gorm.DB, action string) func(ctx *gin.Context) {
+func UseAuthorization(action string) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
-		username := ctx.GetString("username")
-		if username == "" {
+		role := ctx.GetString("role")
+		if role == "" {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errors.InternalServerError("An error occurred during authorization."))
 			return
 		}
 
-		authSvc, err := authorization.NewAuthorizationService(db, username, authorization.DefaultAuthorizerMap)
-		if err != nil {
-			ctx.AbortWithStatusJSON(err.(errors.APIErrorResponse).Code, err)
-			return
-		}
+		authSvc := authorization.NewAuthorizationService(role, authorization.DefaultAuthorizerMap)
 
 		authorized := authSvc.IsAuthorized(action)
 		if !authorized {

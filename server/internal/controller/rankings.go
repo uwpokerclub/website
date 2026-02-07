@@ -26,9 +26,9 @@ func NewRankingsController(db *gorm.DB) Controller {
 
 func (c *rankingsController) LoadRoutes(router *gin.RouterGroup) {
 	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.db))
-	rankings.GET("", middleware.UseAuthorization(c.db, "semester.rankings.list"), c.listRankings)
-	rankings.GET("export", middleware.UseAuthorization(c.db, "semester.rankings.export"), c.exportRankings)
-	rankings.GET(":membershipId", middleware.UseAuthorization(c.db, "semester.rankings.get"), c.getRanking)
+	rankings.GET("", middleware.UseAuthorization("semester.rankings.list"), c.listRankings)
+	rankings.GET("export", middleware.UseAuthorization("semester.rankings.export"), c.exportRankings)
+	rankings.GET(":membershipId", middleware.UseAuthorization("semester.rankings.get"), c.getRanking)
 }
 
 func validateUUIDParam(ctx *gin.Context, paramName string) (uuid.UUID, error) {

@@ -203,12 +203,12 @@ func TestListMembers(t *testing.T) {
 
 			require.Equal(t, tc.expectedStatus, w.Code, "Response: %s", w.Body.String())
 
-			var users []models.User
-			err = json.Unmarshal(w.Body.Bytes(), &users)
+			var resp models.ListResponse[models.User]
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 
 			if tc.expectEmpty {
-				require.Empty(t, users)
+				require.Empty(t, resp.Data)
 			}
 		})
 	}

@@ -64,6 +64,23 @@ func (ss *structureService) ListStructures() ([]models.Structure, error) {
 	return structures, nil
 }
 
+func (ss *structureService) ListStructuresV2(pagination *models.Pagination) ([]models.Structure, int64, error) {
+	var total int64
+	if err := ss.db.Model(&models.Structure{}).Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	var structures []models.Structure
+	query := ss.db.Order("id DESC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&structures).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	return structures, total, nil
+}
+
 func (ss *structureService) GetStructure(id int32) (*models.Structure, error) {
 	structure := models.Structure{
 		ID: id,

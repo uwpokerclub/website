@@ -378,19 +378,25 @@ func (svc *eventService) CreateEventV2(
 	return &event, nil
 }
 
-func (svc *eventService) ListEventsV2(semesterID uuid.UUID) ([]models.Event, error) {
-	events := make([]models.Event, 0)
-
-	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
-		Where("semester_id = ?", semesterID).
-		Order("start_date DESC").
-		Find(&events).
-		Error
-	if err != nil {
-		return nil, fmt.Errorf("failed to list events: %w", err)
+func (svc *eventService) ListEventsV2(semesterID uuid.UUID, pagination *models.Pagination) ([]models.Event, int64, error) {
+	// Count total before pagination
+	var total int64
+	if err := svc.db.Model(&models.Event{}).Where("semester_id = ?", semesterID).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count events: %w", err)
 	}
 
-	return events, nil
+	events := make([]models.Event, 0)
+
+	query := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
+		Where("semester_id = ?", semesterID).
+		Order("start_date DESC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&events).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to list events: %w", err)
+	}
+
+	return events, total, nil
 }
 
 func (svc *eventService) GetEventByID(semesterID uuid.UUID, eventID int32) (*models.Event, error) {

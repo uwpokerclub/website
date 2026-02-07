@@ -66,6 +66,45 @@ func (u *userService) ListUsers(filter *models.ListUsersFilter) ([]models.User, 
 	return users, nil
 }
 
+func (u *userService) ListUsersV2(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
+	var users []models.User
+
+	// Build base query with filters
+	query := u.db.Model(&models.User{})
+
+	if filter.ID != nil {
+		query = query.Where("id = ?", *filter.ID)
+	}
+
+	if filter.Name != nil {
+		query = query.Where("first_name || ' ' || last_name ILIKE ?", "%"+*filter.Name+"%")
+	}
+
+	if filter.Email != nil {
+		query = query.Where("email ILIKE ?", "%"+*filter.Email+"%")
+	}
+
+	if filter.Faculty != nil {
+		query = query.Where("faculty = ?", *filter.Faculty)
+	}
+
+	// Get total count before pagination
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	// Apply ordering and pagination
+	query = query.Order("created_at DESC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&users).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	return users, total, nil
+}
+
 func (u *userService) GetUser(id uint64) (*models.User, error) {
 	user := models.User{ID: id}
 

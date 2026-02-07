@@ -3,6 +3,7 @@ package controller
 import (
 	apierrors "api/internal/errors"
 	"api/internal/middleware"
+	"api/internal/models"
 	"api/internal/services"
 	"errors"
 	"log"
@@ -63,8 +64,14 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 		return
 	}
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewSemesterService(c.db)
-	rankings, err := svc.GetRankings(semesterID)
+	rankings, total, err := svc.GetRankingsV2(semesterID, &pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -75,7 +82,10 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, rankings)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.RankingResponse]{
+		Data:  rankings,
+		Total: total,
+	})
 }
 
 // getRanking handles retrieving the ranking for a specific membership in a semester

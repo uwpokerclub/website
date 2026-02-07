@@ -93,11 +93,11 @@ export function EventDetails() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const resp = await response.json();
         // Transform API response to match Entry type
         // API returns: { membershipId, membership: { user: { firstName, lastName, id } }, ... }
         // Entry expects: { membershipId, firstName, lastName, id, ... }
-        const transformedEntries: Entry[] = data.map(
+        const transformedEntries: Entry[] = resp.data.map(
           (participant: {
             membershipId: string;
             membership?: { user?: { firstName?: string; lastName?: string; id?: string } };

@@ -79,8 +79,14 @@ func (s *semestersController) createSemester(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters [get]
 func (s *semestersController) listSemesters(ctx *gin.Context) {
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewSemesterService(s.db)
-	semesters, err := svc.ListSemesters()
+	semesters, total, err := svc.ListSemestersV2(&pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -90,7 +96,10 @@ func (s *semestersController) listSemesters(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, semesters)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Semester]{
+		Data:  semesters,
+		Total: total,
+	})
 }
 
 // getSemester handles retrieving a specific semester by ID.

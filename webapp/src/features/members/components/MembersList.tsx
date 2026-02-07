@@ -57,8 +57,8 @@ export function MembersList() {
           throw new Error(`Failed to fetch members: ${response.statusText}`);
         }
 
-        const data: Membership[] = await response.json();
-        setMembers(data);
+        const resp: { data: Membership[] } = await response.json();
+        setMembers(resp.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching members");
       } finally {

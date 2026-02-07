@@ -70,23 +70,29 @@ func (svc *participantsService) ListParticipants(eventId int32) ([]models.ListPa
 	return ret, nil
 }
 
-func (svc *participantsService) ListParticipantsV2(eventId int32) ([]models.Participant, error) {
+func (svc *participantsService) ListParticipantsV2(eventId int32, pagination *models.Pagination) ([]models.Participant, int64, error) {
+	// Count total before pagination
+	var total int64
+	if err := svc.db.Model(&models.Participant{}).Where("event_id = ?", eventId).Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
 	var participants []models.Participant
 
 	// Preload nested associations: Membership -> User, Semester, and Ranking
-	res := svc.db.
+	query := svc.db.
 		Preload("Membership.User").
 		Preload("Membership.Semester").
 		Preload("Membership.Ranking").
 		Where("event_id = ?", eventId).
-		Order("signed_out_at DESC").
-		Find(&participants)
+		Order("signed_out_at DESC")
+	query = pagination.Apply(query)
 
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
+	if err := query.Find(&participants).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
 	}
 
-	return participants, nil
+	return participants, total, nil
 }
 
 func (svc *participantsService) UpdateParticipant(req *models.UpdateParticipantRequest) (*models.Participant, error) {

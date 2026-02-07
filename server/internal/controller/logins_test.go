@@ -102,14 +102,14 @@ func TestListLogins(t *testing.T) {
 
 			require.Equal(t, tc.expectedStatus, w.Code, "Response: %s", w.Body.String())
 
-			var logins []models.LoginWithMember
-			err = json.Unmarshal(w.Body.Bytes(), &logins)
+			var resp models.ListResponse[models.LoginWithMember]
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 
 			// Account for the webmaster session login created for auth (+1 if expectedCount > 0 for setup logins)
 			// Actually the session creates its own login, so we need to account for that
 			// The test webmaster login is separate, so expected count should be setup count + 1 (webmaster session)
-			require.Len(t, logins, tc.expectedCount+1) // +1 for testwebmaster session login
+			require.Len(t, resp.Data, tc.expectedCount+1) // +1 for testwebmaster session login
 		})
 	}
 }

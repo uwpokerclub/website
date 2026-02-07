@@ -236,15 +236,18 @@ func TestListSemesters(t *testing.T) {
 		expectedStatus   int
 		expectError      bool
 		expectedErrorMsg string
-		expectedResponse []map[string]interface{}
+		expectedResponse map[string]interface{}
 	}{
 		{
-			name:             "successful request no semesters",
-			userRole:         authorization.ROLE_BOT.ToString(),
-			setupSemesters:   []models.Semester{}, // Empty slice, no semesters to create
-			expectedStatus:   http.StatusOK,
-			expectError:      false,
-			expectedResponse: []map[string]interface{}{},
+			name:           "successful request no semesters",
+			userRole:       authorization.ROLE_BOT.ToString(),
+			setupSemesters: []models.Semester{}, // Empty slice, no semesters to create
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+			expectedResponse: map[string]interface{}{
+				"data":  []map[string]interface{}{},
+				"total": float64(0),
+			},
 		},
 	}
 
@@ -267,14 +270,13 @@ func TestListSemesters(t *testing.T) {
 			expectedStatus   int
 			expectError      bool
 			expectedErrorMsg string
-			expectedResponse []map[string]interface{}
+			expectedResponse map[string]interface{}
 		}{
-			name:             "successful request " + role,
-			userRole:         role,
-			setupSemesters:   testutils.TEST_SEMESTERS,
-			expectedStatus:   http.StatusOK,
-			expectError:      false,
-			expectedResponse: []map[string]interface{}{},
+			name:           "successful request " + role,
+			userRole:       role,
+			setupSemesters: testutils.TEST_SEMESTERS,
+			expectedStatus: http.StatusOK,
+			expectError:    false,
 		})
 	}
 
@@ -282,10 +284,6 @@ func TestListSemesters(t *testing.T) {
 	// to match the API response ordering
 	for i, tc := range testCases {
 		if tc.expectedStatus == http.StatusOK && len(tc.setupSemesters) > 0 {
-			// Create a copy of setupSemesters ordered by start_date DESC
-			orderedSemesters := make([]models.Semester, len(tc.setupSemesters))
-			copy(orderedSemesters, tc.setupSemesters)
-
 			// Sort by start_date DESC (most recent first)
 			// testutils.TEST_SEMESTERS should be: Fall 2024, Spring 2024, Fall 2023
 			expectedOrder := []models.Semester{
@@ -295,9 +293,14 @@ func TestListSemesters(t *testing.T) {
 			}
 
 			// Convert to []map[string]interface{} format
+			var semesterData []map[string]interface{}
 			b, err := json.Marshal(expectedOrder)
 			require.NoError(t, err)
-			require.NoError(t, json.Unmarshal(b, &testCases[i].expectedResponse))
+			require.NoError(t, json.Unmarshal(b, &semesterData))
+			testCases[i].expectedResponse = map[string]interface{}{
+				"data":  semesterData,
+				"total": float64(len(expectedOrder)),
+			}
 		}
 	}
 

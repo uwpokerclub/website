@@ -31,8 +31,8 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
       });
 
       if (response.ok) {
-        const data: Semester[] = await response.json();
-        setSemesters(data);
+        const resp: { data: Semester[] } = await response.json();
+        setSemesters(resp.data);
       } else if (response.status === 401) {
         navigate("/admin/login");
       }

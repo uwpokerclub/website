@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"api/internal/authorization"
+	"api/internal/models"
 	"api/internal/testutils"
 	"context"
 	"encoding/json"
@@ -107,13 +108,13 @@ func TestListStructures(t *testing.T) {
 			require.Equal(t, tc.expectedStatus, w.Code)
 
 			if !tc.expectError {
-				var response []map[string]any
+				var response models.ListResponse[map[string]any]
 				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 
 				if tc.seedStructures {
-					require.GreaterOrEqual(t, len(response), 1)
+					require.GreaterOrEqual(t, len(response.Data), 1)
 				} else {
-					require.Equal(t, 0, len(response))
+					require.Equal(t, 0, len(response.Data))
 				}
 			}
 		})

@@ -299,7 +299,7 @@ func TestListEntries(t *testing.T) {
 		expectedStatus   int
 		expectError      bool
 		expectedErrorMsg string
-		expectedResponse []map[string]any
+		expectedResponse map[string]any
 	}{
 		{
 			name:           "successful request no entries",
@@ -308,7 +308,10 @@ func TestListEntries(t *testing.T) {
 			eventID:        "3",
 			expectedStatus: http.StatusOK,
 			expectError:    false,
-			expectedResponse: []map[string]any{},
+			expectedResponse: map[string]any{
+				"data":  []map[string]any{},
+				"total": float64(0),
+			},
 		},
 		{
 			name:             "invalid semester ID format",
@@ -349,7 +352,7 @@ func TestListEntries(t *testing.T) {
 			expectedStatus   int
 			expectError      bool
 			expectedErrorMsg string
-			expectedResponse []map[string]any
+			expectedResponse map[string]any
 		}{
 			name:             fmt.Sprintf("successful request with role %s", role),
 			userRole:         role,
@@ -377,7 +380,9 @@ func TestListEntries(t *testing.T) {
 				user2, err := testutils.FindUserByID(testutils.TEST_USERS[2].ID)
 				require.NoError(t, err)
 
-				tc.expectedResponse = []map[string]any{
+				tc.expectedResponse = map[string]any{
+					"total": float64(2),
+					"data": []map[string]any{
 					{
 						// Participant fields
 						"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
@@ -460,6 +465,7 @@ func TestListEntries(t *testing.T) {
 							},
 						},
 					},
+				},
 				}
 			}
 
@@ -486,19 +492,28 @@ func TestListEntries(t *testing.T) {
 				testutils.AssertErrorResponse(t, w, tc.expectedStatus, tc.expectedErrorMsg)
 			} else {
 				// Parse response to get the actual participant IDs (auto-generated)
-				var actualResponse []map[string]any
-				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &actualResponse))
+				var fullResponse map[string]any
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &fullResponse))
+
+				actualData, ok := fullResponse["data"].([]any)
+				require.True(t, ok)
+
+				// Build expected data from tc.expectedResponse
+				expectedData, _ := tc.expectedResponse["data"].([]map[string]any)
 
 				// Set the auto-generated fields in expected response
-				for i := range actualResponse {
-					if i < len(tc.expectedResponse) {
+				for i := range actualData {
+					actual, ok := actualData[i].(map[string]any)
+					require.True(t, ok)
+
+					if i < len(expectedData) {
 						// Set auto-generated participant ID
-						tc.expectedResponse[i]["id"] = actualResponse[i]["id"]
+						expectedData[i]["id"] = actual["id"]
 
 						// Set actual createdAt timestamp for user
-						if membership, ok := actualResponse[i]["membership"].(map[string]any); ok {
+						if membership, ok := actual["membership"].(map[string]any); ok {
 							if user, ok := membership["user"].(map[string]any); ok {
-								if expectedMembership, ok := tc.expectedResponse[i]["membership"].(map[string]any); ok {
+								if expectedMembership, ok := expectedData[i]["membership"].(map[string]any); ok {
 									if expectedUser, ok := expectedMembership["user"].(map[string]any); ok {
 										expectedUser["createdAt"] = user["createdAt"]
 									}
@@ -507,7 +522,7 @@ func TestListEntries(t *testing.T) {
 
 							// Set actual ranking membershipId (may be zero-value UUID)
 							if ranking, ok := membership["ranking"].(map[string]any); ok {
-								if expectedMembership, ok := tc.expectedResponse[i]["membership"].(map[string]any); ok {
+								if expectedMembership, ok := expectedData[i]["membership"].(map[string]any); ok {
 									if expectedRanking, ok := expectedMembership["ranking"].(map[string]any); ok {
 										expectedRanking["membershipId"] = ranking["membershipId"]
 									}

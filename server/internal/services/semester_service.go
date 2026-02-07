@@ -74,6 +74,23 @@ func (ss *semesterService) ListSemesters() ([]models.Semester, error) {
 	return semesters, nil
 }
 
+func (ss *semesterService) ListSemestersV2(pagination *models.Pagination) ([]models.Semester, int64, error) {
+	var total int64
+	if err := ss.db.Model(&models.Semester{}).Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	var semesters []models.Semester
+	query := ss.db.Order("start_date DESC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&semesters).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	return semesters, total, nil
+}
+
 func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, error) {
 	var rankings []models.RankingResponse
 
@@ -89,6 +106,27 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 	}
 
 	return rankings, nil
+}
+
+func (ss *semesterService) GetRankingsV2(id uuid.UUID, pagination *models.Pagination) ([]models.RankingResponse, int64, error) {
+	var total int64
+	if err := ss.db.Table(models.SemesterRankingsView).Where("semester_id = ?", id).Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	var rankings []models.RankingResponse
+	query := ss.db.
+		Table(models.SemesterRankingsView).
+		Select("user_id as id, first_name, last_name, points, position").
+		Where("semester_id = ?", id).
+		Order("position ASC, last_name ASC, first_name ASC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&rankings).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	return rankings, total, nil
 }
 
 func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {

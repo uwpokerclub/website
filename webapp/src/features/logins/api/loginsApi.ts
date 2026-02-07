@@ -12,10 +12,13 @@ export type ApiResult<T> = { success: true; data: T } | { success: false; error:
  * @returns Array of logins or error
  */
 export async function fetchLogins(): Promise<ApiResult<LoginResponse[]>> {
-  const { status, data } = await sendAPIRequest<LoginResponse[] | APIErrorResponse>("v2/logins");
+  const { status, data } = await sendAPIRequest<{ data: LoginResponse[]; total: number } | APIErrorResponse>(
+    "v2/logins",
+  );
 
   if (status >= 200 && status < 300) {
-    return { success: true, data: (data as LoginResponse[]) ?? [] };
+    const listResponse = data as { data: LoginResponse[]; total: number };
+    return { success: true, data: listResponse?.data ?? [] };
   }
 
   const errorResponse = data as APIErrorResponse | undefined;

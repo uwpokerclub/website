@@ -504,8 +504,8 @@ func TestMembershipService_ListMemberships_Limit(t *testing.T) {
 
 	limit := 1
 	filter := models.ListMembershipsFilter{
+		Pagination: models.Pagination{Limit: &limit},
 		SemesterID: &semester1.ID,
-		Limit:      &limit,
 	}
 
 	memberships, err := membershipService.ListMemberships(&filter)
@@ -606,8 +606,8 @@ func TestMembershipService_ListMemberships_Offset(t *testing.T) {
 
 	offset := 1
 	filter := models.ListMembershipsFilter{
+		Pagination: models.Pagination{Offset: &offset},
 		SemesterID: &semester1.ID,
-		Offset:     &offset,
 	}
 
 	memberships, err := membershipService.ListMemberships(&filter)
@@ -709,9 +709,8 @@ func TestMembershipService_ListMemberships_LimitOffset(t *testing.T) {
 	limit := 1
 	offset := 1
 	filter := models.ListMembershipsFilter{
+		Pagination: models.Pagination{Limit: &limit, Offset: &offset},
 		SemesterID: &semester1.ID,
-		Offset:     &offset,
-		Limit:      &limit,
 	}
 
 	memberships, err := membershipService.ListMemberships(&filter)

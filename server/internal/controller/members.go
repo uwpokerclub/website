@@ -135,8 +135,14 @@ func (c *membersController) parseListMembersQueryParams(ctx *gin.Context) *model
 func (c *membersController) listMembers(ctx *gin.Context) {
 	filter := c.parseListMembersQueryParams(ctx)
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewUserService(c.db)
-	members, err := svc.ListUsers(filter)
+	members, total, err := svc.ListUsersV2(filter, &pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -150,7 +156,10 @@ func (c *membersController) listMembers(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, members)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.User]{
+		Data:  members,
+		Total: total,
+	})
 }
 
 // getMember handles retrieving a Member by ID

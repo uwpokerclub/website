@@ -31,8 +31,8 @@ export function RankingsPage() {
           throw new Error(`Failed to fetch rankings: ${response.statusText}`);
         }
 
-        const data: Ranking[] = await response.json();
-        setRankings(data);
+        const resp: { data: Ranking[] } = await response.json();
+        setRankings(resp.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching rankings");
       } finally {

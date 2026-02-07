@@ -197,6 +197,7 @@ func TestListMemberships(t *testing.T) {
 		expectedStatus int
 		expectError    bool
 		minResults     int
+		expectedTotal  int64
 	}{
 		{
 			name:           "list all memberships for semester",
@@ -206,6 +207,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     3, // We have 3 test memberships for semester 0
+			expectedTotal:  3,
 		},
 		{
 			name:           "list memberships with limit",
@@ -215,6 +217,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     2,
+			expectedTotal:  3,
 		},
 		{
 			name:           "list memberships with offset",
@@ -224,6 +227,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     2,
+			expectedTotal:  3,
 		},
 		{
 			name:           "list memberships with limit and offset",
@@ -233,6 +237,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     1,
+			expectedTotal:  3,
 		},
 		{
 			name:           "semester with no memberships",
@@ -242,6 +247,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     0,
+			expectedTotal:  0,
 		},
 		{
 			name:           "invalid semester ID",
@@ -286,10 +292,11 @@ func TestListMemberships(t *testing.T) {
 				err = json.Unmarshal(w.Body.Bytes(), &errResp)
 				require.NoError(t, err)
 			} else {
-				var memberships []models.ListMembershipsResult
-				err = json.Unmarshal(w.Body.Bytes(), &memberships)
+				var resp models.ListResponse[models.MembershipWithAttendance]
+				err = json.Unmarshal(w.Body.Bytes(), &resp)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(memberships), tc.minResults)
+				require.GreaterOrEqual(t, len(resp.Data), tc.minResults)
+				require.Equal(t, tc.expectedTotal, resp.Total)
 			}
 		})
 	}

@@ -149,7 +149,7 @@ func TestParticipantsService_ListParticipantsV2(t *testing.T) {
 	}
 
 	svc := NewParticipantsService(db)
-	res, err := svc.ListParticipantsV2(event.ID)
+	res, _, err := svc.ListParticipantsV2(event.ID, &models.Pagination{})
 	if err != nil {
 		t.Errorf("ListParticipantsV2() error = %v", err)
 		return

@@ -132,14 +132,14 @@ export function EventRegistrationModal({
           throw new Error("Failed to load entries");
         }
 
-        const members: Membership[] = await membersResponse.json();
-        const entries: Entry[] = await entriesResponse.json();
+        const membersResp: { data: Membership[] } = await membersResponse.json();
+        const entriesResp: { data: Entry[] } = await entriesResponse.json();
 
         if (mounted) {
           // Build set of registered membership IDs
-          const registeredSet = new Set(entries.map((e) => e.membershipId));
+          const registeredSet = new Set(entriesResp.data.map((e) => e.membershipId));
 
-          setAllMembers(members);
+          setAllMembers(membersResp.data);
           setRegisteredIds(registeredSet);
         }
       } catch (error) {
@@ -318,8 +318,8 @@ export function EventRegistrationModal({
           credentials: "include",
         });
         if (membersResponse.ok) {
-          const members: Membership[] = await membersResponse.json();
-          setAllMembers(members);
+          const membersResp: { data: Membership[] } = await membersResponse.json();
+          setAllMembers(membersResp.data);
         }
         return;
       }

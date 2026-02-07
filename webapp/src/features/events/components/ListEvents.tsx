@@ -273,8 +273,8 @@ export function ListEvents() {
           throw new Error(`Failed to fetch events: ${response.statusText}`);
         }
 
-        const data: ListEventsResponse[] = await response.json();
-        setEvents(data);
+        const resp: { data: ListEventsResponse[] } = await response.json();
+        setEvents(resp.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching events");
       } finally {

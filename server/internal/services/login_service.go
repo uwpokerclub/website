@@ -48,18 +48,24 @@ type loginWithUserRow struct {
 }
 
 // ListLogins retrieves all logins with their linked member information
-func (svc *loginService) ListLogins() ([]models.LoginWithMember, error) {
+func (svc *loginService) ListLogins(pagination *models.Pagination) ([]models.LoginWithMember, int64, error) {
+	// Count total before pagination
+	var total int64
+	if err := svc.db.Table("logins").Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
 	var rows []loginWithUserRow
 
 	// Use LEFT JOIN to fetch logins with linked members, excluding password
-	err := svc.db.Table("logins").
+	query := svc.db.Table("logins").
 		Select("logins.username, logins.role, users.id as user_id, users.first_name, users.last_name").
 		Joins("LEFT JOIN users ON logins.username = users.quest_id").
-		Order("logins.username ASC").
-		Scan(&rows).Error
+		Order("logins.username ASC")
+	query = pagination.Apply(query)
 
-	if err != nil {
-		return nil, e.InternalServerError(err.Error())
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
 	}
 
 	// Transform to LoginWithMember
@@ -78,7 +84,7 @@ func (svc *loginService) ListLogins() ([]models.LoginWithMember, error) {
 		}
 	}
 
-	return results, nil
+	return results, total, nil
 }
 
 // GetLogin retrieves a single login by username (without password)

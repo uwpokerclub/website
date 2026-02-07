@@ -102,16 +102,6 @@ func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gor
 		query = query.Where("memberships.user_id = ?", *filter.UserID)
 	}
 
-	// If a limit is present in the filter, apply this to the query
-	if filter.Limit != nil {
-		query = query.Limit(*filter.Limit)
-	}
-
-	// If an offset is present in the filter, apply this to the query
-	if filter.Offset != nil {
-		query = query.Offset(*filter.Offset)
-	}
-
 	return query
 }
 
@@ -443,19 +433,28 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 }
 
 // ListMembershipsV2 lists all memberships with embedded User and computed attendance count
-func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, error) {
+func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
 	var memberships []models.Membership
 
-	// Query memberships with User joined
-	query := ms.db.Joins("User").
-		Where("memberships.semester_id = ?", filter.SemesterID).
+	// Build base query with filters (before pagination)
+	baseQuery := ms.db.
+		Where("memberships.semester_id = ?", filter.SemesterID)
+	baseQuery = addFilterClauses(baseQuery, filter)
+
+	// Get total count before applying pagination
+	var total int64
+	if err := baseQuery.Model(&models.Membership{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply joins, ordering, and pagination for the actual fetch
+	query := baseQuery.Joins("User").
 		Order("\"User\".first_name ASC").
 		Order("\"User\".last_name ASC")
-
-	query = addFilterClauses(query, filter)
+	query = filter.Pagination.Apply(query)
 
 	if err := query.Find(&memberships).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Build attendance map from subquery
@@ -472,7 +471,7 @@ func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFil
 	}
 	var attendanceResults []attendanceResult
 	if err := attendanceQuery.Scan(&attendanceResults).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	attendanceMap := make(map[uuid.UUID]int)
@@ -489,5 +488,5 @@ func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFil
 		}
 	}
 
-	return result, nil
+	return result, total, nil
 }

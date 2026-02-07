@@ -42,8 +42,14 @@ func (c *loginsController) LoadRoutes(router *gin.RouterGroup) {
 // @Failure 500 {object} ErrorResponse
 // @Router /logins [get]
 func (c *loginsController) listLogins(ctx *gin.Context) {
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewLoginService(c.db)
-	logins, err := svc.ListLogins()
+	logins, total, err := svc.ListLogins(&pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -57,7 +63,10 @@ func (c *loginsController) listLogins(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, logins)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.LoginWithMember]{
+		Data:  logins,
+		Total: total,
+	})
 }
 
 // getLogin handles retrieving a single login by username

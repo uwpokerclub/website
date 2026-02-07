@@ -187,9 +187,15 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 		return
 	}
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	// List participants
 	svc := services.NewParticipantsService(c.db)
-	participants, err := svc.ListParticipantsV2(eventID)
+	participants, total, err := svc.ListParticipantsV2(eventID, &pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -202,7 +208,10 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, participants)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Participant]{
+		Data:  participants,
+		Total: total,
+	})
 }
 
 // signOutEntry handles signing out a participant from an event.

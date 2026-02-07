@@ -119,9 +119,15 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 		return
 	}
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	// Initialize the event service and list events for the semester
 	svc := services.NewEventService(s.db)
-	events, err := svc.ListEventsV2(semesterID)
+	events, total, err := svc.ListEventsV2(semesterID, &pagination)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -130,7 +136,10 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, events)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Event]{
+		Data:  events,
+		Total: total,
+	})
 }
 
 // getEvent handles the retrieval of a specific event by its ID.

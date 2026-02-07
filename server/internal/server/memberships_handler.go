@@ -48,8 +48,10 @@ func parseListMembershipFilter(ctx *gin.Context) *models.ListMembershipsFilter {
 	}
 
 	filter := models.ListMembershipsFilter{
-		Limit:  limit,
-		Offset: offset,
+		Pagination: models.Pagination{
+			Limit:  limit,
+			Offset: offset,
+		},
 		UserID: userID,
 	}
 

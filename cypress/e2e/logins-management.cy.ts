@@ -330,7 +330,7 @@ describe("Logins Management", () => {
       // Mock the API to return empty array
       cy.intercept("GET", "/api/v2/logins", {
         statusCode: 200,
-        body: [],
+        body: { data: [], total: 0 },
       }).as("getEmptyLogins");
 
       cy.visit("/admin/logins");
@@ -345,7 +345,7 @@ describe("Logins Management", () => {
       // Delay the API response to see loading state
       cy.intercept("GET", "/api/v2/logins", {
         statusCode: 200,
-        body: [],
+        body: { data: [], total: 0 },
         delay: 1000,
       }).as("getLoginsDelayed");
 

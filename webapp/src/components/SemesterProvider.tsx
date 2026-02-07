@@ -21,11 +21,11 @@ export default function SemesterProvider({ children }: SemesterProviderProps) {
       });
 
       if (response.ok) {
-        const data: Semester[] = await response.json();
+        const resp: { data: Semester[] } = await response.json();
 
         // Set the first semester (latest) as current if we don't have one selected
-        if (data.length > 0) {
-          setCurrentSemester(data[0]);
+        if (resp.data.length > 0) {
+          setCurrentSemester(resp.data[0]);
         }
       } else {
         setError("Failed to fetch semesters");

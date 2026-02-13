@@ -22,6 +22,7 @@ func CreateTestSession(db *gorm.DB, username, password string, start time.Time) 
 	session := models.Session{
 		ID:        uuid.New(),
 		Username:  "testuser",
+		Role:      "executive",
 		StartedAt: start,
 		ExpiresAt: start.Add(time.Hour * 8),
 	}
@@ -54,7 +55,7 @@ func TestSessionManager(t *testing.T) {
 	t.Run("Create_NoAssociatedLogin", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
-		_, err := sessManager.Create("testuser")
+		_, err := sessManager.Create("testuser", "executive")
 		assert.Error(t, err)
 	})
 	t.Run("Create", func(t *testing.T) {
@@ -63,7 +64,7 @@ func TestSessionManager(t *testing.T) {
 		err := CreateTestLogin(db, "testuser", "password")
 		assert.NoError(t, err)
 
-		id, err := sessManager.Create("testuser")
+		id, err := sessManager.Create("testuser", "executive")
 		assert.NoError(t, err)
 		assert.NoError(t, uuid.Validate(id.String()))
 
@@ -71,6 +72,7 @@ func TestSessionManager(t *testing.T) {
 		res := db.First(&session)
 		assert.NoError(t, res.Error)
 		assert.Equal(t, "testuser", session.Username)
+		assert.Equal(t, "executive", session.Role)
 		assert.WithinDuration(t, session.StartedAt, session.ExpiresAt, time.Hour*8)
 	})
 

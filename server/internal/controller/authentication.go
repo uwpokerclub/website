@@ -54,16 +54,9 @@ func (controller *authenticationController) LoadRoutes(router *gin.RouterGroup) 
 // @Router /session [get]
 func (controller *authenticationController) getSession(ctx *gin.Context) {
 	username := ctx.GetString("username")
+	role := ctx.GetString("role")
 
-	svc, err := authorization.NewAuthorizationService(
-		controller.db,
-		username,
-		authorization.DefaultAuthorizerMap,
-	)
-	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
-		return
-	}
+	svc := authorization.NewAuthorizationService(role, authorization.DefaultAuthorizerMap)
 
 	ctx.JSON(http.StatusOK, models.GetSessionResponse{
 		Username:    username,
@@ -95,7 +88,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 	}
 
 	credentialSvc := authentication.NewCredentialService(controller.db)
-	valid, err := credentialSvc.Validate(req.Username, req.Password)
+	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return
@@ -110,7 +103,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 	}
 
 	sessionManager := authentication.NewSessionManager(controller.db)
-	token, err := sessionManager.Create(req.Username)
+	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
 		return

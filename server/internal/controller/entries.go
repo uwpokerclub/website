@@ -26,11 +26,11 @@ func NewEntriesController(db *gorm.DB) Controller {
 
 func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/events/:eventId/entries", middleware.UseAuthentication(c.db))
-	group.POST("", middleware.UseAuthorization(c.db, "event.participant.create"), c.createEntry)
-	group.GET("", middleware.UseAuthorization(c.db, "event.participant.list"), c.listEntries)
-	group.POST(":entryId/sign-out", middleware.UseAuthorization(c.db, "event.participant.signout"), c.signOutEntry)
-	group.POST(":entryId/sign-in", middleware.UseAuthorization(c.db, "event.participant.signin"), c.signInEntry)
-	group.DELETE(":entryId", middleware.UseAuthorization(c.db, "event.participant.delete"), c.deleteEntry)
+	group.POST("", middleware.UseAuthorization("event.participant.create"), c.createEntry)
+	group.GET("", middleware.UseAuthorization("event.participant.list"), c.listEntries)
+	group.POST(":entryId/sign-out", middleware.UseAuthorization("event.participant.signout"), c.signOutEntry)
+	group.POST(":entryId/sign-in", middleware.UseAuthorization("event.participant.signin"), c.signInEntry)
+	group.DELETE(":entryId", middleware.UseAuthorization("event.participant.delete"), c.deleteEntry)
 }
 
 // validateSemesterID validates and returns the semester UUID from the path parameter.

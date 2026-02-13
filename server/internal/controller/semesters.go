@@ -23,9 +23,9 @@ func NewSemestersController(db *gorm.DB) Controller {
 
 func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters", middleware.UseAuthentication(s.db))
-	group.POST("", middleware.UseAuthorization(s.db, "semester.create"), s.createSemester)
-	group.GET("", middleware.UseAuthorization(s.db, "semester.list"), s.listSemesters)
-	group.GET(":semesterId", middleware.UseAuthorization(s.db, "semester.get"), s.getSemester)
+	group.POST("", middleware.UseAuthorization("semester.create"), s.createSemester)
+	group.GET("", middleware.UseAuthorization("semester.list"), s.listSemesters)
+	group.GET(":semesterId", middleware.UseAuthorization("semester.get"), s.getSemester)
 }
 
 // createSemester handles the creation of a new semester.

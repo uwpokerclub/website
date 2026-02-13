@@ -24,11 +24,11 @@ func NewStructuresController(db *gorm.DB) Controller {
 
 func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("structures", middleware.UseAuthentication(s.db))
-	group.GET("", middleware.UseAuthorization(s.db, "structure.list"), s.listStructures)
-	group.POST("", middleware.UseAuthorization(s.db, "structure.create"), s.createStructure)
-	group.GET(":id", middleware.UseAuthorization(s.db, "structure.get"), s.getStructure)
-	group.PATCH(":id", middleware.UseAuthorization(s.db, "structure.edit"), s.updateStructure)
-	group.DELETE(":id", middleware.UseAuthorization(s.db, "structure.delete"), s.deleteStructure)
+	group.GET("", middleware.UseAuthorization("structure.list"), s.listStructures)
+	group.POST("", middleware.UseAuthorization("structure.create"), s.createStructure)
+	group.GET(":id", middleware.UseAuthorization("structure.get"), s.getStructure)
+	group.PATCH(":id", middleware.UseAuthorization("structure.edit"), s.updateStructure)
+	group.DELETE(":id", middleware.UseAuthorization("structure.delete"), s.deleteStructure)
 }
 
 // listStructures handles the retrieval of all structures.

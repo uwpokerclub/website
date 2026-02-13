@@ -19,7 +19,7 @@ func NewCredentialService(db *gorm.DB) *credentialsService {
 	}
 }
 
-func (svc *credentialsService) Validate(username string, password string) (bool, error) {
+func (svc *credentialsService) Validate(username string, password string) (bool, string, error) {
 	login := models.Login{Username: username}
 
 	// Find first login with the specified username
@@ -27,20 +27,20 @@ func (svc *credentialsService) Validate(username string, password string) (bool,
 	// Check if the login was found
 	err := res.Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, nil
+		return false, "", nil
 	}
 
 	// If the error is not a not found error,
 	// then return this error as a server error
 	if err != nil {
-		return false, e.InternalServerError(err.Error())
+		return false, "", e.InternalServerError(err.Error())
 	}
 
 	// Compare the hashed password and the plaintext password using bcrypt
 	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte(password))
 	if err != nil {
-		return false, nil
+		return false, "", nil
 	}
 
-	return true, nil
+	return true, login.Role, nil
 }

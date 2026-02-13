@@ -24,11 +24,11 @@ func NewMembersController(db *gorm.DB) Controller {
 
 func (c *membersController) LoadRoutes(router *gin.RouterGroup) {
 	members := router.Group("members", middleware.UseAuthentication(c.db))
-	members.POST("", middleware.UseAuthorization(c.db, "user.create"), c.createMember)
-	members.GET("", middleware.UseAuthorization(c.db, "user.list"), c.listMembers)
-	members.GET("/:id", middleware.UseAuthorization(c.db, "user.get"), c.getMember)
-	members.PATCH("/:id", middleware.UseAuthorization(c.db, "user.edit"), c.updateMember)
-	members.DELETE("/:id", middleware.UseAuthorization(c.db, "user.delete"), c.deleteMember)
+	members.POST("", middleware.UseAuthorization("user.create"), c.createMember)
+	members.GET("", middleware.UseAuthorization("user.list"), c.listMembers)
+	members.GET("/:id", middleware.UseAuthorization("user.get"), c.getMember)
+	members.PATCH("/:id", middleware.UseAuthorization("user.edit"), c.updateMember)
+	members.DELETE("/:id", middleware.UseAuthorization("user.delete"), c.deleteMember)
 }
 
 func validateMemberID(ctx *gin.Context) (uint64, error) {

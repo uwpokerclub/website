@@ -40,10 +40,13 @@ export async function searchMembers(query: string): Promise<ApiResult<User[]>> {
   const paramType = getSearchParamType(trimmedQuery);
   const searchParam = encodeURIComponent(trimmedQuery);
 
-  const { status, data } = await sendAPIRequest<User[] | APIErrorResponse>(`v2/members?${paramType}=${searchParam}`);
+  const { status, data } = await sendAPIRequest<{ data: User[]; total: number } | APIErrorResponse>(
+    `v2/members?${paramType}=${searchParam}`,
+  );
 
   if (status >= 200 && status < 300) {
-    return { success: true, data: (data as User[]) ?? [] };
+    const listResponse = data as { data: User[]; total: number };
+    return { success: true, data: listResponse?.data ?? [] };
   }
 
   const errorResponse = data as APIErrorResponse | undefined;

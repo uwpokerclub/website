@@ -126,9 +126,10 @@ func TestListRankings(t *testing.T) {
 					require.Contains(t, w.Body.String(), tc.expectedErrorMessage, "Response: %s", w.Body.String())
 				}
 			} else {
-				var rankings []models.RankingResponse
-				err = json.Unmarshal(w.Body.Bytes(), &rankings)
+				var resp models.ListResponse[models.RankingResponse]
+				err = json.Unmarshal(w.Body.Bytes(), &resp)
 				require.NoError(t, err)
+				rankings := resp.Data
 				require.GreaterOrEqual(t, len(rankings), tc.minResults)
 
 				// Validate structure of rankings if we have results

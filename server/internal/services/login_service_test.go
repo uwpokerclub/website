@@ -107,7 +107,7 @@ func ListLoginsEmptyTest(t *testing.T) {
 	svc := NewLoginService(db)
 
 	// List logins when none exist
-	logins, err := svc.ListLogins()
+	logins, _, err := svc.ListLogins(&models.Pagination{})
 	assert.NoError(t, err)
 	assert.Empty(t, logins)
 }
@@ -130,7 +130,7 @@ func ListLoginsMultipleTest(t *testing.T) {
 	assert.NoError(t, err)
 
 	// List logins
-	logins, err := svc.ListLogins()
+	logins, _, err := svc.ListLogins(&models.Pagination{})
 	assert.NoError(t, err)
 	assert.Len(t, logins, 3)
 
@@ -180,7 +180,7 @@ func ListLoginsWithLinkedMemberTest(t *testing.T) {
 	assert.NoError(t, err)
 
 	// List logins
-	logins, err := svc.ListLogins()
+	logins, _, err := svc.ListLogins(&models.Pagination{})
 	assert.NoError(t, err)
 	assert.Len(t, logins, 2)
 

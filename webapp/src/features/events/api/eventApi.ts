@@ -29,10 +29,13 @@ export type ApiResult<T> = { success: true; data: T } | { success: false; error:
  * @returns Array of structures or error
  */
 export async function fetchStructures(): Promise<ApiResult<Structure[]>> {
-  const { status, data } = await sendAPIRequest<Structure[] | APIErrorResponse>("v2/structures");
+  const { status, data } = await sendAPIRequest<{ data: Structure[]; total: number } | APIErrorResponse>(
+    "v2/structures",
+  );
 
   if (status >= 200 && status < 300) {
-    return { success: true, data: (data as Structure[]) ?? [] };
+    const listResponse = data as { data: Structure[]; total: number };
+    return { success: true, data: listResponse?.data ?? [] };
   }
 
   const errorResponse = data as APIErrorResponse | undefined;

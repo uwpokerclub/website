@@ -45,8 +45,14 @@ func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
 // @Failure 500 {object} ErrorResponse
 // @Router /structures [get]
 func (s *structuresController) listStructures(ctx *gin.Context) {
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewStructureService(s.db)
-	structures, err := svc.ListStructures()
+	structures, total, err := svc.ListStructuresV2(&pagination)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -55,7 +61,10 @@ func (s *structuresController) listStructures(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, structures)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Structure]{
+		Data:  structures,
+		Total: total,
+	})
 }
 
 // createStructure handles the creation of a new structure.

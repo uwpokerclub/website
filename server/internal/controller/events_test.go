@@ -337,16 +337,19 @@ func TestListEvents(t *testing.T) {
 		expectedStatus   int
 		expectError      bool
 		expectedErrorMsg string
-		expectedResponse []map[string]any
+		expectedResponse map[string]any
 	}{
 		{
-			name:             "successful request no events",
-			userRole:         authorization.ROLE_EXECUTIVE.ToString(),
-			semesterID:       testutils.TEST_SEMESTERS[2].ID.String(),
-			expectedEvents:   []models.Event{},
-			expectedStatus:   http.StatusOK,
-			expectError:      false,
-			expectedResponse: []map[string]any{},
+			name:           "successful request no events",
+			userRole:       authorization.ROLE_EXECUTIVE.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[2].ID.String(),
+			expectedEvents: []models.Event{},
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+			expectedResponse: map[string]any{
+				"data":  []map[string]any{},
+				"total": float64(0),
+			},
 		},
 		{
 			name:             "invalid semester ID format",
@@ -378,7 +381,7 @@ func TestListEvents(t *testing.T) {
 			expectedStatus   int
 			expectError      bool
 			expectedErrorMsg string
-			expectedResponse []map[string]any
+			expectedResponse map[string]any
 		}{
 			name:       fmt.Sprintf("successful request with events %s", role),
 			userRole:   role,
@@ -387,18 +390,22 @@ func TestListEvents(t *testing.T) {
 				testutils.TEST_EVENTS[1],
 				testutils.TEST_EVENTS[2],
 			},
-			expectedStatus:   http.StatusOK,
-			expectError:      false,
-			expectedResponse: []map[string]any{}, // Will be set dynamically
+			expectedStatus: http.StatusOK,
+			expectError:    false,
 		})
 	}
 
-	// Preprocess expected responses to convert Event models to map[string]any
+	// Preprocess expected responses to convert Event models to ListResponse shape
 	for i, tc := range testCases {
 		if !tc.expectError && len(tc.expectedEvents) > 0 {
+			var eventsData []map[string]any
 			b, err := json.Marshal(tc.expectedEvents)
 			require.NoError(t, err)
-			require.NoError(t, json.Unmarshal(b, &testCases[i].expectedResponse))
+			require.NoError(t, json.Unmarshal(b, &eventsData))
+			testCases[i].expectedResponse = map[string]any{
+				"data":  eventsData,
+				"total": float64(len(tc.expectedEvents)),
+			}
 		}
 	}
 

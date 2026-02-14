@@ -6,7 +6,6 @@ import (
 	"api/internal/models"
 	"api/internal/services"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -114,27 +113,6 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, membership)
 }
 
-func (c *membershipsController) parseListMembershipsQueryParams(
-	ctx *gin.Context,
-) *models.ListMembershipsFilter {
-	// Implementation for parsing query parameters
-	filter := &models.ListMembershipsFilter{}
-
-	// Parse limit and offset filters
-	if limitStr := ctx.Query("limit"); limitStr != "" {
-		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
-			filter.Limit = &limit
-		}
-	}
-
-	if offsetStr := ctx.Query("offset"); offsetStr != "" {
-		if offset, err := strconv.Atoi(offsetStr); err == nil && offset >= 0 {
-			filter.Offset = &offset
-		}
-	}
-
-	return filter
-}
 
 // listMemberships handles listing all memberships
 //
@@ -159,11 +137,19 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		return
 	}
 
-	filter := c.parseListMembershipsQueryParams(ctx)
-	filter.SemesterID = &semesterID
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	filter := &models.ListMembershipsFilter{
+		Pagination: pagination,
+		SemesterID: &semesterID,
+	}
 
 	svc := services.NewMembershipService(c.db)
-	memberships, err := svc.ListMembershipsV2(filter)
+	memberships, total, err := svc.ListMembershipsV2(filter)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -177,7 +163,10 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, memberships)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.MembershipWithAttendance]{
+		Data:  memberships,
+		Total: total,
+	})
 }
 
 // getMembership handles retrieving a specific membership

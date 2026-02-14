@@ -7,7 +7,7 @@ describe("MembersList", () => {
       cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
-      cy.intercept("GET", "/api/v2/semesters", []).as("getSemesters");
+      cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
     });
 
     it("should display no semester selected message", () => {
@@ -209,7 +209,7 @@ describe("MembersList", () => {
 
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, {
           statusCode: 200,
-          body: mockMembers,
+          body: { data: mockMembers, total: mockMembers.length },
         }).as("getManyMembers");
 
         // Revisit to trigger mock
@@ -263,7 +263,7 @@ describe("MembersList", () => {
       it("should display empty state when no members exist", () => {
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, {
           statusCode: 200,
-          body: [],
+          body: { data: [], total: 0 },
         }).as("getEmptyMembers");
 
         cy.visit("/admin/members");

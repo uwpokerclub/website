@@ -1,5 +1,5 @@
 import { MEMBERS, SEMESTER, USERS } from "../seed";
-import { getUserForMember } from "../support/helpers";
+import { getUserForMember, getMemberFullName } from "../support/helpers";
 
 describe("MembersList", () => {
   context("when no semester is selected", () => {
@@ -256,6 +256,52 @@ describe("MembersList", () => {
         cy.getByData("edit-cancel-btn").click();
 
         cy.getByData("edit-member-modal").should("not.exist");
+      });
+    });
+
+    context("delete membership modal", () => {
+      // Use member with no event participation for clean deletion
+      const deleteMember = MEMBERS[3]; // Khalil Duckham - paid, no events
+      const deleteMemberName = getMemberFullName(deleteMember);
+
+      it("should open modal when delete button is clicked", () => {
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData("delete-membership-modal").should("exist");
+      });
+
+      it("should display member name in confirmation message", () => {
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData("delete-membership-modal").should("contain", deleteMemberName);
+      });
+
+      it("should display consequences warning", () => {
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData("delete-membership-modal").should("contain", "Rankings will be removed");
+        cy.getByData("delete-membership-modal").should("contain", "This action cannot be undone.");
+      });
+
+      it("should close modal when cancel is clicked", () => {
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData("delete-membership-modal").should("exist");
+
+        cy.getByData("delete-membership-cancel-btn").click();
+        cy.getByData("delete-membership-modal").should("not.exist");
+      });
+
+      it("should delete membership successfully", () => {
+        const initialCount = MEMBERS.length;
+
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData("delete-membership-modal").should("exist");
+
+        cy.getByData("delete-membership-confirm-btn").click();
+
+        // Modal should close
+        cy.getByData("delete-membership-modal").should("not.exist");
+
+        // Membership should be removed from table
+        cy.getByData(`member-row-${deleteMember.id}`).should("not.exist");
+        cy.get("[data-qa^='member-row-']").should("have.length", initialCount - 1);
       });
     });
 

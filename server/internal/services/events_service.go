@@ -206,15 +206,17 @@ func (es *eventService) EndEvent(eventId int32) error {
 	rankingService := NewRankingService(tx)
 	eventSize := len(entries)
 	for i, entry := range entries {
-		points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
-
-		err := rankingService.UpdateRanking(entry.MembershipID, points)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-
 		entry.Placement = uint16(i + 1)
+
+		if entry.MembershipID != nil {
+			points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
+
+			err := rankingService.UpdateRanking(*entry.MembershipID, points)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
 
 		tx.Save(&entry)
 		if err := tx.Error; err != nil {
@@ -279,12 +281,14 @@ func (es *eventService) UndoEndEvent(eventId int32) error {
 	rankingService := NewRankingService(tx)
 	eventSize := len(entries)
 	for i, entry := range entries {
-		points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
+		if entry.MembershipID != nil {
+			points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
 
-		err := rankingService.UpdateRanking(entry.MembershipID, -points)
-		if err != nil {
-			tx.Rollback()
-			return err
+			err := rankingService.UpdateRanking(*entry.MembershipID, -points)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 
 		tx.Save(&entry)

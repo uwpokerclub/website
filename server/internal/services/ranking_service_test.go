@@ -34,8 +34,8 @@ func TestRankingService_UpdateRanking_NoPreviousRanking(t *testing.T) {
 	}
 
 	// Retrieve ranking to ensure it was created
-	ranking := models.Ranking{MembershipID: set.Memberships[0].ID}
-	res := db.First(&ranking)
+	var ranking models.Ranking
+	res := db.Where("membership_id = ?", set.Memberships[0].ID).First(&ranking)
 
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Errorf("UpdateRanking() did not create a new ranking record: %v", err)
@@ -84,8 +84,8 @@ func TestRankingService_UpdateRanking_PreviousRanking(t *testing.T) {
 	}
 
 	// Retrieve ranking to ensure it was created
-	found := models.Ranking{MembershipID: set.Memberships[0].ID}
-	res = db.First(&found)
+	var found models.Ranking
+	res = db.Where("membership_id = ?", set.Memberships[0].ID).First(&found)
 
 	if err := res.Error; err != nil {
 		t.Fatalf("Failed to retrieve ranking: %v", err)

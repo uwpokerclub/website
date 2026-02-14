@@ -20,14 +20,15 @@ func NewRankingService(db *gorm.DB) *rankingService {
 }
 
 func (svc *rankingService) UpdateRanking(membershipId uuid.UUID, points int) error {
-	ranking := models.Ranking{
-		MembershipID: membershipId,
-	}
+	var ranking models.Ranking
 
-	res := svc.db.First(&ranking)
+	res := svc.db.Where("membership_id = ?", membershipId).First(&ranking)
 	// If the record can not be found, create a new ranking record
 	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		ranking.Points = int32(points)
+		ranking = models.Ranking{
+			MembershipID: membershipId,
+			Points:       int32(points),
+		}
 
 		res = svc.db.Create(&ranking)
 		if err := res.Error; err != nil {
@@ -43,7 +44,7 @@ func (svc *rankingService) UpdateRanking(membershipId uuid.UUID, points int) err
 
 	ranking.Points += int32(points)
 
-	res = svc.db.Where("membership_id = ?", membershipId).Save(&ranking)
+	res = svc.db.Save(&ranking)
 	if err := res.Error; err != nil {
 		return e.InternalServerError(err.Error())
 	}

@@ -31,6 +31,7 @@ func (c *membershipsController) LoadRoutes(router *gin.RouterGroup) {
 		middleware.UseAuthorization("membership.edit"),
 		c.updateMembership,
 	)
+	memberships.DELETE("/:id", middleware.UseAuthorization("membership.delete"), c.deleteMembership)
 }
 
 func validateSemesterID(ctx *gin.Context) (uuid.UUID, error) {
@@ -294,4 +295,59 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, membership)
+}
+
+// deleteMembership handles deleting a specific membership
+//
+// @Summary Delete a Membership
+// @Description Delete a specific Membership by ID. Rankings are cascade deleted and participant entries are unlinked.
+// @Tags Memberships
+// @Accept json
+// @Produce json
+// @param semesterId path string true "Semester ID"
+// @Param id path string true "Membership ID"
+// @Success 204
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/memberships/{id} [delete]
+func (c *membershipsController) deleteMembership(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	membershipID, err := validateMembershipID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	svc := services.NewMembershipService(c.db)
+	found, err := svc.DeleteMembershipV2(membershipID, semesterID)
+	if err != nil {
+		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
+			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+			return
+		}
+
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	if !found {
+		ctx.AbortWithStatusJSON(
+			http.StatusNotFound,
+			apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
+		)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
 }

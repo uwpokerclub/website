@@ -278,3 +278,30 @@ export async function updateMembership(
     error: errorResponse?.message ?? "Failed to update membership",
   };
 }
+
+/**
+ * Delete an existing membership
+ * @param semesterId - The semester ID
+ * @param membershipId - The membership ID
+ * @returns Success or error
+ */
+export async function deleteMembership(semesterId: string, membershipId: string): Promise<ApiResult<void>> {
+  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(
+    `v2/semesters/${semesterId}/memberships/${membershipId}`,
+    "DELETE",
+  );
+
+  if (status === 204) {
+    return { success: true, data: undefined };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Membership not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to delete membership",
+  };
+}

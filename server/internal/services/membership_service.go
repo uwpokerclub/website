@@ -433,6 +433,19 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 	return &existingMembership, nil
 }
 
+func (ms *membershipService) DeleteMembershipV2(id uuid.UUID, semesterID uuid.UUID) (bool, error) {
+	result := ms.db.Where("id = ? AND semester_id = ?", id, semesterID).Delete(&models.Membership{})
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // ListMembershipsV2 lists all memberships with embedded User and computed attendance count
 func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
 	var memberships []models.Membership

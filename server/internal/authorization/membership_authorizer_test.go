@@ -129,6 +129,7 @@ func TestMembershipAuthorizer_GetPermissions(t *testing.T) {
 				"get":    true,
 				"list":   true,
 				"edit":   true,
+				"delete": true,
 			},
 		},
 	}

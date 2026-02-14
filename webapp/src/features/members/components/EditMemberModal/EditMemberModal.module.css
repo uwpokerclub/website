@@ -30,6 +30,25 @@
   font-size: 0.875rem;
 }
 
+.dangerZone {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-danger, #dc3545);
+}
+
+.dangerZoneTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-danger, #dc3545);
+}
+
+.dangerZoneDescription {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--color-gray-600, #757575);
+}
+
 .footer {
   display: flex;
   justify-content: flex-end;

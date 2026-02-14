@@ -192,6 +192,29 @@ export async function registerNewMemberWithMembership(
 }
 
 /**
+ * Delete an existing member
+ * @param memberId - The member's ID (student ID)
+ * @returns Success or error
+ */
+export async function deleteMember(memberId: string): Promise<ApiResult<void>> {
+  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(`v2/members/${memberId}`, "DELETE");
+
+  if (status === 204) {
+    return { success: true, data: undefined };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Member not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to delete member",
+  };
+}
+
+/**
  * Request type for updating a member
  */
 export interface UpdateMemberRequest {

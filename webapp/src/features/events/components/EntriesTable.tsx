@@ -146,7 +146,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
       const isProcessing = processingEntry === entry.membershipId;
       const isEnded = event.state === EventState.Ended;
 
-      if (isEnded) {
+      if (isEnded || !entry.membershipId) {
         return null;
       }
 
@@ -156,7 +156,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
             <Button
               variant="primary"
               size="small"
-              onClick={() => handleSignIn(entry.membershipId)}
+              onClick={() => handleSignIn(entry.membershipId!)}
               loading={isProcessing}
               aria-label="Sign Back In"
               data-qa="sign-in-btn"
@@ -167,7 +167,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
             <Button
               variant="secondary"
               size="small"
-              onClick={() => handleSignOut(entry.membershipId)}
+              onClick={() => handleSignOut(entry.membershipId!)}
               loading={isProcessing}
               aria-label="Sign Out"
               data-qa="sign-out-btn"
@@ -178,7 +178,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
             <Button
               variant="destructive"
               size="small"
-              onClick={() => handleRemove(entry.membershipId)}
+              onClick={() => handleRemove(entry.membershipId!)}
               loading={isProcessing}
               aria-label="Remove"
               data-qa="remove-btn"
@@ -207,19 +207,19 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
       {
         key: "firstName",
         header: "First Name",
-        accessor: "firstName",
+        accessor: (row) => row.firstName || (row.membershipId === null ? "Unknown" : ""),
         sortable: false,
       },
       {
         key: "lastName",
         header: "Last Name",
-        accessor: "lastName",
+        accessor: (row) => row.lastName || (row.membershipId === null ? "Member" : ""),
         sortable: false,
       },
       {
         key: "studentNumber",
         header: "Student Number",
-        accessor: "id",
+        accessor: (row) => row.id || "--",
         sortable: false,
       },
       {
@@ -339,7 +339,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
           columns={columns}
           loading={isLoading}
           emptyState={emptyState}
-          getRowKey={(row) => row.membershipId}
+          getRowKey={(row) => row.membershipId ?? `entry-${row.eventId}-${row.placement}`}
         />
       </div>
 

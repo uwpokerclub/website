@@ -418,6 +418,7 @@ func TestListEntries(t *testing.T) {
 								"rebuyFee":              float64(testutils.TEST_SEMESTERS[0].RebuyFee),
 							},
 							"ranking": map[string]any{
+								"id":           float64(3),
 								"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
 								"points":       float64(0),
 								"attendance":   float64(0),
@@ -459,6 +460,7 @@ func TestListEntries(t *testing.T) {
 								"rebuyFee":              float64(testutils.TEST_SEMESTERS[0].RebuyFee),
 							},
 							"ranking": map[string]any{
+								"id":           float64(1),
 								"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
 								"points":       float64(0),
 								"attendance":   float64(0),

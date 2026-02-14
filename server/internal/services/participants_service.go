@@ -32,7 +32,7 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 	}
 
 	participant := models.Participant{
-		MembershipID: req.MembershipID,
+		MembershipID: &req.MembershipID,
 		EventID:      req.EventID,
 		Placement:    0,
 		SignedOutAt:  nil,
@@ -108,7 +108,7 @@ func (svc *participantsService) UpdateParticipant(req *models.UpdateParticipantR
 	}
 
 	participant := models.Participant{
-		MembershipID: req.MembershipID,
+		MembershipID: &req.MembershipID,
 		EventID:      req.EventID,
 	}
 

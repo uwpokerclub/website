@@ -8,7 +8,7 @@ type membershipAuthorizer struct {
 // NewMembershipAuthorizer creates a new membership authorizer.
 func NewMembershipAuthorizer() ResourceAuthorizer {
 	return &membershipAuthorizer{
-		actions: []string{"create", "get", "list", "edit"},
+		actions: []string{"create", "get", "list", "edit", "delete"},
 	}
 }
 
@@ -22,6 +22,8 @@ func (svc *membershipAuthorizer) IsAuthorized(role string, action string) bool {
 	case "list":
 		return HasAtleastRole(ROLE_BOT, role)
 	case "edit":
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
+	case "delete":
 		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	}
 

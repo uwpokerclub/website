@@ -366,8 +366,8 @@ func TestEventsService(s *testing.T) {
 			assert.NoError(t, err, "EventService.EndEvent()")
 
 			// Check that entry3's signed_out_at field is set to the start time of the event
-			foundEntry := models.Participant{MembershipID: entry3.MembershipID}
-			res := db.First(&foundEntry)
+			var foundEntry models.Participant
+			res := db.Where("membership_id = ? AND event_id = ?", entry3.MembershipID, entry3.EventID).First(&foundEntry)
 			assert.NoError(t, res.Error, "Getting third entry from DB")
 			assert.WithinDuration(t, event.StartDate, *foundEntry.SignedOutAt, time.Second, "Signout time check")
 		})
@@ -420,22 +420,22 @@ func TestEventsService(s *testing.T) {
 			res = db.Where("event_id = ? AND placement = ?", entry3.EventID, 3).First(&thirdPlace)
 			assert.NoError(t, res.Error, "Retrieve third place entry")
 
-			assert.Equal(t, entry3.MembershipID, firstPlace.MembershipID, "First place member")
-			assert.Equal(t, entry2.MembershipID, secondPlace.MembershipID, "Second place member")
-			assert.Equal(t, entry1.MembershipID, thirdPlace.MembershipID, "Third place member")
+			assert.Equal(t, *entry3.MembershipID, *firstPlace.MembershipID, "First place member")
+			assert.Equal(t, *entry2.MembershipID, *secondPlace.MembershipID, "Second place member")
+			assert.Equal(t, *entry1.MembershipID, *thirdPlace.MembershipID, "Third place member")
 
 			// Check to see rankings were updated
 			// First place = 2 points
 			// Second place = 2 points
 			// Third place = 2 points
-			ranking1 := models.Ranking{MembershipID: entry3.MembershipID}
-			res = db.First(&ranking1)
+			var ranking1 models.Ranking
+			res = db.Where("membership_id = ?", *entry3.MembershipID).First(&ranking1)
 			assert.NoError(t, res.Error, "Entry 3 ranking")
-			ranking2 := models.Ranking{MembershipID: entry2.MembershipID}
-			res = db.First(&ranking2)
+			var ranking2 models.Ranking
+			res = db.Where("membership_id = ?", *entry2.MembershipID).First(&ranking2)
 			assert.NoError(t, res.Error, "Entry 2 ranking")
-			ranking3 := models.Ranking{MembershipID: entry1.MembershipID}
-			res = db.First(&ranking3)
+			var ranking3 models.Ranking
+			res = db.Where("membership_id = ?", *entry1.MembershipID).First(&ranking3)
 			assert.NoError(t, res.Error, "Entry 1 ranking")
 
 			assert.EqualValues(t, 2, ranking1.Points, "Ranking 1 points")
@@ -517,8 +517,8 @@ func TestEventsService(s *testing.T) {
 		assert.NoError(t, err, "EventService.EndEvent()")
 
 		//check points is > 0
-		points1 := models.Ranking{MembershipID: entry1.MembershipID}
-		res := db.First(&points1)
+		var points1 models.Ranking
+		res := db.Where("membership_id = ?", *entry1.MembershipID).First(&points1)
 		assert.NoError(t, res.Error, "Retrieve points from rankings")
 		assert.Greater(t, points1.Points, int32(0), "Entry 1 points")
 
@@ -526,8 +526,8 @@ func TestEventsService(s *testing.T) {
 		err = eventService.UndoEndEvent(event.ID)
 		assert.NoError(t, err, "EventService.UndoEndEvent()")
 
-		points1 = models.Ranking{MembershipID: entry1.MembershipID}
-		res = db.First(&points1)
+		points1 = models.Ranking{}
+		res = db.Where("membership_id = ?", *entry1.MembershipID).First(&points1)
 		assert.NoError(t, res.Error, "Retrieve rankings after restarting event")
 
 		assert.EqualValues(t, 0, points1.Points, "Entry 1 points")

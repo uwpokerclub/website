@@ -723,6 +723,99 @@ func TestUpdateMembershipBudgetUpdates(t *testing.T) {
 	}
 }
 
+func TestDeleteMembership(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	// Test unauthorized/forbidden access
+	unauthorizedRoles := []string{authorization.ROLE_BOT.ToString(), authorization.ROLE_EXECUTIVE.ToString()}
+	testSemesterID := testutils.TEST_SEMESTERS[0].ID.String()
+	testMembershipID := testutils.TEST_MEMBERSHIPS[0].ID.String()
+	testutils.TestInvalidAuthForEndpoint(
+		t,
+		container,
+		apiServer,
+		"DELETE",
+		fmt.Sprintf("/api/v2/semesters/%s/memberships/%s", testSemesterID, testMembershipID),
+		unauthorizedRoles,
+	)
+
+	testCases := []struct {
+		name           string
+		userRole       string
+		semesterID     string
+		membershipID   string
+		expectedStatus int
+	}{
+		{
+			name:           "successful deletion",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "membership not found - wrong semester",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[1].ID.String(),
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "membership not found - non-existent ID",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   "00000000-0000-0000-0000-000000000000",
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid membership ID format",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   "invalid-uuid",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid semester ID format",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     "invalid-uuid",
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, container.ResetDatabase(ctx))
+			require.NoError(t, testutils.SeedAll(db))
+
+			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
+			require.NoError(t, err)
+
+			req, err := testutils.MakeJSONRequest(
+				"DELETE",
+				fmt.Sprintf("/api/v2/semesters/%s/memberships/%s", tc.semesterID, tc.membershipID),
+				nil,
+			)
+			require.NoError(t, err)
+
+			testutils.SetAuthCookie(req, sessionID)
+
+			w := httptest.NewRecorder()
+			apiServer.ServeHTTP(w, req)
+
+			require.Equal(t, tc.expectedStatus, w.Code, "Response: %s", w.Body.String())
+		})
+	}
+}
+
 // Helper function to create bool pointers
 func boolPtr(b bool) *bool {
 	return &b

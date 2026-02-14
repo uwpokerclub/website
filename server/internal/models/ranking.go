@@ -8,9 +8,11 @@ import "github.com/google/uuid"
 const SemesterRankingsView = "semester_rankings_view"
 
 type Ranking struct {
-	MembershipID uuid.UUID `json:"membershipId" gorm:"type:uuid;primaryKey"`
-	Points       int32     `json:"points"`
-	Attendance   int32     `json:"attendance" gorm:"not null;default:0"`
+	ID           int64       `json:"id" gorm:"primaryKey;autoIncrement"`
+	MembershipID uuid.UUID   `json:"membershipId" gorm:"type:uuid;not null;uniqueIndex"`
+	Membership   *Membership `json:"-"`
+	Points       int32       `json:"points"`
+	Attendance   int32       `json:"attendance" gorm:"not null;default:0"`
 } //@name Ranking
 
 func (Ranking) TableName() string {

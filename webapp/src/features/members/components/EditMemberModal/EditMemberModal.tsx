@@ -3,8 +3,10 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { SemesterContext } from "../../../../contexts";
+import { useAuth } from "../../../../hooks";
 import { EditMemberForm } from "./EditMemberForm";
 import { MembershipConfig } from "../RegisterMemberModal/MembershipConfig";
+import { DeleteMemberModal } from "../DeleteMemberModal";
 import { editMemberMembershipSchema, type EditMemberMembershipFormData } from "../../validation/registrationSchema";
 import { updateMember, updateMembership } from "../../api/memberRegistrationApi";
 import type { Membership } from "../../../../types";
@@ -23,8 +25,10 @@ export interface EditMemberModalProps {
 export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: EditMemberModalProps) {
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
+  const { hasPermission } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const form = useForm<EditMemberMembershipFormData>({
     resolver: zodResolver(editMemberMembershipSchema),
@@ -157,7 +161,34 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
             <MembershipConfig />
           </form>
         </FormProvider>
+
+        {hasPermission("delete", "user") && membership && (
+          <div className={styles.dangerZone} data-qa="danger-zone">
+            <h3 className={styles.dangerZoneTitle}>Danger Zone</h3>
+            <p className={styles.dangerZoneDescription}>Permanently delete this member and all associated data.</p>
+            <Button variant="destructive" onClick={() => setIsDeleteModalOpen(true)} data-qa="delete-member-btn">
+              Delete Member
+            </Button>
+          </div>
+        )}
       </div>
+
+      {membership && (
+        <DeleteMemberModal
+          isOpen={isDeleteModalOpen}
+          member={{
+            id: String(membership.userId),
+            firstName: membership.user.firstName,
+            lastName: membership.user.lastName,
+          }}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onSuccess={() => {
+            setIsDeleteModalOpen(false);
+            onSuccess();
+            handleClose();
+          }}
+        />
+      )}
     </Modal>
   );
 }

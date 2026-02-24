@@ -1822,6 +1822,70 @@
                     }
                 }
             },
+            "delete": {
+                "description": "Delete a specific Membership by ID. Rankings are cascade deleted and participant entries are unlinked.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Memberships"
+                ],
+                "summary": "Delete a Membership",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Membership ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "description": "Update details of a specific Membership by ID",
                 "consumes": [
@@ -2951,6 +3015,9 @@
                 "attendance": {
                     "type": "integer"
                 },
+                "id": {
+                    "type": "integer"
+                },
                 "membershipId": {
                     "type": "string"
                 },
@@ -2972,6 +3039,9 @@
                     "type": "string"
                 },
                 "points": {
+                    "type": "integer"
+                },
+                "position": {
                     "type": "integer"
                 }
             }

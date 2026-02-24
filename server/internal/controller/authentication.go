@@ -81,9 +81,7 @@ func (controller *authenticationController) getSession(ctx *gin.Context) {
 // @Router /session [post]
 func (controller *authenticationController) login(ctx *gin.Context) {
 	var req models.NewSessionRequest
-	err := ctx.ShouldBindJSON(&req)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 

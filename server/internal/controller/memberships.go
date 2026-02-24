@@ -81,8 +81,7 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	}
 
 	var req models.CreateMembershipRequestV2
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -256,8 +255,7 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 	}
 
 	var req models.UpdateMembershipRequestV2
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 

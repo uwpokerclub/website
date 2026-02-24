@@ -52,6 +52,14 @@ func NotFound(message string) error {
 	}
 }
 
+func RequestEntityTooLarge(message string) error {
+	return APIErrorResponse{
+		Code:    http.StatusRequestEntityTooLarge,
+		Type:    "REQUEST_ENTITY_TOO_LARGE",
+		Message: message,
+	}
+}
+
 func InternalServerError(message string) error {
 	return APIErrorResponse{
 		Code:    http.StatusInternalServerError,

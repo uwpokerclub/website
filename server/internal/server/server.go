@@ -37,6 +37,9 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	// Middleware to set CORS policy
 	r.Use(middleware.CORSMiddleware)
 
+	// Limit request body size to 1MB
+	r.Use(middleware.MaxBodySize(1 << 20))
+
 	r.Static("/assets", "./public/assets")
 	r.StaticFile("/crest.svg", "./public/crest.svg")
 	r.StaticFile("/root.css", "./public/root.css")

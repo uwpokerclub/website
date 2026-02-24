@@ -63,8 +63,7 @@ func validateMemberID(ctx *gin.Context) (uint64, error) {
 // @Router /members [post]
 func (c *membersController) createMember(ctx *gin.Context) {
 	var req models.CreateUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -226,8 +225,7 @@ func (c *membersController) updateMember(ctx *gin.Context) {
 	}
 
 	var req models.UpdateUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 

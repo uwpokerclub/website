@@ -92,8 +92,7 @@ func (c *entriesController) createEntry(ctx *gin.Context) {
 
 	// Bind request body - array of UUID strings
 	var membershipIdStrs []string
-	if err := ctx.ShouldBindJSON(&membershipIdStrs); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &membershipIdStrs) {
 		return
 	}
 

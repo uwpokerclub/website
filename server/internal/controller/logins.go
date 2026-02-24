@@ -127,8 +127,7 @@ func (c *loginsController) getLogin(ctx *gin.Context) {
 // @Router /logins [post]
 func (c *loginsController) createLogin(ctx *gin.Context) {
 	var req models.CreateLoginRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -235,8 +234,7 @@ func (c *loginsController) changePassword(ctx *gin.Context) {
 	}
 
 	var req models.ChangePasswordRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 

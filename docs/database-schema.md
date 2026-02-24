@@ -59,23 +59,23 @@ erDiagram
 
     memberships {
         uuid id PK
-        bigint user_id FK "UNIQUE(user_id, semester_id)"
-        uuid semester_id FK "UNIQUE(user_id, semester_id)"
+        bigint user_id FK "UK user-semester"
+        uuid semester_id FK "UK user-semester"
         boolean paid
         boolean discounted
     }
 
     participants {
         serial id PK
-        uuid membership_id FK "nullable, UNIQUE(membership_id, event_id)"
-        integer event_id FK "UNIQUE(membership_id, event_id)"
+        uuid membership_id FK "nullable"
+        integer event_id FK
         integer placement
         timestamptz signed_out_at
     }
 
     rankings {
         bigserial id PK
-        uuid membership_id FK "UNIQUE"
+        uuid membership_id FK "unique"
         integer points
         integer attendance
     }
@@ -108,7 +108,7 @@ erDiagram
     structures ||--o{ events : "uses"
     users ||--o{ memberships : "has"
     memberships ||--o| rankings : "has"
-    memberships |o--o{ participants : "registers"
+    memberships }o--o{ participants : "registers"
     events ||--o{ participants : "has"
     logins ||--o{ sessions : "has"
 ```

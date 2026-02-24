@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -163,9 +162,8 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 		return "", e.InternalServerError(fmt.Sprintf("Error when retrieving rankings: %s", err.Error()))
 	}
 
-	// Open a new CSV file
-	filename := "rankings.csv"
-	file, err := os.Create(filename)
+	// Open a new CSV file in the OS temp directory
+	file, err := os.CreateTemp("", "rankings-*.csv")
 	if err != nil {
 		return "", e.InternalServerError(fmt.Sprintf("Error when creating rankings file: %s", err.Error()))
 	}
@@ -195,11 +193,5 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 		}
 	}
 
-	// Get the absolute filepath to the new file
-	fp, err := filepath.Abs(filename)
-	if err != nil {
-		return "", e.InternalServerError(fmt.Sprintf("Failed to export CSV: %s", err.Error()))
-	}
-
-	return fp, nil
+	return file.Name(), nil
 }

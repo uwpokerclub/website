@@ -6,6 +6,7 @@ A modern web application for the University of Waterloo Poker Studies Club (UWPS
 
 - [Overview](#overview)
 - [Architecture](#architecture)
+- [Documentation](#documentation)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Quick Start](#quick-start)
@@ -66,6 +67,12 @@ The application follows a modern microservices architecture:
 - PostgreSQL 17 for data persistence
 - Atlas for schema migrations
 - Optimized indexing and constraints
+
+## Documentation
+
+Additional documentation is available in the [`docs/`](docs/) directory:
+
+- [Database Schema](docs/database-schema.md) - ERD, table definitions, relationships, and cascade behavior
 
 ## Getting Started
 

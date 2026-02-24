@@ -72,6 +72,7 @@ The application follows a modern microservices architecture:
 
 Additional documentation is available in the [`docs/`](docs/) directory:
 
+- [Architecture Overview](docs/architecture.md) - System diagrams, backend layering, auth flow, and deployment pipeline
 - [Database Schema](docs/database-schema.md) - ERD, table definitions, relationships, and cascade behavior
 
 ## Getting Started

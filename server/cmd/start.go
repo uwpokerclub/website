@@ -35,7 +35,7 @@ var startCmd = &cobra.Command{
 
 		// Initialize cron tasks
 		c := cron.New()
-		c.AddFunc("@daily", cr.SessionCleanup(false))
+		c.AddFunc("@daily", cr.SessionCleanup(db))
 		c.Start()
 
 		// Initialize the server

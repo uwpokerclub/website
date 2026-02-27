@@ -60,11 +60,6 @@ func (Event) Preload(tx *gorm.DB, options EventPreloadOptions) *gorm.DB {
 	return ret
 }
 
-func (event *Event) AfterSave(tx *gorm.DB) (err error) {
-	err = event.Preload(tx, EventPreloadOptions{}).Find(event).Error
-	return
-}
-
 type CreateEventRequest struct {
 	Name             string    `json:"name"             binding:"required"`
 	Format           string    `json:"format"           binding:"required"`

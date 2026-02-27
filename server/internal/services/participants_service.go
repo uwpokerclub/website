@@ -79,11 +79,7 @@ func (svc *participantsService) ListParticipantsV2(eventId int32, pagination *mo
 
 	var participants []models.Participant
 
-	// Preload nested associations: Membership -> User, Semester, and Ranking
-	query := svc.db.
-		Preload("Membership.User").
-		Preload("Membership.Semester").
-		Preload("Membership.Ranking").
+	query := models.Participant{}.Preload(svc.db).
 		Where("event_id = ?", eventId).
 		Order("signed_out_at DESC")
 	query = pagination.Apply(query)

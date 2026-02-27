@@ -32,11 +32,6 @@ func (Structure) Preload(tx *gorm.DB, options ...StructurePreloadOptions) *gorm.
 	return ret
 }
 
-func (s *Structure) AfterSave(tx *gorm.DB) (err error) {
-	err = s.Preload(tx, StructurePreloadOptions{Blinds: true}).Find(s).Error
-	return
-}
-
 type Blind struct {
 	ID          int32 `json:"-" gorm:"type:integer;primaryKey;autoIncrement"`
 	Small       int32 `json:"small" gorm:"not null"`

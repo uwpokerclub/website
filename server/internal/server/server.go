@@ -3,7 +3,6 @@ package server
 import (
 	"api/internal/controller"
 	"api/internal/middleware"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -57,11 +56,6 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	s.SetupV2Routes()
 
 	return s
-}
-
-// Run starts the API server and listens on the specified port.
-func (s *apiServer) Run(port string) {
-	s.Router.Run(fmt.Sprintf(":%s", port))
 }
 
 func (s *apiServer) SetupRoutes() {

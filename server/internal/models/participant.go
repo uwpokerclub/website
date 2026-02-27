@@ -21,9 +21,11 @@ func (Participant) TableName() string {
 }
 
 func (Participant) Preload(tx *gorm.DB) *gorm.DB {
-	return tx.Joins("Membership", func(db *gorm.DB) *gorm.DB {
-		return Membership{}.Preload(db)
-	})
+	return tx.
+		Preload("Membership").
+		Preload("Membership.User").
+		Preload("Membership.Semester").
+		Preload("Membership.Ranking")
 }
 
 type CreateParticipantRequest struct {

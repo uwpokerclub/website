@@ -25,7 +25,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 ### ====================== SETUP IMAGE ======================
-FROM golang:1.24.2-bookworm AS setup
+FROM golang:1.26.0-bookworm AS setup
 
 WORKDIR /usr/server
 

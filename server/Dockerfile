@@ -1,5 +1,5 @@
 ### ====================== SERVER BUILD IMAGE ======================
-FROM golang:1.24.2-bookworm AS server
+FROM golang:1.26.0-bookworm AS server
 
 WORKDIR /usr/server
 

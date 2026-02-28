@@ -17,7 +17,7 @@ jobs:
       - name: Save image
         run: docker save -o website.tar website:${{ github.sha }}
       - name: Upload image to cache
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: website-image
           path: website.tar

@@ -56,3 +56,6 @@ dist-ssr
 cypress/screenshots
 cypress/videos
 cypress/downloads
+
+# Docs
+docs/plans

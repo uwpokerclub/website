@@ -3,7 +3,7 @@ import { FACULTIES } from "../../../data/constants";
 
 // Faculty enum from constants with custom error message
 const facultySchema = z.enum(FACULTIES as [string, ...string[]], {
-  errorMap: () => ({ message: "Please select a faculty" }),
+  error: () => "Please select a faculty",
 });
 
 export type Faculty = z.infer<typeof facultySchema>;

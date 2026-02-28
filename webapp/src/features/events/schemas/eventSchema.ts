@@ -9,7 +9,7 @@ export const POKER_FORMATS = [
 ] as const;
 
 export const formatSchema = z.enum(POKER_FORMATS, {
-  errorMap: () => ({ message: "Please select a format" }),
+  error: () => "Please select a format",
 });
 
 export type PokerFormat = z.infer<typeof formatSchema>;

@@ -19,7 +19,7 @@ export const LOGIN_ROLES = [
  * Role schema with enum validation
  */
 const roleSchema = z.enum(LOGIN_ROLES, {
-  errorMap: () => ({ message: "Please select a role" }),
+  error: () => "Please select a role",
 });
 
 /**

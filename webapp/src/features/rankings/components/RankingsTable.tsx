@@ -81,9 +81,9 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
     window.URL.revokeObjectURL(url);
   };
 
-  // Get rank for a given ranking (accounting for original position)
+  // Get rank for a given ranking (uses server-provided position)
   const getRank = (ranking: Ranking): number => {
-    return rankings.findIndex((r) => r.id === ranking.id) + 1;
+    return ranking.position;
   };
 
   // Define table columns

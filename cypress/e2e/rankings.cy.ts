@@ -10,7 +10,12 @@ const SORTED_RANKINGS = RANKINGS.map((r) => {
     user,
     id: user.id, // API returns user ID as ranking.id
   };
-}).sort((a, b) => b.points - a.points);
+}).sort((a, b) => {
+  if (b.points !== a.points) return b.points - a.points;
+  const lastCmp = a.user.lastName.localeCompare(b.user.lastName);
+  if (lastCmp !== 0) return lastCmp;
+  return a.user.firstName.localeCompare(b.user.firstName);
+});
 
 describe("Rankings", () => {
   context("when no semester is selected", () => {
@@ -18,7 +23,7 @@ describe("Rankings", () => {
       cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
-      cy.intercept("GET", "/api/v2/semesters", []).as("getSemesters");
+      cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
     });
 
     it("should display no semester selected message", () => {
@@ -137,7 +142,7 @@ describe("Rankings", () => {
 
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
           statusCode: 200,
-          body: twoRankings,
+          body: { data: twoRankings, total: twoRankings.length },
         }).as("getTwoRankings");
 
         cy.visit("/admin/rankings");
@@ -305,7 +310,7 @@ describe("Rankings", () => {
 
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
           statusCode: 200,
-          body: mockRankings,
+          body: { data: mockRankings, total: mockRankings.length },
         }).as("getManyRankings");
 
         cy.visit("/admin/rankings");
@@ -325,7 +330,7 @@ describe("Rankings", () => {
 
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
           statusCode: 200,
-          body: mockRankings,
+          body: { data: mockRankings, total: mockRankings.length },
         }).as("getManyRankings");
 
         cy.visit("/admin/rankings");
@@ -346,7 +351,7 @@ describe("Rankings", () => {
       it("should display empty state when no rankings exist", () => {
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
           statusCode: 200,
-          body: [],
+          body: { data: [], total: 0 },
         }).as("getEmptyRankings");
 
         cy.visit("/admin/rankings");

@@ -41,6 +41,10 @@ func TestSemesterService(t *testing.T) {
 			test: GetRankingsTest(),
 		},
 		{
+			name: "GetRankings_TiedRankings",
+			test: GetRankingsTiedTest(),
+		},
+		{
 			name: "UpdateBudget_Positive",
 			test: UpdateBudget_Positive(),
 		},
@@ -353,6 +357,144 @@ func GetRankingsTest() func(*testing.T) {
 			t.Errorf("SemesterService.GetRankings() order not correct, got = %v, wanted = %v", rankings[1], user2)
 			return
 		}
+
+		// Verify positions are set correctly
+		if rankings[0].Position != 1 {
+			t.Errorf("SemesterService.GetRankings() position incorrect for first place, got = %v, wanted = 1", rankings[0].Position)
+			return
+		}
+		if rankings[1].Position != 2 {
+			t.Errorf("SemesterService.GetRankings() position incorrect for second place, got = %v, wanted = 2", rankings[1].Position)
+			return
+		}
+	}
+}
+
+func GetRankingsTiedTest() func(*testing.T) {
+	return func(t *testing.T) {
+		db, err := database.OpenTestConnection()
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		defer database.WipeDB(db)
+
+		// Create existing users
+		user1 := models.User{
+			ID:        1,
+			FirstName: "alice",
+			LastName:  "smith",
+			Email:     "alice@gmail.com",
+			Faculty:   "Math",
+			QuestID:   "asmith",
+		}
+		res := db.Create(&user1)
+		if res.Error != nil {
+			t.Fatalf("Error when creating existing users: %v", res.Error)
+		}
+
+		user2 := models.User{
+			ID:        2,
+			FirstName: "bob",
+			LastName:  "jones",
+			Email:     "bob@gmail.com",
+			Faculty:   "Science",
+			QuestID:   "bjones",
+		}
+		res = db.Create(&user2)
+		if res.Error != nil {
+			t.Fatalf("Error when creating existing users: %v", res.Error)
+		}
+
+		user3 := models.User{
+			ID:        3,
+			FirstName: "carol",
+			LastName:  "white",
+			Email:     "carol@gmail.com",
+			Faculty:   "Arts",
+			QuestID:   "cwhite",
+		}
+		res = db.Create(&user3)
+		if res.Error != nil {
+			t.Fatalf("Error when creating existing users: %v", res.Error)
+		}
+
+		// Create semester
+		semester1 := models.Semester{
+			Name:                  "Winter 2023",
+			Meta:                  "",
+			StartDate:             time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:               time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC),
+			StartingBudget:        100.00,
+			MembershipFee:         10,
+			MembershipDiscountFee: 5,
+			RebuyFee:              2,
+		}
+		res = db.Create(&semester1)
+		if res.Error != nil {
+			t.Fatalf("Error when creating existing semester: %v", res.Error)
+		}
+
+		// Create memberships for this semester
+		membership1 := models.Membership{
+			UserID:     user1.ID,
+			SemesterID: semester1.ID,
+			Paid:       true,
+			Discounted: false,
+		}
+		membership2 := models.Membership{
+			UserID:     user2.ID,
+			SemesterID: semester1.ID,
+			Paid:       true,
+			Discounted: false,
+		}
+		membership3 := models.Membership{
+			UserID:     user3.ID,
+			SemesterID: semester1.ID,
+			Paid:       true,
+			Discounted: false,
+		}
+		res = db.Create(&membership1)
+		if res.Error != nil {
+			t.Fatalf("Error when creating memberships: %v", res.Error)
+		}
+		res = db.Create(&membership2)
+		if res.Error != nil {
+			t.Fatalf("Error when creating memberships: %v", res.Error)
+		}
+		res = db.Create(&membership3)
+		if res.Error != nil {
+			t.Fatalf("Error when creating memberships: %v", res.Error)
+		}
+
+		// Add rankings with tied scores: 100, 100, 50
+		r := []models.Ranking{
+			{MembershipID: membership1.ID, Points: 100},
+			{MembershipID: membership2.ID, Points: 100},
+			{MembershipID: membership3.ID, Points: 50},
+		}
+		res = db.Create(&r)
+		if res.Error != nil {
+			t.Fatalf("Failed to create rankings: %v", res.Error)
+		}
+
+		ss := NewSemesterService(db)
+
+		rankings, err := ss.GetRankings(semester1.ID)
+		if err != nil {
+			t.Errorf("SemesterService.GetRankings() error = %v", err)
+			return
+		}
+
+		if len(rankings) != 3 {
+			t.Errorf("SemesterService.GetRankings() length = %d, expected = %d", len(rankings), 3)
+			return
+		}
+
+		// Both tied members should have position 1
+		assert.Equal(t, int32(1), rankings[0].Position, "First 100-point member should be rank 1")
+		assert.Equal(t, int32(1), rankings[1].Position, "Second 100-point member should be rank 1")
+		// Third member should have position 3 (not 2)
+		assert.Equal(t, int32(3), rankings[2].Position, "50-point member should be rank 3")
 	}
 }
 
@@ -482,20 +624,22 @@ func ExportRankingsTest(t *testing.T) {
 
 	svc := NewSemesterService(db)
 
-	// Ensure filepath was returned
+	// Ensure filepath was returned in the OS temp directory with the expected pattern
 	fp, err := svc.ExportRankings(semester.Semester.ID)
-	assert.NoError(t, err, "ExportRankings should not return an error")
+	require.NoError(t, err, "ExportRankings should not return an error")
 
-	expectedPath, err := filepath.Abs("rankings.csv")
-	assert.NoError(t, err, "Should not error creating the expected file path")
-	assert.Equal(t, expectedPath, fp)
+	assert.Equal(t, os.TempDir(), filepath.Dir(fp), "File should be directly in the OS temp directory")
+	matched, err := filepath.Match("rankings-*.csv", filepath.Base(fp))
+	assert.NoError(t, err, "Should not error matching the filename pattern")
+	assert.True(t, matched, "Filename should match the rankings-*.csv pattern")
 
 	// Check that the file exists
 	assert.FileExists(t, fp, "The rankings CSV file should exist")
 
 	// Read the file
 	file, err := os.Open(fp)
-	assert.NoError(t, err, "Should not error when openning a file")
+	assert.NoError(t, err, "Should not error when opening a file")
+	defer file.Close()
 
 	// Initialize reader
 	reader := csv.NewReader(file)
@@ -503,12 +647,12 @@ func ExportRankingsTest(t *testing.T) {
 	records, err := reader.ReadAll()
 	assert.NoError(t, err, "Should not error when reading the CSV file")
 
-	// Check records were inserted correctly
+	// Check records were inserted correctly (now includes position column)
 	expectedRecords := [][]string{
-		{"id", "first_name", "last_name", "points"},
-		{"20780648", "Adam", "Mahood", "10"},
-		{"36459367", "Deep", "Kalra", "5"},
-		{"13274944", "Jane", "Doe", "2"},
+		{"position", "id", "first_name", "last_name", "points"},
+		{"1", "20780648", "Adam", "Mahood", "10"},
+		{"2", "36459367", "Deep", "Kalra", "5"},
+		{"3", "13274944", "Jane", "Doe", "2"},
 	}
 
 	assert.ElementsMatch(t, expectedRecords, records)

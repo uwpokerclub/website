@@ -203,12 +203,12 @@ func TestListMembers(t *testing.T) {
 
 			require.Equal(t, tc.expectedStatus, w.Code, "Response: %s", w.Body.String())
 
-			var users []models.User
-			err = json.Unmarshal(w.Body.Bytes(), &users)
+			var resp models.ListResponse[models.User]
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 
 			if tc.expectEmpty {
-				require.Empty(t, users)
+				require.Empty(t, resp.Data)
 			}
 		})
 	}
@@ -521,4 +521,41 @@ func TestDeleteMember(t *testing.T) {
 			}
 		})
 	}
+
+	// Test cascade deletion: deleting a user with memberships should succeed
+	// and cascade delete the associated memberships
+	t.Run("successful deletion with cascade", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		require.NoError(t, testutils.SeedAll(db))
+
+		sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+		require.NoError(t, err)
+
+		// TEST_USERS[0] (John Doe) has a membership in TEST_MEMBERSHIPS[0]
+		userWithMembership := testutils.TEST_USERS[0]
+		membershipID := testutils.TEST_MEMBERSHIPS[0].ID
+
+		// Verify membership exists before deletion
+		var membershipBefore models.Membership
+		require.NoError(t, db.First(&membershipBefore, "id = ?", membershipID).Error)
+
+		// Delete the user
+		req, err := testutils.MakeJSONRequest("DELETE", fmt.Sprintf("/api/v2/members/%d", userWithMembership.ID), nil)
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, sessionID)
+
+		w := httptest.NewRecorder()
+		apiServer.ServeHTTP(w, req)
+		require.Equal(t, http.StatusNoContent, w.Code)
+
+		// Verify user is deleted
+		var userCheck models.User
+		err = db.First(&userCheck, userWithMembership.ID).Error
+		require.Error(t, err)
+
+		// Verify membership was cascade deleted
+		var membershipAfter models.Membership
+		err = db.First(&membershipAfter, "id = ?", membershipID).Error
+		require.Error(t, err, "membership should have been cascade deleted")
+	})
 }

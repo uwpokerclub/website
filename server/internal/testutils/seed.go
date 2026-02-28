@@ -57,6 +57,7 @@ func CreateTestSession(db *gorm.DB, username string, role string) (uuid.UUID, er
 		StartedAt: time.Now(),
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 		Username:  username,
+		Role:      role,
 	}
 	if err := db.Create(&session).Error; err != nil {
 		return uuid.Nil, err

@@ -26,17 +26,17 @@ func NewEventsController(db *gorm.DB) Controller {
 
 func (s *eventsController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/events", middleware.UseAuthentication(s.db))
-	group.POST("", middleware.UseAuthorization(s.db, "event.create"), s.createEvent)
-	group.GET("", middleware.UseAuthorization(s.db, "event.list"), s.listEvents)
-	group.GET(":eventId", middleware.UseAuthorization(s.db, "event.get"), s.getEvent)
-	group.PATCH(":eventId", middleware.UseAuthorization(s.db, "event.edit"), s.updateEvent)
-	group.POST(":eventId/end", middleware.UseAuthorization(s.db, "event.end"), s.endEvent)
+	group.POST("", middleware.UseAuthorization("event.create"), s.createEvent)
+	group.GET("", middleware.UseAuthorization("event.list"), s.listEvents)
+	group.GET(":eventId", middleware.UseAuthorization("event.get"), s.getEvent)
+	group.PATCH(":eventId", middleware.UseAuthorization("event.edit"), s.updateEvent)
+	group.POST(":eventId/end", middleware.UseAuthorization("event.end"), s.endEvent)
 	group.POST(
 		":eventId/restart",
-		middleware.UseAuthorization(s.db, "event.restart"),
+		middleware.UseAuthorization("event.restart"),
 		s.restartEvent,
 	)
-	group.POST(":eventId/rebuy", middleware.UseAuthorization(s.db, "event.rebuy"), s.rebuyEvent)
+	group.POST(":eventId/rebuy", middleware.UseAuthorization("event.rebuy"), s.rebuyEvent)
 }
 
 // createEvent handles the creation of a new event.
@@ -71,8 +71,7 @@ func (s *eventsController) createEvent(ctx *gin.Context) {
 
 	// Retrieve the request body and bind it to CreateEventRequest
 	var req models.CreateEventRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -119,9 +118,15 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 		return
 	}
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	// Initialize the event service and list events for the semester
 	svc := services.NewEventService(s.db)
-	events, err := svc.ListEventsV2(semesterID)
+	events, total, err := svc.ListEventsV2(semesterID, &pagination)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -130,7 +135,10 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, events)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Event]{
+		Data:  events,
+		Total: total,
+	})
 }
 
 // getEvent handles the retrieval of a specific event by its ID.
@@ -242,11 +250,7 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 
 	// Parse request body once into a map for partial update handling
 	requestValues := make(map[string]any)
-	if err := ctx.ShouldBindJSON(&requestValues); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(fmt.Sprintf("Error parsing request body: %s", err.Error())),
-		)
+	if !BindJSON(ctx, &requestValues) {
 		return
 	}
 

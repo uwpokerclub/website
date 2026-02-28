@@ -5,6 +5,7 @@ import (
 	"api/internal/models"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -202,25 +203,48 @@ func (es *eventService) EndEvent(eventId int32) error {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Calculate points for each entry in the event and update placements
-	rankingService := NewRankingService(tx)
+	// Calculate points and placements for each entry
 	eventSize := len(entries)
+	rankingUpdates := make(map[uuid.UUID]int, eventSize)
+	caseExprs := make([]string, 0, eventSize)
+	args := make([]interface{}, 0, eventSize*3)
+
+	argIdx := 1
 	for i, entry := range entries {
-		points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
+		placement := i + 1
+		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = $%d THEN $%d::integer", argIdx, argIdx+1))
+		args = append(args, entry.ID, placement)
+		argIdx += 2
 
-		err := rankingService.UpdateRanking(entry.MembershipID, points)
-		if err != nil {
-			tx.Rollback()
-			return err
+		if entry.MembershipID != nil {
+			points := CalculatePoints(eventSize, placement, event.PointsMultiplier)
+			rankingUpdates[*entry.MembershipID] = points
 		}
+	}
 
-		entry.Placement = uint16(i + 1)
-
-		tx.Save(&entry)
-		if err := tx.Error; err != nil {
+	// Batch update placements in a single SQL statement
+	if len(caseExprs) > 0 {
+		inPlaceholders := make([]string, eventSize)
+		for i, entry := range entries {
+			inPlaceholders[i] = fmt.Sprintf("$%d", argIdx+i)
+			args = append(args, entry.ID)
+		}
+		query := fmt.Sprintf(
+			"UPDATE participants SET placement = CASE %s END WHERE id IN (%s)",
+			strings.Join(caseExprs, " "),
+			strings.Join(inPlaceholders, ", "),
+		)
+		if err := tx.Exec(query, args...).Error; err != nil {
 			tx.Rollback()
 			return e.InternalServerError(err.Error())
 		}
+	}
+
+	// Batch update rankings in a single UPSERT
+	rankingService := NewRankingService(tx)
+	if err := rankingService.BatchUpdateRankings(rankingUpdates); err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	// Save all changes to the database
@@ -267,31 +291,29 @@ func (es *eventService) UndoEndEvent(eventId int32) error {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Retrieve list of entries for the event
+	// Retrieve list of entries for the event using stored placements
 	entries := []models.Participant{}
-	res = tx.Where("event_id = ?", eventId).Order("signed_out_at DESC").Find(&entries)
+	res = tx.Where("event_id = ?", eventId).Find(&entries)
 	if err := res.Error; err != nil {
 		tx.Rollback()
 		return e.InternalServerError(err.Error())
 	}
 
-	// Calculate points for each entry in the event and update placements
-	rankingService := NewRankingService(tx)
+	// Reverse rankings using stored placements from EndEvent
 	eventSize := len(entries)
-	for i, entry := range entries {
-		points := CalculatePoints(eventSize, i+1, event.PointsMultiplier)
-
-		err := rankingService.UpdateRanking(entry.MembershipID, -points)
-		if err != nil {
-			tx.Rollback()
-			return err
+	rankingUpdates := make(map[uuid.UUID]int, eventSize)
+	for _, entry := range entries {
+		if entry.MembershipID != nil && entry.Placement > 0 {
+			points := CalculatePoints(eventSize, int(entry.Placement), event.PointsMultiplier)
+			rankingUpdates[*entry.MembershipID] = -points
 		}
+	}
 
-		tx.Save(&entry)
-		if err := tx.Error; err != nil {
-			tx.Rollback()
-			return e.InternalServerError(err.Error())
-		}
+	// Batch reverse rankings in a single UPSERT
+	rankingService := NewRankingService(tx)
+	if err := rankingService.BatchUpdateRankings(rankingUpdates); err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	// Save all changes to the database
@@ -378,19 +400,25 @@ func (svc *eventService) CreateEventV2(
 	return &event, nil
 }
 
-func (svc *eventService) ListEventsV2(semesterID uuid.UUID) ([]models.Event, error) {
-	events := make([]models.Event, 0)
-
-	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
-		Where("semester_id = ?", semesterID).
-		Order("start_date DESC").
-		Find(&events).
-		Error
-	if err != nil {
-		return nil, fmt.Errorf("failed to list events: %w", err)
+func (svc *eventService) ListEventsV2(semesterID uuid.UUID, pagination *models.Pagination) ([]models.Event, int64, error) {
+	// Count total before pagination
+	var total int64
+	if err := svc.db.Model(&models.Event{}).Where("semester_id = ?", semesterID).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count events: %w", err)
 	}
 
-	return events, nil
+	events := make([]models.Event, 0)
+
+	query := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
+		Where("semester_id = ?", semesterID).
+		Order("start_date DESC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&events).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to list events: %w", err)
+	}
+
+	return events, total, nil
 }
 
 func (svc *eventService) GetEventByID(semesterID uuid.UUID, eventID int32) (*models.Event, error) {

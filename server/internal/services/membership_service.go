@@ -102,16 +102,6 @@ func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gor
 		query = query.Where("memberships.user_id = ?", *filter.UserID)
 	}
 
-	// If a limit is present in the filter, apply this to the query
-	if filter.Limit != nil {
-		query = query.Limit(*filter.Limit)
-	}
-
-	// If an offset is present in the filter, apply this to the query
-	if filter.Offset != nil {
-		query = query.Offset(*filter.Offset)
-	}
-
 	return query
 }
 
@@ -142,6 +132,7 @@ func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilte
 		Order("users.last_name ASC")
 
 	res = addFilterClauses(res, filter)
+	res = filter.Pagination.Apply(res)
 
 	// Fetch the results and return an error if one occured
 	res = res.Scan(&ret)
@@ -442,52 +433,54 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 	return &existingMembership, nil
 }
 
-// ListMembershipsV2 lists all memberships with embedded User and computed attendance count
-func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, error) {
-	var memberships []models.Membership
-
-	// Query memberships with User joined
-	query := ms.db.Joins("User").
-		Where("memberships.semester_id = ?", filter.SemesterID).
-		Order("\"User\".first_name ASC").
-		Order("\"User\".last_name ASC")
-
-	query = addFilterClauses(query, filter)
-
-	if err := query.Find(&memberships).Error; err != nil {
-		return nil, err
+func (ms *membershipService) DeleteMembershipV2(id uuid.UUID, semesterID uuid.UUID) (bool, error) {
+	result := ms.db.Where("id = ? AND semester_id = ?", id, semesterID).Delete(&models.Membership{})
+	if result.Error != nil {
+		return false, result.Error
 	}
 
-	// Build attendance map from subquery
-	attendanceQuery := ms.db.
+	if result.RowsAffected == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// ListMembershipsV2 lists all memberships with embedded User and computed attendance count
+func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
+	// Count query: separate, no JOIN overhead
+	countQuery := ms.db.Where("memberships.semester_id = ?", filter.SemesterID)
+	countQuery = addFilterClauses(countQuery, filter)
+
+	var total int64
+	if err := countQuery.Model(&models.Membership{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Attendance subquery
+	attendanceSubquery := ms.db.
 		Select("participants.membership_id, COUNT(*) as total").
 		Table("participants").
 		Joins("INNER JOIN events ON participants.event_id = events.id").
 		Where("events.semester_id = ?", filter.SemesterID).
 		Group("participants.membership_id")
 
-	type attendanceResult struct {
-		MembershipID uuid.UUID
-		Total        int
-	}
-	var attendanceResults []attendanceResult
-	if err := attendanceQuery.Scan(&attendanceResults).Error; err != nil {
-		return nil, err
+	// Data query: single query with LEFT JOIN for attendance
+	var results []models.MembershipWithAttendance
+	query := ms.db.
+		Select("memberships.*, COALESCE(att.total, 0) as attendance").
+		Joins("User").
+		Joins("LEFT JOIN (?) as att ON att.membership_id = memberships.id", attendanceSubquery).
+		Where("memberships.semester_id = ?", filter.SemesterID).
+		Order("\"User\".first_name ASC").
+		Order("\"User\".last_name ASC")
+
+	query = addFilterClauses(query, filter)
+	query = filter.Pagination.Apply(query)
+
+	if err := query.Find(&results).Error; err != nil {
+		return nil, 0, err
 	}
 
-	attendanceMap := make(map[uuid.UUID]int)
-	for _, ar := range attendanceResults {
-		attendanceMap[ar.MembershipID] = ar.Total
-	}
-
-	// Build response with attendance
-	result := make([]models.MembershipWithAttendance, len(memberships))
-	for i, m := range memberships {
-		result[i] = models.MembershipWithAttendance{
-			Membership: m,
-			Attendance: attendanceMap[m.ID],
-		}
-	}
-
-	return result, nil
+	return results, total, nil
 }

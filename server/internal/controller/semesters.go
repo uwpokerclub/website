@@ -23,9 +23,9 @@ func NewSemestersController(db *gorm.DB) Controller {
 
 func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters", middleware.UseAuthentication(s.db))
-	group.POST("", middleware.UseAuthorization(s.db, "semester.create"), s.createSemester)
-	group.GET("", middleware.UseAuthorization(s.db, "semester.list"), s.listSemesters)
-	group.GET(":semesterId", middleware.UseAuthorization(s.db, "semester.get"), s.getSemester)
+	group.POST("", middleware.UseAuthorization("semester.create"), s.createSemester)
+	group.GET("", middleware.UseAuthorization("semester.list"), s.listSemesters)
+	group.GET(":semesterId", middleware.UseAuthorization("semester.get"), s.getSemester)
 }
 
 // createSemester handles the creation of a new semester.
@@ -46,8 +46,7 @@ func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
 func (s *semestersController) createSemester(ctx *gin.Context) {
 	// Retrieve the request body and bind it to CreateSemesterRequest
 	var req models.CreateSemesterRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -79,8 +78,14 @@ func (s *semestersController) createSemester(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters [get]
 func (s *semestersController) listSemesters(ctx *gin.Context) {
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewSemesterService(s.db)
-	semesters, err := svc.ListSemesters()
+	semesters, total, err := svc.ListSemestersV2(&pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -90,7 +95,10 @@ func (s *semestersController) listSemesters(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, semesters)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Semester]{
+		Data:  semesters,
+		Total: total,
+	})
 }
 
 // getSemester handles retrieving a specific semester by ID.

@@ -3,4 +3,5 @@ export type Ranking = {
   firstName: string;
   lastName: string;
   points: number;
+  position: number;
 };

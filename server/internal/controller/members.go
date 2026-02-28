@@ -24,11 +24,11 @@ func NewMembersController(db *gorm.DB) Controller {
 
 func (c *membersController) LoadRoutes(router *gin.RouterGroup) {
 	members := router.Group("members", middleware.UseAuthentication(c.db))
-	members.POST("", middleware.UseAuthorization(c.db, "user.create"), c.createMember)
-	members.GET("", middleware.UseAuthorization(c.db, "user.list"), c.listMembers)
-	members.GET("/:id", middleware.UseAuthorization(c.db, "user.get"), c.getMember)
-	members.PATCH("/:id", middleware.UseAuthorization(c.db, "user.edit"), c.updateMember)
-	members.DELETE("/:id", middleware.UseAuthorization(c.db, "user.delete"), c.deleteMember)
+	members.POST("", middleware.UseAuthorization("user.create"), c.createMember)
+	members.GET("", middleware.UseAuthorization("user.list"), c.listMembers)
+	members.GET("/:id", middleware.UseAuthorization("user.get"), c.getMember)
+	members.PATCH("/:id", middleware.UseAuthorization("user.edit"), c.updateMember)
+	members.DELETE("/:id", middleware.UseAuthorization("user.delete"), c.deleteMember)
 }
 
 func validateMemberID(ctx *gin.Context) (uint64, error) {
@@ -63,8 +63,7 @@ func validateMemberID(ctx *gin.Context) (uint64, error) {
 // @Router /members [post]
 func (c *membersController) createMember(ctx *gin.Context) {
 	var req models.CreateUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -135,8 +134,14 @@ func (c *membersController) parseListMembersQueryParams(ctx *gin.Context) *model
 func (c *membersController) listMembers(ctx *gin.Context) {
 	filter := c.parseListMembersQueryParams(ctx)
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewUserService(c.db)
-	members, err := svc.ListUsers(filter)
+	members, total, err := svc.ListUsersV2(filter, &pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -150,7 +155,10 @@ func (c *membersController) listMembers(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, members)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.User]{
+		Data:  members,
+		Total: total,
+	})
 }
 
 // getMember handles retrieving a Member by ID
@@ -217,8 +225,7 @@ func (c *membersController) updateMember(ctx *gin.Context) {
 	}
 
 	var req models.UpdateUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 

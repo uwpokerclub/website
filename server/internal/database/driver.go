@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"ariga.io/atlas-go-sdk/atlasexec"
-	"github.com/pressly/goose/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -54,35 +53,23 @@ func OpenConnection(runMigrations bool) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to ping the database: %s", err.Error())
 	}
 
-	// Run SQL migrations
+	// Run Atlas migrations
 	if runMigrations {
-		err = goose.Up(sqlDB, "migrations")
-		if err != nil {
-			return nil, fmt.Errorf("failed to run migrations: %s", err.Error())
-		}
-
-		// Run Atlas migrations
 		workingDir := "."
-		// Create Atlas client
 		client, err := atlasexec.NewClient(workingDir, "atlas")
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize atlas client: %s", err.Error())
 		}
 
-		// Apply pending migrations
-		// BaselineVersion skips migrations up to and including this version
-		// since goose already created the base schema
 		_, err = client.MigrateApply(context.Background(), &atlasexec.MigrateApplyParams{
-			Env:             "gorm",
-			ConfigURL:       "file://atlas/atlas.hcl",
-			URL:             connectionUrl,
-			DirURL:          "file://atlas/migrations",
-			BaselineVersion: "20250726011345",
+			Env:       "gorm",
+			ConfigURL: "file://atlas/atlas.hcl",
+			URL:       connectionUrl,
+			DirURL:    "file://atlas/migrations",
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply atlas migrations: %s", err.Error())
 		}
-
 	}
 
 	return db, nil

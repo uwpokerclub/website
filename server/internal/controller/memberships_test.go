@@ -197,6 +197,7 @@ func TestListMemberships(t *testing.T) {
 		expectedStatus int
 		expectError    bool
 		minResults     int
+		expectedTotal  int64
 	}{
 		{
 			name:           "list all memberships for semester",
@@ -206,6 +207,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     3, // We have 3 test memberships for semester 0
+			expectedTotal:  3,
 		},
 		{
 			name:           "list memberships with limit",
@@ -215,6 +217,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     2,
+			expectedTotal:  3,
 		},
 		{
 			name:           "list memberships with offset",
@@ -224,6 +227,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     2,
+			expectedTotal:  3,
 		},
 		{
 			name:           "list memberships with limit and offset",
@@ -233,6 +237,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     1,
+			expectedTotal:  3,
 		},
 		{
 			name:           "semester with no memberships",
@@ -242,6 +247,7 @@ func TestListMemberships(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			minResults:     0,
+			expectedTotal:  0,
 		},
 		{
 			name:           "invalid semester ID",
@@ -286,10 +292,11 @@ func TestListMemberships(t *testing.T) {
 				err = json.Unmarshal(w.Body.Bytes(), &errResp)
 				require.NoError(t, err)
 			} else {
-				var memberships []models.ListMembershipsResult
-				err = json.Unmarshal(w.Body.Bytes(), &memberships)
+				var resp models.ListResponse[models.MembershipWithAttendance]
+				err = json.Unmarshal(w.Body.Bytes(), &resp)
 				require.NoError(t, err)
-				require.GreaterOrEqual(t, len(memberships), tc.minResults)
+				require.GreaterOrEqual(t, len(resp.Data), tc.minResults)
+				require.Equal(t, tc.expectedTotal, resp.Total)
 			}
 		})
 	}
@@ -712,6 +719,99 @@ func TestUpdateMembershipBudgetUpdates(t *testing.T) {
 			expectedBudget := initialBudget + tc.expectedBudgetChange
 			require.InDelta(t, expectedBudget, semester.CurrentBudget, 0.01,
 				"Budget should be %f but got %f", expectedBudget, semester.CurrentBudget)
+		})
+	}
+}
+
+func TestDeleteMembership(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	// Test unauthorized/forbidden access
+	unauthorizedRoles := []string{authorization.ROLE_BOT.ToString(), authorization.ROLE_EXECUTIVE.ToString()}
+	testSemesterID := testutils.TEST_SEMESTERS[0].ID.String()
+	testMembershipID := testutils.TEST_MEMBERSHIPS[0].ID.String()
+	testutils.TestInvalidAuthForEndpoint(
+		t,
+		container,
+		apiServer,
+		"DELETE",
+		fmt.Sprintf("/api/v2/semesters/%s/memberships/%s", testSemesterID, testMembershipID),
+		unauthorizedRoles,
+	)
+
+	testCases := []struct {
+		name           string
+		userRole       string
+		semesterID     string
+		membershipID   string
+		expectedStatus int
+	}{
+		{
+			name:           "successful deletion",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "membership not found - wrong semester",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[1].ID.String(),
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "membership not found - non-existent ID",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   "00000000-0000-0000-0000-000000000000",
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "invalid membership ID format",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   "invalid-uuid",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid semester ID format",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     "invalid-uuid",
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, container.ResetDatabase(ctx))
+			require.NoError(t, testutils.SeedAll(db))
+
+			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
+			require.NoError(t, err)
+
+			req, err := testutils.MakeJSONRequest(
+				"DELETE",
+				fmt.Sprintf("/api/v2/semesters/%s/memberships/%s", tc.semesterID, tc.membershipID),
+				nil,
+			)
+			require.NoError(t, err)
+
+			testutils.SetAuthCookie(req, sessionID)
+
+			w := httptest.NewRecorder()
+			apiServer.ServeHTTP(w, req)
+
+			require.Equal(t, tc.expectedStatus, w.Code, "Response: %s", w.Body.String())
 		})
 	}
 }

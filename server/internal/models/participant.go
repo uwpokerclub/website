@@ -8,10 +8,10 @@ import (
 )
 
 type Participant struct {
-	ID           int32       `json:"id" gorm:"type:integer;unique;autoIncrement"`
-	MembershipID uuid.UUID   `json:"membershipId" gorm:"type:uuid;primaryKey"`
-	Membership   *Membership `json:"membership,omitempty"`
-	EventID      int32       `json:"eventId" gorm:"type:integer;primaryKey;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	ID           int32       `json:"id" gorm:"type:integer;primaryKey;autoIncrement"`
+	MembershipID *uuid.UUID  `json:"membershipId" gorm:"type:uuid;uniqueIndex:idx_membership_event"`
+	Membership   *Membership `json:"membership,omitempty" gorm:"constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
+	EventID      int32       `json:"eventId" gorm:"type:integer;not null;uniqueIndex:idx_membership_event"`
 	Placement    uint16      `json:"placement"`
 	SignedOutAt  *time.Time  `json:"signedOutAt"`
 } //@name Participant
@@ -21,9 +21,11 @@ func (Participant) TableName() string {
 }
 
 func (Participant) Preload(tx *gorm.DB) *gorm.DB {
-	return tx.Joins("Membership", func(db *gorm.DB) *gorm.DB {
-		return Membership{}.Preload(db)
-	})
+	return tx.
+		Preload("Membership").
+		Preload("Membership.User").
+		Preload("Membership.Semester").
+		Preload("Membership.Ranking")
 }
 
 type CreateParticipantRequest struct {

@@ -3,6 +3,7 @@ package controller
 import (
 	apierrors "api/internal/errors"
 	"api/internal/middleware"
+	"api/internal/models"
 	"api/internal/services"
 	"errors"
 	"log"
@@ -26,9 +27,9 @@ func NewRankingsController(db *gorm.DB) Controller {
 
 func (c *rankingsController) LoadRoutes(router *gin.RouterGroup) {
 	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.db))
-	rankings.GET("", middleware.UseAuthorization(c.db, "semester.rankings.list"), c.listRankings)
-	rankings.GET("export", middleware.UseAuthorization(c.db, "semester.rankings.export"), c.exportRankings)
-	rankings.GET(":membershipId", middleware.UseAuthorization(c.db, "semester.rankings.get"), c.getRanking)
+	rankings.GET("", middleware.UseAuthorization("semester.rankings.list"), c.listRankings)
+	rankings.GET("export", middleware.UseAuthorization("semester.rankings.export"), c.exportRankings)
+	rankings.GET(":membershipId", middleware.UseAuthorization("semester.rankings.get"), c.getRanking)
 }
 
 func validateUUIDParam(ctx *gin.Context, paramName string) (uuid.UUID, error) {
@@ -63,8 +64,14 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 		return
 	}
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewSemesterService(c.db)
-	rankings, err := svc.GetRankings(semesterID)
+	rankings, total, err := svc.GetRankingsV2(semesterID, &pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -75,7 +82,10 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, rankings)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.RankingResponse]{
+		Data:  rankings,
+		Total: total,
+	})
 }
 
 // getRanking handles retrieving the ranking for a specific membership in a semester

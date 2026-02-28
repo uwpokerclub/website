@@ -24,11 +24,11 @@ func NewStructuresController(db *gorm.DB) Controller {
 
 func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("structures", middleware.UseAuthentication(s.db))
-	group.GET("", middleware.UseAuthorization(s.db, "structure.list"), s.listStructures)
-	group.POST("", middleware.UseAuthorization(s.db, "structure.create"), s.createStructure)
-	group.GET(":id", middleware.UseAuthorization(s.db, "structure.get"), s.getStructure)
-	group.PATCH(":id", middleware.UseAuthorization(s.db, "structure.edit"), s.updateStructure)
-	group.DELETE(":id", middleware.UseAuthorization(s.db, "structure.delete"), s.deleteStructure)
+	group.GET("", middleware.UseAuthorization("structure.list"), s.listStructures)
+	group.POST("", middleware.UseAuthorization("structure.create"), s.createStructure)
+	group.GET(":id", middleware.UseAuthorization("structure.get"), s.getStructure)
+	group.PATCH(":id", middleware.UseAuthorization("structure.edit"), s.updateStructure)
+	group.DELETE(":id", middleware.UseAuthorization("structure.delete"), s.deleteStructure)
 }
 
 // listStructures handles the retrieval of all structures.
@@ -45,8 +45,14 @@ func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
 // @Failure 500 {object} ErrorResponse
 // @Router /structures [get]
 func (s *structuresController) listStructures(ctx *gin.Context) {
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	svc := services.NewStructureService(s.db)
-	structures, err := svc.ListStructures()
+	structures, total, err := svc.ListStructuresV2(&pagination)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -55,7 +61,10 @@ func (s *structuresController) listStructures(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, structures)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Structure]{
+		Data:  structures,
+		Total: total,
+	})
 }
 
 // createStructure handles the creation of a new structure.
@@ -75,8 +84,7 @@ func (s *structuresController) listStructures(ctx *gin.Context) {
 // @Router /structures [post]
 func (s *structuresController) createStructure(ctx *gin.Context) {
 	var req models.CreateStructureRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -158,13 +166,7 @@ func (s *structuresController) updateStructure(ctx *gin.Context) {
 	}
 
 	requestValues := make(map[string]any)
-	if err := ctx.ShouldBindBodyWithJSON(&requestValues); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Error parsing request body: %s", err.Error()),
-			),
-		)
+	if !BindJSON(ctx, &requestValues) {
 		return
 	}
 

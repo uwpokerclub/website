@@ -46,6 +46,7 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		}
 
 		ctx.Set("username", session.Username)
+		ctx.Set("role", session.Role)
 
 		ctx.Next()
 	}

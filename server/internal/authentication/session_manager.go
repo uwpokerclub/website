@@ -20,14 +20,14 @@ func NewSessionManager(db *gorm.DB) *sessionManager {
 	}
 }
 
-func (svc *sessionManager) Create(username string) (uuid.UUID, error) {
+func (svc *sessionManager) Create(username string, role string) (uuid.UUID, error) {
 	// Get the current time
 	now := time.Now().UTC()
 	// Set the expiry time to 8 hours in the future
 	expiry := now.Add(time.Hour * 8).UTC()
 
 	// Create the session in the database
-	session := models.Session{StartedAt: time.Now(), ExpiresAt: expiry, Username: username}
+	session := models.Session{StartedAt: now, ExpiresAt: expiry, Username: username, Role: role}
 	res := svc.db.Create(&session)
 
 	if err := res.Error; err != nil {

@@ -8,12 +8,12 @@ import (
 type Membership struct {
 	ID         uuid.UUID `json:"id"         gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	UserID     uint64    `json:"userId"     gorm:"uniqueIndex:user_semester_unique"`
-	User       *User     `json:"user"`
-	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique"`
+	User       *User     `json:"user" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique;index:idx_memberships_semester_id"`
 	Semester   *Semester `json:"semester"`
 	Paid       bool      `json:"paid"       gorm:"not null;default:false"`
 	Discounted bool      `json:"discounted" gorm:"not null;default:false"`
-	Ranking    *Ranking  `json:"ranking"`
+	Ranking    *Ranking  `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 } //@name Membership
 
 func (Membership) TableName() string {
@@ -51,13 +51,7 @@ type ListMembershipsResult struct {
 // list memberships query. The zero value for ListMembershipsFilter is the same as
 // not filtering the result.
 type ListMembershipsFilter struct {
-	// Limit is the the upper bound of results that will be returned by the query.
-	// If this value is nil then no limit will be put on the query.
-	Limit *int
-
-	// Offset is the number of results to offset the query result by.
-	// If this value is nil then no offset will be put on the query.
-	Offset *int
+	Pagination
 
 	// SemesterID is the ID of the semester that you want to only list members from.
 	// If this value is nil, then the query will return results from all semesters.

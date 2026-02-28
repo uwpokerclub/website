@@ -366,8 +366,8 @@ func TestEventsService(s *testing.T) {
 			assert.NoError(t, err, "EventService.EndEvent()")
 
 			// Check that entry3's signed_out_at field is set to the start time of the event
-			foundEntry := models.Participant{MembershipID: entry3.MembershipID}
-			res := db.First(&foundEntry)
+			var foundEntry models.Participant
+			res := db.Where("membership_id = ? AND event_id = ?", entry3.MembershipID, entry3.EventID).First(&foundEntry)
 			assert.NoError(t, res.Error, "Getting third entry from DB")
 			assert.WithinDuration(t, event.StartDate, *foundEntry.SignedOutAt, time.Second, "Signout time check")
 		})
@@ -420,22 +420,22 @@ func TestEventsService(s *testing.T) {
 			res = db.Where("event_id = ? AND placement = ?", entry3.EventID, 3).First(&thirdPlace)
 			assert.NoError(t, res.Error, "Retrieve third place entry")
 
-			assert.Equal(t, entry3.MembershipID, firstPlace.MembershipID, "First place member")
-			assert.Equal(t, entry2.MembershipID, secondPlace.MembershipID, "Second place member")
-			assert.Equal(t, entry1.MembershipID, thirdPlace.MembershipID, "Third place member")
+			assert.Equal(t, *entry3.MembershipID, *firstPlace.MembershipID, "First place member")
+			assert.Equal(t, *entry2.MembershipID, *secondPlace.MembershipID, "Second place member")
+			assert.Equal(t, *entry1.MembershipID, *thirdPlace.MembershipID, "Third place member")
 
 			// Check to see rankings were updated
 			// First place = 2 points
 			// Second place = 2 points
 			// Third place = 2 points
-			ranking1 := models.Ranking{MembershipID: entry3.MembershipID}
-			res = db.First(&ranking1)
+			var ranking1 models.Ranking
+			res = db.Where("membership_id = ?", *entry3.MembershipID).First(&ranking1)
 			assert.NoError(t, res.Error, "Entry 3 ranking")
-			ranking2 := models.Ranking{MembershipID: entry2.MembershipID}
-			res = db.First(&ranking2)
+			var ranking2 models.Ranking
+			res = db.Where("membership_id = ?", *entry2.MembershipID).First(&ranking2)
 			assert.NoError(t, res.Error, "Entry 2 ranking")
-			ranking3 := models.Ranking{MembershipID: entry1.MembershipID}
-			res = db.First(&ranking3)
+			var ranking3 models.Ranking
+			res = db.Where("membership_id = ?", *entry1.MembershipID).First(&ranking3)
 			assert.NoError(t, res.Error, "Entry 1 ranking")
 
 			assert.EqualValues(t, 2, ranking1.Points, "Ranking 1 points")
@@ -517,8 +517,8 @@ func TestEventsService(s *testing.T) {
 		assert.NoError(t, err, "EventService.EndEvent()")
 
 		//check points is > 0
-		points1 := models.Ranking{MembershipID: entry1.MembershipID}
-		res := db.First(&points1)
+		var points1 models.Ranking
+		res := db.Where("membership_id = ?", *entry1.MembershipID).First(&points1)
 		assert.NoError(t, res.Error, "Retrieve points from rankings")
 		assert.Greater(t, points1.Points, int32(0), "Entry 1 points")
 
@@ -526,10 +526,161 @@ func TestEventsService(s *testing.T) {
 		err = eventService.UndoEndEvent(event.ID)
 		assert.NoError(t, err, "EventService.UndoEndEvent()")
 
-		points1 = models.Ranking{MembershipID: entry1.MembershipID}
-		res = db.First(&points1)
+		points1 = models.Ranking{}
+		res = db.Where("membership_id = ?", *entry1.MembershipID).First(&points1)
 		assert.NoError(t, res.Error, "Retrieve rankings after restarting event")
 
 		assert.EqualValues(t, 0, points1.Points, "Entry 1 points")
+	})
+
+	s.Run("EndEvent batch correctness with 10 participants", func(t *testing.T) {
+		t.Cleanup(wipeDB)
+
+		set, err := testhelpers.SetupSemester(db, "Fall 2024")
+		if !assert.NoError(t, err, "Semester setup") {
+			t.FailNow()
+		}
+
+		// Create 7 additional users and memberships (SetupSemester gives us 3)
+		extraUsers := []struct {
+			id        uint64
+			firstName string
+			lastName  string
+		}{
+			{40000001, "Player", "Four"},
+			{40000002, "Player", "Five"},
+			{40000003, "Player", "Six"},
+			{40000004, "Player", "Seven"},
+			{40000005, "Player", "Eight"},
+			{40000006, "Player", "Nine"},
+			{40000007, "Player", "Ten"},
+		}
+
+		allMemberships := make([]models.Membership, 0, 10)
+		allMemberships = append(allMemberships, set.Memberships...)
+
+		for _, u := range extraUsers {
+			user, err := testhelpers.CreateUser(db, u.id, u.firstName, u.lastName, u.firstName+"@test.com", "Math", u.lastName)
+			if !assert.NoError(t, err, "Create user %s", u.firstName) {
+				t.FailNow()
+			}
+			m, err := testhelpers.CreateMembership(db, user.ID, set.Semester.ID, true, false)
+			if !assert.NoError(t, err, "Create membership for %s", u.firstName) {
+				t.FailNow()
+			}
+			allMemberships = append(allMemberships, *m)
+		}
+
+		event, err := testhelpers.CreateEvent(db, "Batch Event", set.Semester.ID, time.Now().UTC())
+		if !assert.NoError(t, err, "Event creation") {
+			t.FailNow()
+		}
+
+		// Sign out participants at staggered times (first signed out = last place)
+		baseTime := time.Now().UTC()
+		entries := make([]*models.Participant, 10)
+		for i := 0; i < 10; i++ {
+			signOutTime := baseTime.Add(time.Duration(i) * time.Minute)
+			entry, err := testhelpers.CreateParticipant(db, allMemberships[i].ID, event.ID, 0, &signOutTime)
+			if !assert.NoError(t, err, "Create participant %d", i+1) {
+				t.FailNow()
+			}
+			entries[i] = entry
+		}
+
+		err = eventService.EndEvent(event.ID)
+		if !assert.NoError(t, err, "EventService.EndEvent()") {
+			t.FailNow()
+		}
+
+		// Verify placements: sorted by signed_out_at DESC, so last sign-out = 1st place
+		for i := 0; i < 10; i++ {
+			expectedPlacement := 10 - i // entries[9] = 1st, entries[0] = 10th
+			var p models.Participant
+			res := db.Where("id = ?", entries[i].ID).First(&p)
+			assert.NoError(t, res.Error, "Retrieve participant %d", i)
+			assert.EqualValues(t, expectedPlacement, p.Placement, "Participant %d placement", i)
+		}
+
+		// Verify rankings: each participant should have correct points
+		for i := 0; i < 10; i++ {
+			expectedPlacement := 10 - i
+			expectedPoints := CalculatePoints(10, expectedPlacement, event.PointsMultiplier)
+
+			var ranking models.Ranking
+			res := db.Where("membership_id = ?", allMemberships[i].ID).First(&ranking)
+			assert.NoError(t, res.Error, "Retrieve ranking for participant %d", i)
+			assert.EqualValues(t, expectedPoints, ranking.Points, "Ranking points for participant %d (placement %d)", i, expectedPlacement)
+		}
+
+		// Verify UndoEndEvent zeroes out all rankings
+		err = eventService.UndoEndEvent(event.ID)
+		if !assert.NoError(t, err, "EventService.UndoEndEvent()") {
+			t.FailNow()
+		}
+
+		for i := 0; i < 10; i++ {
+			var ranking models.Ranking
+			res := db.Where("membership_id = ?", allMemberships[i].ID).First(&ranking)
+			assert.NoError(t, res.Error, "Retrieve ranking after undo for participant %d", i)
+			assert.EqualValues(t, 0, ranking.Points, "Ranking points after undo for participant %d", i)
+		}
+	})
+
+	s.Run("UndoEndEvent with nil sign-out participants", func(t *testing.T) {
+		t.Cleanup(wipeDB)
+
+		set, err := testhelpers.SetupSemester(db, "Winter 2025")
+		if !assert.NoError(t, err, "Semester setup") {
+			t.FailNow()
+		}
+
+		event, err := testhelpers.CreateEvent(db, "Nil Signout Event", set.Semester.ID, time.Now().UTC())
+		if !assert.NoError(t, err, "Event creation") {
+			t.FailNow()
+		}
+
+		// First participant signed out normally
+		signOut := time.Now().UTC().Add(time.Minute * 30)
+		_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &signOut)
+		if !assert.NoError(t, err, "Create signed-out participant") {
+			t.FailNow()
+		}
+
+		// Two participants with nil sign-out (will be bulk-signed-out by EndEvent)
+		_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, nil)
+		if !assert.NoError(t, err, "Create nil sign-out participant 1") {
+			t.FailNow()
+		}
+		_, err = testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil)
+		if !assert.NoError(t, err, "Create nil sign-out participant 2") {
+			t.FailNow()
+		}
+
+		err = eventService.EndEvent(event.ID)
+		if !assert.NoError(t, err, "EventService.EndEvent()") {
+			t.FailNow()
+		}
+
+		// Verify all participants have rankings
+		for i := 0; i < 3; i++ {
+			var ranking models.Ranking
+			res := db.Where("membership_id = ?", set.Memberships[i].ID).First(&ranking)
+			assert.NoError(t, res.Error, "Ranking exists for participant %d", i)
+			assert.Greater(t, ranking.Points, int32(0), "Participant %d should have points", i)
+		}
+
+		// Undo and verify all rankings return to zero
+		err = eventService.UndoEndEvent(event.ID)
+		if !assert.NoError(t, err, "EventService.UndoEndEvent()") {
+			t.FailNow()
+		}
+
+		for i := 0; i < 3; i++ {
+			var ranking models.Ranking
+			res := db.Where("membership_id = ?", set.Memberships[i].ID).First(&ranking)
+			assert.NoError(t, res.Error, "Ranking after undo for participant %d", i)
+			assert.EqualValues(t, 0, ranking.Points, "Points should be zero after undo for participant %d", i)
+		}
 	})
 }

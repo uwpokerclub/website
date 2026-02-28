@@ -95,7 +95,7 @@ func CreateMembership(db *gorm.DB, userId uint64, semesterId uuid.UUID, paid boo
 
 func CreateParticipant(db *gorm.DB, membershipId uuid.UUID, eventId int32, placement uint16, signedOutAt *time.Time) (*models.Participant, error) {
 	entry := models.Participant{
-		MembershipID: membershipId,
+		MembershipID: &membershipId,
 		EventID:      eventId,
 		Placement:    placement,
 		SignedOutAt:  signedOutAt,

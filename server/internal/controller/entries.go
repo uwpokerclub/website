@@ -26,11 +26,11 @@ func NewEntriesController(db *gorm.DB) Controller {
 
 func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/events/:eventId/entries", middleware.UseAuthentication(c.db))
-	group.POST("", middleware.UseAuthorization(c.db, "event.participant.create"), c.createEntry)
-	group.GET("", middleware.UseAuthorization(c.db, "event.participant.list"), c.listEntries)
-	group.POST(":entryId/sign-out", middleware.UseAuthorization(c.db, "event.participant.signout"), c.signOutEntry)
-	group.POST(":entryId/sign-in", middleware.UseAuthorization(c.db, "event.participant.signin"), c.signInEntry)
-	group.DELETE(":entryId", middleware.UseAuthorization(c.db, "event.participant.delete"), c.deleteEntry)
+	group.POST("", middleware.UseAuthorization("event.participant.create"), c.createEntry)
+	group.GET("", middleware.UseAuthorization("event.participant.list"), c.listEntries)
+	group.POST(":entryId/sign-out", middleware.UseAuthorization("event.participant.signout"), c.signOutEntry)
+	group.POST(":entryId/sign-in", middleware.UseAuthorization("event.participant.signin"), c.signInEntry)
+	group.DELETE(":entryId", middleware.UseAuthorization("event.participant.delete"), c.deleteEntry)
 }
 
 // validateSemesterID validates and returns the semester UUID from the path parameter.
@@ -92,8 +92,7 @@ func (c *entriesController) createEntry(ctx *gin.Context) {
 
 	// Bind request body - array of UUID strings
 	var membershipIdStrs []string
-	if err := ctx.ShouldBindJSON(&membershipIdStrs); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &membershipIdStrs) {
 		return
 	}
 
@@ -187,9 +186,15 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 		return
 	}
 
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
 	// List participants
 	svc := services.NewParticipantsService(c.db)
-	participants, err := svc.ListParticipantsV2(eventID)
+	participants, total, err := svc.ListParticipantsV2(eventID, &pagination)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -202,7 +207,10 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, participants)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Participant]{
+		Data:  participants,
+		Total: total,
+	})
 }
 
 // signOutEntry handles signing out a participant from an event.

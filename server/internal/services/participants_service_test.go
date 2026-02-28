@@ -96,18 +96,18 @@ func TestParticipantsService_ListParticipants(t *testing.T) {
 		return
 	}
 
-	if res[0].MembershipId != entry3.MembershipID {
-		t.Errorf("ListParticipants() result order incorrect, got[0]: %v, wanted: %v", res[0], entry3.MembershipID)
+	if res[0].MembershipId != *entry3.MembershipID {
+		t.Errorf("ListParticipants() result order incorrect, got[0]: %v, wanted: %v", res[0], *entry3.MembershipID)
 		return
 	}
 
-	if res[1].MembershipId != entry2.MembershipID {
-		t.Errorf("ListParticipants() result order incorrect, got[1]: %v, wanted: %v", res[1], entry2.MembershipID)
+	if res[1].MembershipId != *entry2.MembershipID {
+		t.Errorf("ListParticipants() result order incorrect, got[1]: %v, wanted: %v", res[1], *entry2.MembershipID)
 		return
 	}
 
-	if res[2].MembershipId != entry1.MembershipID {
-		t.Errorf("ListParticipants() result order incorrect, got[2]: %v, wanted: %v", res[2], entry1.MembershipID)
+	if res[2].MembershipId != *entry1.MembershipID {
+		t.Errorf("ListParticipants() result order incorrect, got[2]: %v, wanted: %v", res[2], *entry1.MembershipID)
 		return
 	}
 }
@@ -149,7 +149,7 @@ func TestParticipantsService_ListParticipantsV2(t *testing.T) {
 	}
 
 	svc := NewParticipantsService(db)
-	res, err := svc.ListParticipantsV2(event.ID)
+	res, _, err := svc.ListParticipantsV2(event.ID, &models.Pagination{})
 	if err != nil {
 		t.Errorf("ListParticipantsV2() error = %v", err)
 		return
@@ -162,18 +162,18 @@ func TestParticipantsService_ListParticipantsV2(t *testing.T) {
 	}
 
 	// Verify order: should be sorted by signed_out_at DESC (nulls first)
-	if res[0].MembershipID != entry3.MembershipID {
-		t.Errorf("ListParticipantsV2() result order incorrect, got[0]: %v, wanted: %v", res[0].MembershipID, entry3.MembershipID)
+	if *res[0].MembershipID != *entry3.MembershipID {
+		t.Errorf("ListParticipantsV2() result order incorrect, got[0]: %v, wanted: %v", *res[0].MembershipID, *entry3.MembershipID)
 		return
 	}
 
-	if res[1].MembershipID != entry2.MembershipID {
-		t.Errorf("ListParticipantsV2() result order incorrect, got[1]: %v, wanted: %v", res[1].MembershipID, entry2.MembershipID)
+	if *res[1].MembershipID != *entry2.MembershipID {
+		t.Errorf("ListParticipantsV2() result order incorrect, got[1]: %v, wanted: %v", *res[1].MembershipID, *entry2.MembershipID)
 		return
 	}
 
-	if res[2].MembershipID != entry1.MembershipID {
-		t.Errorf("ListParticipantsV2() result order incorrect, got[2]: %v, wanted: %v", res[2].MembershipID, entry1.MembershipID)
+	if *res[2].MembershipID != *entry1.MembershipID {
+		t.Errorf("ListParticipantsV2() result order incorrect, got[2]: %v, wanted: %v", *res[2].MembershipID, *entry1.MembershipID)
 		return
 	}
 
@@ -185,8 +185,8 @@ func TestParticipantsService_ListParticipantsV2(t *testing.T) {
 		}
 
 		// Verify Membership ID matches
-		if participant.Membership.ID != participant.MembershipID {
-			t.Errorf("ListParticipantsV2() participant[%d] membership ID mismatch: got %v, want %v", i, participant.Membership.ID, participant.MembershipID)
+		if participant.Membership.ID != *participant.MembershipID {
+			t.Errorf("ListParticipantsV2() participant[%d] membership ID mismatch: got %v, want %v", i, participant.Membership.ID, *participant.MembershipID)
 			return
 		}
 
@@ -232,7 +232,7 @@ func TestParticipantsService_UpdateParticipant_SignIn(t *testing.T) {
 	svc := NewParticipantsService(db)
 
 	res, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{
-		MembershipID: entry1.MembershipID,
+		MembershipID: *entry1.MembershipID,
 		EventID:      event.ID,
 		SignIn:       true,
 		SignOut:      false,
@@ -276,7 +276,7 @@ func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
 	svc := NewParticipantsService(db)
 
 	res, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{
-		MembershipID: entry1.MembershipID,
+		MembershipID: *entry1.MembershipID,
 		EventID:      event.ID,
 		SignIn:       false,
 		SignOut:      true,
@@ -320,7 +320,7 @@ func TestParticipantsService_DeleteParticipant(t *testing.T) {
 	svc := NewParticipantsService(db)
 
 	err = svc.DeleteParticipant(&models.DeleteParticipantRequest{
-		MembershipID: entry1.MembershipID,
+		MembershipID: *entry1.MembershipID,
 		EventID:      entry1.EventID,
 	})
 	if err != nil {

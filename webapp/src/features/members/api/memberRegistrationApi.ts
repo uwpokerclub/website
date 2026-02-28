@@ -40,10 +40,13 @@ export async function searchMembers(query: string): Promise<ApiResult<User[]>> {
   const paramType = getSearchParamType(trimmedQuery);
   const searchParam = encodeURIComponent(trimmedQuery);
 
-  const { status, data } = await sendAPIRequest<User[] | APIErrorResponse>(`v2/members?${paramType}=${searchParam}`);
+  const { status, data } = await sendAPIRequest<{ data: User[]; total: number } | APIErrorResponse>(
+    `v2/members?${paramType}=${searchParam}`,
+  );
 
   if (status >= 200 && status < 300) {
-    return { success: true, data: (data as User[]) ?? [] };
+    const listResponse = data as { data: User[]; total: number };
+    return { success: true, data: listResponse?.data ?? [] };
   }
 
   const errorResponse = data as APIErrorResponse | undefined;
@@ -189,6 +192,29 @@ export async function registerNewMemberWithMembership(
 }
 
 /**
+ * Delete an existing member
+ * @param memberId - The member's ID (student ID)
+ * @returns Success or error
+ */
+export async function deleteMember(memberId: string): Promise<ApiResult<void>> {
+  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(`v2/members/${memberId}`, "DELETE");
+
+  if (status === 204) {
+    return { success: true, data: undefined };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Member not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to delete member",
+  };
+}
+
+/**
  * Request type for updating a member
  */
 export interface UpdateMemberRequest {
@@ -273,5 +299,32 @@ export async function updateMembership(
   return {
     success: false,
     error: errorResponse?.message ?? "Failed to update membership",
+  };
+}
+
+/**
+ * Delete an existing membership
+ * @param semesterId - The semester ID
+ * @param membershipId - The membership ID
+ * @returns Success or error
+ */
+export async function deleteMembership(semesterId: string, membershipId: string): Promise<ApiResult<void>> {
+  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(
+    `v2/semesters/${semesterId}/memberships/${membershipId}`,
+    "DELETE",
+  );
+
+  if (status === 204) {
+    return { success: true, data: undefined };
+  }
+
+  if (status === 404) {
+    return { success: false, error: "Membership not found" };
+  }
+
+  const errorResponse = data as APIErrorResponse | undefined;
+  return {
+    success: false,
+    error: errorResponse?.message ?? "Failed to delete membership",
   };
 }

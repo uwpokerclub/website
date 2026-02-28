@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -74,16 +73,31 @@ func (ss *semesterService) ListSemesters() ([]models.Semester, error) {
 	return semesters, nil
 }
 
+func (ss *semesterService) ListSemestersV2(pagination *models.Pagination) ([]models.Semester, int64, error) {
+	var total int64
+	if err := ss.db.Model(&models.Semester{}).Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	var semesters []models.Semester
+	query := ss.db.Order("start_date DESC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&semesters).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	return semesters, total, nil
+}
+
 func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, error) {
 	var rankings []models.RankingResponse
 
 	res := ss.db.
-		Table("memberships").
-		Select("users.id, users.first_name, users.last_name, rankings.points").
-		Joins("INNER JOIN users ON memberships.user_id = users.id").
-		Joins("INNER JOIN rankings ON memberships.id = rankings.membership_id").
-		Where("memberships.semester_id = ?", id).
-		Order("rankings.points DESC").
+		Table(models.SemesterRankingsView).
+		Select("user_id as id, first_name, last_name, points, position").
+		Where("semester_id = ?", id).
+		Order("position ASC, last_name ASC, first_name ASC").
 		Find(&rankings)
 
 	if err := res.Error; err != nil {
@@ -91,6 +105,27 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 	}
 
 	return rankings, nil
+}
+
+func (ss *semesterService) GetRankingsV2(id uuid.UUID, pagination *models.Pagination) ([]models.RankingResponse, int64, error) {
+	var total int64
+	if err := ss.db.Table(models.SemesterRankingsView).Where("semester_id = ?", id).Count(&total).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	var rankings []models.RankingResponse
+	query := ss.db.
+		Table(models.SemesterRankingsView).
+		Select("user_id as id, first_name, last_name, points, position").
+		Where("semester_id = ?", id).
+		Order("position ASC, last_name ASC, first_name ASC")
+	query = pagination.Apply(query)
+
+	if err := query.Find(&rankings).Error; err != nil {
+		return nil, 0, e.InternalServerError(err.Error())
+	}
+
+	return rankings, total, nil
 }
 
 func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {
@@ -114,14 +149,12 @@ func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {
 func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 	var rankings []models.RankingResponse
 
-	// Get the top 100 rankings
+	// Get the top 100 rankings for export (limited to prevent excessive file sizes)
 	res := ss.db.
-		Table("memberships").
-		Select("users.id, users.first_name, users.last_name, rankings.points").
-		Joins("INNER JOIN users ON memberships.user_id = users.id").
-		Joins("INNER JOIN rankings on memberships.id = rankings.membership_id").
-		Where("memberships.semester_id = ?", id).
-		Order("rankings.points DESC").
+		Table(models.SemesterRankingsView).
+		Select("user_id as id, first_name, last_name, points, position").
+		Where("semester_id = ?", id).
+		Order("position ASC, last_name ASC, first_name ASC").
 		Limit(100).
 		Find(&rankings)
 
@@ -129,9 +162,8 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 		return "", e.InternalServerError(fmt.Sprintf("Error when retrieving rankings: %s", err.Error()))
 	}
 
-	// Open a new CSV file
-	filename := "rankings.csv"
-	file, err := os.Create(filename)
+	// Open a new CSV file in the OS temp directory
+	file, err := os.CreateTemp("", "rankings-*.csv")
 	if err != nil {
 		return "", e.InternalServerError(fmt.Sprintf("Error when creating rankings file: %s", err.Error()))
 	}
@@ -144,11 +176,12 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 	defer writer.Flush()
 
 	// Write headers to the file
-	writer.Write([]string{"id", "first_name", "last_name", "points"})
+	writer.Write([]string{"position", "id", "first_name", "last_name", "points"})
 
 	// Write each row from the database to the CSV
 	for _, ranking := range rankings {
 		record := []string{
+			strconv.FormatInt(int64(ranking.Position), 10),
 			strconv.FormatUint(ranking.ID, 10),
 			ranking.FirstName,
 			ranking.LastName,
@@ -160,11 +193,5 @@ func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {
 		}
 	}
 
-	// Get the absolute filepath to the new file
-	fp, err := filepath.Abs(filename)
-	if err != nil {
-		return "", e.InternalServerError(fmt.Sprintf("Failed to export CSV: %s", err.Error()))
-	}
-
-	return fp, nil
+	return file.Name(), nil
 }

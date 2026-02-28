@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks";
 import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaUsers } from "react-icons/fa";
 import { RegisterMemberModal } from "./RegisterMemberModal";
 import { EditMemberModal } from "./EditMemberModal";
+import { DeleteMembershipModal } from "./DeleteMembershipModal";
 import styles from "./MembersList.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -22,6 +23,7 @@ export function MembersList() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -57,8 +59,8 @@ export function MembersList() {
           throw new Error(`Failed to fetch members: ${response.statusText}`);
         }
 
-        const data: Membership[] = await response.json();
-        setMembers(data);
+        const resp: { data: Membership[] } = await response.json();
+        setMembers(resp.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching members");
       } finally {
@@ -169,9 +171,18 @@ export function MembersList() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  const handleDelete = (memberId: string) => {
-    console.log("Delete member:", memberId);
-    alert("Delete functionality coming soon!");
+  const handleDelete = (membership: Membership) => {
+    setSelectedMembership(membership);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedMembership(null);
+  };
+
+  const handleDeleteSuccess = () => {
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   // Define table columns
@@ -231,16 +242,17 @@ export function MembersList() {
               <FaEdit />
             </button>
           )}
-          <button
-            className={`${styles.iconButton} ${styles.danger}`}
-            onClick={() => handleDelete(row.id)}
-            disabled
-            title="Delete member"
-            aria-label="Delete member"
-            data-qa={`delete-member-btn-${row.id}`}
-          >
-            <FaTrash />
-          </button>
+          {hasPermission("delete", "membership") && (
+            <button
+              className={`${styles.iconButton} ${styles.danger}`}
+              onClick={() => handleDelete(row)}
+              title="Delete membership"
+              aria-label="Delete membership"
+              data-qa={`delete-member-btn-${row.id}`}
+            >
+              <FaTrash />
+            </button>
+          )}
         </div>
       ),
     },
@@ -385,6 +397,15 @@ export function MembersList() {
         membership={selectedMembership}
         onClose={handleEditModalClose}
         onSuccess={handleEditSuccess}
+      />
+
+      {/* Delete Membership Modal */}
+      <DeleteMembershipModal
+        isOpen={isDeleteModalOpen}
+        membership={selectedMembership}
+        semesterId={semesterContext.currentSemester.id}
+        onClose={handleDeleteModalClose}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

@@ -15,7 +15,7 @@ services:
   server:
     build:
       context: ./server
-    command: sh -c 'go build -ldflags="-w -s" -o api . && /usr/server/api start'
+    command: sh -c 'go build -ldflags="-w -s" -o api . && exec /usr/server/api start'
     volumes:
       - ./server:/usr/server
     ports:

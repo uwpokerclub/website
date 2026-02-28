@@ -6,7 +6,6 @@ import (
 	"api/internal/models"
 	"api/internal/services"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,14 +23,15 @@ func NewMembershipsController(db *gorm.DB) Controller {
 
 func (c *membershipsController) LoadRoutes(router *gin.RouterGroup) {
 	memberships := router.Group("semesters/:semesterId/memberships", middleware.UseAuthentication(c.db))
-	memberships.POST("", middleware.UseAuthorization(c.db, "membership.create"), c.createMembership)
-	memberships.GET("", middleware.UseAuthorization(c.db, "membership.list"), c.listMemberships)
-	memberships.GET("/:id", middleware.UseAuthorization(c.db, "membership.get"), c.getMembership)
+	memberships.POST("", middleware.UseAuthorization("membership.create"), c.createMembership)
+	memberships.GET("", middleware.UseAuthorization("membership.list"), c.listMemberships)
+	memberships.GET("/:id", middleware.UseAuthorization("membership.get"), c.getMembership)
 	memberships.PATCH(
 		"/:id",
-		middleware.UseAuthorization(c.db, "membership.edit"),
+		middleware.UseAuthorization("membership.edit"),
 		c.updateMembership,
 	)
+	memberships.DELETE("/:id", middleware.UseAuthorization("membership.delete"), c.deleteMembership)
 }
 
 func validateSemesterID(ctx *gin.Context) (uuid.UUID, error) {
@@ -81,8 +81,7 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	}
 
 	var req models.CreateMembershipRequestV2
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -114,27 +113,6 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, membership)
 }
 
-func (c *membershipsController) parseListMembershipsQueryParams(
-	ctx *gin.Context,
-) *models.ListMembershipsFilter {
-	// Implementation for parsing query parameters
-	filter := &models.ListMembershipsFilter{}
-
-	// Parse limit and offset filters
-	if limitStr := ctx.Query("limit"); limitStr != "" {
-		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
-			filter.Limit = &limit
-		}
-	}
-
-	if offsetStr := ctx.Query("offset"); offsetStr != "" {
-		if offset, err := strconv.Atoi(offsetStr); err == nil && offset >= 0 {
-			filter.Offset = &offset
-		}
-	}
-
-	return filter
-}
 
 // listMemberships handles listing all memberships
 //
@@ -159,11 +137,19 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		return
 	}
 
-	filter := c.parseListMembershipsQueryParams(ctx)
-	filter.SemesterID = &semesterID
+	pagination, err := models.ParsePagination(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	filter := &models.ListMembershipsFilter{
+		Pagination: pagination,
+		SemesterID: &semesterID,
+	}
 
 	svc := services.NewMembershipService(c.db)
-	memberships, err := svc.ListMembershipsV2(filter)
+	memberships, total, err := svc.ListMembershipsV2(filter)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -177,7 +163,10 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, memberships)
+	ctx.JSON(http.StatusOK, models.ListResponse[models.MembershipWithAttendance]{
+		Data:  memberships,
+		Total: total,
+	})
 }
 
 // getMembership handles retrieving a specific membership
@@ -266,8 +255,7 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 	}
 
 	var req models.UpdateMembershipRequestV2
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -305,4 +293,59 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, membership)
+}
+
+// deleteMembership handles deleting a specific membership
+//
+// @Summary Delete a Membership
+// @Description Delete a specific Membership by ID. Rankings are cascade deleted and participant entries are unlinked.
+// @Tags Memberships
+// @Accept json
+// @Produce json
+// @param semesterId path string true "Semester ID"
+// @Param id path string true "Membership ID"
+// @Success 204
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/memberships/{id} [delete]
+func (c *membershipsController) deleteMembership(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	membershipID, err := validateMembershipID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	svc := services.NewMembershipService(c.db)
+	found, err := svc.DeleteMembershipV2(membershipID, semesterID)
+	if err != nil {
+		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
+			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+			return
+		}
+
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	if !found {
+		ctx.AbortWithStatusJSON(
+			http.StatusNotFound,
+			apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
+		)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
 }

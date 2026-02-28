@@ -56,7 +56,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24"
+          go-version: "1.26"
       - name: Start PostgreSQL container
         run: docker run --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub_test -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
       - name: Wait for PostgreSQL to be ready

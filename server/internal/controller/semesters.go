@@ -46,8 +46,7 @@ func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
 func (s *semestersController) createSemester(ctx *gin.Context) {
 	// Retrieve the request body and bind it to CreateSemesterRequest
 	var req models.CreateSemesterRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 

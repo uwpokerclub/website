@@ -4,6 +4,8 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -46,6 +48,32 @@ func (svc *rankingService) UpdateRanking(membershipId uuid.UUID, points int) err
 
 	res = svc.db.Save(&ranking)
 	if err := res.Error; err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+func (svc *rankingService) BatchUpdateRankings(updates map[uuid.UUID]int) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	valueStrings := make([]string, 0, len(updates))
+	args := make([]interface{}, 0, len(updates)*2)
+	i := 1
+	for membershipID, points := range updates {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d::uuid, $%d, 0)", i, i+1))
+		args = append(args, membershipID, points)
+		i += 2
+	}
+
+	query := fmt.Sprintf(
+		`INSERT INTO rankings (membership_id, points, attendance) VALUES %s ON CONFLICT (membership_id) DO UPDATE SET points = rankings.points + EXCLUDED.points`,
+		strings.Join(valueStrings, ", "),
+	)
+
+	if err := svc.db.Exec(query, args...).Error; err != nil {
 		return e.InternalServerError(err.Error())
 	}
 

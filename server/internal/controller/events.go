@@ -71,8 +71,7 @@ func (s *eventsController) createEvent(ctx *gin.Context) {
 
 	// Retrieve the request body and bind it to CreateEventRequest
 	var req models.CreateEventRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -251,11 +250,7 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 
 	// Parse request body once into a map for partial update handling
 	requestValues := make(map[string]any)
-	if err := ctx.ShouldBindJSON(&requestValues); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(fmt.Sprintf("Error parsing request body: %s", err.Error())),
-		)
+	if !BindJSON(ctx, &requestValues) {
 		return
 	}
 

@@ -84,8 +84,7 @@ func (s *structuresController) listStructures(ctx *gin.Context) {
 // @Router /structures [post]
 func (s *structuresController) createStructure(ctx *gin.Context) {
 	var req models.CreateStructureRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	if !BindJSON(ctx, &req) {
 		return
 	}
 
@@ -167,13 +166,7 @@ func (s *structuresController) updateStructure(ctx *gin.Context) {
 	}
 
 	requestValues := make(map[string]any)
-	if err := ctx.ShouldBindBodyWithJSON(&requestValues); err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(
-				fmt.Sprintf("Error parsing request body: %s", err.Error()),
-			),
-		)
+	if !BindJSON(ctx, &requestValues) {
 		return
 	}
 

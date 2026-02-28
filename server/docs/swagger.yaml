@@ -330,6 +330,8 @@ definitions:
     properties:
       attendance:
         type: integer
+      id:
+        type: integer
       membershipId:
         type: string
       points:
@@ -344,6 +346,8 @@ definitions:
       lastName:
         type: string
       points:
+        type: integer
+      position:
         type: integer
     type: object
   Semester:
@@ -1639,6 +1643,50 @@ paths:
       tags:
       - Memberships
   /semesters/{semesterId}/memberships/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific Membership by ID. Rankings are cascade deleted
+        and participant entries are unlinked.
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Membership ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Delete a Membership
+      tags:
+      - Memberships
     get:
       consumes:
       - application/json

@@ -7,13 +7,15 @@ updates:
       - "/webapp"
     schedule:
       interval: weekly
+      day: monday
     labels:
-      - "type::Dependencies"
-      - "dep::Docker"
+      - "dependencies"
+      - "docker"
   - package-ecosystem: gomod
     directory: "/server"
     schedule:
       interval: weekly
+      day: monday
     groups:
       golang:
         applies-to: version-updates
@@ -21,14 +23,15 @@ updates:
           - "minor"
           - "patch"
     labels:
-      - "type::Dependencies"
-      - "dep::Go"    
+      - "dependencies"
+      - "go"
   - package-ecosystem: npm
     allow:
       - dependency-type: production
     directory: "/webapp"
     schedule:
       interval: weekly
+      day: monday
     groups:
       npm:
         applies-to: version-updates
@@ -36,12 +39,13 @@ updates:
           - "minor"
           - "patch"
     labels:
-      - "type::Dependencies"
-      - "dep::Javascript"
+      - "dependencies"
+      - "javascript"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: weekly
+      day: monday
     labels:
-      - "type::Dependencies"
-      - "dep::Github Actions"
+      - "dependencies"
+      - "github-actions"

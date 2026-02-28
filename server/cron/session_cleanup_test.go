@@ -1,102 +1,77 @@
 package cron
 
 import (
-	"api/internal/database"
-	"api/internal/models"
+	"context"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+
+	"api/internal/models"
+	"api/internal/testutils"
 )
 
-func createTestLogin(db *gorm.DB, username, password string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
+func createTestSession(db *gorm.DB, username string, start time.Time) (*models.Session, error) {
 	login := models.Login{
 		Username: username,
-		Password: string(hash),
+		Password: "not_used",
+		Role:     "executive",
 	}
-
-	res := db.Create(&login)
-
-	return res.Error
-}
-
-func createTestSession(db *gorm.DB, username, password string, start time.Time) (*models.Session, error) {
-	// Create test user
-	err := createTestLogin(db, username, password)
-	if err != nil {
+	if err := db.Create(&login).Error; err != nil {
 		return nil, err
 	}
 
-	// Create test session
 	session := models.Session{
 		ID:        uuid.New(),
 		Username:  username,
 		StartedAt: start,
 		ExpiresAt: start.Add(time.Hour * 8),
+		Role:      "executive",
 	}
-	res := db.Create(&session)
+	if err := db.Create(&session).Error; err != nil {
+		return nil, err
+	}
 
-	return &session, res.Error
+	return &session, nil
 }
 
 func TestSessionCleanup(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer sqlDB.Close()
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
 
-	wipeDB := func() {
-		err := database.WipeDB(db)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-	}
-	defer wipeDB()
-
+	db := container.GetDB()
 	now := time.Now().UTC()
 
-	session1 := now.Add(time.Hour * -1)
-	session2 := now.Add(time.Hour * -4).Add(time.Minute * -30)
-	session3 := now.Add(time.Hour * -7)
-	session4 := now.Add(time.Hour * -9)
-	session5 := now.Add(time.Hour * -12)
+	// Sessions started 1, 4.5, and 7 hours ago (expire in 7, 3.5, and 1 hours — still valid)
+	s1, err := createTestSession(db, "user1", now.Add(time.Hour*-1))
+	require.NoError(t, err)
+	s2, err := createTestSession(db, "user2", now.Add(time.Hour*-4+time.Minute*-30))
+	require.NoError(t, err)
+	s3, err := createTestSession(db, "user3", now.Add(time.Hour*-7))
+	require.NoError(t, err)
 
-	s1, err := createTestSession(db, "user1", "pass", session1)
-	assert.NoError(t, err, "Creating test session 1 should not error")
-	s2, err := createTestSession(db, "user2", "pass", session2)
-	assert.NoError(t, err, "Creating test session 2 should not error")
-	s3, err := createTestSession(db, "user3", "pass", session3)
-	assert.NoError(t, err, "Creating test session 3 should not error")
-	_, err = createTestSession(db, "user4", "pass", session4)
-	assert.NoError(t, err, "Creating test session 4 should not error")
-	_, err = createTestSession(db, "user5", "pass", session5)
-	assert.NoError(t, err, "Creating test session 5 should not error")
+	// Sessions started 9 and 12 hours ago (expired 1 and 4 hours ago)
+	_, err = createTestSession(db, "user4", now.Add(time.Hour*-9))
+	require.NoError(t, err)
+	_, err = createTestSession(db, "user5", now.Add(time.Hour*-12))
+	require.NoError(t, err)
 
-	// List of non-expired session ids
-	expectedSessionIds := []string{s1.Username, s2.Username, s3.Username}
+	expectedIDs := []uuid.UUID{s1.ID, s2.ID, s3.ID}
 
 	// Run cron job
-	SessionCleanup(true)()
+	SessionCleanup(db)()
 
-	// Check if only the expired sessions (s4, s5) were deleted from the database
-	var sessionIds []string
-	res := db.Table("sessions").Select("username").Find(&sessionIds)
-	assert.NoError(t, res.Error, "Should be no database error")
-	assert.Equal(t, len(expectedSessionIds), len(sessionIds), "Session count should match")
-	assert.ElementsMatch(t, expectedSessionIds, sessionIds, "Expected session ids (list A) should match existing session ids (list B)")
+	// Check that only the expired sessions (s4, s5) were deleted
+	var remainingIDs []uuid.UUID
+	res := db.Table("sessions").Select("id").Find(&remainingIDs)
+	assert.NoError(t, res.Error)
+	assert.Equal(t, len(expectedIDs), len(remainingIDs))
+	assert.ElementsMatch(t, expectedIDs, remainingIDs)
 }

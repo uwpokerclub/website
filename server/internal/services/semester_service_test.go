@@ -624,20 +624,22 @@ func ExportRankingsTest(t *testing.T) {
 
 	svc := NewSemesterService(db)
 
-	// Ensure filepath was returned
+	// Ensure filepath was returned in the OS temp directory with the expected pattern
 	fp, err := svc.ExportRankings(semester.Semester.ID)
-	assert.NoError(t, err, "ExportRankings should not return an error")
+	require.NoError(t, err, "ExportRankings should not return an error")
 
-	expectedPath, err := filepath.Abs("rankings.csv")
-	assert.NoError(t, err, "Should not error creating the expected file path")
-	assert.Equal(t, expectedPath, fp)
+	assert.Equal(t, os.TempDir(), filepath.Dir(fp), "File should be directly in the OS temp directory")
+	matched, err := filepath.Match("rankings-*.csv", filepath.Base(fp))
+	assert.NoError(t, err, "Should not error matching the filename pattern")
+	assert.True(t, matched, "Filename should match the rankings-*.csv pattern")
 
 	// Check that the file exists
 	assert.FileExists(t, fp, "The rankings CSV file should exist")
 
 	// Read the file
 	file, err := os.Open(fp)
-	assert.NoError(t, err, "Should not error when openning a file")
+	assert.NoError(t, err, "Should not error when opening a file")
+	defer file.Close()
 
 	// Initialize reader
 	reader := csv.NewReader(file)

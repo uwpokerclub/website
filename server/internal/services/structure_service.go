@@ -40,16 +40,6 @@ func (ss *structureService) CreateStructure(req *models.CreateStructureRequest) 
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	blindsRes := make([]models.BlindJSON, len(blinds))
-	for i, blind := range blinds {
-		blindsRes[i] = models.BlindJSON{
-			Small: blind.Small,
-			Big:   blind.Big,
-			Ante:  blind.Ante,
-			Time:  blind.Time,
-		}
-	}
-
 	return &structure, nil
 }
 
@@ -91,22 +81,6 @@ func (ss *structureService) GetStructure(id int32) (*models.Structure, error) {
 		return nil, e.NotFound(err.Error())
 	} else if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
-	}
-
-	var blinds []models.Blind
-	res = ss.db.Where("structure_id = ?", id).Order("index ASC").Find(&blinds)
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	blindsRes := make([]models.BlindJSON, len(blinds))
-	for i, blind := range blinds {
-		blindsRes[i] = models.BlindJSON{
-			Small: blind.Small,
-			Big:   blind.Big,
-			Ante:  blind.Ante,
-			Time:  blind.Time,
-		}
 	}
 
 	return &structure, nil

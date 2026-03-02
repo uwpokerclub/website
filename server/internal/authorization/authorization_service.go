@@ -9,14 +9,14 @@ type authorizationService struct {
 	resourceAuthorizers ResourceAuthorizerMap
 }
 
-func NewAuthorizationService(role string, resourceAuthorizers ResourceAuthorizerMap) *authorizationService {
-	return &authorizationService{
+func NewAuthorizationService(role string, resourceAuthorizers ResourceAuthorizerMap) authorizationService {
+	return authorizationService{
 		role:                role,
 		resourceAuthorizers: resourceAuthorizers,
 	}
 }
 
-func (svc *authorizationService) IsAuthorized(action string) bool {
+func (svc authorizationService) IsAuthorized(action string) bool {
 	// Validate input
 	if action == "" {
 		return false
@@ -38,11 +38,11 @@ func (svc *authorizationService) IsAuthorized(action string) bool {
 	return authorizer.IsAuthorized(svc.role, action)
 }
 
-func (svc *authorizationService) Role() string {
+func (svc authorizationService) Role() string {
 	return svc.role
 }
 
-func (svc *authorizationService) GetPermissions() map[string]map[string]any {
+func (svc authorizationService) GetPermissions() map[string]map[string]any {
 	permissions := make(map[string]map[string]any)
 
 	for resource, authorizer := range svc.resourceAuthorizers {

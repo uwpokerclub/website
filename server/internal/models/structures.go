@@ -26,7 +26,9 @@ func (Structure) Preload(tx *gorm.DB, options ...StructurePreloadOptions) *gorm.
 	}
 
 	if opts.Blinds {
-		ret = ret.Preload("Blinds")
+		ret = ret.Preload("Blinds", func(db *gorm.DB) *gorm.DB {
+			return db.Order("index ASC")
+		})
 	}
 
 	return ret

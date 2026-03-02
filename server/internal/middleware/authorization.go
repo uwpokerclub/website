@@ -9,6 +9,8 @@ import (
 )
 
 func UseAuthorization(action string) func(ctx *gin.Context) {
+	authorizerMap := authorization.DefaultAuthorizerMap
+
 	return func(ctx *gin.Context) {
 		role := ctx.GetString("role")
 		if role == "" {
@@ -16,7 +18,7 @@ func UseAuthorization(action string) func(ctx *gin.Context) {
 			return
 		}
 
-		authSvc := authorization.NewAuthorizationService(role, authorization.DefaultAuthorizerMap)
+		authSvc := authorization.NewAuthorizationService(role, authorizerMap)
 
 		authorized := authSvc.IsAuthorized(action)
 		if !authorized {

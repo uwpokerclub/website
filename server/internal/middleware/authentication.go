@@ -14,13 +14,16 @@ import (
 )
 
 func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
+	var cookieKey string
+	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
+		cookieKey = "uwpsc-session-id"
+	} else {
+		cookieKey = "uwpsc-dev-session-id"
+	}
+
+	sessionManager := authentication.NewSessionManager(db)
+
 	return func(ctx *gin.Context) {
-		var cookieKey string
-		if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
-			cookieKey = "uwpsc-session-id"
-		} else {
-			cookieKey = "uwpsc-dev-session-id"
-		}
 		cookie, err := ctx.Cookie(cookieKey)
 		if err != nil {
 			// Cookie not present in the request. Return 401
@@ -35,8 +38,6 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		}
 
 		sessionID, _ := uuid.Parse(cookie)
-
-		sessionManager := authentication.NewSessionManager(db)
 
 		// Authenticate this session ID
 		session, err := sessionManager.Authenticate(sessionID)

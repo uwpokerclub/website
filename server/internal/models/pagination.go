@@ -18,17 +18,12 @@ func ParsePagination(ctx *gin.Context) (Pagination, error) {
 		return Pagination{}, err
 	}
 
-	if pagination.Limit != nil {
-		if *pagination.Limit <= 0 {
-			defaultLimit := MaxLimit
-			pagination.Limit = &defaultLimit
-		} else if *pagination.Limit > MaxLimit {
-			capped := MaxLimit
-			pagination.Limit = &capped
-		}
+	if pagination.Limit == nil || *pagination.Limit <= 0 || *pagination.Limit > MaxLimit {
+		defaultLimit := MaxLimit
+		pagination.Limit = &defaultLimit
 	}
 
-	if pagination.Offset != nil && *pagination.Offset < 0 {
+	if pagination.Offset == nil || *pagination.Offset < 0 {
 		zero := 0
 		pagination.Offset = &zero
 	}

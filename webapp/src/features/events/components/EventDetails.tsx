@@ -412,11 +412,11 @@ export function EventDetails() {
         {/* Stats Bar */}
         <div className={styles.statsBar}>
           <div className={styles.statCard}>
-            <span className={styles.statValue}>{entries.length + event.rebuys}</span>
+            <span className={styles.statValue}>{totalEntries + event.rebuys}</span>
             <span className={styles.statLabel}>Total Entries</span>
           </div>
           <div className={styles.statCard}>
-            <span className={styles.statValue}>{entries.length}</span>
+            <span className={styles.statValue}>{totalEntries}</span>
             <span className={styles.statLabel}>Players</span>
           </div>
           <div className={styles.statCard}>

@@ -294,9 +294,9 @@ export function EntriesTable({
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <strong>{entries.length + event.rebuys} Entries</strong>
+        <strong>{totalItems + event.rebuys} Entries</strong>
         <span>
-          ({entries.length} Players, {event.rebuys} Rebuys)
+          ({totalItems} Players, {event.rebuys} Rebuys)
         </span>
       </div>
 

@@ -60,7 +60,7 @@ export function RankingsPage() {
   }, []);
 
   // Show loading state
-  if (isLoading || semesterLoading) {
+  if ((isLoading || semesterLoading) && rankings.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.centerContent} data-qa="rankings-loading">

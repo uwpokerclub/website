@@ -40,7 +40,7 @@ describe("Rankings", () => {
 
     it("should display loading spinner while fetching rankings", () => {
       // Intercept with delay to see loading state
-      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, (req) => {
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, (req) => {
         req.on("response", (res) => {
           res.setDelay(500);
         });
@@ -60,7 +60,7 @@ describe("Rankings", () => {
     });
 
     it("should display error message and retry button when API fails", () => {
-      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, {
         statusCode: 500,
         body: { error: "Internal Server Error" },
       }).as("getRankingsError");
@@ -140,7 +140,7 @@ describe("Rankings", () => {
           { id: "2", firstName: "User", lastName: "Two", points: 5 },
         ];
 
-        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, {
           statusCode: 200,
           body: { data: twoRankings, total: twoRankings.length },
         }).as("getTwoRankings");
@@ -308,7 +308,7 @@ describe("Rankings", () => {
           points: 100 - i,
         }));
 
-        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, {
           statusCode: 200,
           body: { data: mockRankings, total: mockRankings.length },
         }).as("getManyRankings");
@@ -328,10 +328,26 @@ describe("Rankings", () => {
           points: 100 - i,
         }));
 
-        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
-          statusCode: 200,
-          body: { data: mockRankings, total: mockRankings.length },
-        }).as("getManyRankings");
+        cy.intercept(
+          "GET",
+          /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/,
+          (req) => {
+            const url = new URL(req.url);
+            const offset = parseInt(
+              url.searchParams.get("offset") || "0"
+            );
+            const limit = parseInt(
+              url.searchParams.get("limit") || "25"
+            );
+            req.reply({
+              statusCode: 200,
+              body: {
+                data: mockRankings.slice(offset, offset + limit),
+                total: mockRankings.length,
+              },
+            });
+          }
+        ).as("getManyRankings");
 
         cy.visit("/admin/rankings");
         cy.wait("@getManyRankings");
@@ -349,7 +365,7 @@ describe("Rankings", () => {
 
     context("empty state", () => {
       it("should display empty state when no rankings exist", () => {
-        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings$/, {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, {
           statusCode: 200,
           body: { data: [], total: 0 },
         }).as("getEmptyRankings");

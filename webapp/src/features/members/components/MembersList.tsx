@@ -15,6 +15,7 @@ export function MembersList() {
   const semesterContext = useContext(SemesterContext);
   const { hasPermission } = useAuth();
   const [members, setMembers] = useState<Membership[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,6 +40,13 @@ export function MembersList() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Reset pagination when semester changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
+  }, [semesterContext?.currentSemester?.id]);
+
   // Fetch members from API
   useEffect(() => {
     if (!semesterContext?.currentSemester) {
@@ -51,16 +59,19 @@ export function MembersList() {
       setError(null);
 
       try {
-        const response = await fetch(`/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships`, {
-          credentials: "include",
-        });
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+        const response = await fetch(
+          `/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
+          { credentials: "include" },
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to fetch members: ${response.statusText}`);
         }
 
-        const resp: { data: Membership[] } = await response.json();
+        const resp: { data: Membership[]; total: number } = await response.json();
         setMembers(resp.data);
+        setTotalItems(resp.total);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching members");
       } finally {
@@ -69,7 +80,7 @@ export function MembersList() {
     };
 
     fetchMembers();
-  }, [semesterContext?.currentSemester, refreshTrigger]);
+  }, [semesterContext?.currentSemester, refreshTrigger, currentPage]);
 
   // Filter members by search query
   const filteredMembers = useMemo(() => {
@@ -125,13 +136,6 @@ export function MembersList() {
 
     return sorted;
   }, [filteredMembers, sortKey, sortDirection]);
-
-  // Paginate members
-  const paginatedMembers = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return sortedMembers.slice(startIndex, endIndex);
-  }, [sortedMembers, currentPage]);
 
   // Handle sort
   const handleSort = useCallback((key: string, direction: "asc" | "desc") => {
@@ -332,7 +336,7 @@ export function MembersList() {
 
       <div className={styles.resultsInfo} data-qa="members-results-info">
         <p>
-          Showing {paginatedMembers.length} of {sortedMembers.length} members
+          Showing {sortedMembers.length} of {totalItems} members
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
         </p>
       </div>
@@ -343,7 +347,7 @@ export function MembersList() {
           data-qa="members-table"
           variant="striped"
           headerVariant="primary"
-          data={paginatedMembers}
+          data={sortedMembers}
           columns={columns}
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -372,11 +376,11 @@ export function MembersList() {
       </div>
 
       {/* Pagination */}
-      {sortedMembers.length > ITEMS_PER_PAGE && (
+      {totalItems > ITEMS_PER_PAGE && (
         <div className={styles.paginationContainer} data-qa="members-pagination">
           <Pagination
             variant="compact"
-            totalItems={sortedMembers.length}
+            totalItems={totalItems}
             pageSize={ITEMS_PER_PAGE}
             currentPage={currentPage}
             onPageChange={setCurrentPage}

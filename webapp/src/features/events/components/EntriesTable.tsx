@@ -8,14 +8,16 @@ import { EventResponse } from "../api/eventApi";
 
 import styles from "./EntriesTable.module.css";
 
-const ITEMS_PER_PAGE = 25;
-
 type EntriesTableProps = {
   entries: Entry[];
   event: EventResponse;
   semesterId: string;
   isLoading: boolean;
   updateParticipants: () => void;
+  totalItems: number;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 };
 
 // Format signed out at date
@@ -31,15 +33,22 @@ const formatSignedOutAt = (entry: Entry): string => {
   });
 };
 
-export function EntriesTable({ entries, event, semesterId, isLoading, updateParticipants }: EntriesTableProps) {
+export function EntriesTable({
+  entries,
+  event,
+  semesterId,
+  isLoading,
+  updateParticipants,
+  totalItems,
+  currentPage,
+  pageSize,
+  onPageChange,
+}: EntriesTableProps) {
   const { hasPermission } = useAuth();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Processing state for action buttons
   const [processingEntry, setProcessingEntry] = useState<string | null>(null);
@@ -48,11 +57,11 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setCurrentPage(1);
+      onPageChange(1);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, onPageChange]);
 
   // Filter entries by search query
   const filteredEntries = useMemo(() => {
@@ -63,13 +72,6 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
     const query = debouncedSearchQuery.toLowerCase();
     return entries.filter((entry) => `${entry.firstName} ${entry.lastName}`.toLowerCase().includes(query));
   }, [entries, debouncedSearchQuery]);
-
-  // Paginate entries
-  const paginatedEntries = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredEntries.slice(startIndex, endIndex);
-  }, [filteredEntries, currentPage]);
 
   // Handle clear search
   const handleClearSearch = useCallback(() => {
@@ -200,8 +202,8 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
         accessor: () => "",
         sortable: false,
         render: (_, row) => {
-          const index = paginatedEntries.findIndex((e) => e.membershipId === row.membershipId);
-          return (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+          const index = filteredEntries.findIndex((e) => e.membershipId === row.membershipId);
+          return (currentPage - 1) * pageSize + index + 1;
         },
       },
       {
@@ -253,7 +255,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
     }
 
     return cols;
-  }, [currentPage, paginatedEntries, event.state, hasPermission, ActionButtons]);
+  }, [currentPage, pageSize, filteredEntries, event.state, hasPermission, ActionButtons]);
 
   // Empty state component
   const emptyState = useMemo(
@@ -292,9 +294,9 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <strong>{entries.length + event.rebuys} Entries</strong>
+        <strong>{totalItems + event.rebuys} Entries</strong>
         <span>
-          ({entries.length} Players, {event.rebuys} Rebuys)
+          ({totalItems} Players, {event.rebuys} Rebuys)
         </span>
       </div>
 
@@ -326,7 +328,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
 
       <div className={styles.resultsInfo}>
         <p>
-          Showing {paginatedEntries.length} of {filteredEntries.length} entries
+          Showing {filteredEntries.length} of {totalItems} entries
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
         </p>
       </div>
@@ -335,7 +337,7 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
         <Table
           variant="striped"
           headerVariant="primary"
-          data={paginatedEntries}
+          data={filteredEntries}
           columns={columns}
           loading={isLoading}
           emptyState={emptyState}
@@ -343,14 +345,14 @@ export function EntriesTable({ entries, event, semesterId, isLoading, updatePart
         />
       </div>
 
-      {filteredEntries.length > ITEMS_PER_PAGE && (
+      {totalItems > pageSize && (
         <div className={styles.paginationContainer}>
           <Pagination
             variant="compact"
-            totalItems={filteredEntries.length}
-            pageSize={ITEMS_PER_PAGE}
+            totalItems={totalItems}
+            pageSize={pageSize}
             currentPage={currentPage}
-            onPageChange={setCurrentPage}
+            onPageChange={onPageChange}
           />
         </div>
       )}

@@ -328,7 +328,7 @@ describe("Logins Management", () => {
   context("empty state", () => {
     it("should display empty state when no logins exist", () => {
       // Mock the API to return empty array
-      cy.intercept("GET", "/api/v2/logins", {
+      cy.intercept("GET", "/api/v2/logins*", {
         statusCode: 200,
         body: { data: [], total: 0 },
       }).as("getEmptyLogins");
@@ -343,7 +343,7 @@ describe("Logins Management", () => {
   context("loading state", () => {
     it("should display loading spinner while fetching data", () => {
       // Delay the API response to see loading state
-      cy.intercept("GET", "/api/v2/logins", {
+      cy.intercept("GET", "/api/v2/logins*", {
         statusCode: 200,
         body: { data: [], total: 0 },
         delay: 1000,
@@ -356,7 +356,7 @@ describe("Logins Management", () => {
 
   context("error state", () => {
     it("should display error state on API failure", () => {
-      cy.intercept("GET", "/api/v2/logins", {
+      cy.intercept("GET", "/api/v2/logins*", {
         statusCode: 500,
         body: { message: "Internal server error" },
       }).as("getLoginsError");

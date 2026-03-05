@@ -29,6 +29,8 @@ import { EventRegistrationModal } from "./EventRegistrationModal";
 import { DropdownMenu, type DropdownMenuItem } from "./DropdownMenu";
 import { EventResponse, fetchEvent } from "../api/eventApi";
 
+const ENTRIES_PER_PAGE = 25;
+
 export function EventDetails() {
   const { eventId: eventIdParam = "" } = useParams<{ eventId: string }>();
   const eventId = parseInt(eventIdParam, 10);
@@ -39,6 +41,8 @@ export function EventDetails() {
   // Data state
   const [event, setEvent] = useState<EventResponse | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [entriesPage, setEntriesPage] = useState(1);
   const [structure, setStructure] = useState<StructureWithBlinds | null>(null);
 
   // Loading/error state
@@ -88,32 +92,34 @@ export function EventDetails() {
 
     setIsEntriesLoading(true);
     try {
-      const response = await fetch(`/api/v2/semesters/${currentSemester.id}/events/${eventId}/entries`, {
-        credentials: "include",
-      });
+      const offset = (entriesPage - 1) * ENTRIES_PER_PAGE;
+      const response = await fetch(
+        `/api/v2/semesters/${currentSemester.id}/events/${eventId}/entries?limit=${ENTRIES_PER_PAGE}&offset=${offset}`,
+        { credentials: "include" },
+      );
 
       if (response.ok) {
-        const resp = await response.json();
+        type ParticipantResponse = {
+          membershipId: string;
+          membership?: { user?: { firstName?: string; lastName?: string; id?: string } };
+          signedOutAt: Date;
+          placement?: number;
+          eventId: string;
+        };
+        const resp: { data: ParticipantResponse[]; total: number } = await response.json();
+        setTotalEntries(resp.total);
         // Transform API response to match Entry type
         // API returns: { membershipId, membership: { user: { firstName, lastName, id } }, ... }
         // Entry expects: { membershipId, firstName, lastName, id, ... }
-        const transformedEntries: Entry[] = resp.data.map(
-          (participant: {
-            membershipId: string;
-            membership?: { user?: { firstName?: string; lastName?: string; id?: string } };
-            signedOutAt: Date;
-            placement?: number;
-            eventId: string;
-          }) => ({
-            id: participant.membership?.user?.id ?? "",
-            membershipId: participant.membershipId,
-            eventId: participant.eventId,
-            firstName: participant.membership?.user?.firstName ?? "",
-            lastName: participant.membership?.user?.lastName ?? "",
-            signedOutAt: participant.signedOutAt,
-            placement: participant.placement,
-          }),
-        );
+        const transformedEntries: Entry[] = resp.data.map((participant) => ({
+          id: participant.membership?.user?.id ?? "",
+          membershipId: participant.membershipId,
+          eventId: participant.eventId,
+          firstName: participant.membership?.user?.firstName ?? "",
+          lastName: participant.membership?.user?.lastName ?? "",
+          signedOutAt: participant.signedOutAt,
+          placement: participant.placement,
+        }));
         setEntries(transformedEntries);
       }
     } catch {
@@ -121,7 +127,7 @@ export function EventDetails() {
     } finally {
       setIsEntriesLoading(false);
     }
-  }, [currentSemester, eventId]);
+  }, [currentSemester, eventId, entriesPage]);
 
   // Fetch entries only when event is first loaded (event.id changes)
   useEffect(() => {
@@ -406,11 +412,11 @@ export function EventDetails() {
         {/* Stats Bar */}
         <div className={styles.statsBar}>
           <div className={styles.statCard}>
-            <span className={styles.statValue}>{entries.length + event.rebuys}</span>
+            <span className={styles.statValue}>{totalEntries + event.rebuys}</span>
             <span className={styles.statLabel}>Total Entries</span>
           </div>
           <div className={styles.statCard}>
-            <span className={styles.statValue}>{entries.length}</span>
+            <span className={styles.statValue}>{totalEntries}</span>
             <span className={styles.statLabel}>Players</span>
           </div>
           <div className={styles.statCard}>
@@ -530,6 +536,10 @@ export function EventDetails() {
                   semesterId={currentSemester.id}
                   isLoading={isEntriesLoading}
                   updateParticipants={fetchEntries}
+                  totalItems={totalEntries}
+                  currentPage={entriesPage}
+                  pageSize={ENTRIES_PER_PAGE}
+                  onPageChange={setEntriesPage}
                 />
               ) : activeSubTab === "structure" ? (
                 <div className={styles.structureSection}>

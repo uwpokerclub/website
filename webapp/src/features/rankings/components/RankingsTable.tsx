@@ -5,32 +5,39 @@ import { useAuth } from "@/hooks";
 import { FaSearch, FaTimes, FaTrophy, FaDownload } from "react-icons/fa";
 import styles from "./RankingsTable.module.css";
 
-const ITEMS_PER_PAGE = 25;
-
 type RankingsTableProps = {
   rankings: Ranking[];
   semesterId: string;
+  totalItems: number;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 };
 
-export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
+export function RankingsTable({
+  rankings,
+  semesterId,
+  totalItems,
+  currentPage,
+  pageSize,
+  onPageChange,
+}: RankingsTableProps) {
   const { hasPermission } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
 
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setCurrentPage(1);
+      onPageChange(1);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, onPageChange]);
 
-  // Reset pagination when rankings change
+  // Reset search when semester changes
   useEffect(() => {
-    setCurrentPage(1);
     setSearchQuery("");
     setDebouncedSearchQuery("");
   }, [semesterId]);
@@ -49,13 +56,6 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
         `${ranking.firstName} ${ranking.lastName}`.toLowerCase().includes(query),
     );
   }, [rankings, debouncedSearchQuery]);
-
-  // Paginate rankings
-  const paginatedRankings = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredRankings.slice(startIndex, endIndex);
-  }, [filteredRankings, currentPage]);
 
   // Handle clear search
   const handleClearSearch = useCallback(() => {
@@ -151,7 +151,7 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
 
       <div className={styles.resultsInfo} data-qa="rankings-results-info">
         <p>
-          Showing {paginatedRankings.length} of {filteredRankings.length} rankings
+          Showing {filteredRankings.length} of {totalItems} rankings
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
         </p>
       </div>
@@ -162,7 +162,7 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
           data-qa="rankings-table"
           variant="striped"
           headerVariant="primary"
-          data={paginatedRankings}
+          data={filteredRankings}
           columns={columns}
           rowProps={(row) => ({ "data-qa": `ranking-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
           emptyState={
@@ -188,14 +188,14 @@ export function RankingsTable({ rankings, semesterId }: RankingsTableProps) {
       </div>
 
       {/* Pagination */}
-      {filteredRankings.length > ITEMS_PER_PAGE && (
+      {totalItems > pageSize && (
         <div className={styles.paginationContainer} data-qa="rankings-pagination">
           <Pagination
             variant="compact"
-            totalItems={filteredRankings.length}
-            pageSize={ITEMS_PER_PAGE}
+            totalItems={totalItems}
+            pageSize={pageSize}
             currentPage={currentPage}
-            onPageChange={setCurrentPage}
+            onPageChange={onPageChange}
           />
         </div>
       )}

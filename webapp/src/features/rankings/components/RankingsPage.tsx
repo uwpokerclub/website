@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Spinner, Button } from "@uwpokerclub/components";
 import { useCurrentSemester } from "@/hooks";
 import { Ranking } from "@/types";
@@ -6,11 +6,20 @@ import { RankingsPodium } from "./RankingsPodium";
 import { RankingsTable } from "./RankingsTable";
 import styles from "./RankingsPage.module.css";
 
+const ITEMS_PER_PAGE = 25;
+
 export function RankingsPage() {
   const { currentSemester, loading: semesterLoading } = useCurrentSemester();
   const [rankings, setRankings] = useState<Ranking[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset pagination when semester changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [currentSemester?.id]);
 
   useEffect(() => {
     if (!currentSemester) {
@@ -23,16 +32,19 @@ export function RankingsPage() {
       setError(null);
 
       try {
-        const response = await fetch(`/api/v2/semesters/${currentSemester.id}/rankings`, {
-          credentials: "include",
-        });
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+        const response = await fetch(
+          `/api/v2/semesters/${currentSemester.id}/rankings?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
+          { credentials: "include" },
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to fetch rankings: ${response.statusText}`);
         }
 
-        const resp: { data: Ranking[] } = await response.json();
+        const resp: { data: Ranking[]; total: number } = await response.json();
         setRankings(resp.data);
+        setTotalItems(resp.total);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching rankings");
       } finally {
@@ -41,10 +53,14 @@ export function RankingsPage() {
     };
 
     fetchRankings();
-  }, [currentSemester]);
+  }, [currentSemester, currentPage]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
 
   // Show loading state
-  if (isLoading || semesterLoading) {
+  if ((isLoading || semesterLoading) && rankings.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.centerContent} data-qa="rankings-loading">
@@ -82,11 +98,18 @@ export function RankingsPage() {
 
   return (
     <div className={styles.container}>
-      {/* Podium - only shown when 3+ members have points */}
-      <RankingsPodium rankings={rankings} />
+      {/* Podium - only shown on page 1 where top-3 are present */}
+      {currentPage === 1 && <RankingsPodium rankings={rankings} />}
 
       {/* Table with search and pagination */}
-      <RankingsTable rankings={rankings} semesterId={currentSemester.id} />
+      <RankingsTable
+        rankings={rankings}
+        semesterId={currentSemester.id}
+        totalItems={totalItems}
+        currentPage={currentPage}
+        pageSize={ITEMS_PER_PAGE}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ const ITEMS_PER_PAGE = 25;
 export function LoginsList() {
   const { hasPermission } = useAuth();
   const [logins, setLogins] = useState<LoginResponse[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,10 +47,12 @@ export function LoginsList() {
       setIsLoading(true);
       setError(null);
 
-      const result = await fetchLogins();
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+      const result = await fetchLogins({ limit: ITEMS_PER_PAGE, offset });
 
       if (result.success) {
-        setLogins(result.data);
+        setLogins(result.data.data);
+        setTotalItems(result.data.total);
       } else {
         setError(result.error);
       }
@@ -58,7 +61,7 @@ export function LoginsList() {
     };
 
     loadLogins();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, currentPage]);
 
   // Filter logins by search query
   const filteredLogins = useMemo(() => {
@@ -110,13 +113,6 @@ export function LoginsList() {
 
     return sorted;
   }, [filteredLogins, sortKey, sortDirection]);
-
-  // Paginate logins
-  const paginatedLogins = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return sortedLogins.slice(startIndex, endIndex);
-  }, [sortedLogins, currentPage]);
 
   // Handle sort
   const handleSort = useCallback((key: string, direction: "asc" | "desc") => {
@@ -301,7 +297,7 @@ export function LoginsList() {
 
       <div className={styles.resultsInfo} data-qa="logins-results-info">
         <p>
-          Showing {paginatedLogins.length} of {sortedLogins.length} logins
+          Showing {sortedLogins.length} of {totalItems} logins
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
         </p>
       </div>
@@ -312,7 +308,7 @@ export function LoginsList() {
           data-qa="logins-table"
           variant="striped"
           headerVariant="primary"
-          data={paginatedLogins}
+          data={sortedLogins}
           columns={columns}
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -341,11 +337,11 @@ export function LoginsList() {
       </div>
 
       {/* Pagination */}
-      {sortedLogins.length > ITEMS_PER_PAGE && (
+      {totalItems > ITEMS_PER_PAGE && (
         <div className={styles.paginationContainer} data-qa="logins-pagination">
           <Pagination
             variant="compact"
-            totalItems={sortedLogins.length}
+            totalItems={totalItems}
             pageSize={ITEMS_PER_PAGE}
             currentPage={currentPage}
             onPageChange={setCurrentPage}

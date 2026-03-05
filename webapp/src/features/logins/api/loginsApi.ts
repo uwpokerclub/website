@@ -8,17 +8,22 @@ import { LoginResponse, CreateLoginRequest, ChangePasswordRequest } from "../typ
 export type ApiResult<T> = { success: true; data: T } | { success: false; error: string };
 
 /**
- * Fetch all logins
- * @returns Array of logins or error
+ * Fetch logins with pagination
+ * @param params - Optional pagination params (limit, offset)
+ * @returns Array of logins with total count, or error
  */
-export async function fetchLogins(): Promise<ApiResult<LoginResponse[]>> {
+export async function fetchLogins(params: {
+  limit: number;
+  offset: number;
+}): Promise<ApiResult<{ data: LoginResponse[]; total: number }>> {
+  const query = `?limit=${params.limit}&offset=${params.offset}`;
   const { status, data } = await sendAPIRequest<{ data: LoginResponse[]; total: number } | APIErrorResponse>(
-    "v2/logins",
+    `v2/logins${query}`,
   );
 
   if (status >= 200 && status < 300) {
     const listResponse = data as { data: LoginResponse[]; total: number };
-    return { success: true, data: listResponse?.data ?? [] };
+    return { success: true, data: { data: listResponse?.data ?? [], total: listResponse?.total ?? 0 } };
   }
 
   const errorResponse = data as APIErrorResponse | undefined;

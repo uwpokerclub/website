@@ -232,6 +232,7 @@ export function ListEvents() {
   const semesterContext = useContext(SemesterContext);
   const { hasPermission } = useAuth();
   const [events, setEvents] = useState<ListEventsResponse[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -265,16 +266,19 @@ export function ListEvents() {
       setError(null);
 
       try {
-        const response = await fetch(`/api/v2/semesters/${semesterContext.currentSemester!.id}/events`, {
-          credentials: "include",
-        });
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+        const response = await fetch(
+          `/api/v2/semesters/${semesterContext.currentSemester!.id}/events?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
+          { credentials: "include" },
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to fetch events: ${response.statusText}`);
         }
 
-        const resp: { data: ListEventsResponse[] } = await response.json();
+        const resp: { data: ListEventsResponse[]; total: number } = await response.json();
         setEvents(resp.data);
+        setTotalItems(resp.total);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching events");
       } finally {
@@ -283,7 +287,7 @@ export function ListEvents() {
     };
 
     fetchEvents();
-  }, [semesterContext?.currentSemester, refreshTrigger]);
+  }, [semesterContext?.currentSemester, refreshTrigger, currentPage]);
 
   // Reset pagination when semester changes
   useEffect(() => {
@@ -301,13 +305,6 @@ export function ListEvents() {
     const query = debouncedSearchQuery.toLowerCase();
     return events.filter((event) => event.name.toLowerCase().includes(query));
   }, [events, debouncedSearchQuery]);
-
-  // Paginate events
-  const paginatedEvents = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredEvents.slice(startIndex, endIndex);
-  }, [filteredEvents, currentPage]);
 
   // Handle clear search
   const handleClearSearch = useCallback(() => {
@@ -481,7 +478,7 @@ export function ListEvents() {
 
       <div className={styles.resultsInfo} data-qa="events-results-info">
         <p>
-          Showing {paginatedEvents.length} of {filteredEvents.length} events
+          Showing {filteredEvents.length} of {totalItems} events
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
         </p>
       </div>
@@ -491,7 +488,7 @@ export function ListEvents() {
         <Table
           variant="striped"
           headerVariant="primary"
-          data={paginatedEvents}
+          data={filteredEvents}
           columns={columns}
           emptyState={
             <div className={styles.emptyState} data-qa={events.length === 0 ? "events-empty" : "events-no-results"}>
@@ -517,11 +514,11 @@ export function ListEvents() {
       </div>
 
       {/* Pagination */}
-      {filteredEvents.length > ITEMS_PER_PAGE && (
+      {totalItems > ITEMS_PER_PAGE && (
         <div className={styles.paginationContainer} data-qa="events-pagination">
           <Pagination
             variant="compact"
-            totalItems={filteredEvents.length}
+            totalItems={totalItems}
             pageSize={ITEMS_PER_PAGE}
             currentPage={currentPage}
             onPageChange={setCurrentPage}

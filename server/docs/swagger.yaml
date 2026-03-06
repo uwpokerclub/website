@@ -1234,6 +1234,11 @@ paths:
         name: eventId
         required: true
         type: string
+      - description: Search term to filter entries by participant name or student
+          number (case-insensitive)
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:

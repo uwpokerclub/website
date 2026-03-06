@@ -15,10 +15,24 @@ export function RankingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
-  // Reset pagination when semester changes
+  // Debounce search query and reset page when search changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset pagination and search when semester changes
   useEffect(() => {
     setCurrentPage(1);
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
   }, [currentSemester?.id]);
 
   useEffect(() => {
@@ -33,10 +47,11 @@ export function RankingsPage() {
 
       try {
         const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        const response = await fetch(
-          `/api/v2/semesters/${currentSemester.id}/rankings?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
-          { credentials: "include" },
-        );
+        let url = `/api/v2/semesters/${currentSemester.id}/rankings?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+        if (debouncedSearchQuery) {
+          url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
+        }
+        const response = await fetch(url, { credentials: "include" });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch rankings: ${response.statusText}`);
@@ -53,7 +68,7 @@ export function RankingsPage() {
     };
 
     fetchRankings();
-  }, [currentSemester, currentPage]);
+  }, [currentSemester, currentPage, debouncedSearchQuery]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -109,6 +124,9 @@ export function RankingsPage() {
         currentPage={currentPage}
         pageSize={ITEMS_PER_PAGE}
         onPageChange={handlePageChange}
+        searchQuery={searchQuery}
+        activeSearchQuery={debouncedSearchQuery}
+        onSearchChange={setSearchQuery}
       />
     </div>
   );

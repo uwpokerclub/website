@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useCallback } from "react";
 import { Table, TableColumn, Input, Pagination, Button } from "@uwpokerclub/components";
 import { Ranking } from "@/types";
 import { useAuth } from "@/hooks";
@@ -12,6 +12,9 @@ type RankingsTableProps = {
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  searchQuery: string;
+  activeSearchQuery: string;
+  onSearchChange: (query: string) => void;
 };
 
 export function RankingsTable({
@@ -21,46 +24,15 @@ export function RankingsTable({
   currentPage,
   pageSize,
   onPageChange,
+  searchQuery,
+  activeSearchQuery,
+  onSearchChange,
 }: RankingsTableProps) {
   const { hasPermission } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      onPageChange(1);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, onPageChange]);
-
-  // Reset search when semester changes
-  useEffect(() => {
-    setSearchQuery("");
-    setDebouncedSearchQuery("");
-  }, [semesterId]);
-
-  // Filter rankings by search query
-  const filteredRankings = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return rankings;
-    }
-
-    const query = debouncedSearchQuery.toLowerCase();
-    return rankings.filter(
-      (ranking) =>
-        ranking.firstName.toLowerCase().includes(query) ||
-        ranking.lastName.toLowerCase().includes(query) ||
-        `${ranking.firstName} ${ranking.lastName}`.toLowerCase().includes(query),
-    );
-  }, [rankings, debouncedSearchQuery]);
-
-  // Handle clear search
   const handleClearSearch = useCallback(() => {
-    setSearchQuery("");
-  }, []);
+    onSearchChange("");
+  }, [onSearchChange]);
 
   // Handle CSV export
   const handleExport = async () => {
@@ -124,7 +96,7 @@ export function RankingsTable({
             type="search"
             placeholder="Search by name..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             prefix={<FaSearch />}
             suffix={
               searchQuery ? (
@@ -151,8 +123,8 @@ export function RankingsTable({
 
       <div className={styles.resultsInfo} data-qa="rankings-results-info">
         <p>
-          Showing {filteredRankings.length} of {totalItems} rankings
-          {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
+          Showing {rankings.length} of {totalItems} rankings
+          {activeSearchQuery && ` matching "${activeSearchQuery}"`}
         </p>
       </div>
 
@@ -162,7 +134,7 @@ export function RankingsTable({
           data-qa="rankings-table"
           variant="striped"
           headerVariant="primary"
-          data={filteredRankings}
+          data={rankings}
           columns={columns}
           rowProps={(row) => ({ "data-qa": `ranking-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
           emptyState={
@@ -170,16 +142,16 @@ export function RankingsTable({
               <div className={styles.emptyIllustration}>
                 <FaTrophy size={64} />
               </div>
-              {rankings.length === 0 ? (
+              {activeSearchQuery ? (
                 <>
-                  <h3 data-qa="rankings-empty">No rankings yet</h3>
-                  <p>No members have earned points this semester yet.</p>
+                  <h3 data-qa="rankings-no-results">No results found</h3>
+                  <p>No rankings found matching &quot;{activeSearchQuery}&quot;</p>
+                  <p className={styles.emptyHint}>Try adjusting your search terms</p>
                 </>
               ) : (
                 <>
-                  <h3 data-qa="rankings-no-results">No results found</h3>
-                  <p>No rankings found matching &quot;{debouncedSearchQuery}&quot;</p>
-                  <p className={styles.emptyHint}>Try adjusting your search terms</p>
+                  <h3 data-qa="rankings-empty">No rankings yet</h3>
+                  <p>No members have earned points this semester yet.</p>
                 </>
               )}
             </div>

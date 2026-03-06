@@ -51,6 +51,7 @@ func validateUUIDParam(ctx *gin.Context, paramName string) (uuid.UUID, error) {
 // @Tags Rankings
 // @Produce json
 // @Param semesterId path string true "Semester ID"
+// @Param search query string false "Search term to filter rankings by name (case-insensitive)"
 // @Success 200 {array} RankingResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -70,8 +71,10 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 		return
 	}
 
+	search := ctx.Query("search")
+
 	svc := services.NewSemesterService(c.db)
-	rankings, total, err := svc.GetRankingsV2(semesterID, &pagination)
+	rankings, total, err := svc.GetRankingsV2(semesterID, &pagination, search)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

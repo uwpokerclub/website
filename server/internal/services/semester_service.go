@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -107,17 +108,28 @@ func (ss *semesterService) GetRankings(id uuid.UUID) ([]models.RankingResponse, 
 	return rankings, nil
 }
 
-func (ss *semesterService) GetRankingsV2(id uuid.UUID, pagination *models.Pagination) ([]models.RankingResponse, int64, error) {
+func (ss *semesterService) GetRankingsV2(id uuid.UUID, pagination *models.Pagination, search string) ([]models.RankingResponse, int64, error) {
+	buildBase := func() *gorm.DB {
+		q := ss.db.Table(models.SemesterRankingsView).Where("semester_id = ?", id)
+		if search != "" {
+			sanitized := sanitizeLikeInput(search)
+			pattern := "%" + sanitized + "%"
+			q = q.Where(
+				"first_name ILIKE ? OR last_name ILIKE ? OR (first_name || ' ' || last_name) ILIKE ?",
+				pattern, pattern, pattern,
+			)
+		}
+		return q
+	}
+
 	var total int64
-	if err := ss.db.Table(models.SemesterRankingsView).Where("semester_id = ?", id).Count(&total).Error; err != nil {
+	if err := buildBase().Count(&total).Error; err != nil {
 		return nil, 0, e.InternalServerError(err.Error())
 	}
 
 	var rankings []models.RankingResponse
-	query := ss.db.
-		Table(models.SemesterRankingsView).
+	query := buildBase().
 		Select("user_id as id, first_name, last_name, points, position").
-		Where("semester_id = ?", id).
 		Order("position ASC, last_name ASC, first_name ASC")
 	query = pagination.Apply(query)
 
@@ -126,6 +138,16 @@ func (ss *semesterService) GetRankingsV2(id uuid.UUID, pagination *models.Pagina
 	}
 
 	return rankings, total, nil
+}
+
+var likeReplacer = strings.NewReplacer(
+	"\\", "\\\\",
+	"%", "\\%",
+	"_", "\\_",
+)
+
+func sanitizeLikeInput(s string) string {
+	return likeReplacer.Replace(s)
 }
 
 func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {

@@ -1988,6 +1988,12 @@ const docTemplate = `{
                         "name": "semesterId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term to filter rankings by name (case-insensitive)",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {

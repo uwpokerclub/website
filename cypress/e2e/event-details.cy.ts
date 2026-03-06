@@ -129,8 +129,8 @@ describe("EventDetails", () => {
           cy.contains(`matching "${user.firstName}"`).should("be.visible");
           cy.contains(user.firstName).should("be.visible");
 
-          // Verify showing filtered count
-          cy.contains(`Showing 1 of ${ACTIVE_EVENT_PARTICIPANTS.length} entries`).should("be.visible");
+          // Verify showing filtered count (server-side search returns filtered total)
+          cy.contains("Showing 1 of 1 entries").should("be.visible");
         }
       });
 

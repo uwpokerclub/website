@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Table, TableColumn, Input, Pagination, Spinner, Button } from "@uwpokerclub/components";
 import { FaSearch, FaTimes, FaUsers, FaSignInAlt, FaSignOutAlt, FaTrash } from "react-icons/fa";
 import { Entry } from "../../../types";
@@ -18,6 +18,8 @@ type EntriesTableProps = {
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 };
 
 // Format signed out at date
@@ -43,40 +45,18 @@ export function EntriesTable({
   currentPage,
   pageSize,
   onPageChange,
+  searchQuery,
+  onSearchChange,
 }: EntriesTableProps) {
   const { hasPermission } = useAuth();
-
-  // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   // Processing state for action buttons
   const [processingEntry, setProcessingEntry] = useState<string | null>(null);
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      onPageChange(1);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, onPageChange]);
-
-  // Filter entries by search query
-  const filteredEntries = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return entries;
-    }
-
-    const query = debouncedSearchQuery.toLowerCase();
-    return entries.filter((entry) => `${entry.firstName} ${entry.lastName}`.toLowerCase().includes(query));
-  }, [entries, debouncedSearchQuery]);
-
   // Handle clear search
   const handleClearSearch = useCallback(() => {
-    setSearchQuery("");
-  }, []);
+    onSearchChange("");
+  }, [onSearchChange]);
 
   // V2 API actions
   const handleSignOut = useCallback(
@@ -202,7 +182,7 @@ export function EntriesTable({
         accessor: () => "",
         sortable: false,
         render: (_, row) => {
-          const index = filteredEntries.findIndex((e) => e.membershipId === row.membershipId);
+          const index = entries.findIndex((e) => e.membershipId === row.membershipId);
           return (currentPage - 1) * pageSize + index + 1;
         },
       },
@@ -255,7 +235,7 @@ export function EntriesTable({
     }
 
     return cols;
-  }, [currentPage, pageSize, filteredEntries, event.state, hasPermission, ActionButtons]);
+  }, [currentPage, pageSize, entries, event.state, hasPermission, ActionButtons]);
 
   // Empty state component
   const emptyState = useMemo(
@@ -264,7 +244,7 @@ export function EntriesTable({
         <div className={styles.emptyIllustration}>
           <FaUsers size={64} />
         </div>
-        {entries.length === 0 ? (
+        {entries.length === 0 && !searchQuery ? (
           <>
             <h3>No entries yet</h3>
             <p>No participants have been registered for this event yet.</p>
@@ -272,13 +252,13 @@ export function EntriesTable({
         ) : (
           <>
             <h3>No results found</h3>
-            <p>No entries found matching &quot;{debouncedSearchQuery}&quot;</p>
+            <p>No entries found matching &quot;{searchQuery}&quot;</p>
             <p className={styles.emptyHint}>Try adjusting your search terms</p>
           </>
         )}
       </div>
     ),
-    [entries.length, debouncedSearchQuery],
+    [entries.length, searchQuery],
   );
 
   // Loading state
@@ -306,7 +286,7 @@ export function EntriesTable({
             type="search"
             placeholder="Search entries..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             prefix={<FaSearch />}
             suffix={
               searchQuery ? (
@@ -328,8 +308,8 @@ export function EntriesTable({
 
       <div className={styles.resultsInfo}>
         <p>
-          Showing {filteredEntries.length} of {totalItems} entries
-          {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
+          Showing {entries.length} of {totalItems} entries
+          {searchQuery && ` matching "${searchQuery}"`}
         </p>
       </div>
 
@@ -337,7 +317,7 @@ export function EntriesTable({
         <Table
           variant="striped"
           headerVariant="primary"
-          data={filteredEntries}
+          data={entries}
           columns={columns}
           loading={isLoading}
           emptyState={emptyState}

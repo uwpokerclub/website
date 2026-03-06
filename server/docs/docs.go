@@ -1156,6 +1156,12 @@ const docTemplate = `{
                         "name": "eventId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search term to filter entries by participant name or student number (case-insensitive)",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {

@@ -1792,6 +1792,10 @@ paths:
         name: semesterId
         required: true
         type: string
+      - description: Search term to filter rankings by name (case-insensitive)
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:

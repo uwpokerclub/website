@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -138,16 +137,6 @@ func (ss *semesterService) GetRankingsV2(id uuid.UUID, pagination *models.Pagina
 	}
 
 	return rankings, total, nil
-}
-
-var likeReplacer = strings.NewReplacer(
-	"\\", "\\\\",
-	"%", "\\%",
-	"_", "\\_",
-)
-
-func sanitizeLikeInput(s string) string {
-	return likeReplacer.Replace(s)
 }
 
 func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {

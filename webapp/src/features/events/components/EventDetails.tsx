@@ -42,6 +42,7 @@ export function EventDetails() {
   const [event, setEvent] = useState<EventResponse | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [totalEntries, setTotalEntries] = useState(0);
+  const [totalPlayerCount, setTotalPlayerCount] = useState(0);
   const [entriesPage, setEntriesPage] = useState(1);
   const [structure, setStructure] = useState<StructureWithBlinds | null>(null);
 
@@ -49,6 +50,9 @@ export function EventDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEntriesLoading, setIsEntriesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   // UI state
   const [showEndModal, setShowEndModal] = useState(false);
@@ -86,6 +90,14 @@ export function EventDetails() {
     loadEvent();
   }, [currentSemester, eventId]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setEntriesPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Fetch entries - only depends on IDs, not the full event object
   const fetchEntries = useCallback(async () => {
     if (!currentSemester || !eventId) return;
@@ -93,10 +105,11 @@ export function EventDetails() {
     setIsEntriesLoading(true);
     try {
       const offset = (entriesPage - 1) * ENTRIES_PER_PAGE;
-      const response = await fetch(
-        `/api/v2/semesters/${currentSemester.id}/events/${eventId}/entries?limit=${ENTRIES_PER_PAGE}&offset=${offset}`,
-        { credentials: "include" },
-      );
+      let url = `/api/v2/semesters/${currentSemester.id}/events/${eventId}/entries?limit=${ENTRIES_PER_PAGE}&offset=${offset}`;
+      if (debouncedSearchQuery) {
+        url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
+      }
+      const response = await fetch(url, { credentials: "include" });
 
       if (response.ok) {
         type ParticipantResponse = {
@@ -108,6 +121,9 @@ export function EventDetails() {
         };
         const resp: { data: ParticipantResponse[]; total: number } = await response.json();
         setTotalEntries(resp.total);
+        if (!debouncedSearchQuery) {
+          setTotalPlayerCount(resp.total);
+        }
         // Transform API response to match Entry type
         // API returns: { membershipId, membership: { user: { firstName, lastName, id } }, ... }
         // Entry expects: { membershipId, firstName, lastName, id, ... }
@@ -127,7 +143,7 @@ export function EventDetails() {
     } finally {
       setIsEntriesLoading(false);
     }
-  }, [currentSemester, eventId, entriesPage]);
+  }, [currentSemester, eventId, entriesPage, debouncedSearchQuery]);
 
   // Fetch entries only when event is first loaded (event.id changes)
   useEffect(() => {
@@ -412,11 +428,11 @@ export function EventDetails() {
         {/* Stats Bar */}
         <div className={styles.statsBar}>
           <div className={styles.statCard}>
-            <span className={styles.statValue}>{totalEntries + event.rebuys}</span>
+            <span className={styles.statValue}>{totalPlayerCount + event.rebuys}</span>
             <span className={styles.statLabel}>Total Entries</span>
           </div>
           <div className={styles.statCard}>
-            <span className={styles.statValue}>{totalEntries}</span>
+            <span className={styles.statValue}>{totalPlayerCount}</span>
             <span className={styles.statLabel}>Players</span>
           </div>
           <div className={styles.statCard}>
@@ -540,6 +556,8 @@ export function EventDetails() {
                   currentPage={entriesPage}
                   pageSize={ENTRIES_PER_PAGE}
                   onPageChange={setEntriesPage}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
                 />
               ) : activeSubTab === "structure" ? (
                 <div className={styles.structureSection}>

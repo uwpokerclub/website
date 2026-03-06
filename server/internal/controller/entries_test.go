@@ -2,12 +2,14 @@ package controller_test
 
 import (
 	"api/internal/authorization"
+	"api/internal/models"
 	"api/internal/testutils"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1019,6 +1021,129 @@ func TestDeleteEntry(t *testing.T) {
 			} else {
 				require.Equal(t, tc.expectedStatus, w.Code)
 				require.Empty(t, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestListEntriesSearch(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	// Event 2 has 2 participants:
+	// - John Doe (user ID 20780648, membership[0])
+	// - Bob Johnson (user ID 20780650, membership[2])
+	testCases := []struct {
+		name          string
+		search        string
+		expectedTotal int64
+		expectedNames []string
+	}{
+		{
+			name:          "search by first name",
+			search:        "Bob",
+			expectedTotal: 1,
+			expectedNames: []string{"Bob"},
+		},
+		{
+			name:          "search by last name",
+			search:        "Doe",
+			expectedTotal: 1,
+			expectedNames: []string{"John"},
+		},
+		{
+			name:          "search by full name",
+			search:        "Bob Johnson",
+			expectedTotal: 1,
+			expectedNames: []string{"Bob"},
+		},
+		{
+			name:          "search by student number",
+			search:        "20780648",
+			expectedTotal: 1,
+			expectedNames: []string{"John"},
+		},
+		{
+			name:          "search is case-insensitive",
+			search:        "bob",
+			expectedTotal: 1,
+			expectedNames: []string{"Bob"},
+		},
+		{
+			name:          "empty search returns all",
+			search:        "",
+			expectedTotal: 2,
+		},
+		{
+			name:          "search with no matches",
+			search:        "Nonexistent",
+			expectedTotal: 0,
+		},
+		{
+			name:          "partial name match",
+			search:        "Jo",
+			expectedTotal: 2,
+			expectedNames: []string{"John", "Bob"},
+		},
+		{
+			name:          "percent sign is treated as literal",
+			search:        "%",
+			expectedTotal: 0,
+		},
+		{
+			name:          "underscore is treated as literal",
+			search:        "_",
+			expectedTotal: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, container.ResetDatabase(ctx))
+			require.NoError(t, testutils.SeedAll(db))
+
+			sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_EXECUTIVE.ToString())
+			require.NoError(t, err)
+
+			params := url.Values{}
+			params.Set("limit", "25")
+			params.Set("offset", "0")
+			if tc.search != "" {
+				params.Set("search", tc.search)
+			}
+			reqURL := fmt.Sprintf("/api/v2/semesters/%s/events/2/entries?%s", testutils.TEST_SEMESTERS[0].ID, params.Encode())
+
+			req, err := testutils.MakeJSONRequest("GET", reqURL, nil)
+			require.NoError(t, err)
+			testutils.SetAuthCookie(req, sessionID)
+
+			w := httptest.NewRecorder()
+			apiServer.ServeHTTP(w, req)
+
+			require.Equal(t, http.StatusOK, w.Code, "Response: %s", w.Body.String())
+
+			var resp models.ListResponse[models.Participant]
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.expectedTotal, resp.Total)
+			require.Len(t, resp.Data, int(tc.expectedTotal))
+
+			if tc.expectedNames != nil {
+				actualNames := make([]string, len(resp.Data))
+				for i, p := range resp.Data {
+					require.NotNil(t, p.Membership, "participant should have membership preloaded")
+					require.NotNil(t, p.Membership.User, "membership should have user preloaded")
+					actualNames[i] = p.Membership.User.FirstName
+				}
+				require.ElementsMatch(t, tc.expectedNames, actualNames)
 			}
 		})
 	}

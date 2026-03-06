@@ -166,6 +166,7 @@ func (c *entriesController) createEntry(ctx *gin.Context) {
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
+// @Param search query string false "Search term to filter entries by participant name or student number (case-insensitive)"
 // @Success 200 {array} Participant
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -192,9 +193,11 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 		return
 	}
 
+	search := ctx.Query("search")
+
 	// List participants
 	svc := services.NewParticipantsService(c.db)
-	participants, total, err := svc.ListParticipantsV2(eventID, &pagination)
+	participants, total, err := svc.ListParticipantsV2(eventID, &pagination, search)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

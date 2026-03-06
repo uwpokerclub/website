@@ -70,21 +70,34 @@ func (svc *participantsService) ListParticipants(eventId int32) ([]models.ListPa
 	return ret, nil
 }
 
-func (svc *participantsService) ListParticipantsV2(eventId int32, pagination *models.Pagination) ([]models.Participant, int64, error) {
-	// Count total before pagination
+func (svc *participantsService) ListParticipantsV2(eventId int32, pagination *models.Pagination, search string) ([]models.Participant, int64, error) {
+	buildBase := func() *gorm.DB {
+		q := svc.db.Model(&models.Participant{}).Where("participants.event_id = ?", eventId)
+		if search != "" {
+			sanitized := sanitizeLikeInput(search)
+			pattern := "%" + sanitized + "%"
+			q = q.Joins("JOIN memberships ON memberships.id = participants.membership_id").
+				Joins("JOIN users ON users.id = memberships.user_id").
+				Where(
+					"users.first_name ILIKE ? OR users.last_name ILIKE ? OR (users.first_name || ' ' || users.last_name) ILIKE ? OR CAST(users.id AS TEXT) ILIKE ?",
+					pattern, pattern, pattern, pattern,
+				)
+		}
+		return q
+	}
+
 	var total int64
-	if err := svc.db.Model(&models.Participant{}).Where("event_id = ?", eventId).Count(&total).Error; err != nil {
+	if err := buildBase().Count(&total).Error; err != nil {
 		return nil, 0, e.InternalServerError(err.Error())
 	}
 
 	var participants []models.Participant
 
-	query := models.Participant{}.Preload(svc.db).
-		Where("event_id = ?", eventId).
-		Order("signed_out_at DESC")
-	query = pagination.Apply(query)
+	fetchQuery := models.Participant{}.Preload(buildBase()).
+		Order("participants.signed_out_at DESC")
+	fetchQuery = pagination.Apply(fetchQuery)
 
-	if err := query.Find(&participants).Error; err != nil {
+	if err := fetchQuery.Find(&participants).Error; err != nil {
 		return nil, 0, e.InternalServerError(err.Error())
 	}
 

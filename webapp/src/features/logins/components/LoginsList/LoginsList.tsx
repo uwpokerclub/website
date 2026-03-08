@@ -303,7 +303,7 @@ export function LoginsList() {
               <div className={styles.emptyIllustration}>
                 <FaKey size={64} />
               </div>
-              {logins.length === 0 ? (
+              {!debouncedSearchQuery ? (
                 <>
                   <h3 data-qa="logins-empty">No logins yet</h3>
                   <p>No login accounts have been created yet.</p>

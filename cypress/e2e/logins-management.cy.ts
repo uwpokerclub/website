@@ -72,13 +72,16 @@ describe("Logins Management", () => {
 
   context("search functionality", () => {
     beforeEach(() => {
+      cy.intercept("GET", "/api/v2/logins*").as("getLogins");
       cy.visit("/admin/logins");
+      cy.wait("@getLogins");
       cy.getByData("logins-table").should("exist");
     });
 
-    it("should filter by username", () => {
+    it("should send search query to API and filter by username", () => {
       cy.getByData("input-logins-search").type("hdrust0");
 
+      cy.wait("@getLogins").its("request.url").should("include", "search=hdrust0");
       cy.getByData("logins-results-info").should("contain", "hdrust0");
       cy.get("[data-qa^='login-row-']").should("have.length", 1);
       cy.getByData("login-row-hdrust0").should("exist");
@@ -87,6 +90,7 @@ describe("Logins Management", () => {
     it("should filter by role", () => {
       cy.getByData("input-logins-search").type("executive");
 
+      cy.wait("@getLogins").its("request.url").should("include", "search=executive");
       cy.getByData("logins-results-info").should("contain", "executive");
       // Should show test_executive and hdrust0 (both executive role)
       cy.get("[data-qa^='login-row-']").should("have.length", 2);
@@ -95,6 +99,7 @@ describe("Logins Management", () => {
     it("should be case-insensitive", () => {
       cy.getByData("input-logins-search").type("PRESIDENT");
 
+      cy.wait("@getLogins").its("request.url").should("include", "search=PRESIDENT");
       cy.getByData("logins-results-info").should("contain", "PRESIDENT");
       cy.get("[data-qa^='login-row-']").should("have.length", 1);
     });
@@ -102,19 +107,22 @@ describe("Logins Management", () => {
     it("should show no results state", () => {
       cy.getByData("input-logins-search").type("nonexistentuser12345");
 
+      cy.wait("@getLogins").its("request.url").should("include", "search=nonexistentuser12345");
       cy.getByData("logins-no-results").should("be.visible");
     });
 
     it("should clear search and show all logins", () => {
       // First search to filter
       cy.getByData("input-logins-search").type("hdrust0");
+      cy.wait("@getLogins").its("request.url").should("include", "search=hdrust0");
       cy.getByData("logins-results-info").should("contain", "hdrust0");
       cy.get("[data-qa^='login-row-']").should("have.length", 1);
 
       // Clear search
       cy.getByData("clear-search-btn").click();
 
-      // Should show all logins again
+      // Should fetch without search param and show all logins
+      cy.wait("@getLogins").its("request.url").should("not.include", "search=");
       cy.getByData("input-logins-search").should("have.value", "");
       cy.get("[data-qa^='login-row-']").should("have.length", LOGINS.length);
     });

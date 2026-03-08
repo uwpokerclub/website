@@ -36,6 +36,7 @@ func (c *loginsController) LoadRoutes(router *gin.RouterGroup) {
 // @Tags Logins
 // @Accept json
 // @Produce json
+// @Param search query string false "Search term to filter logins by username, role, or linked member name (case-insensitive)"
 // @Success 200 {array} LoginWithMember
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -48,8 +49,10 @@ func (c *loginsController) listLogins(ctx *gin.Context) {
 		return
 	}
 
+	search := ctx.Query("search")
+
 	svc := services.NewLoginService(c.db)
-	logins, total, err := svc.ListLogins(&pagination)
+	logins, total, err := svc.ListLogins(&pagination, search)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

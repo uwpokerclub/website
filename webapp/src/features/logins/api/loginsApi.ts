@@ -15,8 +15,12 @@ export type ApiResult<T> = { success: true; data: T } | { success: false; error:
 export async function fetchLogins(params: {
   limit: number;
   offset: number;
+  search?: string;
 }): Promise<ApiResult<{ data: LoginResponse[]; total: number }>> {
-  const query = `?limit=${params.limit}&offset=${params.offset}`;
+  let query = `?limit=${params.limit}&offset=${params.offset}`;
+  if (params.search) {
+    query += `&search=${encodeURIComponent(params.search)}`;
+  }
   const { status, data } = await sendAPIRequest<{ data: LoginResponse[]; total: number } | APIErrorResponse>(
     `v2/logins${query}`,
   );

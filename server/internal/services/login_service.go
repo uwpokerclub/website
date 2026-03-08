@@ -48,19 +48,31 @@ type loginWithUserRow struct {
 }
 
 // ListLogins retrieves all logins with their linked member information
-func (svc *loginService) ListLogins(pagination *models.Pagination) ([]models.LoginWithMember, int64, error) {
+func (svc *loginService) ListLogins(pagination *models.Pagination, search string) ([]models.LoginWithMember, int64, error) {
+	buildBase := func() *gorm.DB {
+		q := svc.db.Table("logins").
+			Joins("LEFT JOIN users ON logins.username = users.quest_id")
+		if search != "" {
+			sanitized := sanitizeLikeInput(search)
+			pattern := "%" + sanitized + "%"
+			q = q.Where(
+				"logins.username ILIKE ? OR logins.role ILIKE ? OR users.first_name ILIKE ? OR users.last_name ILIKE ? OR (users.first_name || ' ' || users.last_name) ILIKE ?",
+				pattern, pattern, pattern, pattern, pattern,
+			)
+		}
+		return q
+	}
+
 	// Count total before pagination
 	var total int64
-	if err := svc.db.Table("logins").Count(&total).Error; err != nil {
+	if err := buildBase().Count(&total).Error; err != nil {
 		return nil, 0, e.InternalServerError(err.Error())
 	}
 
 	var rows []loginWithUserRow
 
-	// Use LEFT JOIN to fetch logins with linked members, excluding password
-	query := svc.db.Table("logins").
+	query := buildBase().
 		Select("logins.username, logins.role, users.id as user_id, users.first_name, users.last_name").
-		Joins("LEFT JOIN users ON logins.username = users.quest_id").
 		Order("logins.username ASC")
 	query = pagination.Apply(query)
 

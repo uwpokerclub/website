@@ -6,8 +6,10 @@ import (
 	"api/internal/testutils"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -507,6 +509,153 @@ func TestChangePassword(t *testing.T) {
 
 			if tc.expectError && tc.expectedErrorMessage != "" {
 				testutils.AssertErrorResponse(t, w, tc.expectedStatus, tc.expectedErrorMessage)
+			}
+		})
+	}
+}
+
+func TestListLoginsSearch(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	// Setup test data: logins with linked members
+	setupSearchData := func() {
+		// Create users that will be linked to logins via quest_id
+		db.Create(&models.User{
+			ID:        12345678,
+			FirstName: "John",
+			LastName:  "Doe",
+			Email:     "john@example.com",
+			Faculty:   "Math",
+			QuestID:   "jdoe",
+		})
+		db.Create(&models.User{
+			ID:        87654321,
+			FirstName: "Alice",
+			LastName:  "Smith",
+			Email:     "alice@example.com",
+			Faculty:   "Science",
+			QuestID:   "asmith",
+		})
+
+		// Create logins (some linked to users, some not)
+		db.Create(&models.Login{Username: "jdoe", Password: "hash1", Role: "executive"})
+		db.Create(&models.Login{Username: "asmith", Password: "hash2", Role: "president"})
+		db.Create(&models.Login{Username: "unlinked_admin", Password: "hash3", Role: "webmaster"})
+	}
+
+	// Test data has 3 logins + 1 testwebmaster from session = 4 total
+	testCases := []struct {
+		name              string
+		search            string
+		expectedTotal     int64
+		expectedUsernames []string
+	}{
+		{
+			name:          "search by username",
+			search:        "jdoe",
+			expectedTotal: 1,
+			expectedUsernames: []string{"jdoe"},
+		},
+		{
+			name:          "search by role",
+			search:        "executive",
+			expectedTotal: 1,
+			expectedUsernames: []string{"jdoe"},
+		},
+		{
+			name:          "search by member first name",
+			search:        "Alice",
+			expectedTotal: 1,
+			expectedUsernames: []string{"asmith"},
+		},
+		{
+			name:          "search by member last name",
+			search:        "Doe",
+			expectedTotal: 1,
+			expectedUsernames: []string{"jdoe"},
+		},
+		{
+			name:          "search by full name",
+			search:        "John Doe",
+			expectedTotal: 1,
+			expectedUsernames: []string{"jdoe"},
+		},
+		{
+			name:          "search is case-insensitive",
+			search:        "EXECUTIVE",
+			expectedTotal: 1,
+			expectedUsernames: []string{"jdoe"},
+		},
+		{
+			name:          "empty search returns all",
+			search:        "",
+			expectedTotal: 4, // 3 setup + 1 testwebmaster
+		},
+		{
+			name:          "search with no matches",
+			search:        "Nonexistent",
+			expectedTotal: 0,
+		},
+		{
+			name:          "percent sign is treated as literal",
+			search:        "%",
+			expectedTotal: 0,
+		},
+		{
+			name:          "underscore is treated as literal",
+			search:        "_",
+			expectedTotal: 1,
+			expectedUsernames: []string{"unlinked_admin"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, container.ResetDatabase(ctx))
+
+			sessionID, err := testutils.CreateTestSession(db, "testwebmaster", authorization.ROLE_WEBMASTER.ToString())
+			require.NoError(t, err)
+
+			setupSearchData()
+
+			params := url.Values{}
+			params.Set("limit", "25")
+			params.Set("offset", "0")
+			if tc.search != "" {
+				params.Set("search", tc.search)
+			}
+			reqURL := fmt.Sprintf("/api/v2/logins?%s", params.Encode())
+
+			req, err := testutils.MakeJSONRequest("GET", reqURL, nil)
+			require.NoError(t, err)
+			testutils.SetAuthCookie(req, sessionID)
+
+			w := httptest.NewRecorder()
+			apiServer.ServeHTTP(w, req)
+
+			require.Equal(t, http.StatusOK, w.Code, "Response: %s", w.Body.String())
+
+			var resp models.ListResponse[models.LoginWithMember]
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.expectedTotal, resp.Total)
+			require.Len(t, resp.Data, int(tc.expectedTotal))
+
+			if tc.expectedUsernames != nil {
+				actualUsernames := make([]string, len(resp.Data))
+				for i, login := range resp.Data {
+					actualUsernames[i] = login.Username
+				}
+				require.ElementsMatch(t, tc.expectedUsernames, actualUsernames)
 			}
 		})
 	}

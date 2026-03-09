@@ -58,6 +58,14 @@ const docTemplate = `{
                     "Logins"
                 ],
                 "summary": "List all logins",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search term to filter logins by username, role, or linked member name (case-insensitive)",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

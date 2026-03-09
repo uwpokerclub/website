@@ -504,6 +504,12 @@ paths:
       consumes:
       - application/json
       description: Retrieve a list of all logins with their linked member information
+      parameters:
+      - description: Search term to filter logins by username, role, or linked member
+          name (case-insensitive)
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:

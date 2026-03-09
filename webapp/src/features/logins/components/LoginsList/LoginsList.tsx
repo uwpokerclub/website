@@ -48,7 +48,7 @@ export function LoginsList() {
       setError(null);
 
       const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-      const result = await fetchLogins({ limit: ITEMS_PER_PAGE, offset });
+      const result = await fetchLogins({ limit: ITEMS_PER_PAGE, offset, search: debouncedSearchQuery || undefined });
 
       if (result.success) {
         setLogins(result.data.data);
@@ -61,31 +61,15 @@ export function LoginsList() {
     };
 
     loadLogins();
-  }, [refreshTrigger, currentPage]);
-
-  // Filter logins by search query
-  const filteredLogins = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return logins;
-    }
-
-    const query = debouncedSearchQuery.toLowerCase();
-    return logins.filter(
-      (login) =>
-        login.username.toLowerCase().includes(query) ||
-        login.role.toLowerCase().includes(query) ||
-        (login.linkedMember &&
-          `${login.linkedMember.firstName} ${login.linkedMember.lastName}`.toLowerCase().includes(query)),
-    );
-  }, [logins, debouncedSearchQuery]);
+  }, [refreshTrigger, currentPage, debouncedSearchQuery]);
 
   // Sort logins
   const sortedLogins = useMemo(() => {
     if (!sortKey) {
-      return filteredLogins;
+      return logins;
     }
 
-    const sorted = [...filteredLogins].sort((a, b) => {
+    const sorted = [...logins].sort((a, b) => {
       let aValue: string = "";
       let bValue: string = "";
 
@@ -112,7 +96,7 @@ export function LoginsList() {
     });
 
     return sorted;
-  }, [filteredLogins, sortKey, sortDirection]);
+  }, [logins, sortKey, sortDirection]);
 
   // Handle sort
   const handleSort = useCallback((key: string, direction: "asc" | "desc") => {
@@ -268,7 +252,7 @@ export function LoginsList() {
           <Input
             data-qa="input-logins-search"
             type="search"
-            placeholder="Search by username or role..."
+            placeholder="Search by username, role, or member name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             prefix={<FaSearch />}
@@ -319,7 +303,7 @@ export function LoginsList() {
               <div className={styles.emptyIllustration}>
                 <FaKey size={64} />
               </div>
-              {logins.length === 0 ? (
+              {!debouncedSearchQuery ? (
                 <>
                   <h3 data-qa="logins-empty">No logins yet</h3>
                   <p>No login accounts have been created yet.</p>

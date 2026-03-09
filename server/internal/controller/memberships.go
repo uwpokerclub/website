@@ -124,6 +124,7 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 // @Param semesterId path string true "Semester ID"
 // @Param limit query int false "Maximum number of results to return"
 // @Param offset query int false "Number of results to skip"
+// @Param search query string false "Search by first name, last name, email, or full name"
 // @Success 200 {array} MembershipWithAttendance
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -143,9 +144,12 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		return
 	}
 
+	search := ctx.Query("search")
+
 	filter := &models.ListMembershipsFilter{
 		Pagination: pagination,
 		SemesterID: &semesterID,
+		Search:     search,
 	}
 
 	svc := services.NewMembershipService(c.db)

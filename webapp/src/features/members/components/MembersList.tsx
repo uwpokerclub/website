@@ -60,10 +60,11 @@ export function MembersList() {
 
       try {
         const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        const response = await fetch(
-          `/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
-          { credentials: "include" },
-        );
+        let url = `/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+        if (debouncedSearchQuery) {
+          url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
+        }
+        const response = await fetch(url, { credentials: "include" });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch members: ${response.statusText}`);
@@ -80,31 +81,15 @@ export function MembersList() {
     };
 
     fetchMembers();
-  }, [semesterContext?.currentSemester, refreshTrigger, currentPage]);
-
-  // Filter members by search query
-  const filteredMembers = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return members;
-    }
-
-    const query = debouncedSearchQuery.toLowerCase();
-    return members.filter(
-      (member) =>
-        member.user.firstName.toLowerCase().includes(query) ||
-        member.user.lastName.toLowerCase().includes(query) ||
-        member.user.email.toLowerCase().includes(query) ||
-        `${member.user.firstName} ${member.user.lastName}`.toLowerCase().includes(query),
-    );
-  }, [members, debouncedSearchQuery]);
+  }, [semesterContext?.currentSemester, refreshTrigger, currentPage, debouncedSearchQuery]);
 
   // Sort members
   const sortedMembers = useMemo(() => {
     if (!sortKey) {
-      return filteredMembers;
+      return members;
     }
 
-    const sorted = [...filteredMembers].sort((a, b) => {
+    const sorted = [...members].sort((a, b) => {
       let aValue: string | number = "";
       let bValue: string | number = "";
 
@@ -135,7 +120,7 @@ export function MembersList() {
     });
 
     return sorted;
-  }, [filteredMembers, sortKey, sortDirection]);
+  }, [members, sortKey, sortDirection]);
 
   // Handle sort
   const handleSort = useCallback((key: string, direction: "asc" | "desc") => {
@@ -358,16 +343,16 @@ export function MembersList() {
               <div className={styles.emptyIllustration}>
                 <FaUsers size={64} />
               </div>
-              {members.length === 0 ? (
-                <>
-                  <h3 data-qa="members-empty">No members yet</h3>
-                  <p>No members have been registered for this semester yet.</p>
-                </>
-              ) : (
+              {debouncedSearchQuery ? (
                 <>
                   <h3 data-qa="members-no-results">No results found</h3>
                   <p>No members found matching &quot;{debouncedSearchQuery}&quot;</p>
                   <p className={styles.emptyHint}>Try adjusting your search terms</p>
+                </>
+              ) : (
+                <>
+                  <h3 data-qa="members-empty">No members yet</h3>
+                  <p>No members have been registered for this semester yet.</p>
                 </>
               )}
             </div>

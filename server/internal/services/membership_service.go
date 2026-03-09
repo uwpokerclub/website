@@ -102,6 +102,15 @@ func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gor
 		query = query.Where("memberships.user_id = ?", *filter.UserID)
 	}
 
+	if filter.Search != "" {
+		sanitized := sanitizeLikeInput(filter.Search)
+		pattern := "%" + sanitized + "%"
+		query = query.Where(
+			"\"User\".first_name ILIKE ? OR \"User\".last_name ILIKE ? OR \"User\".email ILIKE ? OR (\"User\".first_name || ' ' || \"User\".last_name) ILIKE ?",
+			pattern, pattern, pattern, pattern,
+		)
+	}
+
 	return query
 }
 
@@ -448,8 +457,11 @@ func (ms *membershipService) DeleteMembershipV2(id uuid.UUID, semesterID uuid.UU
 
 // ListMembershipsV2 lists all memberships with embedded User and computed attendance count
 func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
-	// Count query: separate, no JOIN overhead
+	// Count query: separate, add User JOIN only when search needs it
 	countQuery := ms.db.Where("memberships.semester_id = ?", filter.SemesterID)
+	if filter.Search != "" {
+		countQuery = countQuery.Joins("User")
+	}
 	countQuery = addFilterClauses(countQuery, filter)
 
 	var total int64

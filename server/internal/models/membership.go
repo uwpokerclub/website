@@ -59,6 +59,9 @@ type ListMembershipsFilter struct {
 
 	// UserID will filter for memberships that are only held by this specified user.
 	UserID *uint64
+
+	// Search filters memberships by user first name, last name, email, or full name (case-insensitive).
+	Search string
 }
 
 type CreateMembershipRequestV2 struct {

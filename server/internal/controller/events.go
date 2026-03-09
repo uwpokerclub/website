@@ -99,6 +99,7 @@ func (s *eventsController) createEvent(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param semesterId path string true "Semester ID"
+// @Param search query string false "Search events by name (case-insensitive)"
 // @Success 200 {array} Event
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -124,9 +125,17 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 		return
 	}
 
+	search := ctx.Query("search")
+
+	filter := &models.ListEventsFilter{
+		Pagination: pagination,
+		SemesterID: semesterID,
+		Search:     search,
+	}
+
 	// Initialize the event service and list events for the semester
 	svc := services.NewEventService(s.db)
-	events, total, err := svc.ListEventsV2(semesterID, &pagination)
+	events, total, err := svc.ListEventsV2(filter)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,

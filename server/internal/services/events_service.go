@@ -400,19 +400,30 @@ func (svc *eventService) CreateEventV2(
 	return &event, nil
 }
 
-func (svc *eventService) ListEventsV2(semesterID uuid.UUID, pagination *models.Pagination) ([]models.Event, int64, error) {
+func (svc *eventService) ListEventsV2(filter *models.ListEventsFilter) ([]models.Event, int64, error) {
+	applySearch := func(q *gorm.DB) *gorm.DB {
+		if filter.Search != "" {
+			pattern := "%" + sanitizeLikeInput(filter.Search) + "%"
+			return q.Where("events.name ILIKE ?", pattern)
+		}
+		return q
+	}
+
 	// Count total before pagination
 	var total int64
-	if err := svc.db.Model(&models.Event{}).Where("semester_id = ?", semesterID).Count(&total).Error; err != nil {
+	countQuery := applySearch(svc.db.Model(&models.Event{}).Where("semester_id = ?", filter.SemesterID))
+	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count events: %w", err)
 	}
 
 	events := make([]models.Event, 0)
 
-	query := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
-		Where("semester_id = ?", semesterID).
-		Order("start_date DESC")
-	query = pagination.Apply(query)
+	query := applySearch(
+		models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
+			Where("semester_id = ?", filter.SemesterID).
+			Order("start_date DESC"),
+	)
+	query = filter.Pagination.Apply(query)
 
 	if err := query.Find(&events).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to list events: %w", err)

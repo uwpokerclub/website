@@ -267,10 +267,11 @@ export function ListEvents() {
 
       try {
         const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        const response = await fetch(
-          `/api/v2/semesters/${semesterContext.currentSemester!.id}/events?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
-          { credentials: "include" },
-        );
+        let url = `/api/v2/semesters/${semesterContext.currentSemester!.id}/events?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+        if (debouncedSearchQuery) {
+          url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
+        }
+        const response = await fetch(url, { credentials: "include" });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch events: ${response.statusText}`);
@@ -287,7 +288,7 @@ export function ListEvents() {
     };
 
     fetchEvents();
-  }, [semesterContext?.currentSemester, refreshTrigger, currentPage]);
+  }, [semesterContext?.currentSemester, refreshTrigger, currentPage, debouncedSearchQuery]);
 
   // Reset pagination when semester changes
   useEffect(() => {
@@ -295,16 +296,6 @@ export function ListEvents() {
     setSearchQuery("");
     setDebouncedSearchQuery("");
   }, [semesterContext?.currentSemester?.id]);
-
-  // Filter events by search query
-  const filteredEvents = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return events;
-    }
-
-    const query = debouncedSearchQuery.toLowerCase();
-    return events.filter((event) => event.name.toLowerCase().includes(query));
-  }, [events, debouncedSearchQuery]);
 
   // Handle clear search
   const handleClearSearch = useCallback(() => {
@@ -478,7 +469,7 @@ export function ListEvents() {
 
       <div className={styles.resultsInfo} data-qa="events-results-info">
         <p>
-          Showing {filteredEvents.length} of {totalItems} events
+          Showing {events.length} of {totalItems} events
           {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
         </p>
       </div>
@@ -488,23 +479,23 @@ export function ListEvents() {
         <Table
           variant="striped"
           headerVariant="primary"
-          data={filteredEvents}
+          data={events}
           columns={columns}
           emptyState={
-            <div className={styles.emptyState} data-qa={events.length === 0 ? "events-empty" : "events-no-results"}>
+            <div className={styles.emptyState} data-qa={debouncedSearchQuery ? "events-no-results" : "events-empty"}>
               <div className={styles.emptyIllustration}>
                 <FaCalendarAlt size={64} />
               </div>
-              {events.length === 0 ? (
-                <>
-                  <h3>No events yet</h3>
-                  <p>No events have been created for this semester yet.</p>
-                </>
-              ) : (
+              {debouncedSearchQuery ? (
                 <>
                   <h3>No results found</h3>
                   <p>No events found matching &quot;{debouncedSearchQuery}&quot;</p>
                   <p className={styles.emptyHint}>Try adjusting your search terms</p>
+                </>
+              ) : (
+                <>
+                  <h3>No events yet</h3>
+                  <p>No events have been created for this semester yet.</p>
                 </>
               )}
             </div>

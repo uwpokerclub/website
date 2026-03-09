@@ -86,6 +86,19 @@ type UpdateEventRequestV2 struct {
 	PointsMultiplier *float32   `json:"pointsMultiplier,omitempty" binding:"omitempty,gte=0"                              example:"1.5"`
 } //@name UpdateEventRequestV2
 
+// ListEventsFilter is the set of parameters that will be used to filter the
+// list events query. The zero value for ListEventsFilter is the same as
+// not filtering the result.
+type ListEventsFilter struct {
+	Pagination
+
+	// SemesterID is the ID of the semester to list events for.
+	SemesterID uuid.UUID
+
+	// Search filters events by name (case-insensitive substring match).
+	Search string
+}
+
 type ListEventsResponse struct {
 	ID         int32     `json:"id"`
 	Name       string    `json:"name"`

@@ -4,9 +4,8 @@ import { FaSearch, FaChevronRight, FaChevronLeft, FaUsers, FaUserCheck, FaUserPl
 import { RegisterMemberModal, type RegistrationSuccessData } from "../../../members/components/RegisterMemberModal";
 import styles from "./EventRegistrationModal.module.css";
 
-/**
- * Membership data from the API
- */
+const PAGE_SIZE = 100;
+
 interface Membership {
   id: string;
   userId: number;
@@ -22,9 +21,6 @@ interface Membership {
   attendance: number;
 }
 
-/**
- * Entry/Participant data from the API
- */
 interface Entry {
   membershipId: string;
   eventId: number;
@@ -37,9 +33,6 @@ interface Entry {
   };
 }
 
-/**
- * API response for batch entry creation
- */
 interface CreateEntryResult {
   membershipId: string;
   status: "created" | "error";
@@ -54,12 +47,6 @@ export interface EventRegistrationModalProps {
   onRegistrationChange?: () => void;
 }
 
-/**
- * EventRegistrationModal - Dual-list transfer interface for event registration
- *
- * Displays available and registered members side-by-side with immediate
- * registration/unregistration via action buttons.
- */
 export function EventRegistrationModal({
   isOpen,
   onClose,
@@ -70,19 +57,41 @@ export function EventRegistrationModal({
   const { showToast } = useToast();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Data state
-  const [allMembers, setAllMembers] = useState<Membership[]>([]);
+  // Memberships (available panel) state
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [membershipsTotal, setMembershipsTotal] = useState(0);
+  const [membershipsOffset, setMembershipsOffset] = useState(0);
+  const [membershipsLoading, setMembershipsLoading] = useState(false);
+
+  // Entries (registered panel) state
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entriesTotal, setEntriesTotal] = useState(0);
+  const [entriesOffset, setEntriesOffset] = useState(0);
+  const [entriesLoading, setEntriesLoading] = useState(false);
+
+  // Set of registered membership IDs (built from entries)
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
 
   // UI state
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadingMemberIds, setLoadingMemberIds] = useState<Set<string>>(new Set());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isCreateMemberModalOpen, setIsCreateMemberModalOpen] = useState(false);
 
-  // Debounced search query
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Sentinel refs for IntersectionObserver
+  const availableSentinelRef = useRef<HTMLDivElement>(null);
+  const registeredSentinelRef = useRef<HTMLDivElement>(null);
+
+  // Refs to track latest values in async callbacks and stable observers
+  const membershipsLoadingRef = useRef(false);
+  const entriesLoadingRef = useRef(false);
+  const membershipsOffsetRef = useRef(0);
+  const entriesOffsetRef = useRef(0);
+  const hasMoreMembershipsRef = useRef(false);
+  const hasMoreEntriesRef = useRef(false);
+  const debouncedQueryRef = useRef("");
 
   // Debounce search input
   useEffect(() => {
@@ -102,55 +111,137 @@ export function EventRegistrationModal({
     }
   }, [isOpen]);
 
-  // Load data when modal opens
+  // Fetch a page of memberships
+  const fetchMembershipsPage = useCallback(
+    async (offset: number, search: string, reset: boolean) => {
+      if (membershipsLoadingRef.current) return;
+      membershipsLoadingRef.current = true;
+      setMembershipsLoading(true);
+
+      try {
+        let url = `/api/v2/semesters/${semesterId}/memberships?limit=${PAGE_SIZE}&offset=${offset}`;
+        if (search) {
+          url += `&search=${encodeURIComponent(search)}`;
+        }
+
+        const response = await fetch(url, { credentials: "include" });
+        if (!response.ok) throw new Error("Failed to load members");
+
+        const resp: { data: Membership[]; total: number } = await response.json();
+
+        setMemberships((prev) => (reset ? resp.data : [...prev, ...resp.data]));
+        setMembershipsTotal(resp.total);
+        const newOffset = offset + resp.data.length;
+        setMembershipsOffset(newOffset);
+        membershipsOffsetRef.current = newOffset;
+        hasMoreMembershipsRef.current = newOffset < resp.total;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load members";
+        showToast({ message, variant: "error", duration: 5000 });
+      } finally {
+        membershipsLoadingRef.current = false;
+        setMembershipsLoading(false);
+      }
+    },
+    [semesterId, showToast],
+  );
+
+  // Fetch a page of entries
+  const fetchEntriesPage = useCallback(
+    async (offset: number, search: string, reset: boolean) => {
+      if (entriesLoadingRef.current) return;
+      entriesLoadingRef.current = true;
+      setEntriesLoading(true);
+
+      try {
+        let url = `/api/v2/semesters/${semesterId}/events/${eventId}/entries?limit=${PAGE_SIZE}&offset=${offset}`;
+        if (search) {
+          url += `&search=${encodeURIComponent(search)}`;
+        }
+
+        const response = await fetch(url, { credentials: "include" });
+        if (!response.ok) throw new Error("Failed to load entries");
+
+        const resp: { data: Entry[]; total: number } = await response.json();
+
+        setEntries((prev) => (reset ? resp.data : [...prev, ...resp.data]));
+        setEntriesTotal(resp.total);
+        const newOffset = offset + resp.data.length;
+        setEntriesOffset(newOffset);
+        entriesOffsetRef.current = newOffset;
+        hasMoreEntriesRef.current = newOffset < resp.total;
+
+        // Update registeredIds
+        if (reset) {
+          setRegisteredIds(new Set(resp.data.map((e) => e.membershipId)));
+        } else {
+          setRegisteredIds((prev) => {
+            const next = new Set(prev);
+            for (const e of resp.data) {
+              next.add(e.membershipId);
+            }
+            return next;
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load entries";
+        showToast({ message, variant: "error", duration: 5000 });
+      } finally {
+        entriesLoadingRef.current = false;
+        setEntriesLoading(false);
+      }
+    },
+    [semesterId, eventId, showToast],
+  );
+
+  // Initial load when modal opens
   useEffect(() => {
-    if (!isOpen || !semesterId || !eventId) {
-      return;
-    }
+    if (!isOpen || !semesterId || !eventId) return;
 
     let mounted = true;
 
-    const loadData = async () => {
+    const loadInitial = async () => {
       setIsInitialLoading(true);
       setLoadError(null);
 
       try {
-        // Fetch memberships and entries in parallel
         const [membersResponse, entriesResponse] = await Promise.all([
-          fetch(`/api/v2/semesters/${semesterId}/memberships`, {
+          fetch(`/api/v2/semesters/${semesterId}/memberships?limit=${PAGE_SIZE}&offset=0`, {
             credentials: "include",
           }),
-          fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/entries`, {
+          fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/entries?limit=${PAGE_SIZE}&offset=0`, {
             credentials: "include",
           }),
         ]);
 
-        if (!membersResponse.ok) {
-          throw new Error("Failed to load members");
-        }
-        if (!entriesResponse.ok) {
-          throw new Error("Failed to load entries");
-        }
+        if (!membersResponse.ok) throw new Error("Failed to load members");
+        if (!entriesResponse.ok) throw new Error("Failed to load entries");
 
-        const membersResp: { data: Membership[] } = await membersResponse.json();
-        const entriesResp: { data: Entry[] } = await entriesResponse.json();
+        const membersResp: { data: Membership[]; total: number } = await membersResponse.json();
+        const entriesResp: { data: Entry[]; total: number } = await entriesResponse.json();
 
         if (mounted) {
-          // Build set of registered membership IDs
-          const registeredSet = new Set(entriesResp.data.map((e) => e.membershipId));
+          setMemberships(membersResp.data);
+          setMembershipsTotal(membersResp.total);
+          const mOffset = membersResp.data.length;
+          setMembershipsOffset(mOffset);
+          membershipsOffsetRef.current = mOffset;
+          hasMoreMembershipsRef.current = mOffset < membersResp.total;
 
-          setAllMembers(membersResp.data);
-          setRegisteredIds(registeredSet);
+          setEntries(entriesResp.data);
+          setEntriesTotal(entriesResp.total);
+          const eOffset = entriesResp.data.length;
+          setEntriesOffset(eOffset);
+          entriesOffsetRef.current = eOffset;
+          hasMoreEntriesRef.current = eOffset < entriesResp.total;
+
+          setRegisteredIds(new Set(entriesResp.data.map((e) => e.membershipId)));
         }
       } catch (error) {
         if (mounted) {
           const message = error instanceof Error ? error.message : "Failed to load data";
           setLoadError(message);
-          showToast({
-            message,
-            variant: "error",
-            duration: 5000,
-          });
+          showToast({ message, variant: "error", duration: 5000 });
         }
       } finally {
         if (mounted) {
@@ -159,52 +250,129 @@ export function EventRegistrationModal({
       }
     };
 
-    loadData();
+    loadInitial();
 
     return () => {
       mounted = false;
     };
   }, [isOpen, semesterId, eventId, showToast]);
 
+  // Reset and re-fetch when search changes
+  useEffect(() => {
+    if (isInitialLoading || !isOpen) return;
+
+    setMemberships([]);
+    setMembershipsOffset(0);
+    membershipsOffsetRef.current = 0;
+    setMembershipsTotal(0);
+    hasMoreMembershipsRef.current = false;
+    setEntries([]);
+    setEntriesOffset(0);
+    entriesOffsetRef.current = 0;
+    setEntriesTotal(0);
+    hasMoreEntriesRef.current = false;
+    setRegisteredIds(new Set());
+    debouncedQueryRef.current = debouncedQuery;
+
+    fetchMembershipsPage(0, debouncedQuery, true);
+    fetchEntriesPage(0, debouncedQuery, true);
+  }, [debouncedQuery, isInitialLoading, isOpen, fetchMembershipsPage, fetchEntriesPage]);
+
+  // Compute derived values
+  const hasMoreMemberships = membershipsOffset < membershipsTotal;
+  const hasMoreEntries = entriesOffset < entriesTotal;
+
+  // Keep refs in sync for stable observer closures
+  useEffect(() => {
+    hasMoreMembershipsRef.current = hasMoreMemberships;
+  }, [hasMoreMemberships]);
+  useEffect(() => {
+    hasMoreEntriesRef.current = hasMoreEntries;
+  }, [hasMoreEntries]);
+  useEffect(() => {
+    debouncedQueryRef.current = debouncedQuery;
+  }, [debouncedQuery]);
+
+  // Available members = loaded memberships minus registered ones
+  const availableMembers = useMemo(
+    () => memberships.filter((m) => !registeredIds.has(m.id)),
+    [memberships, registeredIds],
+  );
+
+  // Build a lookup from entries to membership data for display
+  const membershipsMap = useMemo(() => {
+    const map = new Map<string, Membership>();
+    for (const m of memberships) {
+      map.set(m.id, m);
+    }
+    return map;
+  }, [memberships]);
+
+  const registeredMembers = useMemo(
+    () =>
+      entries.map((entry) => ({
+        entry,
+        membership: membershipsMap.get(entry.membershipId),
+      })),
+    [entries, membershipsMap],
+  );
+
+  // Stable IntersectionObserver for available panel (uses refs, not re-created on state changes)
+  useEffect(() => {
+    const sentinel = availableSentinelRef.current;
+    if (!sentinel || isInitialLoading) return;
+
+    const observer = new IntersectionObserver(
+      (observerEntries) => {
+        if (observerEntries[0].isIntersecting && hasMoreMembershipsRef.current && !membershipsLoadingRef.current) {
+          fetchMembershipsPage(membershipsOffsetRef.current, debouncedQueryRef.current, false);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isInitialLoading, fetchMembershipsPage]);
+
+  // Stable IntersectionObserver for registered panel
+  useEffect(() => {
+    const sentinel = registeredSentinelRef.current;
+    if (!sentinel || isInitialLoading) return;
+
+    const observer = new IntersectionObserver(
+      (observerEntries) => {
+        if (observerEntries[0].isIntersecting && hasMoreEntriesRef.current && !entriesLoadingRef.current) {
+          fetchEntriesPage(entriesOffsetRef.current, debouncedQueryRef.current, false);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isInitialLoading, fetchEntriesPage]);
+
   // Reset state when modal closes
   const handleClose = useCallback(() => {
     setSearchQuery("");
     setDebouncedQuery("");
     setLoadError(null);
+    setIsInitialLoading(true);
+    setMemberships([]);
+    setMembershipsTotal(0);
+    setMembershipsOffset(0);
+    membershipsOffsetRef.current = 0;
+    hasMoreMembershipsRef.current = false;
+    setEntries([]);
+    setEntriesTotal(0);
+    setEntriesOffset(0);
+    entriesOffsetRef.current = 0;
+    hasMoreEntriesRef.current = false;
+    setRegisteredIds(new Set());
+    debouncedQueryRef.current = "";
     onClose();
   }, [onClose]);
-
-  // Filter function for search
-  const matchesSearch = useCallback((member: Membership, query: string): boolean => {
-    if (!query.trim()) return true;
-    const searchLower = query.toLowerCase();
-    const fullName = `${member.user.firstName} ${member.user.lastName}`.toLowerCase();
-    const studentId = member.userId.toString();
-    return fullName.includes(searchLower) || studentId.includes(searchLower);
-  }, []);
-
-  // Derived filtered lists
-  const filteredAvailable = useMemo(() => {
-    return allMembers
-      .filter((m) => !registeredIds.has(m.id))
-      .filter((m) => matchesSearch(m, debouncedQuery))
-      .sort((a, b) => {
-        const nameA = `${a.user.lastName} ${a.user.firstName}`.toLowerCase();
-        const nameB = `${b.user.lastName} ${b.user.firstName}`.toLowerCase();
-        return nameA.localeCompare(nameB);
-      });
-  }, [allMembers, registeredIds, debouncedQuery, matchesSearch]);
-
-  const filteredRegistered = useMemo(() => {
-    return allMembers
-      .filter((m) => registeredIds.has(m.id))
-      .filter((m) => matchesSearch(m, debouncedQuery))
-      .sort((a, b) => {
-        const nameA = `${a.user.lastName} ${a.user.firstName}`.toLowerCase();
-        const nameB = `${b.user.lastName} ${b.user.firstName}`.toLowerCase();
-        return nameA.localeCompare(nameB);
-      });
-  }, [allMembers, registeredIds, debouncedQuery, matchesSearch]);
 
   // Check if member should be highlighted as danger (unpaid with 3+ attendance)
   const isDangerMember = useCallback((member: Membership): boolean => {
@@ -230,6 +398,32 @@ export function EventRegistrationModal({
 
           if (result?.status === "created") {
             setRegisteredIds((prev) => new Set(prev).add(membershipId));
+
+            // Add to entries list with membership data for display
+            setEntries((prev) => {
+              const membership = membershipsMap.get(membershipId);
+              const newEntry: Entry = {
+                membershipId,
+                eventId,
+                membership: membership
+                  ? {
+                      id: membership.id,
+                      user: {
+                        firstName: membership.user.firstName,
+                        lastName: membership.user.lastName,
+                      },
+                    }
+                  : undefined,
+              };
+              return [...prev, newEntry];
+            });
+            setEntriesTotal((prev) => prev + 1);
+            setEntriesOffset((prev) => {
+              const newOffset = prev + 1;
+              entriesOffsetRef.current = newOffset;
+              return newOffset;
+            });
+
             onRegistrationChange?.();
           } else {
             showToast({
@@ -260,7 +454,7 @@ export function EventRegistrationModal({
         });
       }
     },
-    [semesterId, eventId, showToast, onRegistrationChange],
+    [semesterId, eventId, membershipsMap, showToast, onRegistrationChange],
   );
 
   // Unregister a member
@@ -280,6 +474,15 @@ export function EventRegistrationModal({
             next.delete(membershipId);
             return next;
           });
+
+          setEntries((prev) => prev.filter((e) => e.membershipId !== membershipId));
+          setEntriesTotal((prev) => prev - 1);
+          setEntriesOffset((prev) => {
+            const newOffset = prev - 1;
+            entriesOffsetRef.current = newOffset;
+            return newOffset;
+          });
+
           onRegistrationChange?.();
         } else {
           const errorData = await response.json().catch(() => null);
@@ -312,19 +515,10 @@ export function EventRegistrationModal({
       setIsCreateMemberModalOpen(false);
 
       if (!data) {
-        // No data returned, just refresh the members list
-        // Re-fetch to get the updated list
-        const membersResponse = await fetch(`/api/v2/semesters/${semesterId}/memberships`, {
-          credentials: "include",
-        });
-        if (membersResponse.ok) {
-          const membersResp: { data: Membership[] } = await membersResponse.json();
-          setAllMembers(membersResp.data);
-        }
+        fetchMembershipsPage(0, debouncedQueryRef.current, true);
         return;
       }
 
-      // Add the new member to the local state
       const newMember: Membership = {
         id: data.membershipId,
         userId: data.userId,
@@ -339,23 +533,27 @@ export function EventRegistrationModal({
         discounted: false,
         attendance: 0,
       };
-      setAllMembers((prev) => [...prev, newMember]);
+      setMemberships((prev) => [...prev, newMember]);
+      setMembershipsTotal((prev) => prev + 1);
+      setMembershipsOffset((prev) => {
+        const newOffset = prev + 1;
+        membershipsOffsetRef.current = newOffset;
+        return newOffset;
+      });
 
-      // Auto-register the new member for the event
       showToast({
         message: `${data.firstName} ${data.lastName} added. Registering for event...`,
         variant: "info",
         duration: 2000,
       });
 
-      // Register them for the event
       await handleRegister(data.membershipId);
     },
-    [semesterId, showToast, handleRegister],
+    [semesterId, showToast, handleRegister, fetchMembershipsPage],
   );
 
-  // Render a member row
-  const renderMemberRow = (member: Membership, isRegistered: boolean) => {
+  // Render a member row for the available panel
+  const renderAvailableMemberRow = (member: Membership) => {
     const isLoading = loadingMemberIds.has(member.id);
     const isDanger = isDangerMember(member);
 
@@ -375,25 +573,52 @@ export function EventRegistrationModal({
         </div>
         <button
           type="button"
-          className={`${styles.actionButton} ${
-            isRegistered ? styles.actionButtonUnregister : styles.actionButtonRegister
-          }`}
-          onClick={() => (isRegistered ? handleUnregister(member.id) : handleRegister(member.id))}
+          className={`${styles.actionButton} ${styles.actionButtonRegister}`}
+          onClick={() => handleRegister(member.id)}
           disabled={isLoading}
-          aria-label={
-            isRegistered
-              ? `Unregister ${member.user.firstName} ${member.user.lastName}`
-              : `Register ${member.user.firstName} ${member.user.lastName}`
-          }
-          data-qa={isRegistered ? `unregister-member-btn-${member.id}` : `register-member-btn-${member.id}`}
+          aria-label={`Register ${member.user.firstName} ${member.user.lastName}`}
+          data-qa={`register-member-btn-${member.id}`}
         >
-          {isLoading ? (
-            <Spinner size="sm" className={styles.actionButtonSpinner} />
-          ) : isRegistered ? (
-            <FaChevronLeft />
-          ) : (
-            <FaChevronRight />
+          {isLoading ? <Spinner size="sm" className={styles.actionButtonSpinner} /> : <FaChevronRight />}
+        </button>
+      </div>
+    );
+  };
+
+  // Render a member row for the registered panel
+  const renderRegisteredMemberRow = (entry: Entry, membership?: Membership) => {
+    const membershipId = entry.membershipId;
+    const isLoading = loadingMemberIds.has(membershipId);
+    const firstName = membership?.user.firstName ?? entry.membership?.user.firstName ?? "";
+    const lastName = membership?.user.lastName ?? entry.membership?.user.lastName ?? "";
+    // Danger highlighting is best-effort: only applies when full membership data is locally loaded
+    const isDanger = membership ? isDangerMember(membership) : false;
+
+    return (
+      <div
+        key={membershipId}
+        className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}
+        data-qa={`member-row-${membershipId}`}
+      >
+        <div className={styles.memberInfo}>
+          <span className={styles.memberName} data-qa={`member-name-${membershipId}`}>
+            {firstName} {lastName}
+          </span>
+          {membership && (
+            <span className={styles.memberStudentId} data-qa={`member-studentId-${membershipId}`}>
+              {membership.userId}
+            </span>
           )}
+        </div>
+        <button
+          type="button"
+          className={`${styles.actionButton} ${styles.actionButtonUnregister}`}
+          onClick={() => handleUnregister(membershipId)}
+          disabled={isLoading}
+          aria-label={`Unregister ${firstName} ${lastName}`}
+          data-qa={`unregister-member-btn-${membershipId}`}
+        >
+          {isLoading ? <Spinner size="sm" className={styles.actionButtonSpinner} /> : <FaChevronLeft />}
         </button>
       </div>
     );
@@ -435,17 +660,18 @@ export function EventRegistrationModal({
     );
   };
 
-  // Determine empty state type for each panel
-  const getEmptyStateType = (isAvailable: boolean): "available" | "registered" | "no-results" | null => {
-    const list = isAvailable ? filteredAvailable : filteredRegistered;
-    const fullList = isAvailable
-      ? allMembers.filter((m) => !registeredIds.has(m.id))
-      : allMembers.filter((m) => registeredIds.has(m.id));
+  // Loading sentinel component
+  const renderSentinel = (ref: React.RefObject<HTMLDivElement | null>, isLoading: boolean) => (
+    <div ref={ref} className={styles.sentinel}>
+      {isLoading && (
+        <div className={styles.sentinelLoading}>
+          <Spinner size="sm" />
+        </div>
+      )}
+    </div>
+  );
 
-    if (list.length > 0) return null;
-    if (debouncedQuery && fullList.length > 0) return "no-results";
-    return isAvailable ? "available" : "registered";
-  };
+  const availableCount = debouncedQuery ? availableMembers.length : membershipsTotal - entriesTotal;
 
   return (
     <Modal
@@ -503,16 +729,23 @@ export function EventRegistrationModal({
                       <FaPlus />
                     </button>
                     <span className={styles.panelCount} data-qa="panel-available-count">
-                      {filteredAvailable.length}
+                      {availableCount < 0 ? 0 : availableCount}
                     </span>
                   </div>
                 </div>
                 <div className={styles.panelList}>
-                  {(() => {
-                    const emptyType = getEmptyStateType(true);
-                    if (emptyType) return renderEmptyState(emptyType, true);
-                    return filteredAvailable.map((member) => renderMemberRow(member, false));
-                  })()}
+                  {availableMembers.length === 0 && !membershipsLoading ? (
+                    debouncedQuery ? (
+                      renderEmptyState("no-results", true)
+                    ) : (
+                      renderEmptyState("available", true)
+                    )
+                  ) : (
+                    <>
+                      {availableMembers.map((member) => renderAvailableMemberRow(member))}
+                      {renderSentinel(availableSentinelRef, membershipsLoading)}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -521,15 +754,22 @@ export function EventRegistrationModal({
                 <div className={styles.panelHeader}>
                   <span className={styles.panelTitle}>Registered</span>
                   <span className={styles.panelCount} data-qa="panel-registered-count">
-                    {filteredRegistered.length}
+                    {entriesTotal}
                   </span>
                 </div>
                 <div className={styles.panelList}>
-                  {(() => {
-                    const emptyType = getEmptyStateType(false);
-                    if (emptyType) return renderEmptyState(emptyType);
-                    return filteredRegistered.map((member) => renderMemberRow(member, true));
-                  })()}
+                  {registeredMembers.length === 0 && !entriesLoading ? (
+                    debouncedQuery ? (
+                      renderEmptyState("no-results")
+                    ) : (
+                      renderEmptyState("registered")
+                    )
+                  ) : (
+                    <>
+                      {registeredMembers.map(({ entry, membership }) => renderRegisteredMemberRow(entry, membership))}
+                      {renderSentinel(registeredSentinelRef, entriesLoading)}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

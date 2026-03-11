@@ -3,14 +3,12 @@ FROM node:24.14.0-alpine
 
 WORKDIR /usr/app
 
-# Build argument for GitHub Package authentication
-ARG GITHUB_PACKAGE_TOKEN
-
 # Copy package.json, package-lock.json, and .npmrc files over
 COPY package.json package-lock.json .npmrc ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies using secret mount for GitHub token
+RUN --mount=type=secret,id=GITHUB_PACKAGE_TOKEN \
+    GITHUB_PACKAGE_TOKEN=$(cat /run/secrets/GITHUB_PACKAGE_TOKEN) npm ci
 
 # Copy files into container
 COPY . .

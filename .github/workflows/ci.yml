@@ -20,7 +20,8 @@ jobs:
           context: .
           load: true
           tags: website:${{ github.sha }}
-          build-args: GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          secrets: |
+            GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -106,7 +107,8 @@ jobs:
           context: .
           load: true
           tags: website:${{ github.sha }}
-          build-args: GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          secrets: |
+            GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha
       - name: Setup Docker network
         run: docker network create uwpokerclub_services_network

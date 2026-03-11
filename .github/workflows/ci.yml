@@ -2,9 +2,22 @@ name: "Continuous Integration"
 
 on:
   push:
-    paths:
-      - "**"
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/CODEOWNERS"
+      - ".github/release.yml"
+      - ".github/dependabot.yml"
+      - ".github/pull_request_template.md"
+      - "LICENSE"
+      - ".gitattributes"
+      - ".gitignore"
   merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

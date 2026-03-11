@@ -3,6 +3,9 @@ name: Webapp Tests
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   webapp-tests:
     runs-on: ubuntu-latest

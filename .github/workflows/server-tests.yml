@@ -3,6 +3,9 @@ name: Server Tests
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   server-tests:
     runs-on: ubuntu-latest

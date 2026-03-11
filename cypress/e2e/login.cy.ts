@@ -13,9 +13,6 @@ describe("Login page", () => {
       cy.get("input[name=password]").type("password");
       cy.getByData("login-submit").click();
 
-      // Intentionally failing assertion to test artifact upload
-      cy.wrap(true).should("eq", false);
-
       // Verify redirect to admin dashboard
       cy.location("pathname").should("eq", "/admin");
 

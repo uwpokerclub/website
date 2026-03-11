@@ -2,6 +2,8 @@ services:
   website:
     build:
       context: ../
+      secrets:
+        - GITHUB_PACKAGE_TOKEN
     ports:
       - 5000:5000
     depends_on:
@@ -33,6 +35,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+secrets:
+  GITHUB_PACKAGE_TOKEN:
+    environment: GITHUB_PACKAGE_TOKEN
 networks:
   services:
     name: uwpokerclub_services_network

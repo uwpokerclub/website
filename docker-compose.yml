@@ -2,8 +2,8 @@ services:
   webapp:
     build:
       context: ./webapp
-      args:
-        - GITHUB_PACKAGE_TOKEN=${GITHUB_PACKAGE_TOKEN}
+      secrets:
+        - GITHUB_PACKAGE_TOKEN
     volumes:
       - ./webapp:/usr/app
     ports:
@@ -78,6 +78,9 @@ services:
     networks:
       - services
 
+secrets:
+  GITHUB_PACKAGE_TOKEN:
+    environment: GITHUB_PACKAGE_TOKEN
 volumes:
   postgres-data:
 networks:

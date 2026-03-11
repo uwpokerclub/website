@@ -9,11 +9,9 @@ COPY webapp/package.json webapp/package-lock.json ./
 # Copy .npmrc for GitHub packages authentication
 COPY webapp/.npmrc ./
 
-# Build argument for GitHub token
-ARG GITHUB_PACKAGE_TOKEN
-
-# Install dependencies
-RUN GITHUB_PACKAGE_TOKEN=${GITHUB_PACKAGE_TOKEN} npm ci --omit-dev
+# Install dependencies using secret mount for GitHub token
+RUN --mount=type=secret,id=GITHUB_PACKAGE_TOKEN \
+    GITHUB_PACKAGE_TOKEN=$(cat /run/secrets/GITHUB_PACKAGE_TOKEN) npm ci --omit-dev
 
 # Copy files into container
 COPY webapp .

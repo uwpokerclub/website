@@ -17,7 +17,7 @@ docker network create uwpokerclub_services_network
 ### 2. Build and start services
 
 ```bash
-docker compose -f cypress/docker-compose.yml build --build-arg GITHUB_PACKAGE_TOKEN=${GITHUB_PACKAGE_TOKEN}
+docker compose -f cypress/docker-compose.yml build
 docker compose -f cypress/docker-compose.yml up -d
 ```
 

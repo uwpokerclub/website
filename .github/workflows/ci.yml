@@ -34,6 +34,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
       - name: Install dependencies
         run: GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }} npm ci
       - name: Lint source code
@@ -55,6 +57,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: "1.26"
+          cache-dependency-path: server/go.sum
       - name: Start PostgreSQL container
         run: docker run --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub_test -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
       - name: Wait for PostgreSQL to be ready

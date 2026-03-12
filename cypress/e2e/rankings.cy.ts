@@ -83,42 +83,36 @@ describe("Rankings", () => {
     });
 
     context("podium display", () => {
-      it("should display podium for top 3 members", () => {
+      it("should display podium with correct data and layout", () => {
         cy.getByData("rankings-podium").should("be.visible");
         cy.getByData("podium-position-1").should("exist");
         cy.getByData("podium-position-2").should("exist");
         cy.getByData("podium-position-3").should("exist");
-      });
 
-      it("should show correct names and points on podium", () => {
+        // Correct names and points
         const first = SORTED_RANKINGS[0];
         const second = SORTED_RANKINGS[1];
         const third = SORTED_RANKINGS[2];
 
-        // 1st place
         cy.getByData("podium-name-1").should(
           "contain",
           `${first.user.firstName} ${first.user.lastName}`
         );
         cy.getByData("podium-points-1").should("contain", `${first.points} pts`);
 
-        // 2nd place
         cy.getByData("podium-name-2").should(
           "contain",
           `${second.user.firstName} ${second.user.lastName}`
         );
         cy.getByData("podium-points-2").should("contain", `${second.points} pts`);
 
-        // 3rd place
         cy.getByData("podium-name-3").should(
           "contain",
           `${third.user.firstName} ${third.user.lastName}`
         );
         cy.getByData("podium-points-3").should("contain", `${third.points} pts`);
-      });
 
-      it("should display podium positions in correct visual order (2-1-3)", () => {
-        // Verify the DOM order matches visual layout: 2nd, 1st, 3rd
+        // Visual order: 2nd, 1st, 3rd
         cy.getByData("rankings-podium")
           .children()
           .first()
@@ -154,21 +148,19 @@ describe("Rankings", () => {
     });
 
     context("table display", () => {
-      it("should display all column headers", () => {
+      it("should display table with correct data", () => {
+        // Column headers
         cy.getByData("rank-header").should("contain", "Rank");
         cy.getByData("name-header").should("contain", "Name");
         cy.getByData("points-header").should("contain", "Points");
-      });
 
-      it("should display all rankings in table", () => {
+        // All rankings present
         SORTED_RANKINGS.forEach((ranking) => {
           cy.getByData(`ranking-row-${ranking.id}`).should("exist");
         });
-      });
 
-      it("should display ranking data correctly", () => {
+        // First ranking data correct
         const first = SORTED_RANKINGS[0];
-
         cy.getByData(`ranking-rank-${first.id}`).should("contain", "1");
         cy.getByData(`ranking-name-${first.id}`).should(
           "contain",
@@ -178,9 +170,8 @@ describe("Rankings", () => {
           "contain",
           first.points
         );
-      });
 
-      it("should display correct count in results info", () => {
+        // Results info
         cy.getByData("rankings-results-info").should(
           "contain",
           `Showing ${SORTED_RANKINGS.length} of ${SORTED_RANKINGS.length} rankings`
@@ -189,50 +180,45 @@ describe("Rankings", () => {
     });
 
     context("search functionality", () => {
-      it("should filter rankings by first name", () => {
+      it("should filter rankings by name", () => {
         const searchUser = SORTED_RANKINGS[0].user;
-        cy.getByData("input-rankings-search").type(searchUser.firstName);
 
-        // Wait for debounce by checking results info updates
+        // By first name
+        cy.getByData("input-rankings-search").type(searchUser.firstName);
         cy.getByData("rankings-results-info").should(
           "contain",
           searchUser.firstName
         );
         cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-      });
 
-      it("should filter rankings by last name", () => {
-        const searchUser = SORTED_RANKINGS[0].user;
+        // Clear and search by last name
+        cy.getByData("clear-search-btn").click();
         cy.getByData("input-rankings-search").type(searchUser.lastName);
-
         cy.getByData("rankings-results-info").should(
           "contain",
           searchUser.lastName
         );
         cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-      });
 
-      it("should filter rankings by full name", () => {
-        const searchUser = SORTED_RANKINGS[0].user;
+        // Clear and search by full name
+        cy.getByData("clear-search-btn").click();
         const fullName = `${searchUser.firstName} ${searchUser.lastName}`;
         cy.getByData("input-rankings-search").type(fullName);
-
         cy.getByData("rankings-results-info").should("contain", fullName);
         cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
       });
 
-      it("should be case-insensitive", () => {
+      it("should be case-insensitive and display search term in results", () => {
         const searchUser = SORTED_RANKINGS[0].user;
         const upperName = searchUser.firstName.toUpperCase();
         cy.getByData("input-rankings-search").type(upperName);
 
         cy.getByData("rankings-results-info").should("contain", upperName);
         cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-      });
 
-      it("should display search term in results info", () => {
+        // Verify search term display format
+        cy.getByData("clear-search-btn").click();
         cy.getByData("input-rankings-search").type("Wald");
-
         cy.getByData("rankings-results-info").should(
           "contain",
           'matching "Wald"'

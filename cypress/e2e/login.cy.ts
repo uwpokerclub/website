@@ -37,20 +37,17 @@ describe("Login page", () => {
       cy.location("pathname").should("eq", "/admin/login");
     });
 
-    it("should show error for empty username", () => {
+    it("should validate required credentials", () => {
+      // Empty username
       cy.get("input[name=password]").type("password");
       cy.getByData("login-submit").click();
-
-      // Verify user stays on login page (form validation prevents submission)
       cy.location("pathname").should("eq", "/admin/login");
       cy.getCookie("uwpsc-dev-session-id").should("not.exist");
-    });
 
-    it("should show error for empty password", () => {
+      // Clear and try empty password
+      cy.get("input[name=password]").clear();
       cy.get("input[name=username]").type("e2e_user");
       cy.getByData("login-submit").click();
-
-      // Verify user stays on login page (form validation prevents submission)
       cy.location("pathname").should("eq", "/admin/login");
       cy.getCookie("uwpsc-dev-session-id").should("not.exist");
     });

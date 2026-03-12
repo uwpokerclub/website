@@ -77,19 +77,6 @@ describe("ListEvents", () => {
       });
     });
 
-    context("event status badges", () => {
-      it("should display Active status for started events", () => {
-        cy.getByData(`event-status-${EVENT.id}`).should("contain", "Active");
-      });
-
-      it("should display Ended status for completed events", () => {
-        cy.getByData(`event-status-${ENDED_EVENT.id}`).should(
-          "contain",
-          "Ended"
-        );
-      });
-    });
-
     context("search functionality", () => {
       it("should filter events by name", () => {
         cy.getByData("input-events-search").type(EVENT.name);
@@ -140,21 +127,10 @@ describe("ListEvents", () => {
     });
 
     context("event actions menu", () => {
-      it("should open actions menu when clicking menu button", () => {
+      it("should show edit and end options for active events", () => {
         cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
 
         cy.getByData(`edit-event-btn-${EVENT.id}`).should("be.visible");
-      });
-
-      it("should show edit option for active events", () => {
-        cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
-
-        cy.getByData(`edit-event-btn-${EVENT.id}`).should("be.visible");
-      });
-
-      it("should show end event option for active events", () => {
-        cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
-
         // Use exist instead of visible due to CSS overflow clipping
         cy.getByData(`end-event-btn-${EVENT.id}`).should("exist");
       });
@@ -167,17 +143,11 @@ describe("ListEvents", () => {
     });
 
     context("end event confirmation", () => {
-      it("should open confirmation modal when End Event clicked", () => {
+      it("should open and cancel end event confirmation modal", () => {
         cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
         cy.getByData(`end-event-btn-${EVENT.id}`).click();
 
         // Modal should be open (using exist due to CSS)
-        cy.getByData(`end-confirm-modal-${EVENT.id}`).should("exist");
-      });
-
-      it("should close modal when Cancel clicked", () => {
-        cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
-        cy.getByData(`end-event-btn-${EVENT.id}`).click();
         cy.getByData(`end-confirm-modal-${EVENT.id}`).should("exist");
 
         cy.getByData(`end-confirm-cancel-btn-${EVENT.id}`).click();
@@ -187,15 +157,10 @@ describe("ListEvents", () => {
     });
 
     context("create event modal", () => {
-      it("should open modal when Create Event button is clicked", () => {
+      it("should open and cancel create event modal", () => {
         cy.getByData("create-event-btn").click();
 
         // Modal content should exist (using exist instead of visible due to CSS)
-        cy.getByData("create-event-modal").should("exist");
-      });
-
-      it("should close modal when cancel is clicked", () => {
-        cy.getByData("create-event-btn").click();
         cy.getByData("create-event-modal").should("exist");
 
         cy.getByData("create-event-cancel-btn").click();

@@ -40,10 +40,10 @@ describe("MembersList", () => {
         );
       });
 
-      it("should display unpaid status correctly", () => {
+      it("should display member statuses correctly", () => {
+        // Unpaid
         const unpaidMember = MEMBERS.find((m) => !m.paid)!;
         const user = getUserForMember(unpaidMember);
-
         cy.getByData(`member-row-${unpaidMember.id}`).within(() => {
           cy.getByData(`member-userId-${unpaidMember.id}`).should(
             "contain",
@@ -62,21 +62,17 @@ describe("MembersList", () => {
             "Unpaid"
           );
         });
-      });
 
-      it("should display paid status correctly", () => {
+        // Paid
         const paidMember = MEMBERS.find((m) => m.paid && !m.discounted)!;
-
         cy.getByData(`member-status-${paidMember.id}`).should("contain", "Paid");
         cy.getByData(`member-status-${paidMember.id}`).should(
           "not.contain",
           "Discounted"
         );
-      });
 
-      it("should display paid discounted status correctly", () => {
+        // Discounted
         const discountedMember = MEMBERS.find((m) => m.paid && m.discounted)!;
-
         cy.getByData(`member-status-${discountedMember.id}`).should(
           "contain",
           "Discounted"
@@ -221,40 +217,23 @@ describe("MembersList", () => {
     });
 
     context("register member modal", () => {
-      it("should open modal when register button is clicked", () => {
-        // Click the register button
-        cy.getByData("register-member-btn").click();
-
-        // Modal content should exist (using exist instead of visible due to CSS)
-        cy.getByData("register-member-modal").should("exist");
-      });
-
-      it("should close modal when cancel is clicked", () => {
+      it("should open and close modal", () => {
         cy.getByData("register-member-btn").click();
         cy.getByData("register-member-modal").should("exist");
 
         cy.getByData("register-cancel-btn").click();
-
         cy.getByData("register-member-modal").should("not.exist");
       });
     });
 
     context("edit member modal", () => {
-      it("should open modal when edit icon is clicked", () => {
+      it("should open and close modal", () => {
         const member = MEMBERS[0];
 
-        // Scroll the table to make sure the edit button is in view and click it
         cy.getByData(`edit-member-btn-${member.id}`).scrollIntoView().click({ force: true });
-
-        cy.getByData("edit-member-modal").should("exist");
-      });
-
-      it("should close modal when cancel is clicked", () => {
-        cy.getByData(`edit-member-btn-${MEMBERS[0].id}`).scrollIntoView().click({ force: true });
         cy.getByData("edit-member-modal").should("exist");
 
         cy.getByData("edit-cancel-btn").click();
-
         cy.getByData("edit-member-modal").should("not.exist");
       });
     });
@@ -264,18 +243,10 @@ describe("MembersList", () => {
       const deleteMember = MEMBERS[3]; // Khalil Duckham - paid, no events
       const deleteMemberName = getMemberFullName(deleteMember);
 
-      it("should open modal when delete button is clicked", () => {
+      it("should open modal and display confirmation details", () => {
         cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
         cy.getByData("delete-membership-modal").should("exist");
-      });
-
-      it("should display member name in confirmation message", () => {
-        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
         cy.getByData("delete-membership-modal").should("contain", deleteMemberName);
-      });
-
-      it("should display consequences warning", () => {
-        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
         cy.getByData("delete-membership-modal").should("contain", "Rankings will be removed");
         cy.getByData("delete-membership-modal").should("contain", "This action cannot be undone.");
       });

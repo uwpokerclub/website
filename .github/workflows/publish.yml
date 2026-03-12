@@ -20,7 +20,7 @@ jobs:
     secrets: inherit
 
   e2e:
-    needs: [build, webapp-tests, server-tests]
+    needs: [build]
     uses: ./.github/workflows/e2e.yml
     with:
       image-tag: ${{ github.sha }}
@@ -33,7 +33,7 @@ jobs:
       contents: 'read'
       id-token: 'write'
       packages: 'read'
-    needs: e2e
+    needs: [e2e, webapp-tests, server-tests]
     steps:
       - name: Check out the repo
         uses: actions/checkout@v5

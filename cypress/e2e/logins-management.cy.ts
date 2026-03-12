@@ -28,14 +28,19 @@ describe("Logins Management", () => {
       cy.getByData("logins-table").should("exist");
     });
 
-    it("should display all column headers", () => {
+    it("should display table with correct headers, logins, and role badges", () => {
+      // Column headers
       cy.getByData("sort-username-header").should("be.visible");
       cy.getByData("sort-role-header").should("be.visible");
       cy.getByData("sort-linkedMember-header").should("be.visible");
-    });
 
-    it("should display all seeded logins", () => {
+      // All seeded logins
       cy.get("[data-qa^='login-row-']").should("have.length", LOGINS.length);
+
+      // Role badges
+      LOGINS.forEach((login) => {
+        cy.getByData(`login-role-${login.username}`).should("exist");
+      });
     });
 
     it("should display login with linked member correctly", () => {
@@ -61,12 +66,6 @@ describe("Logins Management", () => {
         "contain",
         "No linked member"
       );
-    });
-
-    it("should display role badges", () => {
-      LOGINS.forEach((login) => {
-        cy.getByData(`login-role-${login.username}`).should("exist");
-      });
     });
   });
 
@@ -234,19 +233,10 @@ describe("Logins Management", () => {
       cy.getByData("logins-table").should("exist");
     });
 
-    it("should open modal when edit button is clicked", () => {
+    it("should open, display username, and close", () => {
       cy.getByData("edit-password-btn-test_executive").click();
       cy.getByData("edit-password-modal").should("exist");
-    });
-
-    it("should display username in modal title", () => {
-      cy.getByData("edit-password-btn-test_executive").click();
       cy.getByData("edit-password-modal").should("contain", "test_executive");
-    });
-
-    it("should close modal when cancel is clicked", () => {
-      cy.getByData("edit-password-btn-test_executive").click();
-      cy.getByData("edit-password-modal").should("exist");
 
       cy.getByData("edit-password-cancel-btn").click();
       cy.getByData("edit-password-modal").should("not.exist");
@@ -285,19 +275,10 @@ describe("Logins Management", () => {
       cy.getByData("logins-table").should("exist");
     });
 
-    it("should open modal when delete button is clicked", () => {
+    it("should open, display username, and close", () => {
       cy.getByData("delete-login-btn-test_executive").click();
       cy.getByData("delete-login-modal").should("exist");
-    });
-
-    it("should display username in confirmation message", () => {
-      cy.getByData("delete-login-btn-test_executive").click();
       cy.getByData("delete-login-modal").should("contain", "test_executive");
-    });
-
-    it("should close modal when cancel is clicked", () => {
-      cy.getByData("delete-login-btn-test_executive").click();
-      cy.getByData("delete-login-modal").should("exist");
 
       cy.getByData("delete-login-cancel-btn").click();
       cy.getByData("delete-login-modal").should("not.exist");

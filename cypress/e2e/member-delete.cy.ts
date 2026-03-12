@@ -40,25 +40,12 @@ describe("DeleteMemberModal", () => {
     const deleteUser = getUserForMember(deleteMember);
     const deleteMemberName = `${deleteUser.firstName} ${deleteUser.lastName}`;
 
-    it("should open delete modal when delete button is clicked", () => {
+    it("should open modal and display confirmation details", () => {
       openEditModal(deleteMember.id);
-
       cy.getByData("delete-member-btn").scrollIntoView().click();
 
       cy.getByData("delete-member-modal").should("exist");
-    });
-
-    it("should display member name in confirmation message", () => {
-      openEditModal(deleteMember.id);
-      cy.getByData("delete-member-btn").scrollIntoView().click();
-
       cy.getByData("delete-member-modal").should("contain", deleteMemberName);
-    });
-
-    it("should display cascade warning", () => {
-      openEditModal(deleteMember.id);
-      cy.getByData("delete-member-btn").scrollIntoView().click();
-
       cy.getByData("delete-member-modal").should(
         "contain",
         "all their memberships across all semesters"

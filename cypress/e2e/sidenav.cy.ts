@@ -19,22 +19,16 @@ describe("SideNav", () => {
       cy.getByData("nav-link-rankings").should("exist");
     });
 
-    it("should navigate to dashboard when clicked", () => {
+    it("should navigate to each page when clicked", () => {
       cy.getByData("nav-link-dashboard").click();
       cy.location("pathname").should("eq", "/admin/dashboard");
-    });
 
-    it("should navigate to members when clicked", () => {
       cy.getByData("nav-link-members").click();
       cy.location("pathname").should("eq", "/admin/members");
-    });
 
-    it("should navigate to events when clicked", () => {
       cy.getByData("nav-link-events").click();
       cy.location("pathname").should("eq", "/admin/events");
-    });
 
-    it("should navigate to rankings when clicked", () => {
       cy.getByData("nav-link-rankings").click();
       cy.location("pathname").should("eq", "/admin/rankings");
     });
@@ -55,19 +49,10 @@ describe("SideNav", () => {
       cy.getByData("sidenav").should("exist");
     });
 
-    it("should display user profile section", () => {
+    it("should display user profile elements", () => {
       cy.getByData("user-profile").should("exist");
-    });
-
-    it("should display username", () => {
       cy.getByData("user-name").should("contain", "e2e_user");
-    });
-
-    it("should display user role", () => {
       cy.getByData("user-role").should("exist");
-    });
-
-    it("should display logout button", () => {
       cy.getByData("logout-btn").should("exist");
     });
 
@@ -83,15 +68,9 @@ describe("SideNav", () => {
       cy.getByData("sidenav").should("exist");
     });
 
-    it("should display semester selector", () => {
+    it("should display semester selector with current semester", () => {
       cy.getByData("semester-selector").should("exist");
-    });
-
-    it("should display semester dropdown", () => {
       cy.getByData("semester-dropdown").should("exist");
-    });
-
-    it("should display current semester in dropdown trigger", () => {
       cy.getByData("semester-dropdown").should("contain", SEMESTER.name);
     });
 
@@ -154,19 +133,12 @@ describe("SideNav", () => {
       cy.getByData("sidenav").invoke("attr", "class").should("not.match", /collapsed/);
     });
 
-    it("should show semester selector in collapsed state", () => {
+    it("should retain key elements when collapsed", () => {
       cy.getByData("sidenav-toggle").click();
       cy.getByData("sidenav").invoke("attr", "class").should("match", /collapsed/);
 
-      // Semester selector should still be visible
+      // Semester selector and logout button should still be visible
       cy.getByData("semester-selector").should("exist");
-    });
-
-    it("should show logout button in collapsed state", () => {
-      cy.getByData("sidenav-toggle").click();
-      cy.getByData("sidenav").invoke("attr", "class").should("match", /collapsed/);
-
-      // Logout button should still be visible
       cy.getByData("logout-btn").should("exist");
     });
   });
@@ -177,12 +149,9 @@ describe("SideNav", () => {
       cy.visit("/admin");
     });
 
-    it("should start collapsed on mobile", () => {
+    it("should start collapsed with mobile open button visible", () => {
       // On mobile, sidenav starts collapsed (hidden) - CSS Modules rename classes
       cy.getByData("sidenav").invoke("attr", "class").should("match", /collapsed/);
-    });
-
-    it("should show mobile open button", () => {
       cy.getByData("sidenav-mobile-open").should("be.visible");
     });
 
@@ -226,51 +195,36 @@ describe("SideNav", () => {
   });
 
   context("role-based rendering", () => {
-    it("should display Officers section for executive roles", () => {
+    it("should display Officers and Webmaster sections for executive roles", () => {
       // Default e2e_user has WEBMASTER role
       cy.visit("/admin");
       cy.getByData("sidenav").should("exist");
 
-      // Officers section should be visible
+      // Officers section
       cy.getByData("sidenav-officers-section").should("exist");
-
-      // Officer links should be visible
       cy.getByData("nav-link-inventory").should("exist");
       cy.getByData("nav-link-finances").should("exist");
       cy.getByData("nav-link-executive-team").should("exist");
-    });
 
-    it("should display Webmaster section for webmaster role", () => {
-      // Default e2e_user has WEBMASTER role
-      cy.visit("/admin");
-      cy.getByData("sidenav").should("exist");
-
-      // Webmaster section should be visible
+      // Webmaster section
       cy.getByData("sidenav-webmaster-section").should("exist");
-
-      // Manage Logins link should be visible
       cy.getByData("nav-link-manage-logins").should("exist");
     });
 
-    it("should navigate to manage logins when clicked", () => {
+    it("should navigate to each role-based page when clicked", () => {
       cy.visit("/admin");
+
       cy.getByData("nav-link-manage-logins").click();
       cy.location("pathname").should("eq", "/admin/logins");
-    });
 
-    it("should navigate to inventory when clicked", () => {
       cy.visit("/admin");
       cy.getByData("nav-link-inventory").click();
       cy.location("pathname").should("eq", "/admin/inventory");
-    });
 
-    it("should navigate to finances when clicked", () => {
       cy.visit("/admin");
       cy.getByData("nav-link-finances").click();
       cy.location("pathname").should("eq", "/admin/finances");
-    });
 
-    it("should navigate to executive team when clicked", () => {
       cy.visit("/admin");
       cy.getByData("nav-link-executive-team").click();
       cy.location("pathname").should("eq", "/admin/executive");

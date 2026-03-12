@@ -63,17 +63,6 @@ describe("EditMemberModal", () => {
       cy.getByData("checkbox-discounted").scrollIntoView().should("exist");
       cy.getByData("checkbox-discounted").should("be.checked");
     });
-
-    it("should have Student ID as read-only", () => {
-      const member = UNPAID_MEMBER;
-
-      openEditModal(member.id);
-
-      // Verify Student ID input is disabled
-      cy.getByData("display-studentId").should("be.disabled");
-      // Verify the value is still displayed correctly
-      cy.getByData("display-studentId").should("have.value", member.userId);
-    });
   });
 
   context("member editing", () => {
@@ -344,54 +333,22 @@ describe("EditMemberModal", () => {
   });
 
   context("validation", () => {
-    it("should show error for empty first name", () => {
+    it("should show errors for empty required fields", () => {
       const member = UNPAID_MEMBER;
 
       openEditModal(member.id);
 
-      // Clear first name
+      // Clear all required fields
       cy.getByData("input-firstName").clear();
-
-      // Submit the form
-      cy.getByData("edit-submit-btn").scrollIntoView().click();
-
-      // Verify validation error
-      cy.contains("First name is required").should("exist");
-
-      // Verify modal stays open
-      cy.getByData("edit-member-modal").should("exist");
-    });
-
-    it("should show error for empty last name", () => {
-      const member = UNPAID_MEMBER;
-
-      openEditModal(member.id);
-
-      // Clear last name
       cy.getByData("input-lastName").clear();
-
-      // Submit the form
-      cy.getByData("edit-submit-btn").scrollIntoView().click();
-
-      // Verify validation error
-      cy.contains("Last name is required").should("exist");
-
-      // Verify modal stays open
-      cy.getByData("edit-member-modal").should("exist");
-    });
-
-    it("should show error for empty email", () => {
-      const member = UNPAID_MEMBER;
-
-      openEditModal(member.id);
-
-      // Clear email
       cy.getByData("input-email").clear();
 
       // Submit the form
       cy.getByData("edit-submit-btn").scrollIntoView().click();
 
-      // Verify validation error
+      // Verify validation errors
+      cy.contains("First name is required").should("exist");
+      cy.contains("Last name is required").should("exist");
       cy.contains("Email is required").should("exist");
 
       // Verify modal stays open

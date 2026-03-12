@@ -103,13 +103,11 @@ describe("CreateEventModal", () => {
   });
 
   context("selecting existing structure", () => {
-    it("should display available structures in dropdown", () => {
+    it("should display and select existing structures from dropdown", () => {
       cy.getByData("radio-structure-mode-select").should("be.checked");
       cy.getByData("select-structureId").should("exist");
       cy.getByData("select-structureId").find("option").should("have.length.gt", 1);
-    });
 
-    it("should select an existing structure", () => {
       cy.getByData("select-structureId").select(String(STRUCTURE.id));
       cy.getByData("select-structureId").should("have.value", String(STRUCTURE.id));
     });

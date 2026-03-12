@@ -176,7 +176,7 @@ describe("EventDetails", () => {
           cy.getByData("sign-out-btn").should("exist");
         });
 
-        it("removes a participant", () => {
+        it("removes a participant and updates entry count", () => {
           // Get initial count
           const initialCount = ACTIVE_EVENT_PARTICIPANTS.length;
 
@@ -189,20 +189,10 @@ describe("EventDetails", () => {
 
           // Verify entry count decremented
           cy.contains(`${initialCount - 1} Entries`).should("be.visible");
-        });
-
-        it("updates entry count after removal", () => {
-          const initialPlayers = ACTIVE_EVENT_PARTICIPANTS.length;
-
-          // Remove a participant
-          cy.getByData("remove-btn").first().click();
-          cy.wait("@removeEntry");
-
-          // Verify both stats updated
-          cy.contains(`${initialPlayers - 1} Players`).should("be.visible");
+          cy.contains(`${initialCount - 1} Players`).should("be.visible");
           cy.contains("Players")
             .parent()
-            .should("contain", String(initialPlayers - 1));
+            .should("contain", String(initialCount - 1));
         });
       });
     });
@@ -305,12 +295,11 @@ describe("EventDetails", () => {
       cy.contains("h1", ENDED_EVENT.name).should("be.visible");
     });
 
-    it("displays ended status badge", () => {
+    it("displays ended state with correct UI", () => {
+      // Status badge
       cy.contains("Ended").should("be.visible");
-    });
 
-    it("shows placements in entries table", () => {
-      // Verify placements are displayed
+      // Placements are displayed
       const firstPlaceParticipant = ENDED_EVENT_PARTICIPANTS.find(
         (p) => p.placement === 1
       );
@@ -327,15 +316,13 @@ describe("EventDetails", () => {
         cy.contains("td", "1").should("exist");
         cy.contains("td", "2").should("exist");
       });
-    });
 
-    it("hides action buttons (Register, Rebuy, End)", () => {
+      // Action buttons hidden
       cy.getByData("register-members-btn").should("not.exist");
       cy.getByData("rebuy-btn").should("not.exist");
       cy.getByData("end-event-btn").should("not.exist");
-    });
 
-    it("hides entry action buttons (sign in/out, remove)", () => {
+      // Entry action buttons hidden
       cy.getByData("sign-in-btn").should("not.exist");
       cy.getByData("sign-out-btn").should("not.exist");
       cy.getByData("remove-btn").should("not.exist");

@@ -24,15 +24,11 @@ describe("Member Registration", () => {
 
   context("Search Mode", () => {
     context("modal behavior", () => {
-      it("should open in search mode by default", () => {
+      it("should open in search mode with combobox by default", () => {
         cy.getByData("register-member-btn").click();
         cy.getByData("register-member-modal").should("exist");
         cy.getByData("member-search-combobox").should("exist");
         cy.getByData("toggle-new-member-btn").should("exist");
-      });
-
-      it("should display search combobox", () => {
-        cy.getByData("register-member-btn").click();
         getMemberSearchInput().should("exist");
       });
     });
@@ -149,19 +145,18 @@ describe("Member Registration", () => {
 
   context("Create Mode", () => {
     context("mode switching", () => {
-      it("should switch from search to create mode", () => {
+      it("should toggle between search and create modes", () => {
         cy.getByData("register-member-btn").click();
+
+        // Switch to create mode
         cy.getByData("toggle-new-member-btn").click();
         cy.getByData("input-studentId").should("be.visible");
         cy.getByData("input-firstName").should("be.visible");
         cy.getByData("input-lastName").should("be.visible");
         cy.getByData("input-email").should("be.visible");
         cy.getByData("select-faculty").should("be.visible");
-      });
 
-      it("should switch back to search mode", () => {
-        cy.getByData("register-member-btn").click();
-        cy.getByData("toggle-new-member-btn").click();
+        // Switch back to search mode
         cy.getByData("toggle-search-btn").click();
         cy.getByData("member-search-combobox").should("exist");
         cy.getByData("input-studentId").should("not.exist");

@@ -2,7 +2,30 @@ name: Publish
 on:
   release:
     types: [created]
+permissions:
+  contents: read
 jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      image-tag: ${{ github.sha }}
+    secrets: inherit
+
+  webapp-tests:
+    uses: ./.github/workflows/webapp-tests.yml
+    secrets: inherit
+
+  server-tests:
+    uses: ./.github/workflows/server-tests.yml
+    secrets: inherit
+
+  e2e:
+    needs: [build, webapp-tests, server-tests]
+    uses: ./.github/workflows/e2e.yml
+    with:
+      image-tag: ${{ github.sha }}
+    secrets: inherit
+
   push:
     name: Push Docker image to GCP Artifact Registry
     runs-on: ubuntu-latest
@@ -10,6 +33,7 @@ jobs:
       contents: 'read'
       id-token: 'write'
       packages: 'read'
+    needs: e2e
     steps:
       - name: Check out the repo
         uses: actions/checkout@v5

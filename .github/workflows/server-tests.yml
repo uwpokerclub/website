@@ -1,0 +1,46 @@
+name: Server Tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  server-tests:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/New_York
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache-dependency-path: server/go.sum
+      - name: Start PostgreSQL container
+        run: docker run --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=uwpokerclub_test -e TZ=America/New_York -p 5432:5432 -d postgres:17-alpine
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              break
+            fi
+            sleep 1
+          done
+      - name: Install dependencies
+        run: |
+          go mod download
+          curl -sSf https://atlasgo.sh | sh
+      - name: Run database migrations
+        run: atlas migrate apply --dir "file://atlas/migrations" --url "postgres://postgres:password@localhost:5432/uwpokerclub_test?sslmode=disable"
+        env:
+          TEST_DATABASE_URL: postgres://postgres:password@localhost:5432/uwpokerclub_test
+      - name: Run tests
+        run: go test -p=1 ./internal/...
+        env:
+          TEST_DATABASE_URL: postgres://postgres:password@localhost:5432/uwpokerclub_test

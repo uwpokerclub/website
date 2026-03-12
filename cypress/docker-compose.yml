@@ -30,7 +30,7 @@ services:
     networks:
       - services
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U docker -d uwpokerclub"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d uwpokerclub"]
       interval: 5s
       timeout: 5s
       retries: 5

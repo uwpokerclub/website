@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 
 # Install atlas CLI and delve debugger
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && \
-    curl -sSf https://atlasgo.sh | sh && \
+    ATLAS_VERSION=v1.1.0 curl -sSf https://atlasgo.sh | sh && \
     go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Download dependencies

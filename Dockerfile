@@ -61,7 +61,7 @@ WORKDIR /usr/server
 
 COPY --from=setup /usr/server .
 
-RUN curl -sSf https://atlasgo.sh | sh
+RUN ATLAS_VERSION=v1.1.0 curl -sSf https://atlasgo.sh | sh
 
 # Make the migration script executable (it should already be copied from setup stage)
 RUN chmod +x /usr/server/scripts/atlas_migrate.sh
@@ -77,7 +77,7 @@ WORKDIR /server
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install atlas CLI
-RUN curl -sSf https://atlasgo.sh | sh
+RUN ATLAS_VERSION=v1.1.0 curl -sSf https://atlasgo.sh | sh
 
 # Create a non-root user and group with home directory
 RUN groupadd -r runner && useradd -r -g runner -m runner

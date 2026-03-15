@@ -4,6 +4,7 @@ on:
     types: [created]
 permissions:
   contents: read
+  packages: read
 jobs:
   build:
     uses: ./.github/workflows/build.yml

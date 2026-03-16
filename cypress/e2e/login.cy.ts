@@ -9,8 +9,8 @@ describe("Login page", () => {
     });
 
     it("should successfully login with valid credentials", () => {
-      cy.get("input[name=username]").type("e2e_user");
-      cy.get("input[name=password]").type("password");
+      cy.getByData("input-username").type("e2e_user");
+      cy.getByData("input-password").type("password");
       cy.getByData("login-submit").click();
 
       // Verify redirect to admin dashboard
@@ -21,8 +21,8 @@ describe("Login page", () => {
     });
 
     it("should show error for invalid credentials", () => {
-      cy.get("input[name=username]").type("unknownuser");
-      cy.get("input[name=password]").type("wrongpassword");
+      cy.getByData("input-username").type("unknownuser");
+      cy.getByData("input-password").type("wrongpassword");
       cy.getByData("login-submit").click();
 
       // Verify error banner is displayed
@@ -39,14 +39,14 @@ describe("Login page", () => {
 
     it("should validate required credentials", () => {
       // Empty username
-      cy.get("input[name=password]").type("password");
+      cy.getByData("input-password").type("password");
       cy.getByData("login-submit").click();
       cy.location("pathname").should("eq", "/admin/login");
       cy.getCookie("uwpsc-dev-session-id").should("not.exist");
 
       // Clear and try empty password
-      cy.get("input[name=password]").clear();
-      cy.get("input[name=username]").type("e2e_user");
+      cy.getByData("input-password").clear();
+      cy.getByData("input-username").type("e2e_user");
       cy.getByData("login-submit").click();
       cy.location("pathname").should("eq", "/admin/login");
       cy.getCookie("uwpsc-dev-session-id").should("not.exist");
@@ -64,8 +64,7 @@ describe("Login page", () => {
       // Verify we're logged in
       cy.getCookie("uwpsc-dev-session-id").should("exist");
 
-      // Click logout button (uses aria-label as no data-qa attribute exists)
-      cy.get('button[aria-label="Logout"]').click();
+      cy.getByData("logout-btn").click();
 
       // Verify redirect to login page
       cy.location("pathname").should("eq", "/admin/login");

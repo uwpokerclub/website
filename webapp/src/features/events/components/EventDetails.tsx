@@ -427,19 +427,19 @@ export function EventDetails() {
 
         {/* Stats Bar */}
         <div className={styles.statsBar}>
-          <div className={styles.statCard}>
+          <div className={styles.statCard} data-qa="stat-total-entries">
             <span className={styles.statValue}>{totalPlayerCount + event.rebuys}</span>
             <span className={styles.statLabel}>Total Entries</span>
           </div>
-          <div className={styles.statCard}>
+          <div className={styles.statCard} data-qa="stat-players">
             <span className={styles.statValue}>{totalPlayerCount}</span>
             <span className={styles.statLabel}>Players</span>
           </div>
-          <div className={styles.statCard}>
+          <div className={styles.statCard} data-qa="stat-rebuys">
             <span className={styles.statValue}>{event.rebuys}</span>
             <span className={styles.statLabel}>Rebuys</span>
           </div>
-          <div className={styles.statCard}>
+          <div className={styles.statCard} data-qa="stat-points-multiplier">
             <span className={styles.statValue}>{event.pointsMultiplier}x</span>
             <span className={styles.statLabel}>Points Multiplier</span>
           </div>

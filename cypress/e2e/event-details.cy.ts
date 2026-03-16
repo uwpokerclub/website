@@ -75,20 +75,16 @@ describe("EventDetails", () => {
         const expectedTotal = expectedPlayers + expectedRebuys;
 
         // Total Entries
-        cy.contains("Total Entries")
-          .parent()
-          .should("contain", String(expectedTotal));
+        cy.getByData("stat-total-entries").should("contain", String(expectedTotal));
 
         // Players
-        cy.contains("Players").parent().should("contain", String(expectedPlayers));
+        cy.getByData("stat-players").should("contain", String(expectedPlayers));
 
         // Rebuys
-        cy.contains("Rebuys").parent().should("contain", String(expectedRebuys));
+        cy.getByData("stat-rebuys").should("contain", String(expectedRebuys));
 
         // Points Multiplier
-        cy.contains("Points Multiplier")
-          .parent()
-          .should("contain", `${EVENT.pointsMultiplier}x`);
+        cy.getByData("stat-points-multiplier").should("contain", `${EVENT.pointsMultiplier}x`);
       });
     });
 
@@ -190,9 +186,7 @@ describe("EventDetails", () => {
           // Verify entry count decremented
           cy.contains(`${initialCount - 1} Entries`).should("be.visible");
           cy.contains(`${initialCount - 1} Players`).should("be.visible");
-          cy.contains("Players")
-            .parent()
-            .should("contain", String(initialCount - 1));
+          cy.getByData("stat-players").should("contain", String(initialCount - 1));
         });
       });
     });
@@ -227,9 +221,7 @@ describe("EventDetails", () => {
         });
 
         // Verify rebuy count incremented
-        cy.contains("Rebuys")
-          .parent()
-          .should("contain", String(initialRebuys + 1));
+        cy.getByData("stat-rebuys").should("contain", String(initialRebuys + 1));
 
         // Verify toast message (use exist and longer timeout)
         cy.contains("Rebuy recorded", { timeout: 5000 }).should("exist");
@@ -312,7 +304,7 @@ describe("EventDetails", () => {
       }
 
       // Verify Place column shows placements (use exist due to CSS clipping)
-      cy.get("table").within(() => {
+      cy.getByData("entries-table").within(() => {
         cy.contains("td", "1").should("exist");
         cy.contains("td", "2").should("exist");
       });
@@ -385,7 +377,7 @@ describe("EventDetails", () => {
       cy.contains("Failed to record rebuy", { timeout: 5000 }).should("exist");
 
       // Verify rebuy count unchanged
-      cy.contains("Rebuys").parent().should("contain", String(EVENT.rebuys));
+      cy.getByData("stat-rebuys").should("contain", String(EVENT.rebuys));
     });
 
     it("handles end event API failure gracefully", () => {

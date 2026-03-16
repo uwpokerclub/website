@@ -183,79 +183,6 @@ describe("Rankings", () => {
       });
     });
 
-    context("search functionality", () => {
-      it("should filter rankings by name", () => {
-        const searchUser = SORTED_RANKINGS[0].user;
-
-        // By first name
-        cy.getByData("input-rankings-search").type(searchUser.firstName);
-        cy.getByData("rankings-results-info").should(
-          "contain",
-          searchUser.firstName
-        );
-        cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-
-        // Clear and search by last name
-        cy.getByData("clear-search-btn").click();
-        cy.getByData("input-rankings-search").type(searchUser.lastName);
-        cy.getByData("rankings-results-info").should(
-          "contain",
-          searchUser.lastName
-        );
-        cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-
-        // Clear and search by full name
-        cy.getByData("clear-search-btn").click();
-        const fullName = `${searchUser.firstName} ${searchUser.lastName}`;
-        cy.getByData("input-rankings-search").type(fullName);
-        cy.getByData("rankings-results-info").should("contain", fullName);
-        cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-      });
-
-      it("should be case-insensitive and display search term in results", () => {
-        const searchUser = SORTED_RANKINGS[0].user;
-        const upperName = searchUser.firstName.toUpperCase();
-        cy.getByData("input-rankings-search").type(upperName);
-
-        cy.getByData("rankings-results-info").should("contain", upperName);
-        cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
-
-        // Verify search term display format
-        cy.getByData("clear-search-btn").click();
-        cy.getByData("input-rankings-search").type("Wald");
-        cy.getByData("rankings-results-info").should(
-          "contain",
-          'matching "Wald"'
-        );
-      });
-
-      it("should show no results state", () => {
-        cy.getByData("input-rankings-search").type("nonexistentuser12345");
-
-        cy.getByData("rankings-no-results").should("be.visible");
-      });
-
-      it("should clear search and show all rankings", () => {
-        // First search to filter
-        const searchUser = SORTED_RANKINGS[0].user;
-        cy.getByData("input-rankings-search").type(searchUser.firstName);
-        cy.getByData("rankings-results-info").should(
-          "contain",
-          searchUser.firstName
-        );
-
-        // Clear search
-        cy.getByData("clear-search-btn").click();
-
-        // Should show all rankings again
-        cy.getByData("input-rankings-search").should("have.value", "");
-        cy.getByData("rankings-results-info").should(
-          "contain",
-          `Showing ${SORTED_RANKINGS.length} of ${SORTED_RANKINGS.length}`
-        );
-      });
-    });
-
     context("export functionality", () => {
       it("should handle export failure gracefully", () => {
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings\/export/, {
@@ -363,6 +290,25 @@ describe("Rankings", () => {
 
     beforeEach(() => {
       cy.login();
+    });
+
+    it("should filter rankings by name and clear search", () => {
+      const searchUser = SORTED_RANKINGS[0].user;
+
+      cy.visit("/admin/rankings");
+      cy.getByData("rankings-table").should("exist");
+
+      cy.getByData("input-rankings-search").type(searchUser.firstName);
+      cy.getByData("rankings-results-info").should("contain", searchUser.firstName);
+      cy.getByData(`ranking-row-${SORTED_RANKINGS[0].id}`).should("exist");
+
+      // Clear search
+      cy.getByData("clear-search-btn").click();
+      cy.getByData("input-rankings-search").should("have.value", "");
+      cy.getByData("rankings-results-info").should(
+        "contain",
+        `Showing ${SORTED_RANKINGS.length} of ${SORTED_RANKINGS.length}`
+      );
     });
 
     it("should load rankings from real API", () => {

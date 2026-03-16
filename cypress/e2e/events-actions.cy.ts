@@ -25,17 +25,6 @@ describe("Event Actions", () => {
       cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events/, { fixture: "events.json" }).as("getEvents");
       cy.visit("/admin/events");
       cy.getByData("events-table").should("exist");
-
-      // API intercepts for actions
-      cy.intercept("PATCH", /\/api\/v2\/semesters\/.*\/events\/.*/).as(
-        "editEvent"
-      );
-      cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/.*\/end/).as(
-        "endEvent"
-      );
-      cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/.*\/restart/).as(
-        "restartEvent"
-      );
     });
 
     context("dropdown menu", () => {
@@ -54,22 +43,6 @@ describe("Event Actions", () => {
         cy.contains("Edit Event").should("exist"); // Disabled span still shows text
         cy.getByData(`restart-event-btn-${ENDED_EVENT.id}`).should("exist");
         cy.getByData(`end-event-btn-${ENDED_EVENT.id}`).should("not.exist");
-      });
-    });
-
-    context("edit event", () => {
-      it("should open edit modal with pre-filled data", () => {
-        openEditModal(EVENT.id);
-        cy.getByData("input-name").should("have.value", EVENT.name);
-      });
-
-      it("should close modal without saving when cancel is clicked", () => {
-        openEditModal(EVENT.id);
-        cy.getByData("input-name").clear().type("Modified Name");
-        cy.getByData("edit-event-cancel-btn").scrollIntoView().click();
-
-        cy.getByData("edit-event-modal").should("not.exist");
-        cy.getByData(`event-name-${EVENT.id}`).should("contain", EVENT.name);
       });
     });
 
@@ -122,6 +95,20 @@ describe("Event Actions", () => {
       cy.intercept("PATCH", /\/api\/v2\/semesters\/.*\/events\/.*/).as("editEvent");
       cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/.*\/end/).as("endEvent");
       cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/.*\/restart/).as("restartEvent");
+    });
+
+    it("should open edit modal with pre-filled data", () => {
+      openEditModal(EVENT.id);
+      cy.getByData("input-name").should("have.value", EVENT.name);
+    });
+
+    it("should close edit modal without saving when cancel is clicked", () => {
+      openEditModal(EVENT.id);
+      cy.getByData("input-name").clear().type("Modified Name");
+      cy.getByData("edit-event-cancel-btn").scrollIntoView().click();
+
+      cy.getByData("edit-event-modal").should("not.exist");
+      cy.getByData(`event-name-${EVENT.id}`).should("contain", EVENT.name);
     });
 
     it("should edit event name and save changes", () => {

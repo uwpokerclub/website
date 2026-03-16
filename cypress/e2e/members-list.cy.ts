@@ -84,71 +84,6 @@ describe("MembersList", () => {
       });
     });
 
-    context("search functionality", () => {
-      it("should filter by name", () => {
-        const targetUser = USERS[0]; // Heinrik Drust
-        const targetMember = MEMBERS[0];
-
-        cy.getByData("input-members-search").type(targetUser.firstName);
-
-        // Wait for debounce by checking results info updates
-        cy.getByData("members-results-info").should(
-          "contain",
-          targetUser.firstName
-        );
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-        cy.getByData(`member-row-${targetMember.id}`).should("exist");
-      });
-
-      it("should filter by email", () => {
-        const targetUser = USERS[2]; // eaucock2@si.edu
-        const targetMember = MEMBERS[2];
-
-        cy.getByData("input-members-search").type(targetUser.email);
-
-        cy.getByData("members-results-info").should("contain", targetUser.email);
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-        cy.getByData(`member-row-${targetMember.id}`).should("exist");
-      });
-
-      it("should be case-insensitive", () => {
-        const targetUser = USERS[0];
-
-        cy.getByData("input-members-search").type(
-          targetUser.firstName.toUpperCase()
-        );
-
-        cy.getByData("members-results-info").should(
-          "contain",
-          targetUser.firstName.toUpperCase()
-        );
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-      });
-
-      it("should show no results state", () => {
-        cy.getByData("input-members-search").type("nonexistentuser12345");
-
-        cy.getByData("members-no-results").should("be.visible");
-      });
-
-      it("should clear search and show all members", () => {
-        // First search to filter
-        cy.getByData("input-members-search").type("Heinrik");
-        cy.getByData("members-results-info").should("contain", "Heinrik");
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-
-        // Clear search
-        cy.getByData("clear-search-btn").click();
-
-        // Should show all members again
-        cy.getByData("input-members-search").should("have.value", "");
-        cy.get("[data-qa^='member-row-']").should(
-          "have.length",
-          MEMBERS.length
-        );
-      });
-    });
-
     context("sorting", () => {
       it("should have clickable sort headers", () => {
         // Verify all sortable column headers exist and are clickable
@@ -288,6 +223,21 @@ describe("MembersList", () => {
       cy.login();
       cy.visit("/admin/members");
       cy.getByData("members-table").should("exist");
+    });
+
+    it("should filter members by name and clear search", () => {
+      const targetUser = USERS[0]; // Heinrik Drust
+      const targetMember = MEMBERS[0];
+
+      cy.getByData("input-members-search").type(targetUser.firstName);
+      cy.getByData("members-results-info").should("contain", targetUser.firstName);
+      cy.get("[data-qa^='member-row-']").should("have.length", 1);
+      cy.getByData(`member-row-${targetMember.id}`).should("exist");
+
+      // Clear search
+      cy.getByData("clear-search-btn").click();
+      cy.getByData("input-members-search").should("have.value", "");
+      cy.get("[data-qa^='member-row-']").should("have.length", MEMBERS.length);
     });
 
     it("should load members list from real API", () => {

@@ -91,15 +91,6 @@ describe("EventDetails", () => {
           }
         });
 
-        it("shows no results state for unmatched search", () => {
-          const nonExistentName = "ZZZNonExistent";
-
-          cy.getByData("input-search").type(nonExistentName);
-
-          // Wait for debounce and verify no results
-          cy.contains("No results found").should("be.visible");
-          cy.contains(`matching "${nonExistentName}"`).should("be.visible");
-        });
       });
 
       context("structure tab", () => {
@@ -276,6 +267,16 @@ describe("EventDetails", () => {
       cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/\d+\/entries\/.*\/sign-out/).as("signOut");
       cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/\d+\/entries\/.*\/sign-in/).as("signIn");
       cy.intercept("DELETE", /\/api\/v2\/semesters\/.*\/events\/\d+\/entries\/.*/).as("removeEntry");
+    });
+
+    it("should search entries and show no results for unmatched search", () => {
+      visitEventDetails(EVENT.id);
+      cy.contains("h1", EVENT.name).should("be.visible");
+
+      const nonExistentName = "ZZZNonExistent";
+      cy.getByData("input-search").type(nonExistentName);
+      cy.contains("No results found").should("be.visible");
+      cy.contains(`matching "${nonExistentName}"`).should("be.visible");
     });
 
     it("should load active event page from real API", () => {

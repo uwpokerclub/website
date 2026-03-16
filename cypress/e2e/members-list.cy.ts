@@ -2,9 +2,12 @@ import { MEMBERS, SEMESTER, USERS } from "../seed";
 import { getUserForMember, getMemberFullName } from "../support/helpers";
 
 describe("MembersList", () => {
+  before(() => {
+    cy.resetDatabase();
+  });
+
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
@@ -18,8 +21,9 @@ describe("MembersList", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getMemberships");
       cy.visit("/admin/members");
       // Wait for table to be visible (data loaded)
       cy.getByData("members-table").should("exist");
@@ -258,22 +262,6 @@ describe("MembersList", () => {
         cy.getByData("delete-membership-cancel-btn").click();
         cy.getByData("delete-membership-modal").should("not.exist");
       });
-
-      it("should delete membership successfully", () => {
-        const initialCount = MEMBERS.length;
-
-        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
-        cy.getByData("delete-membership-modal").should("exist");
-
-        cy.getByData("delete-membership-confirm-btn").click();
-
-        // Modal should close
-        cy.getByData("delete-membership-modal").should("not.exist");
-
-        // Membership should be removed from table
-        cy.getByData(`member-row-${deleteMember.id}`).should("not.exist");
-        cy.get("[data-qa^='member-row-']").should("have.length", initialCount - 1);
-      });
     });
 
     context("empty state", () => {
@@ -288,6 +276,42 @@ describe("MembersList", () => {
 
         cy.getByData("members-empty").should("be.visible");
       });
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    beforeEach(() => {
+      cy.login();
+      cy.visit("/admin/members");
+      cy.getByData("members-table").should("exist");
+    });
+
+    it("should load members list from real API", () => {
+      cy.get("[data-qa^='member-row-']").should(
+        "have.length",
+        MEMBERS.length
+      );
+    });
+
+    it("should delete membership successfully", () => {
+      const deleteMember = MEMBERS[3]; // Khalil Duckham
+      const initialCount = MEMBERS.length;
+
+      cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+      cy.getByData("delete-membership-modal").should("exist");
+
+      cy.getByData("delete-membership-confirm-btn").click();
+
+      // Modal should close
+      cy.getByData("delete-membership-modal").should("not.exist");
+
+      // Membership should be removed from table
+      cy.getByData(`member-row-${deleteMember.id}`).should("not.exist");
+      cy.get("[data-qa^='member-row-']").should("have.length", initialCount - 1);
     });
   });
 });

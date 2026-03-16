@@ -1,9 +1,12 @@
 import { EVENT, ENDED_EVENT, SEMESTER } from "../seed";
 
 describe("ListEvents", () => {
+  before(() => {
+    cy.resetDatabase();
+  });
+
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
@@ -17,8 +20,8 @@ describe("ListEvents", () => {
 
   context("error state", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
     });
 
     it("should display error message and retry button when API fails", () => {
@@ -37,8 +40,9 @@ describe("ListEvents", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events/, { fixture: "events.json" }).as("getEvents");
       cy.visit("/admin/events");
       // Wait for table to be visible (data loaded)
       cy.getByData("events-table").should("exist");
@@ -213,6 +217,40 @@ describe("ListEvents", () => {
 
         cy.getByData("events-empty").should("be.visible");
       });
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    beforeEach(() => {
+      cy.login();
+    });
+
+    it("should load events list from real API", () => {
+      cy.visit("/admin/events");
+      cy.getByData("events-table").should("exist");
+      cy.getByData(`event-name-${EVENT.id}`).should("contain", EVENT.name);
+      cy.getByData(`event-name-${ENDED_EVENT.id}`).should("contain", ENDED_EVENT.name);
+    });
+
+    it("should end an event via real API", () => {
+      cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/.*\/end/).as("endEvent");
+
+      cy.visit("/admin/events");
+      cy.getByData("events-table").should("exist");
+
+      cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
+      cy.getByData(`end-event-btn-${EVENT.id}`).click();
+      cy.getByData(`end-confirm-btn-${EVENT.id}`).click();
+
+      cy.wait("@endEvent").then((interception) => {
+        expect(interception.response?.statusCode).to.eq(204);
+      });
+
+      cy.getByData(`event-status-${EVENT.id}`).should("contain", "Ended");
     });
   });
 });

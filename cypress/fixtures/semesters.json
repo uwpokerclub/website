@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "id": "84f026be-53e0-4759-ab89-131c4a66d649",
+      "name": "Winter 2025",
+      "startDate": "2025-01-01T00:00:00Z",
+      "endDate": "2025-06-30T00:00:00Z",
+      "startingBudget": 100,
+      "currentBudget": 100,
+      "membershipFee": 10,
+      "membershipDiscountFee": 7,
+      "rebuyFee": 2,
+      "meta": "Seed semester"
+    }
+  ],
+  "total": 1
+}

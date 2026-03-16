@@ -18,9 +18,12 @@ const SORTED_RANKINGS = RANKINGS.map((r) => {
 });
 
 describe("Rankings", () => {
+  before(() => {
+    cy.resetDatabase();
+  });
+
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
@@ -34,16 +37,16 @@ describe("Rankings", () => {
 
   context("loading state", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
     });
 
     it("should display loading spinner while fetching rankings", () => {
       // Intercept with delay to see loading state
-      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, (req) => {
-        req.on("response", (res) => {
-          res.setDelay(500);
-        });
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, {
+        statusCode: 200,
+        fixture: "rankings.json",
+        delay: 500,
       }).as("slowRankings");
 
       cy.visit("/admin/rankings");
@@ -55,8 +58,8 @@ describe("Rankings", () => {
 
   context("error state", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
     });
 
     it("should display error message and retry button when API fails", () => {
@@ -75,8 +78,9 @@ describe("Rankings", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings(?:\?|$)/, { fixture: "rankings.json" }).as("getRankings");
       cy.visit("/admin/rankings");
       // Wait for table to be visible (data loaded)
       cy.getByData("rankings-table").should("exist");
@@ -253,18 +257,6 @@ describe("Rankings", () => {
     });
 
     context("export functionality", () => {
-      it("should download CSV when export button clicked", () => {
-        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings\/export/).as(
-          "exportRankings"
-        );
-
-        cy.getByData("export-rankings-btn").click();
-
-        cy.wait("@exportRankings")
-          .its("response.statusCode")
-          .should("eq", 200);
-      });
-
       it("should handle export failure gracefully", () => {
         cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings\/export/, {
           statusCode: 500,
@@ -361,6 +353,40 @@ describe("Rankings", () => {
 
         cy.getByData("rankings-empty").should("be.visible");
       });
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    beforeEach(() => {
+      cy.login();
+    });
+
+    it("should load rankings from real API", () => {
+      cy.visit("/admin/rankings");
+      cy.getByData("rankings-table").should("exist");
+
+      SORTED_RANKINGS.forEach((ranking) => {
+        cy.getByData(`ranking-row-${ranking.id}`).should("exist");
+      });
+    });
+
+    it("should download CSV when export button clicked", () => {
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/rankings\/export/).as(
+        "exportRankings"
+      );
+
+      cy.visit("/admin/rankings");
+      cy.getByData("rankings-table").should("exist");
+
+      cy.getByData("export-rankings-btn").click();
+
+      cy.wait("@exportRankings")
+        .its("response.statusCode")
+        .should("eq", 200);
     });
   });
 });

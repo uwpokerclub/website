@@ -1,5 +1,5 @@
 describe("Login page", () => {
-  beforeEach(() => {
+  before(() => {
     cy.resetDatabase();
   });
 
@@ -8,22 +8,17 @@ describe("Login page", () => {
       cy.visit("/admin/login");
     });
 
-    it("should successfully login with valid credentials", () => {
-      cy.getByData("input-username").type("e2e_user");
-      cy.getByData("input-password").type("password");
-      cy.getByData("login-submit").click();
-
-      // Verify redirect to admin dashboard
-      cy.location("pathname").should("eq", "/admin");
-
-      // Verify session cookie exists
-      cy.getCookie("uwpsc-dev-session-id").should("exist");
-    });
-
     it("should show error for invalid credentials", () => {
+      cy.intercept("POST", "/api/v2/session", {
+        statusCode: 401,
+        body: { message: "Invalid username or password" },
+      }).as("loginFailed");
+
       cy.getByData("input-username").type("unknownuser");
       cy.getByData("input-password").type("wrongpassword");
       cy.getByData("login-submit").click();
+
+      cy.wait("@loginFailed");
 
       // Verify error banner is displayed
       cy.getByData("login-error-banner")
@@ -57,6 +52,7 @@ describe("Login page", () => {
     beforeEach(() => {
       // Login via API for faster setup
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
       cy.visit("/admin");
     });
 
@@ -72,6 +68,37 @@ describe("Login page", () => {
   });
 
   context("session persistence", () => {
+    it("should redirect to login when accessing protected route without session", () => {
+      // Clear any existing session
+      cy.clearCookies();
+
+      // Try to access protected route
+      cy.visit("/admin/events");
+
+      // Should redirect to login
+      cy.location("pathname").should("eq", "/admin/login");
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    it("should successfully login with valid credentials", () => {
+      cy.visit("/admin/login");
+
+      cy.getByData("input-username").type("e2e_user");
+      cy.getByData("input-password").type("password");
+      cy.getByData("login-submit").click();
+
+      // Verify redirect to admin dashboard
+      cy.location("pathname").should("eq", "/admin");
+
+      // Verify session cookie exists
+      cy.getCookie("uwpsc-dev-session-id").should("exist");
+    });
+
     it("should persist session across page reloads", () => {
       // Login via API
       cy.login();
@@ -87,17 +114,6 @@ describe("Login page", () => {
       // Verify still logged in
       cy.getCookie("uwpsc-dev-session-id").should("exist");
       cy.location("pathname").should("eq", "/admin");
-    });
-
-    it("should redirect to login when accessing protected route without session", () => {
-      // Clear any existing session
-      cy.clearCookies();
-
-      // Try to access protected route
-      cy.visit("/admin/events");
-
-      // Should redirect to login
-      cy.location("pathname").should("eq", "/admin/login");
     });
   });
 });

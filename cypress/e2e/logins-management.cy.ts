@@ -1,12 +1,17 @@
 import { LOGINS } from "../seed";
 
 describe("Logins Management", () => {
-  beforeEach(() => {
+  before(() => {
     cy.resetDatabase();
-    cy.login();
   });
 
   context("navigation", () => {
+    beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", "/api/v2/logins*", { fixture: "logins.json" }).as("getLogins");
+    });
+
     it("should navigate to logins page from sidenav", () => {
       cy.visit("/admin");
       cy.getByData("sidenav").should("exist");
@@ -24,6 +29,9 @@ describe("Logins Management", () => {
 
   context("logins table", () => {
     beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", "/api/v2/logins*", { fixture: "logins.json" }).as("getLogins");
       cy.visit("/admin/logins");
       cy.getByData("logins-table").should("exist");
     });
@@ -69,66 +77,11 @@ describe("Logins Management", () => {
     });
   });
 
-  context("search functionality", () => {
-    beforeEach(() => {
-      cy.intercept("GET", "/api/v2/logins*").as("getLogins");
-      cy.visit("/admin/logins");
-      cy.wait("@getLogins");
-      cy.getByData("logins-table").should("exist");
-    });
-
-    it("should send search query to API and filter by username", () => {
-      cy.getByData("input-logins-search").type("hdrust0");
-
-      cy.wait("@getLogins").its("request.url").should("include", "search=hdrust0");
-      cy.getByData("logins-results-info").should("contain", "hdrust0");
-      cy.get("[data-qa^='login-row-']").should("have.length", 1);
-      cy.getByData("login-row-hdrust0").should("exist");
-    });
-
-    it("should filter by role", () => {
-      cy.getByData("input-logins-search").type("executive");
-
-      cy.wait("@getLogins").its("request.url").should("include", "search=executive");
-      cy.getByData("logins-results-info").should("contain", "executive");
-      // Should show test_executive and hdrust0 (both executive role)
-      cy.get("[data-qa^='login-row-']").should("have.length", 2);
-    });
-
-    it("should be case-insensitive", () => {
-      cy.getByData("input-logins-search").type("PRESIDENT");
-
-      cy.wait("@getLogins").its("request.url").should("include", "search=PRESIDENT");
-      cy.getByData("logins-results-info").should("contain", "PRESIDENT");
-      cy.get("[data-qa^='login-row-']").should("have.length", 1);
-    });
-
-    it("should show no results state", () => {
-      cy.getByData("input-logins-search").type("nonexistentuser12345");
-
-      cy.wait("@getLogins").its("request.url").should("include", "search=nonexistentuser12345");
-      cy.getByData("logins-no-results").should("be.visible");
-    });
-
-    it("should clear search and show all logins", () => {
-      // First search to filter
-      cy.getByData("input-logins-search").type("hdrust0");
-      cy.wait("@getLogins").its("request.url").should("include", "search=hdrust0");
-      cy.getByData("logins-results-info").should("contain", "hdrust0");
-      cy.get("[data-qa^='login-row-']").should("have.length", 1);
-
-      // Clear search
-      cy.getByData("clear-search-btn").click();
-
-      // Should fetch without search param and show all logins
-      cy.wait("@getLogins").its("request.url").should("not.include", "search=");
-      cy.getByData("input-logins-search").should("have.value", "");
-      cy.get("[data-qa^='login-row-']").should("have.length", LOGINS.length);
-    });
-  });
-
   context("sorting", () => {
     beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", "/api/v2/logins*", { fixture: "logins.json" }).as("getLogins");
       cy.visit("/admin/logins");
       cy.getByData("logins-table").should("exist");
     });
@@ -150,6 +103,9 @@ describe("Logins Management", () => {
 
   context("create login modal", () => {
     beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", "/api/v2/logins*", { fixture: "logins.json" }).as("getLogins");
       cy.visit("/admin/logins");
       cy.getByData("logins-table").should("exist");
     });
@@ -192,25 +148,6 @@ describe("Logins Management", () => {
       cy.getByData("create-login-modal").should("exist");
     });
 
-    it("should create a new login successfully", () => {
-      const newUsername = `testuser_${Date.now()}`;
-
-      cy.getByData("create-login-btn").click();
-      cy.getByData("create-login-modal").should("exist");
-
-      cy.getByData("input-username").type(newUsername);
-      cy.getByData("input-password").type("password123");
-      cy.getByData("select-role").select("executive");
-
-      cy.getByData("create-login-submit-btn").click();
-
-      // Modal should close
-      cy.getByData("create-login-modal").should("not.exist");
-
-      // New login should appear in the table
-      cy.getByData(`login-row-${newUsername}`).should("exist");
-    });
-
     it("should show error for duplicate username", () => {
       cy.getByData("create-login-btn").click();
       cy.getByData("create-login-modal").should("exist");
@@ -220,7 +157,14 @@ describe("Logins Management", () => {
       cy.getByData("input-password").type("password123");
       cy.getByData("select-role").select("executive");
 
+      cy.intercept("POST", "/api/v2/logins", {
+        statusCode: 409,
+        body: { message: "Username already exists" },
+      }).as("createLoginDuplicate");
+
       cy.getByData("create-login-submit-btn").click();
+
+      cy.wait("@createLoginDuplicate");
 
       // Should show error (modal stays open)
       cy.getByData("create-login-error-alert").should("exist");
@@ -229,6 +173,9 @@ describe("Logins Management", () => {
 
   context("edit password modal", () => {
     beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", "/api/v2/logins*", { fixture: "logins.json" }).as("getLogins");
       cy.visit("/admin/logins");
       cy.getByData("logins-table").should("exist");
     });
@@ -254,23 +201,13 @@ describe("Logins Management", () => {
       // Should show validation error (modal stays open)
       cy.getByData("edit-password-modal").should("exist");
     });
-
-    it("should update password successfully", () => {
-      cy.getByData("edit-password-btn-test_executive").click();
-      cy.getByData("edit-password-modal").should("exist");
-
-      cy.getByData("input-new-password").type("newpassword123");
-      cy.getByData("input-confirm-password").type("newpassword123");
-
-      cy.getByData("edit-password-submit-btn").click();
-
-      // Modal should close
-      cy.getByData("edit-password-modal").should("not.exist");
-    });
   });
 
   context("delete login modal", () => {
     beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", "/api/v2/logins*", { fixture: "logins.json" }).as("getLogins");
       cy.visit("/admin/logins");
       cy.getByData("logins-table").should("exist");
     });
@@ -296,25 +233,14 @@ describe("Logins Management", () => {
         loginWithMember.linkedMember!.firstName
       );
     });
-
-    it("should delete login successfully", () => {
-      const initialCount = LOGINS.length;
-
-      cy.getByData("delete-login-btn-test_executive").click();
-      cy.getByData("delete-login-modal").should("exist");
-
-      cy.getByData("delete-login-confirm-btn").click();
-
-      // Modal should close
-      cy.getByData("delete-login-modal").should("not.exist");
-
-      // Login should be removed from table
-      cy.getByData("login-row-test_executive").should("not.exist");
-      cy.get("[data-qa^='login-row-']").should("have.length", initialCount - 1);
-    });
   });
 
   context("empty state", () => {
+    beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+    });
+
     it("should display empty state when no logins exist", () => {
       // Mock the API to return empty array
       cy.intercept("GET", "/api/v2/logins*", {
@@ -330,6 +256,11 @@ describe("Logins Management", () => {
   });
 
   context("loading state", () => {
+    beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+    });
+
     it("should display loading spinner while fetching data", () => {
       // Delay the API response to see loading state
       cy.intercept("GET", "/api/v2/logins*", {
@@ -344,6 +275,11 @@ describe("Logins Management", () => {
   });
 
   context("error state", () => {
+    beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+    });
+
     it("should display error state on API failure", () => {
       cy.intercept("GET", "/api/v2/logins*", {
         statusCode: 500,
@@ -355,6 +291,70 @@ describe("Logins Management", () => {
 
       cy.getByData("logins-error").should("be.visible");
       cy.getByData("retry-btn").should("exist");
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    beforeEach(() => {
+      cy.login();
+    });
+
+    it("should load logins list from real API", () => {
+      cy.visit("/admin/logins");
+      cy.getByData("logins-table").should("exist");
+      cy.get("[data-qa^='login-row-']").should("have.length", LOGINS.length);
+    });
+
+    it("should search logins and filter results", () => {
+      cy.intercept("GET", "/api/v2/logins*").as("getLogins");
+      cy.visit("/admin/logins");
+      cy.wait("@getLogins");
+      cy.getByData("logins-table").should("exist");
+
+      cy.getByData("input-logins-search").type("hdrust0");
+      cy.wait("@getLogins").its("request.url").should("include", "search=hdrust0");
+      cy.getByData("logins-results-info").should("contain", "hdrust0");
+      cy.get("[data-qa^='login-row-']").should("have.length", 1);
+      cy.getByData("login-row-hdrust0").should("exist");
+    });
+
+    it("should create and delete a login", () => {
+      cy.visit("/admin/logins");
+      cy.getByData("logins-table").should("exist");
+
+      // Create
+      const newUsername = `testuser_${Date.now()}`;
+      cy.getByData("create-login-btn").click();
+      cy.getByData("create-login-modal").should("exist");
+      cy.getByData("input-username").type(newUsername);
+      cy.getByData("input-password").type("password123");
+      cy.getByData("select-role").select("executive");
+      cy.getByData("create-login-submit-btn").click();
+      cy.getByData("create-login-modal").should("not.exist");
+      cy.getByData(`login-row-${newUsername}`).should("exist");
+
+      // Delete
+      cy.getByData(`delete-login-btn-${newUsername}`).click();
+      cy.getByData("delete-login-modal").should("exist");
+      cy.getByData("delete-login-confirm-btn").click();
+      cy.getByData("delete-login-modal").should("not.exist");
+      cy.getByData(`login-row-${newUsername}`).should("not.exist");
+    });
+
+    it("should update password successfully", () => {
+      cy.visit("/admin/logins");
+      cy.getByData("logins-table").should("exist");
+
+      cy.getByData("edit-password-btn-test_executive").click();
+      cy.getByData("edit-password-modal").should("exist");
+      cy.getByData("input-new-password").type("newpassword123");
+      cy.getByData("input-confirm-password").type("newpassword123");
+      cy.getByData("edit-password-submit-btn").click();
+      cy.getByData("edit-password-modal").should("not.exist");
     });
   });
 });

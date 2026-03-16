@@ -1,0 +1,74 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "membershipId": "5d312426-ad56-4231-bb12-241acbfb91e2",
+      "membership": {
+        "id": "5d312426-ad56-4231-bb12-241acbfb91e2",
+        "userId": 62958169,
+        "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
+        "paid": false,
+        "discounted": false,
+        "user": {
+          "id": 62958169,
+          "firstName": "Heinrik",
+          "lastName": "Drust",
+          "email": "hdrust0@merriam-webster.com",
+          "faculty": "AHS",
+          "questId": "hdrust0",
+          "createdAt": "2025-04-18T00:00:00Z"
+        }
+      },
+      "eventId": 1,
+      "placement": 0,
+      "signedOutAt": null
+    },
+    {
+      "id": 2,
+      "membershipId": "c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d",
+      "membership": {
+        "id": "c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d",
+        "userId": 20141158,
+        "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
+        "paid": false,
+        "discounted": false,
+        "user": {
+          "id": 20141158,
+          "firstName": "Doretta",
+          "lastName": "Housegoe",
+          "email": "dhousegoe1@xinhuanet.com",
+          "faculty": "AHS",
+          "questId": "dhousegoe1",
+          "createdAt": "2025-04-19T00:00:00Z"
+        }
+      },
+      "eventId": 1,
+      "placement": 0,
+      "signedOutAt": null
+    },
+    {
+      "id": 3,
+      "membershipId": "b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e",
+      "membership": {
+        "id": "b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e",
+        "userId": 85018940,
+        "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
+        "paid": false,
+        "discounted": false,
+        "user": {
+          "id": 85018940,
+          "firstName": "Elita",
+          "lastName": "Aucock",
+          "email": "eaucock2@si.edu",
+          "faculty": "Science",
+          "questId": "eaucock2",
+          "createdAt": "2024-10-07T00:00:00Z"
+        }
+      },
+      "eventId": 1,
+      "placement": 0,
+      "signedOutAt": null
+    }
+  ],
+  "total": 3
+}

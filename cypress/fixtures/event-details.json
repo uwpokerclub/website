@@ -1,0 +1,22 @@
+{
+  "id": 1,
+  "name": "Winter 2025 Event #1",
+  "format": "No Limit Hold'em",
+  "notes": "Seed event",
+  "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
+  "state": 0,
+  "structureId": 1,
+  "structure": {
+    "id": 1,
+    "name": "Structure A",
+    "blinds": [
+      { "small": 10, "big": 20, "ante": 0, "time": 15 },
+      { "small": 20, "big": 40, "ante": 0, "time": 15 },
+      { "small": 50, "big": 100, "ante": 10, "time": 20 }
+    ]
+  },
+  "rebuys": 0,
+  "pointsMultiplier": 1.0,
+  "startDate": "2025-01-03T19:00:00Z",
+  "entries": []
+}

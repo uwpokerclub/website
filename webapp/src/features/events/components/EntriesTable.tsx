@@ -322,6 +322,7 @@ export function EntriesTable({
           loading={isLoading}
           emptyState={emptyState}
           getRowKey={(row) => row.membershipId ?? `entry-${row.eventId}-${row.placement}`}
+          data-qa="entries-table"
         />
       </div>
 

@@ -2,7 +2,7 @@ import { USERS, USERS_WITHOUT_MEMBERSHIPS } from "../seed";
 
 // Helper to get the member search input
 const getMemberSearchInput = () => {
-  return cy.get('input[placeholder*="Search by name, email"]');
+  return cy.getByData("member-search-combobox");
 };
 
 describe("Member Registration", () => {
@@ -40,7 +40,7 @@ describe("Member Registration", () => {
         cy.getByData("register-member-btn").click();
         getMemberSearchInput().type(targetUser.firstName);
         cy.wait("@searchByName");
-        cy.contains("[role='option']", targetUser.firstName).should("exist");
+        cy.getByData(`combobox-option-${targetUser.id}`).should("exist");
       });
 
       it("should search by email", () => {
@@ -49,7 +49,7 @@ describe("Member Registration", () => {
         cy.getByData("register-member-btn").click();
         getMemberSearchInput().type(targetUser.email);
         cy.wait("@searchByEmail");
-        cy.contains("[role='option']", targetUser.firstName).should("exist");
+        cy.getByData(`combobox-option-${targetUser.id}`).should("exist");
       });
 
       it("should search by student ID", () => {
@@ -58,7 +58,7 @@ describe("Member Registration", () => {
         cy.getByData("register-member-btn").click();
         getMemberSearchInput().type(targetUser.id);
         cy.wait("@searchById");
-        cy.contains("[role='option']", targetUser.firstName).should("exist");
+        cy.getByData(`combobox-option-${targetUser.id}`).should("exist");
       });
 
       it("should show no results message", () => {
@@ -74,7 +74,7 @@ describe("Member Registration", () => {
         cy.getByData("register-member-btn").click();
         getMemberSearchInput().type(targetUser.firstName);
         cy.wait("@searchByName");
-        cy.contains("[role='option']", targetUser.firstName).click();
+        cy.getByData(`combobox-option-${targetUser.id}`).click();
 
         // Verify selection - the input should display the selected member
         getMemberSearchInput()
@@ -115,7 +115,7 @@ describe("Member Registration", () => {
         cy.getByData("register-member-btn").click();
         getMemberSearchInput().type(targetUser.firstName);
         cy.wait("@searchByName");
-        cy.contains("[role='option']", targetUser.firstName).click();
+        cy.getByData(`combobox-option-${targetUser.id}`).click();
         cy.getByData("checkbox-paid").click();
         cy.getByData("register-submit-btn").click();
 
@@ -130,7 +130,7 @@ describe("Member Registration", () => {
         cy.getByData("register-member-btn").click();
         getMemberSearchInput().type(existingUser.firstName);
         cy.wait("@searchByName");
-        cy.contains("[role='option']", existingUser.firstName).click();
+        cy.getByData(`combobox-option-${existingUser.id}`).click();
         cy.getByData("register-submit-btn").click();
 
         // API may return 409 or 500 depending on how the backend handles duplicates
@@ -240,7 +240,7 @@ describe("Member Registration", () => {
       cy.getByData("register-member-btn").click();
       getMemberSearchInput().type(targetUser.firstName);
       cy.wait("@searchByName");
-      cy.contains("[role='option']", targetUser.firstName).click();
+      cy.getByData(`combobox-option-${targetUser.id}`).click();
       cy.getByData("checkbox-paid").click();
       cy.getByData("register-submit-btn").click();
 

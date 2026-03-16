@@ -1013,6 +1013,10 @@ paths:
         name: semesterId
         required: true
         type: string
+      - description: Search events by name (case-insensitive)
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -1583,6 +1587,10 @@ paths:
         in: query
         name: offset
         type: integer
+      - description: Search by first name, last name, email, or full name
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:

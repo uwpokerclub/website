@@ -1,0 +1,40 @@
+{
+  "data": [
+    {
+      "id": 39166759,
+      "firstName": "Wald",
+      "lastName": "Sundin",
+      "points": 4,
+      "position": 1
+    },
+    {
+      "id": 81085720,
+      "firstName": "Oralie",
+      "lastName": "Bunten",
+      "points": 3,
+      "position": 2
+    },
+    {
+      "id": 52873146,
+      "firstName": "Kristel",
+      "lastName": "Callan",
+      "points": 3,
+      "position": 2
+    },
+    {
+      "id": 55686346,
+      "firstName": "Germayne",
+      "lastName": "Croom",
+      "points": 3,
+      "position": 2
+    },
+    {
+      "id": 75969632,
+      "firstName": "Winslow",
+      "lastName": "Josey",
+      "points": 2,
+      "position": 5
+    }
+  ],
+  "total": 5
+}

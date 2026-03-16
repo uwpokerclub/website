@@ -11,64 +11,126 @@ const openEditModal = (memberId: string) => {
 };
 
 describe("DeleteMemberModal", () => {
-  beforeEach(() => {
+  before(() => {
     cy.resetDatabase();
-    cy.login();
-    cy.visit("/admin/members");
-    cy.getByData("members-table").should("exist");
   });
 
-  context("danger zone visibility", () => {
-    it("should display danger zone in edit modal", () => {
-      const member = PAID_MEMBER;
+  context("stubbed tests", () => {
+    beforeEach(() => {
+      cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getMemberships");
+      cy.visit("/admin/members");
+      cy.getByData("members-table").should("exist");
+    });
 
-      openEditModal(member.id);
+    context("danger zone visibility", () => {
+      it("should display danger zone in edit modal", () => {
+        const member = PAID_MEMBER;
 
-      cy.getByData("danger-zone").scrollIntoView().should("exist");
-      cy.getByData("danger-zone").should("contain", "Danger Zone");
-      cy.getByData("danger-zone").should(
-        "contain",
-        "Permanently delete this member"
-      );
-      cy.getByData("delete-member-btn").should("exist");
+        openEditModal(member.id);
+
+        cy.getByData("danger-zone").scrollIntoView().should("exist");
+        cy.getByData("danger-zone").should("contain", "Danger Zone");
+        cy.getByData("danger-zone").should(
+          "contain",
+          "Permanently delete this member"
+        );
+        cy.getByData("delete-member-btn").should("exist");
+      });
+    });
+
+    context("modal behavior", () => {
+      // Use PAID_MEMBER (Khalil Duckham) - no event participation
+      const deleteMember = PAID_MEMBER;
+      const deleteUser = getUserForMember(deleteMember);
+      const deleteMemberName = `${deleteUser.firstName} ${deleteUser.lastName}`;
+
+      it("should open modal and display confirmation details", () => {
+        openEditModal(deleteMember.id);
+        cy.getByData("delete-member-btn").scrollIntoView().click();
+
+        cy.getByData("delete-member-modal").should("exist");
+        cy.getByData("delete-member-modal").should("contain", deleteMemberName);
+        cy.getByData("delete-member-modal").should(
+          "contain",
+          "all their memberships across all semesters"
+        );
+        cy.getByData("delete-member-modal").should(
+          "contain",
+          "This action cannot be undone."
+        );
+      });
+
+      it("should close delete modal when cancel is clicked", () => {
+        openEditModal(deleteMember.id);
+        cy.getByData("delete-member-btn").scrollIntoView().click();
+        cy.getByData("delete-member-modal").should("exist");
+
+        cy.getByData("delete-member-cancel-btn").click();
+
+        cy.getByData("delete-member-modal").should("not.exist");
+        // Edit modal should still be open
+        cy.getByData("edit-member-modal").should("exist");
+      });
+    });
+
+    context("error handling", () => {
+      const deleteMember = PAID_MEMBER;
+
+      it("should show error when API fails", () => {
+        cy.intercept("DELETE", `/api/v2/members/${deleteMember.userId}`, {
+          statusCode: 500,
+          body: { message: "Internal server error" },
+        }).as("deleteMemberError");
+
+        openEditModal(deleteMember.id);
+        cy.getByData("delete-member-btn").scrollIntoView().click();
+        cy.getByData("delete-member-modal").should("exist");
+
+        cy.getByData("delete-member-confirm-btn").click();
+
+        cy.wait("@deleteMemberError");
+
+        // Error should be displayed
+        cy.getByData("delete-member-error-alert").should("exist");
+
+        // Modal should stay open
+        cy.getByData("delete-member-modal").should("exist");
+      });
+
+      it("should show error when member not found", () => {
+        cy.intercept("DELETE", `/api/v2/members/${deleteMember.userId}`, {
+          statusCode: 404,
+          body: { message: "Member not found" },
+        }).as("deleteMemberNotFound");
+
+        openEditModal(deleteMember.id);
+        cy.getByData("delete-member-btn").scrollIntoView().click();
+
+        cy.getByData("delete-member-confirm-btn").click();
+
+        cy.wait("@deleteMemberNotFound");
+
+        cy.getByData("delete-member-error-alert").should("exist");
+        cy.getByData("delete-member-modal").should("exist");
+      });
     });
   });
 
-  context("modal behavior", () => {
-    // Use PAID_MEMBER (Khalil Duckham) - no event participation
-    const deleteMember = PAID_MEMBER;
-    const deleteUser = getUserForMember(deleteMember);
-    const deleteMemberName = `${deleteUser.firstName} ${deleteUser.lastName}`;
-
-    it("should open modal and display confirmation details", () => {
-      openEditModal(deleteMember.id);
-      cy.getByData("delete-member-btn").scrollIntoView().click();
-
-      cy.getByData("delete-member-modal").should("exist");
-      cy.getByData("delete-member-modal").should("contain", deleteMemberName);
-      cy.getByData("delete-member-modal").should(
-        "contain",
-        "all their memberships across all semesters"
-      );
-      cy.getByData("delete-member-modal").should(
-        "contain",
-        "This action cannot be undone."
-      );
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
     });
 
-    it("should close delete modal when cancel is clicked", () => {
-      openEditModal(deleteMember.id);
-      cy.getByData("delete-member-btn").scrollIntoView().click();
-      cy.getByData("delete-member-modal").should("exist");
-
-      cy.getByData("delete-member-cancel-btn").click();
-
-      cy.getByData("delete-member-modal").should("not.exist");
-      // Edit modal should still be open
-      cy.getByData("edit-member-modal").should("exist");
+    beforeEach(() => {
+      cy.login();
+      cy.visit("/admin/members");
+      cy.getByData("members-table").should("exist");
     });
 
     it("should delete member successfully", () => {
+      const deleteMember = PAID_MEMBER;
       const initialCount = MEMBERS.length;
 
       cy.intercept("DELETE", `/api/v2/members/${deleteMember.userId}`).as(
@@ -99,48 +161,6 @@ describe("DeleteMemberModal", () => {
         "have.length",
         initialCount - 1
       );
-    });
-  });
-
-  context("error handling", () => {
-    const deleteMember = PAID_MEMBER;
-
-    it("should show error when API fails", () => {
-      cy.intercept("DELETE", `/api/v2/members/${deleteMember.userId}`, {
-        statusCode: 500,
-        body: { message: "Internal server error" },
-      }).as("deleteMemberError");
-
-      openEditModal(deleteMember.id);
-      cy.getByData("delete-member-btn").scrollIntoView().click();
-      cy.getByData("delete-member-modal").should("exist");
-
-      cy.getByData("delete-member-confirm-btn").click();
-
-      cy.wait("@deleteMemberError");
-
-      // Error should be displayed
-      cy.getByData("delete-member-error-alert").should("exist");
-
-      // Modal should stay open
-      cy.getByData("delete-member-modal").should("exist");
-    });
-
-    it("should show error when member not found", () => {
-      cy.intercept("DELETE", `/api/v2/members/${deleteMember.userId}`, {
-        statusCode: 404,
-        body: { message: "Member not found" },
-      }).as("deleteMemberNotFound");
-
-      openEditModal(deleteMember.id);
-      cy.getByData("delete-member-btn").scrollIntoView().click();
-
-      cy.getByData("delete-member-confirm-btn").click();
-
-      cy.wait("@deleteMemberNotFound");
-
-      cy.getByData("delete-member-error-alert").should("exist");
-      cy.getByData("delete-member-modal").should("exist");
     });
   });
 });

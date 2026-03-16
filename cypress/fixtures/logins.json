@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "username": "e2e_user",
+      "role": "webmaster",
+      "linkedMember": null
+    },
+    {
+      "username": "test_president",
+      "role": "president",
+      "linkedMember": null
+    },
+    {
+      "username": "test_executive",
+      "role": "executive",
+      "linkedMember": null
+    },
+    {
+      "username": "hdrust0",
+      "role": "executive",
+      "linkedMember": {
+        "id": "62958169",
+        "firstName": "Heinrik",
+        "lastName": "Drust"
+      }
+    }
+  ],
+  "total": 4
+}

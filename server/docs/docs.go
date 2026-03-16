@@ -824,6 +824,12 @@ const docTemplate = `{
                         "name": "semesterId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search events by name (case-insensitive)",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1673,6 +1679,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Number of results to skip",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by first name, last name, email, or full name",
+                        "name": "search",
                         "in": "query"
                     }
                 ],

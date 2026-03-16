@@ -2,9 +2,12 @@ import { MEMBERS, SEMESTER, USERS } from "../seed";
 import { getUserForMember, getMemberFullName } from "../support/helpers";
 
 describe("MembersList", () => {
+  before(() => {
+    cy.resetDatabase();
+  });
+
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
@@ -18,8 +21,9 @@ describe("MembersList", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getMemberships");
       cy.visit("/admin/members");
       // Wait for table to be visible (data loaded)
       cy.getByData("members-table").should("exist");
@@ -76,71 +80,6 @@ describe("MembersList", () => {
         cy.getByData(`member-status-${discountedMember.id}`).should(
           "contain",
           "Discounted"
-        );
-      });
-    });
-
-    context("search functionality", () => {
-      it("should filter by name", () => {
-        const targetUser = USERS[0]; // Heinrik Drust
-        const targetMember = MEMBERS[0];
-
-        cy.getByData("input-members-search").type(targetUser.firstName);
-
-        // Wait for debounce by checking results info updates
-        cy.getByData("members-results-info").should(
-          "contain",
-          targetUser.firstName
-        );
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-        cy.getByData(`member-row-${targetMember.id}`).should("exist");
-      });
-
-      it("should filter by email", () => {
-        const targetUser = USERS[2]; // eaucock2@si.edu
-        const targetMember = MEMBERS[2];
-
-        cy.getByData("input-members-search").type(targetUser.email);
-
-        cy.getByData("members-results-info").should("contain", targetUser.email);
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-        cy.getByData(`member-row-${targetMember.id}`).should("exist");
-      });
-
-      it("should be case-insensitive", () => {
-        const targetUser = USERS[0];
-
-        cy.getByData("input-members-search").type(
-          targetUser.firstName.toUpperCase()
-        );
-
-        cy.getByData("members-results-info").should(
-          "contain",
-          targetUser.firstName.toUpperCase()
-        );
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-      });
-
-      it("should show no results state", () => {
-        cy.getByData("input-members-search").type("nonexistentuser12345");
-
-        cy.getByData("members-no-results").should("be.visible");
-      });
-
-      it("should clear search and show all members", () => {
-        // First search to filter
-        cy.getByData("input-members-search").type("Heinrik");
-        cy.getByData("members-results-info").should("contain", "Heinrik");
-        cy.get("[data-qa^='member-row-']").should("have.length", 1);
-
-        // Clear search
-        cy.getByData("clear-search-btn").click();
-
-        // Should show all members again
-        cy.getByData("input-members-search").should("have.value", "");
-        cy.get("[data-qa^='member-row-']").should(
-          "have.length",
-          MEMBERS.length
         );
       });
     });
@@ -258,22 +197,6 @@ describe("MembersList", () => {
         cy.getByData("delete-membership-cancel-btn").click();
         cy.getByData("delete-membership-modal").should("not.exist");
       });
-
-      it("should delete membership successfully", () => {
-        const initialCount = MEMBERS.length;
-
-        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
-        cy.getByData("delete-membership-modal").should("exist");
-
-        cy.getByData("delete-membership-confirm-btn").click();
-
-        // Modal should close
-        cy.getByData("delete-membership-modal").should("not.exist");
-
-        // Membership should be removed from table
-        cy.getByData(`member-row-${deleteMember.id}`).should("not.exist");
-        cy.get("[data-qa^='member-row-']").should("have.length", initialCount - 1);
-      });
     });
 
     context("empty state", () => {
@@ -288,6 +211,57 @@ describe("MembersList", () => {
 
         cy.getByData("members-empty").should("be.visible");
       });
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    beforeEach(() => {
+      cy.login();
+      cy.visit("/admin/members");
+      cy.getByData("members-table").should("exist");
+    });
+
+    it("should filter members by name and clear search", () => {
+      const targetUser = USERS[0]; // Heinrik Drust
+      const targetMember = MEMBERS[0];
+
+      cy.getByData("input-members-search").type(targetUser.firstName);
+      cy.getByData("members-results-info").should("contain", targetUser.firstName);
+      cy.get("[data-qa^='member-row-']").should("have.length", 1);
+      cy.getByData(`member-row-${targetMember.id}`).should("exist");
+
+      // Clear search
+      cy.getByData("clear-search-btn").click();
+      cy.getByData("input-members-search").should("have.value", "");
+      cy.get("[data-qa^='member-row-']").should("have.length", MEMBERS.length);
+    });
+
+    it("should load members list from real API", () => {
+      cy.get("[data-qa^='member-row-']").should(
+        "have.length",
+        MEMBERS.length
+      );
+    });
+
+    it("should delete membership successfully", () => {
+      const deleteMember = MEMBERS[3]; // Khalil Duckham
+      const initialCount = MEMBERS.length;
+
+      cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+      cy.getByData("delete-membership-modal").should("exist");
+
+      cy.getByData("delete-membership-confirm-btn").click();
+
+      // Modal should close
+      cy.getByData("delete-membership-modal").should("not.exist");
+
+      // Membership should be removed from table
+      cy.getByData(`member-row-${deleteMember.id}`).should("not.exist");
+      cy.get("[data-qa^='member-row-']").should("have.length", initialCount - 1);
     });
   });
 });

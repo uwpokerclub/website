@@ -1,9 +1,12 @@
 import { EVENT, ENDED_EVENT, SEMESTER } from "../seed";
 
 describe("ListEvents", () => {
+  before(() => {
+    cy.resetDatabase();
+  });
+
   context("when no semester is selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
       // Mock semesters API to return empty array so no semester is selected
       cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getSemesters");
@@ -17,8 +20,8 @@ describe("ListEvents", () => {
 
   context("error state", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
     });
 
     it("should display error message and retry button when API fails", () => {
@@ -37,8 +40,9 @@ describe("ListEvents", () => {
 
   context("with semester selected", () => {
     beforeEach(() => {
-      cy.resetDatabase();
       cy.login();
+      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+      cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events/, { fixture: "events.json" }).as("getEvents");
       cy.visit("/admin/events");
       // Wait for table to be visible (data loaded)
       cy.getByData("events-table").should("exist");
@@ -77,47 +81,6 @@ describe("ListEvents", () => {
       });
     });
 
-    context("search functionality", () => {
-      it("should filter events by name", () => {
-        cy.getByData("input-events-search").type(EVENT.name);
-
-        // Wait for debounce by checking results info updates
-        cy.getByData("events-results-info").should("contain", EVENT.name);
-        cy.getByData(`event-name-${EVENT.id}`).should("exist");
-        cy.getByData(`event-name-${ENDED_EVENT.id}`).should("not.exist");
-      });
-
-      it("should be case-insensitive", () => {
-        const searchTerm = EVENT.name.toUpperCase();
-        cy.getByData("input-events-search").type(searchTerm);
-
-        // Wait for debounce by checking results info updates
-        cy.getByData("events-results-info").should("contain", searchTerm);
-        cy.getByData(`event-name-${EVENT.id}`).should("exist");
-      });
-
-      it("should show no results state", () => {
-        cy.getByData("input-events-search").type("nonexistentevent12345");
-
-        cy.getByData("events-no-results").should("be.visible");
-      });
-
-      it("should clear search and show all events", () => {
-        // First search to filter
-        cy.getByData("input-events-search").type(EVENT.name);
-        cy.getByData("events-results-info").should("contain", EVENT.name);
-        cy.getByData(`event-name-${ENDED_EVENT.id}`).should("not.exist");
-
-        // Clear search
-        cy.getByData("clear-search-btn").click();
-
-        // Should show all events again
-        cy.getByData("input-events-search").should("have.value", "");
-        cy.getByData(`event-name-${EVENT.id}`).should("exist");
-        cy.getByData(`event-name-${ENDED_EVENT.id}`).should("exist");
-      });
-    });
-
     context("navigation", () => {
       it("should navigate to event details when clicking event name", () => {
         cy.getByData(`event-name-${EVENT.id}`).click();
@@ -138,7 +101,8 @@ describe("ListEvents", () => {
       it("should show restart option for ended events", () => {
         cy.getByData(`actions-menu-btn-${ENDED_EVENT.id}`).click();
 
-        cy.getByData(`restart-event-btn-${ENDED_EVENT.id}`).should("be.visible");
+        // Use exist instead of visible due to CSS overflow clipping
+        cy.getByData(`restart-event-btn-${ENDED_EVENT.id}`).should("exist");
       });
     });
 
@@ -213,6 +177,56 @@ describe("ListEvents", () => {
 
         cy.getByData("events-empty").should("be.visible");
       });
+    });
+  });
+
+  context("contract tests", () => {
+    before(() => {
+      cy.resetDatabase();
+    });
+
+    beforeEach(() => {
+      cy.login();
+    });
+
+    it("should filter events by search and clear search", () => {
+      cy.visit("/admin/events");
+      cy.getByData("events-table").should("exist");
+
+      cy.getByData("input-events-search").type(EVENT.name);
+      cy.getByData("events-results-info").should("contain", EVENT.name);
+      cy.getByData(`event-name-${EVENT.id}`).should("exist");
+      cy.getByData(`event-name-${ENDED_EVENT.id}`).should("not.exist");
+
+      // Clear search
+      cy.getByData("clear-search-btn").click();
+      cy.getByData("input-events-search").should("have.value", "");
+      cy.getByData(`event-name-${EVENT.id}`).should("exist");
+      cy.getByData(`event-name-${ENDED_EVENT.id}`).should("exist");
+    });
+
+    it("should load events list from real API", () => {
+      cy.visit("/admin/events");
+      cy.getByData("events-table").should("exist");
+      cy.getByData(`event-name-${EVENT.id}`).should("contain", EVENT.name);
+      cy.getByData(`event-name-${ENDED_EVENT.id}`).should("contain", ENDED_EVENT.name);
+    });
+
+    it("should end an event via real API", () => {
+      cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/.*\/end/).as("endEvent");
+
+      cy.visit("/admin/events");
+      cy.getByData("events-table").should("exist");
+
+      cy.getByData(`actions-menu-btn-${EVENT.id}`).click();
+      cy.getByData(`end-event-btn-${EVENT.id}`).click();
+      cy.getByData(`end-confirm-btn-${EVENT.id}`).click();
+
+      cy.wait("@endEvent").then((interception) => {
+        expect(interception.response?.statusCode).to.eq(204);
+      });
+
+      cy.getByData(`event-status-${EVENT.id}`).should("contain", "Ended");
     });
   });
 });

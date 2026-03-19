@@ -31,7 +31,7 @@ jobs:
         id: balance
         run: node .github/scripts/balance-shards.js
 
-  e2e:
+  run-shard:
     needs: [shard-specs]
     runs-on: ubuntu-latest
     strategy:
@@ -111,3 +111,15 @@ jobs:
         with:
           name: cypress-videos-shard-${{ matrix.shard }}
           path: cypress/videos
+
+  e2e:
+    if: always()
+    needs: [run-shard]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check shard results
+        run: |
+          if [ "${{ needs.run-shard.result }}" != "success" ]; then
+            echo "One or more shards failed"
+            exit 1
+          fi

@@ -41,16 +41,31 @@ Cypress.Commands.add("login", (username?: string, password?: string) => {
   const user = username ?? Cypress.env("TEST_USERNAME") ?? "e2e_user";
   const pass = password ?? Cypress.env("TEST_PASSWORD") ?? "password";
 
-  cy.request("POST", "/api/v2/session", {
-    username: user,
-    password: pass,
-  });
-  cy.getCookie("uwpsc-dev-session-id").should("exist");
+  cy.session(
+    [user, pass],
+    () => {
+      cy.request("POST", "/api/v2/session", {
+        username: user,
+        password: pass,
+      });
+    },
+    {
+      validate() {
+        cy.request({
+          url: "/api/v2/session",
+          failOnStatusCode: false,
+        })
+          .its("status")
+          .should("eq", 200);
+      },
+    },
+  );
 });
 
 /**
  * Reset and seed the test database
  */
 Cypress.Commands.add("resetDatabase", () => {
+  Cypress.session.clearAllSavedSessions();
   return cy.exec("npm run db:reset && npm run db:seed", { timeout: 30000 });
 });

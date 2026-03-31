@@ -42,7 +42,10 @@ describe("CreateEventModal", () => {
         // Verify form is reset
         cy.getByData("input-name").should("have.value", "");
         // Select element has null value when no option is selected
-        cy.getByData("select-format").should("have.value", "");
+        cy.getByData("select-format").should(($el) => {
+          const val = $el.val();
+          expect(val === "" || val === null).to.be.true;
+        });
       });
     });
 

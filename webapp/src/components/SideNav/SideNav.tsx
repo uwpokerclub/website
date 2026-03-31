@@ -85,6 +85,16 @@ function SideNav() {
     <div className={styles.sidenavContainer}>
       {/* Main navigation */}
       <nav className={sidenavClasses} data-qa="sidenav">
+        {/* Mobile close button */}
+        <button
+          className={styles.closeBtn}
+          onClick={() => setIsExpanded(false)}
+          aria-label="Close navigation"
+          data-qa="sidenav-mobile-close"
+        >
+          <FaTimes />
+        </button>
+
         <div className={styles.sidenavHeader}>
           <div className={styles.logoContainer}>
             <img
@@ -175,15 +185,6 @@ function SideNav() {
         data-qa="sidenav-overlay"
       ></div>
 
-      {/* Mobile close button */}
-      <button
-        className={styles.closeBtn}
-        onClick={() => setIsExpanded(false)}
-        aria-label="Close navigation"
-        data-qa="sidenav-mobile-close"
-      >
-        <FaTimes />
-      </button>
     </div>
   );
 }

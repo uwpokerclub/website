@@ -51,7 +51,12 @@ Cypress.Commands.add("login", (username?: string, password?: string) => {
     },
     {
       validate() {
-        cy.getCookie("uwpsc-dev-session-id").should("exist");
+        cy.request({
+          url: "/api/v2/session",
+          failOnStatusCode: false,
+        })
+          .its("status")
+          .should("eq", 200);
       },
     },
   );

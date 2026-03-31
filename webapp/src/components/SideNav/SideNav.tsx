@@ -184,7 +184,6 @@ function SideNav() {
         onClick={() => setIsExpanded(false)}
         data-qa="sidenav-overlay"
       ></div>
-
     </div>
   );
 }

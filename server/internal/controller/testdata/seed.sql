@@ -79,7 +79,7 @@ INSERT INTO participants (id, membership_id, event_id, placement, signed_out_at)
   (6, 'c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 2, 3, '2025-01-10 23:00:00'),
   (7, 'd4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 2, 4, '2025-01-10 22:30:00'),
   (8, 'e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 2, 5, '2025-01-10 22:00:00');
-SELECT setval('participants_num_seq', (SELECT MAX(id) FROM participants));
+SELECT setval('participants_id_seq', (SELECT MAX(id) FROM participants));
 
 -- Seed rankings for members who participated in the ended event
 -- Points calculated: ceil((payout * 5) / 50) * 1.0

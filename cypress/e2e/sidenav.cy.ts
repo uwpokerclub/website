@@ -174,8 +174,7 @@ describe("SideNav", () => {
       cy.getByData("sidenav-mobile-open").click();
       cy.getByData("sidenav").invoke("attr", "class").should("not.match", /collapsed/);
 
-      // Close (use force since button may be partially hidden)
-      cy.getByData("sidenav-mobile-close").click({ force: true });
+      cy.getByData("sidenav-mobile-close").should("be.visible").click();
       cy.getByData("sidenav").invoke("attr", "class").should("match", /collapsed/);
     });
 
@@ -184,8 +183,8 @@ describe("SideNav", () => {
       cy.getByData("sidenav-mobile-open").click();
       cy.getByData("sidenav").invoke("attr", "class").should("not.match", /collapsed/);
 
-      // Click overlay
-      cy.getByData("sidenav-overlay").click({ force: true });
+      // Click overlay at top position since sidenav covers the center
+      cy.getByData("sidenav-overlay").click("top");
       cy.getByData("sidenav").invoke("attr", "class").should("match", /collapsed/);
     });
 

@@ -169,7 +169,7 @@ describe("MembersList", () => {
       it("should open and close modal", () => {
         const member = MEMBERS[0];
 
-        cy.getByData(`edit-member-btn-${member.id}`).scrollIntoView().click({ force: true });
+        cy.getByData(`edit-member-btn-${member.id}`).scrollIntoView().click();
         cy.getByData("edit-member-modal").should("exist");
 
         cy.getByData("edit-cancel-btn").click();
@@ -183,7 +183,7 @@ describe("MembersList", () => {
       const deleteMemberName = getMemberFullName(deleteMember);
 
       it("should open modal and display confirmation details", () => {
-        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click();
         cy.getByData("delete-membership-modal").should("exist");
         cy.getByData("delete-membership-modal").should("contain", deleteMemberName);
         cy.getByData("delete-membership-modal").should("contain", "Rankings will be removed");
@@ -191,7 +191,7 @@ describe("MembersList", () => {
       });
 
       it("should close modal when cancel is clicked", () => {
-        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+        cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click();
         cy.getByData("delete-membership-modal").should("exist");
 
         cy.getByData("delete-membership-cancel-btn").click();
@@ -251,7 +251,7 @@ describe("MembersList", () => {
       const deleteMember = MEMBERS[3]; // Khalil Duckham
       const initialCount = MEMBERS.length;
 
-      cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click({ force: true });
+      cy.getByData(`delete-member-btn-${deleteMember.id}`).scrollIntoView().click();
       cy.getByData("delete-membership-modal").should("exist");
 
       cy.getByData("delete-membership-confirm-btn").click();

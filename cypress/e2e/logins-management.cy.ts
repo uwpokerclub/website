@@ -327,7 +327,7 @@ describe("Logins Management", () => {
       cy.getByData("logins-table").should("exist");
 
       // Create
-      const newUsername = `testuser_${Date.now()}`;
+      const newUsername = "testuser_cypress";
       cy.getByData("create-login-btn").click();
       cy.getByData("create-login-modal").should("exist");
       cy.getByData("input-username").type(newUsername);

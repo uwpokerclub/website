@@ -85,10 +85,8 @@ describe("EventDetails", () => {
           // Verify a participant is visible (use exist due to CSS clipping)
           const firstParticipant = ACTIVE_EVENT_PARTICIPANTS[0];
           const user = getUserForMember(firstParticipant.membershipId);
-          if (user) {
-            cy.contains(user.firstName).should("exist");
-            cy.contains(user.lastName).should("exist");
-          }
+          cy.contains(user.firstName).should("exist");
+          cy.contains(user.lastName).should("exist");
         });
 
       });
@@ -151,14 +149,10 @@ describe("EventDetails", () => {
         // Placements are displayed
         const firstPlaceParticipant = ENDED_EVENT_PARTICIPANTS.find(
           (p) => p.placement === 1
-        );
-        if (firstPlaceParticipant) {
-          const user = getUserForMember(firstPlaceParticipant.membershipId);
-          if (user) {
-            // Verify first place participant is visible (use exist due to CSS clipping)
-            cy.contains(user.firstName).should("exist");
-          }
-        }
+        )!;
+        const user = getUserForMember(firstPlaceParticipant.membershipId);
+        // Verify first place participant is visible (use exist due to CSS clipping)
+        cy.contains(user.firstName).should("exist");
 
         // Verify Place column shows placements (use exist due to CSS clipping)
         cy.getByData("entries-table").within(() => {

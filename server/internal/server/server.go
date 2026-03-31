@@ -155,6 +155,8 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewLoginsController(s.db),
 	}
 
+	controllers = append(controllers, registerTestControllers(s.db)...)
+
 	for _, controller := range controllers {
 		controller.LoadRoutes(apiV2Route)
 	}

@@ -34,6 +34,8 @@ FROM setup AS server
 
 WORKDIR /usr/server
 
+ARG GO_BUILD_TAGS=""
+
 # Copy files over
 COPY --from=setup /usr/server .
 
@@ -41,7 +43,7 @@ COPY --from=setup /usr/server .
 RUN go mod download
 
 # Compile server binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /tmp/server .
+RUN CGO_ENABLED=0 GOOS=linux go build -tags "${GO_BUILD_TAGS}" -ldflags="-w -s" -o /tmp/server .
 
 ### ====================== API DOC GENERATION ======================
 FROM setup AS generate-api-docs

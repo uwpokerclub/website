@@ -62,6 +62,8 @@ jobs:
           context: .
           load: true
           tags: website:${{ inputs.image-tag }}
+          build-args: |
+            GO_BUILD_TAGS=e2e
           secrets: |
             GITHUB_PACKAGE_TOKEN=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha

@@ -22,7 +22,7 @@ declare namespace Cypress {
      * Reset and seed the test database
      * @example cy.resetDatabase()
      */
-    resetDatabase(): Chainable<Cypress.Exec>;
+    resetDatabase(): Chainable<Cypress.Response<any>>;
   }
 }
 
@@ -66,6 +66,5 @@ Cypress.Commands.add("login", (username?: string, password?: string) => {
  * Reset and seed the test database
  */
 Cypress.Commands.add("resetDatabase", () => {
-  Cypress.session.clearAllSavedSessions();
-  return cy.exec("npm run db:reset && npm run db:seed", { timeout: 30000 });
+  return cy.request("POST", "/api/v2/test/reset");
 });

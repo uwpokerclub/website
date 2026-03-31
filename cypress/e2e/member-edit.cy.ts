@@ -10,7 +10,7 @@ import {
 const openEditModal = (memberId: string) => {
   cy.getByData(`edit-member-btn-${memberId}`)
     .scrollIntoView()
-    .click({ force: true });
+    .click();
   // Wait for modal to exist and animation to complete
   cy.getByData("edit-member-modal").should("exist");
   // Wait for the modal to be fully animated in by checking an input is interactable
@@ -182,7 +182,7 @@ describe("EditMemberModal", () => {
         cy.getByData("checkbox-discounted").should("not.exist");
 
         // Check paid checkbox
-        cy.getByData("checkbox-paid").click({ force: true });
+        cy.getByData("checkbox-paid").scrollIntoView().click();
         cy.getByData("checkbox-paid").should("be.checked");
         cy.getByData("checkbox-discounted").should("exist");
       });
@@ -197,7 +197,7 @@ describe("EditMemberModal", () => {
         cy.getByData("checkbox-discounted").should("be.checked");
 
         // Uncheck paid checkbox
-        cy.getByData("checkbox-paid").click({ force: true });
+        cy.getByData("checkbox-paid").scrollIntoView().click();
         cy.getByData("checkbox-paid").should("not.be.checked");
 
         // Verify discounted disappears (component behavior)
@@ -267,7 +267,7 @@ describe("EditMemberModal", () => {
       openEditModal(member.id);
 
       // Check paid checkbox
-      cy.getByData("checkbox-paid").scrollIntoView().click({ force: true });
+      cy.getByData("checkbox-paid").scrollIntoView().click();
       cy.getByData("checkbox-paid").should("be.checked");
 
       // Submit the form

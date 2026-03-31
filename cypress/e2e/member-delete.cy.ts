@@ -5,7 +5,7 @@ import { getUserForMember, PAID_MEMBER } from "../support/helpers";
 const openEditModal = (memberId: string) => {
   cy.getByData(`edit-member-btn-${memberId}`)
     .scrollIntoView()
-    .click({ force: true });
+    .click();
   cy.getByData("edit-member-modal").should("exist");
   cy.getByData("input-firstName").should("be.visible");
 };

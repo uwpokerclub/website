@@ -55,11 +55,7 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
   }, [isOpen]);
 
   return (
-    <aside
-      ref={panelRef}
-      className={`${styles.drawer} ${isOpen ? styles.open : ""}`}
-      data-qa="filter-sidebar"
-    >
+    <aside ref={panelRef} className={`${styles.drawer} ${isOpen ? styles.open : ""}`} data-qa="filter-sidebar">
       <div className={styles.header}>
         <span className={styles.headerTitle}>Filters</span>
         <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close filters">

@@ -59,7 +59,6 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
       ref={panelRef}
       className={`${styles.drawer} ${isOpen ? styles.open : ""}`}
       data-qa="filter-sidebar"
-      aria-hidden={!isOpen}
     >
       <div className={styles.header}>
         <span className={styles.headerTitle}>Filters</span>

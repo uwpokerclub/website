@@ -111,6 +111,37 @@ func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gor
 		)
 	}
 
+	if filter.Name != nil {
+		sanitized := sanitizeLikeInput(*filter.Name)
+		pattern := "%" + sanitized + "%"
+		query = query.Where(
+			"\"User\".first_name ILIKE ? OR \"User\".last_name ILIKE ? OR (\"User\".first_name || ' ' || \"User\".last_name) ILIKE ?",
+			pattern, pattern, pattern,
+		)
+	}
+
+	if filter.Email != nil {
+		sanitized := sanitizeLikeInput(*filter.Email)
+		pattern := "%" + sanitized + "%"
+		query = query.Where("\"User\".email ILIKE ?", pattern)
+	}
+
+	if filter.Faculty != nil {
+		query = query.Where("\"User\".faculty = ?", *filter.Faculty)
+	}
+
+	if filter.StudentID != nil {
+		query = query.Where("CAST(\"User\".id AS TEXT) = ?", *filter.StudentID)
+	}
+
+	if filter.Paid != nil {
+		query = query.Where("memberships.paid = ?", *filter.Paid)
+	}
+
+	if filter.Discounted != nil {
+		query = query.Where("memberships.discounted = ?", *filter.Discounted)
+	}
+
 	return query
 }
 
@@ -457,9 +488,9 @@ func (ms *membershipService) DeleteMembershipV2(id uuid.UUID, semesterID uuid.UU
 
 // ListMembershipsV2 lists all memberships with embedded User and computed attendance count
 func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
-	// Count query: separate, add User JOIN only when search needs it
+	// Count query: separate, add User JOIN only when filtering on user fields
 	countQuery := ms.db.Where("memberships.semester_id = ?", filter.SemesterID)
-	if filter.Search != "" {
+	if filter.Search != "" || filter.Name != nil || filter.Email != nil || filter.Faculty != nil || filter.StudentID != nil {
 		countQuery = countQuery.Joins("User")
 	}
 	countQuery = addFilterClauses(countQuery, filter)

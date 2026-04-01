@@ -125,6 +125,12 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 // @Param limit query int false "Maximum number of results to return"
 // @Param offset query int false "Number of results to skip"
 // @Param search query string false "Search by first name, last name, email, or full name"
+// @Param name query string false "Filter by first name, last name, or full name (case-insensitive partial match)"
+// @Param email query string false "Filter by email (case-insensitive partial match)"
+// @Param faculty query string false "Filter by faculty (exact match)" Enums(AHS, Arts, Engineering, Environment, Math, Science)
+// @Param studentId query string false "Filter by student ID (exact match)"
+// @Param paid query bool false "Filter by paid status"
+// @Param discounted query bool false "Filter by discounted status"
 // @Success 200 {array} MembershipWithAttendance
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -150,6 +156,27 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		Pagination: pagination,
 		SemesterID: &semesterID,
 		Search:     search,
+	}
+
+	if name := ctx.Query("name"); name != "" {
+		filter.Name = &name
+	}
+	if email := ctx.Query("email"); email != "" {
+		filter.Email = &email
+	}
+	if faculty := ctx.Query("faculty"); faculty != "" {
+		filter.Faculty = &faculty
+	}
+	if studentID := ctx.Query("studentId"); studentID != "" {
+		filter.StudentID = &studentID
+	}
+	if paid := ctx.Query("paid"); paid == "true" || paid == "false" {
+		v := paid == "true"
+		filter.Paid = &v
+	}
+	if discounted := ctx.Query("discounted"); discounted == "true" || discounted == "false" {
+		v := discounted == "true"
+		filter.Discounted = &v
 	}
 
 	svc := services.NewMembershipService(c.db)

@@ -1,25 +1,51 @@
-import { useContext, useEffect, useState, useMemo, useCallback } from "react";
-import { Table, TableColumn, Button, Input, Pagination, Spinner } from "@uwpokerclub/components";
+import { useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Table, TableColumn, Button, Pagination, Spinner } from "@uwpokerclub/components";
 import { SemesterContext } from "@/contexts";
 import { Membership } from "@/types";
 import { useAuth } from "@/hooks";
-import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaUsers } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaUsers, FaFilter } from "react-icons/fa";
 import { RegisterMemberModal } from "./RegisterMemberModal";
 import { EditMemberModal } from "./EditMemberModal";
 import { DeleteMembershipModal } from "./DeleteMembershipModal";
+import { MemberFilters, type MemberFilterValues } from "./MemberFilters";
 import styles from "./MembersList.module.css";
 
 const ITEMS_PER_PAGE = 25;
+const DEBOUNCE_MS = 300;
+
+const EMPTY_FILTERS: MemberFilterValues = { studentId: "", name: "", email: "", faculty: "", paid: "", discounted: "" };
+const FILTER_KEYS = Object.keys(EMPTY_FILTERS) as (keyof MemberFilterValues)[];
+
+function filtersFromParams(params: URLSearchParams): MemberFilterValues {
+  return {
+    studentId: params.get("studentId") ?? "",
+    name: params.get("name") ?? "",
+    email: params.get("email") ?? "",
+    faculty: params.get("faculty") ?? "",
+    paid: params.get("paid") ?? "",
+    discounted: params.get("discounted") ?? "",
+  };
+}
 
 export function MembersList() {
   const semesterContext = useContext(SemesterContext);
   const { hasPermission } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Filter state: immediate (for inputs) and debounced (for API calls)
+  const [filters, setFilters] = useState<MemberFilterValues>(() => filtersFromParams(searchParams));
+  const [debouncedFilters, setDebouncedFilters] = useState<MemberFilterValues>(filters);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   const [members, setMembers] = useState<Membership[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = parseInt(searchParams.get("page") ?? "1", 10);
+    return isNaN(page) || page < 1 ? 1 : page;
+  });
   const [sortKey, setSortKey] = useState<string | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -27,24 +53,72 @@ export function MembersList() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Debounce search query
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  // Debounce text filter changes, apply dropdown immediately
+  const handleFilterChange = useCallback((key: keyof MemberFilterValues, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      setCurrentPage(1); // Reset to first page on search
-    }, 300);
+    if (key === "faculty" || key === "paid" || key === "discounted") {
+      // Dropdown: apply immediately
+      setDebouncedFilters((prev) => ({ ...prev, [key]: value }));
+      setCurrentPage(1);
+    } else {
+      // Text input: debounce
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(() => {
+        setDebouncedFilters((prev) => ({ ...prev, [key]: value }));
+        setCurrentPage(1);
+      }, DEBOUNCE_MS);
+    }
+  }, []);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Reset pagination when semester changes
-  useEffect(() => {
+  const handleClearFilters = useCallback(() => {
+    setFilters(EMPTY_FILTERS);
+    setDebouncedFilters(EMPTY_FILTERS);
     setCurrentPage(1);
-    setSearchQuery("");
-    setDebouncedSearchQuery("");
+    clearTimeout(debounceTimer.current);
+  }, []);
+
+  // Sync debounced filters + page to URL (skip initial mount to avoid spurious re-render)
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const params = new URLSearchParams();
+    for (const key of FILTER_KEYS) {
+      if (debouncedFilters[key]) {
+        params.set(key, debouncedFilters[key]);
+      }
+    }
+    if (currentPage > 1) {
+      params.set("page", String(currentPage));
+    }
+    setSearchParams(params, { replace: true });
+  }, [debouncedFilters, currentPage, setSearchParams]);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(debounceTimer.current);
+  }, []);
+
+  // Reset filters only when switching between semesters (not on initial load)
+  const prevSemesterId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const currentId = semesterContext?.currentSemester?.id;
+    if (prevSemesterId.current === undefined) {
+      // First semester load — preserve URL-initialized filters
+      prevSemesterId.current = currentId;
+      return;
+    }
+    if (prevSemesterId.current === currentId) return;
+    prevSemesterId.current = currentId;
+    setCurrentPage(1);
+    setFilters(EMPTY_FILTERS);
+    setDebouncedFilters(EMPTY_FILTERS);
+    clearTimeout(debounceTimer.current);
   }, [semesterContext?.currentSemester?.id]);
 
   // Fetch members from API
@@ -60,10 +134,19 @@ export function MembersList() {
 
       try {
         const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        let url = `/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
-        if (debouncedSearchQuery) {
-          url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
-        }
+        const params = new URLSearchParams({
+          limit: String(ITEMS_PER_PAGE),
+          offset: String(offset),
+        });
+
+        if (debouncedFilters.name) params.set("name", debouncedFilters.name);
+        if (debouncedFilters.email) params.set("email", debouncedFilters.email);
+        if (debouncedFilters.faculty) params.set("faculty", debouncedFilters.faculty);
+        if (debouncedFilters.studentId) params.set("studentId", debouncedFilters.studentId);
+        if (debouncedFilters.paid) params.set("paid", debouncedFilters.paid);
+        if (debouncedFilters.discounted) params.set("discounted", debouncedFilters.discounted);
+
+        const url = `/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships?${params.toString()}`;
         const response = await fetch(url, { credentials: "include" });
 
         if (!response.ok) {
@@ -81,7 +164,7 @@ export function MembersList() {
     };
 
     fetchMembers();
-  }, [semesterContext?.currentSemester, refreshTrigger, currentPage, debouncedSearchQuery]);
+  }, [semesterContext?.currentSemester, refreshTrigger, currentPage, debouncedFilters]);
 
   // Sort members
   const sortedMembers = useMemo(() => {
@@ -122,40 +205,29 @@ export function MembersList() {
     return sorted;
   }, [members, sortKey, sortDirection]);
 
-  // Handle sort
   const handleSort = useCallback((key: string, direction: "asc" | "desc") => {
     setSortKey(key);
     setSortDirection(direction);
   }, []);
 
-  // Handle clear search
-  const handleClearSearch = () => {
-    setSearchQuery("");
-  };
-
-  // Handle register new member
   const handleRegisterMember = () => {
     setIsRegisterModalOpen(true);
   };
 
-  // Handle successful registration
   const handleRegistrationSuccess = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Handle edit member
   const handleViewEdit = (membership: Membership) => {
     setSelectedMembership(membership);
     setIsEditModalOpen(true);
   };
 
-  // Handle edit modal close
   const handleEditModalClose = () => {
     setIsEditModalOpen(false);
     setSelectedMembership(null);
   };
 
-  // Handle edit success
   const handleEditSuccess = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
@@ -174,7 +246,9 @@ export function MembersList() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Define table columns
+  const activeFilterCount = Object.values(debouncedFilters).filter((v) => v !== "").length;
+  const hasActiveFilters = activeFilterCount > 0;
+
   const columns: TableColumn<Membership>[] = [
     {
       key: "userId",
@@ -247,154 +321,151 @@ export function MembersList() {
     },
   ];
 
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className={styles.container}>
+  const renderContent = () => {
+    if (isLoading && members.length === 0) {
+      return (
         <div className={styles.centerContent} data-qa="members-loading">
           <Spinner size="lg" />
           <p>Loading members...</p>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // Show error state
-  if (error) {
-    return (
-      <div className={styles.container}>
+    if (error) {
+      return (
         <div className={styles.errorState} data-qa="members-error">
           <p>Error: {error}</p>
           <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
             Retry
           </Button>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // Show empty state when no semester is selected
-  if (!semesterContext?.currentSemester) {
-    return (
-      <div className={styles.container}>
+    if (!semesterContext?.currentSemester) {
+      return (
         <div className={styles.emptyState} data-qa="members-no-semester">
           <p>Please select a semester to view members.</p>
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <>
+        {/* Action bar */}
+        <div className={styles.actionBar}>
+          <div className={styles.resultsInfo} data-qa="members-results-info">
+            <p>
+              Showing {sortedMembers.length} of {totalItems} members
+              {hasActiveFilters && " (filtered)"}
+            </p>
+          </div>
+          <div className={styles.actionButtons}>
+            {hasPermission("create", "membership") && (
+              <Button data-qa="register-member-btn" onClick={handleRegisterMember} iconBefore={<FaPlus />}>
+                Register New Member
+              </Button>
+            )}
+            <button
+              type="button"
+              className={styles.filterToggle}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              aria-label="Toggle filters"
+              data-qa="filter-toggle-btn"
+            >
+              <FaFilter />
+              {activeFilterCount > 0 && (
+                <span className={styles.filterBadge} data-qa="filter-active-count">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className={styles.tableWrapper}>
+          <Table
+            data-qa="members-table"
+            variant="striped"
+            headerVariant="primary"
+            data={sortedMembers}
+            columns={columns}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            rowProps={(row) => ({ "data-qa": `member-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
+            emptyState={
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIllustration}>
+                  <FaUsers size={64} />
+                </div>
+                {hasActiveFilters ? (
+                  <>
+                    <h3 data-qa="members-no-results">No results found</h3>
+                    <p>No members found matching your filters</p>
+                    <p className={styles.emptyHint}>Try adjusting your filter criteria</p>
+                  </>
+                ) : (
+                  <>
+                    <h3 data-qa="members-empty">No members yet</h3>
+                    <p>No members have been registered for this semester yet.</p>
+                  </>
+                )}
+              </div>
+            }
+          />
+        </div>
+
+        {/* Pagination */}
+        {totalItems > ITEMS_PER_PAGE && (
+          <div className={styles.paginationContainer} data-qa="members-pagination">
+            <Pagination
+              variant="compact"
+              totalItems={totalItems}
+              pageSize={ITEMS_PER_PAGE}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+
+        {/* Register Member Modal */}
+        <RegisterMemberModal
+          isOpen={isRegisterModalOpen}
+          onClose={() => setIsRegisterModalOpen(false)}
+          onSuccess={handleRegistrationSuccess}
+        />
+
+        {/* Edit Member Modal */}
+        <EditMemberModal
+          isOpen={isEditModalOpen}
+          membership={selectedMembership}
+          onClose={handleEditModalClose}
+          onSuccess={handleEditSuccess}
+        />
+
+        {/* Delete Membership Modal */}
+        <DeleteMembershipModal
+          isOpen={isDeleteModalOpen}
+          membership={selectedMembership}
+          semesterId={semesterContext.currentSemester.id}
+          onClose={handleDeleteModalClose}
+          onSuccess={handleDeleteSuccess}
+        />
+      </>
     );
-  }
+  };
 
   return (
     <div className={styles.container}>
-      {/* Search and action bar */}
-      <div className={styles.searchContainer}>
-        <div className={styles.searchInputWrapper}>
-          <Input
-            data-qa="input-members-search"
-            type="search"
-            placeholder="Search by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            prefix={<FaSearch />}
-            suffix={
-              searchQuery ? (
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className={styles.clearButton}
-                  aria-label="Clear search"
-                  data-qa="clear-search-btn"
-                >
-                  <FaTimes />
-                </button>
-              ) : null
-            }
-            fullWidth
-          />
-        </div>
-        {hasPermission("create", "membership") && (
-          <Button data-qa="register-member-btn" onClick={handleRegisterMember} iconBefore={<FaPlus />}>
-            Register New Member
-          </Button>
-        )}
-      </div>
-
-      <div className={styles.resultsInfo} data-qa="members-results-info">
-        <p>
-          Showing {sortedMembers.length} of {totalItems} members
-          {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
-        </p>
-      </div>
-
-      {/* Table */}
-      <div className={styles.tableWrapper}>
-        <Table
-          data-qa="members-table"
-          variant="striped"
-          headerVariant="primary"
-          data={sortedMembers}
-          columns={columns}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-          rowProps={(row) => ({ "data-qa": `member-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
-          emptyState={
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIllustration}>
-                <FaUsers size={64} />
-              </div>
-              {debouncedSearchQuery ? (
-                <>
-                  <h3 data-qa="members-no-results">No results found</h3>
-                  <p>No members found matching &quot;{debouncedSearchQuery}&quot;</p>
-                  <p className={styles.emptyHint}>Try adjusting your search terms</p>
-                </>
-              ) : (
-                <>
-                  <h3 data-qa="members-empty">No members yet</h3>
-                  <p>No members have been registered for this semester yet.</p>
-                </>
-              )}
-            </div>
-          }
-        />
-      </div>
-
-      {/* Pagination */}
-      {totalItems > ITEMS_PER_PAGE && (
-        <div className={styles.paginationContainer} data-qa="members-pagination">
-          <Pagination
-            variant="compact"
-            totalItems={totalItems}
-            pageSize={ITEMS_PER_PAGE}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-      )}
-
-      {/* Register Member Modal */}
-      <RegisterMemberModal
-        isOpen={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-        onSuccess={handleRegistrationSuccess}
-      />
-
-      {/* Edit Member Modal */}
-      <EditMemberModal
-        isOpen={isEditModalOpen}
-        membership={selectedMembership}
-        onClose={handleEditModalClose}
-        onSuccess={handleEditSuccess}
-      />
-
-      {/* Delete Membership Modal */}
-      <DeleteMembershipModal
-        isOpen={isDeleteModalOpen}
-        membership={selectedMembership}
-        semesterId={semesterContext.currentSemester.id}
-        onClose={handleDeleteModalClose}
-        onSuccess={handleDeleteSuccess}
+      {renderContent()}
+      <MemberFilters
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
       />
     </div>
   );

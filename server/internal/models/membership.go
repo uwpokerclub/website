@@ -62,6 +62,24 @@ type ListMembershipsFilter struct {
 
 	// Search filters memberships by user first name, last name, email, or full name (case-insensitive).
 	Search string
+
+	// Name filters memberships by user first name, last name, or full name (case-insensitive partial match).
+	Name *string
+
+	// Email filters memberships by user email (case-insensitive partial match).
+	Email *string
+
+	// Faculty filters memberships by user faculty (exact match).
+	Faculty *string
+
+	// StudentID filters memberships by user ID (exact match as string).
+	StudentID *string
+
+	// Paid filters memberships by paid status.
+	Paid *bool
+
+	// Discounted filters memberships by discounted status.
+	Discounted *bool
 }
 
 type CreateMembershipRequestV2 struct {

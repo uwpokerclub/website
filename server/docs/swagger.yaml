@@ -1591,6 +1591,38 @@ paths:
         in: query
         name: search
         type: string
+      - description: Filter by first name, last name, or full name (case-insensitive
+          partial match)
+        in: query
+        name: name
+        type: string
+      - description: Filter by email (case-insensitive partial match)
+        in: query
+        name: email
+        type: string
+      - description: Filter by faculty (exact match)
+        enum:
+        - AHS
+        - Arts
+        - Engineering
+        - Environment
+        - Math
+        - Science
+        in: query
+        name: faculty
+        type: string
+      - description: Filter by student ID (exact match)
+        in: query
+        name: studentId
+        type: string
+      - description: Filter by paid status
+        in: query
+        name: paid
+        type: boolean
+      - description: Filter by discounted status
+        in: query
+        name: discounted
+        type: boolean
       produces:
       - application/json
       responses:

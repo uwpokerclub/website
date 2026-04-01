@@ -232,7 +232,7 @@ describe("MembersList", () => {
 
         cy.getByData("filter-name").should("have.value", "");
         cy.getByData("filter-faculty").should("have.value", "");
-        cy.getByData("filter-active-count").should("not.exist");
+        cy.getByData("filter-clear-btn").should("be.disabled");
       });
 
       it("should persist filters in URL query params", () => {

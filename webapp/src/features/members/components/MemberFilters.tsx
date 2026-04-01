@@ -152,11 +152,16 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
         </div>
       </div>
 
-      {activeCount > 0 && (
-        <Button data-qa="filter-clear-btn" variant="tertiary" onClick={onClear} iconBefore={<FaTimes />} fullWidth>
-          Clear All Filters
-        </Button>
-      )}
+      <Button
+        data-qa="filter-clear-btn"
+        variant="tertiary"
+        onClick={onClear}
+        iconBefore={<FaTimes />}
+        fullWidth
+        disabled={activeCount === 0}
+      >
+        Clear All Filters
+      </Button>
     </aside>
   );
 }

@@ -223,8 +223,11 @@ describe("MembersList", () => {
 
       it("should clear all filters", () => {
         cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-sidebar").should("be.visible");
         cy.getByData("filter-name").type("test");
         cy.getByData("filter-faculty").select("Math");
+        // Ensure drawer is still open after filter interactions
+        cy.getByData("filter-sidebar").should("be.visible");
         cy.getByData("filter-clear-btn").click();
 
         cy.getByData("filter-name").should("have.value", "");
@@ -254,7 +257,8 @@ describe("MembersList", () => {
         cy.visit("/admin/members?name=test&faculty=Math");
         cy.getByData("members-table").should("exist");
         cy.getByData("filter-toggle-btn").click();
-        cy.getByData("filter-clear-btn").click();
+        cy.getByData("filter-sidebar").should("be.visible");
+        cy.getByData("filter-clear-btn").should("be.visible").click();
 
         cy.url().should("not.include", "name=");
         cy.url().should("not.include", "faculty=");

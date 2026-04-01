@@ -30,7 +30,6 @@ const BOOL_OPTIONS = [
 ];
 
 export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClear }: MemberFiltersProps) {
-  const activeCount = Object.values(filters).filter((v) => v !== "").length;
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -152,14 +151,7 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
         </div>
       </div>
 
-      <Button
-        data-qa="filter-clear-btn"
-        variant="tertiary"
-        onClick={onClear}
-        iconBefore={<FaTimes />}
-        fullWidth
-        disabled={activeCount === 0}
-      >
+      <Button data-qa="filter-clear-btn" variant="tertiary" onClick={onClear} iconBefore={<FaTimes />} fullWidth>
         Clear All Filters
       </Button>
     </aside>

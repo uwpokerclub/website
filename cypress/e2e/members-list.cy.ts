@@ -172,39 +172,45 @@ describe("MembersList", () => {
       });
 
       it("should send name filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-name").type("Heinrik");
-        cy.wait("@getMemberships").its("request.url").should("include", "name=Heinrik");
+        cy.wait("@getFiltered").its("request.url").should("include", "name=Heinrik");
       });
 
       it("should send email filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-email").type("merriam");
-        cy.wait("@getMemberships").its("request.url").should("include", "email=merriam");
+        cy.wait("@getFiltered").its("request.url").should("include", "email=merriam");
       });
 
       it("should send student ID filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-studentId").type("62958169");
-        cy.wait("@getMemberships").its("request.url").should("include", "studentId=62958169");
+        cy.wait("@getFiltered").its("request.url").should("include", "studentId=62958169");
       });
 
       it("should send faculty filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-faculty").select("Engineering");
-        cy.wait("@getMemberships").its("request.url").should("include", "faculty=Engineering");
+        cy.wait("@getFiltered").its("request.url").should("include", "faculty=Engineering");
       });
 
       it("should send paid filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-paid").select("Yes");
-        cy.wait("@getMemberships").its("request.url").should("include", "paid=true");
+        cy.wait("@getFiltered").its("request.url").should("include", "paid=true");
       });
 
       it("should send discounted filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-discounted").select("Yes");
-        cy.wait("@getMemberships").its("request.url").should("include", "discounted=true");
+        cy.wait("@getFiltered").its("request.url").should("include", "discounted=true");
       });
 
       it("should show active filter count", () => {

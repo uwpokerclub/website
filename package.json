@@ -22,7 +22,9 @@
   },
   "homepage": "https://github.com/uwpokerclub/website#readme",
   "devDependencies": {
+    "axe-core": "^4.11.2",
     "cypress": "^14.3.1",
+    "cypress-axe": "^1.7.0",
     "typescript": "^5.8.3"
   }
 }

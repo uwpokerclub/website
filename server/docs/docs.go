@@ -1686,6 +1686,50 @@ const docTemplate = `{
                         "description": "Search by first name, last name, email, or full name",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by first name, last name, or full name (case-insensitive partial match)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by email (case-insensitive partial match)",
+                        "name": "email",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "AHS",
+                            "Arts",
+                            "Engineering",
+                            "Environment",
+                            "Math",
+                            "Science"
+                        ],
+                        "type": "string",
+                        "description": "Filter by faculty (exact match)",
+                        "name": "faculty",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by student ID (exact match)",
+                        "name": "studentId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by paid status",
+                        "name": "paid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by discounted status",
+                        "name": "discounted",
+                        "in": "query"
                     }
                 ],
                 "responses": {

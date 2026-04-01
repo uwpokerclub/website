@@ -155,6 +155,106 @@ describe("MembersList", () => {
       });
     });
 
+    context("filter drawer", () => {
+      it("should open and close filter drawer", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-sidebar").should("be.visible");
+        cy.getByData("filter-studentId").should("exist");
+        cy.getByData("filter-name").should("exist");
+        cy.getByData("filter-email").should("exist");
+        cy.getByData("filter-faculty").should("exist");
+        cy.getByData("filter-paid").should("exist");
+        cy.getByData("filter-discounted").should("exist");
+
+        // Close via X button
+        cy.get("[aria-label='Close filters']").click();
+        cy.getByData("filter-sidebar").should("not.be.visible");
+      });
+
+      it("should send name filter to API", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-name").type("Heinrik");
+        cy.wait("@getMemberships").its("request.url").should("include", "name=Heinrik");
+      });
+
+      it("should send email filter to API", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-email").type("merriam");
+        cy.wait("@getMemberships").its("request.url").should("include", "email=merriam");
+      });
+
+      it("should send student ID filter to API", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-studentId").type("62958169");
+        cy.wait("@getMemberships").its("request.url").should("include", "studentId=62958169");
+      });
+
+      it("should send faculty filter to API", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-faculty").select("Engineering");
+        cy.wait("@getMemberships").its("request.url").should("include", "faculty=Engineering");
+      });
+
+      it("should send paid filter to API", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-paid").select("Yes");
+        cy.wait("@getMemberships").its("request.url").should("include", "paid=true");
+      });
+
+      it("should send discounted filter to API", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-discounted").select("Yes");
+        cy.wait("@getMemberships").its("request.url").should("include", "discounted=true");
+      });
+
+      it("should show active filter count", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-name").type("test");
+        cy.getByData("filter-active-count").should("contain", "1");
+        cy.getByData("filter-faculty").select("Math");
+        cy.getByData("filter-active-count").should("contain", "2");
+      });
+
+      it("should clear all filters", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-name").type("test");
+        cy.getByData("filter-faculty").select("Math");
+        cy.getByData("filter-clear-btn").click();
+
+        cy.getByData("filter-name").should("have.value", "");
+        cy.getByData("filter-faculty").should("have.value", "");
+        cy.getByData("filter-active-count").should("not.exist");
+      });
+
+      it("should persist filters in URL query params", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-faculty").select("Engineering");
+        cy.getByData("filter-paid").select("Yes");
+
+        cy.url().should("include", "faculty=Engineering");
+        cy.url().should("include", "paid=true");
+      });
+
+      it("should restore filters from URL on page load", () => {
+        cy.visit("/admin/members?name=Heinrik&faculty=AHS");
+        cy.getByData("members-table").should("exist");
+        cy.getByData("filter-toggle-btn").click();
+
+        cy.getByData("filter-name").should("have.value", "Heinrik");
+        cy.getByData("filter-faculty").should("have.value", "AHS");
+      });
+
+      it("should clear URL params when filters are cleared", () => {
+        cy.visit("/admin/members?name=test&faculty=Math");
+        cy.getByData("members-table").should("exist");
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-clear-btn").click();
+
+        cy.url().should("not.include", "name=");
+        cy.url().should("not.include", "faculty=");
+      });
+    });
+
     context("register member modal", () => {
       it("should open and close modal", () => {
         cy.getByData("register-member-btn").click();
@@ -225,26 +325,77 @@ describe("MembersList", () => {
       cy.getByData("members-table").should("exist");
     });
 
-    it("should filter members by name and clear search", () => {
-      const targetUser = USERS[0]; // Heinrik Drust
-      const targetMember = MEMBERS[0];
-
-      cy.getByData("input-members-search").type(targetUser.firstName);
-      cy.getByData("members-results-info").should("contain", targetUser.firstName);
-      cy.get("[data-qa^='member-row-']").should("have.length", 1);
-      cy.getByData(`member-row-${targetMember.id}`).should("exist");
-
-      // Clear search
-      cy.getByData("clear-search-btn").click();
-      cy.getByData("input-members-search").should("have.value", "");
-      cy.get("[data-qa^='member-row-']").should("have.length", MEMBERS.length);
-    });
-
     it("should load members list from real API", () => {
       cy.get("[data-qa^='member-row-']").should(
         "have.length",
         MEMBERS.length
       );
+    });
+
+    it("should filter members by name", () => {
+      const targetUser = USERS[0]; // Heinrik Drust
+      const targetMember = MEMBERS[0];
+
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-name").type(targetUser.firstName);
+
+      // Wait for debounce + API response
+      cy.get("[data-qa^='member-row-']").should("have.length", 1);
+      cy.getByData(`member-row-${targetMember.id}`).should("exist");
+    });
+
+    it("should filter members by faculty", () => {
+      // Engineering: Khalil Duckham, Amandie Libbis
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-faculty").select("Engineering");
+
+      cy.get("[data-qa^='member-row-']").should("have.length", 2);
+    });
+
+    it("should filter members by student ID", () => {
+      const targetMember = MEMBERS[0];
+
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-studentId").type(targetMember.userId);
+
+      cy.get("[data-qa^='member-row-']").should("have.length", 1);
+      cy.getByData(`member-row-${targetMember.id}`).should("exist");
+    });
+
+    it("should filter members by paid status", () => {
+      // 6 paid members in seed data
+      const paidCount = MEMBERS.filter((m) => m.paid).length;
+
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-paid").select("Yes");
+
+      cy.get("[data-qa^='member-row-']").should("have.length", paidCount);
+    });
+
+    it("should filter members by discounted status", () => {
+      // 2 discounted members in seed data
+      const discountedCount = MEMBERS.filter((m) => m.discounted).length;
+
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-discounted").select("Yes");
+
+      cy.get("[data-qa^='member-row-']").should("have.length", discountedCount);
+    });
+
+    it("should show empty state when filters match nothing", () => {
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-name").type("zzzznonexistent");
+
+      cy.getByData("members-no-results").should("be.visible");
+    });
+
+    it("should clear filters and restore full list", () => {
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-faculty").select("Engineering");
+      cy.get("[data-qa^='member-row-']").should("have.length", 2);
+
+      cy.getByData("filter-clear-btn").click();
+      cy.get("[data-qa^='member-row-']").should("have.length", MEMBERS.length);
     });
 
     it("should delete membership successfully", () => {

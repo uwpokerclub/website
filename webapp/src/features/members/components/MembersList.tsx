@@ -104,8 +104,11 @@ export function MembersList() {
     return () => clearTimeout(debounceTimer.current);
   }, []);
 
-  // Reset filters when semester changes
+  // Reset filters when semester changes (skip initial mount to preserve URL-initialized filters)
+  const prevSemesterId = useRef(semesterContext?.currentSemester?.id);
   useEffect(() => {
+    if (prevSemesterId.current === semesterContext?.currentSemester?.id) return;
+    prevSemesterId.current = semesterContext?.currentSemester?.id;
     setCurrentPage(1);
     setFilters(EMPTY_FILTERS);
     setDebouncedFilters(EMPTY_FILTERS);

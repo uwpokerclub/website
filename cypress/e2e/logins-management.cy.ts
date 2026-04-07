@@ -13,7 +13,7 @@ describe("Logins Management", () => {
     });
 
     it("should navigate to logins page from sidenav", () => {
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
       cy.getByData("sidenav-webmaster-section").should("exist");
       cy.getByData("nav-link-manage-logins").click();

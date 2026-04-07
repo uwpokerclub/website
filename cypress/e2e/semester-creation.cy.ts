@@ -7,7 +7,7 @@ describe("CreateSemesterModal", () => {
     beforeEach(() => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
     });
 
@@ -218,7 +218,7 @@ describe("CreateSemesterModal", () => {
     it("should create semester from sidenav and auto-select it in dropdown", () => {
       cy.intercept("POST", "/api/v2/semesters").as("createSemester");
 
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("semester-dropdown").click();
       cy.getByData("create-semester-btn").click();
       cy.getByData("create-semester-modal").should("exist");

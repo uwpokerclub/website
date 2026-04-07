@@ -53,7 +53,7 @@ describe("Login page", () => {
       // Login via API for faster setup
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
     });
 
     it("should successfully logout", () => {
@@ -93,7 +93,7 @@ describe("Login page", () => {
       cy.getByData("login-submit").click();
 
       // Verify redirect to admin dashboard
-      cy.location("pathname").should("eq", "/admin");
+      cy.location("pathname").should("eq", "/admin/dashboard");
 
       // Verify session cookie exists
       cy.getCookie("uwpsc-dev-session-id").should("exist");
@@ -102,18 +102,18 @@ describe("Login page", () => {
     it("should persist session across page reloads", () => {
       // Login via API
       cy.login();
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
 
       // Verify logged in
       cy.getCookie("uwpsc-dev-session-id").should("exist");
-      cy.location("pathname").should("eq", "/admin");
+      cy.location("pathname").should("eq", "/admin/dashboard");
 
       // Reload the page
       cy.reload();
 
       // Verify still logged in
       cy.getCookie("uwpsc-dev-session-id").should("exist");
-      cy.location("pathname").should("eq", "/admin");
+      cy.location("pathname").should("eq", "/admin/dashboard");
     });
   });
 });

@@ -9,7 +9,7 @@ describe("SideNav", () => {
     beforeEach(() => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
     });
 
@@ -48,7 +48,7 @@ describe("SideNav", () => {
     beforeEach(() => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
     });
 
@@ -69,7 +69,7 @@ describe("SideNav", () => {
     beforeEach(() => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
     });
 
@@ -114,7 +114,7 @@ describe("SideNav", () => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
       cy.viewport(1280, 720); // Desktop viewport
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
     });
 
@@ -155,7 +155,7 @@ describe("SideNav", () => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
       cy.viewport(375, 667); // Mobile viewport (iPhone SE)
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
     });
 
     it("should start collapsed with mobile open button visible", () => {
@@ -210,7 +210,7 @@ describe("SideNav", () => {
 
     it("should display Officers and Webmaster sections for executive roles", () => {
       // Default e2e_user has WEBMASTER role
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
 
       // Officers section
@@ -225,26 +225,26 @@ describe("SideNav", () => {
     });
 
     it("should navigate to each role-based page when clicked", () => {
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
 
       cy.getByData("nav-link-manage-logins").click();
       cy.location("pathname").should("eq", "/admin/logins");
 
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("nav-link-inventory").click();
       cy.location("pathname").should("eq", "/admin/inventory");
 
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("nav-link-finances").click();
       cy.location("pathname").should("eq", "/admin/finances");
 
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("nav-link-executive-team").click();
       cy.location("pathname").should("eq", "/admin/executive");
     });
 
     it("should NOT display Officers section for non-executive roles", () => {
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
 
       // Verify that the officers section IS visible for current user (executive)
@@ -263,7 +263,7 @@ describe("SideNav", () => {
     });
 
     it("should load semester list from real API", () => {
-      cy.visit("/admin");
+      cy.visit("/admin/dashboard");
       cy.getByData("sidenav").should("exist");
       cy.getByData("semester-selector").should("exist");
       cy.getByData("semester-dropdown").should("contain", SEMESTER.name);

@@ -15,7 +15,7 @@ export async function sendRequest<T>(
   const res = await fetch(`${import.meta.env.VITE_API_URL}/${path}`, {
     credentials: "include",
     method,
-    headers: body ? { "Content-Type": "applcation/json" } : undefined,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
 

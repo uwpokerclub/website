@@ -25,16 +25,23 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
 
   const fetchSemesters = useCallback(
     async (signal?: AbortSignal) => {
-      const response = await fetch("/api/v2/semesters", {
-        credentials: "include",
-        signal,
-      });
+      try {
+        const response = await fetch("/api/v2/semesters", {
+          credentials: "include",
+          signal,
+        });
 
-      if (response.ok) {
-        const resp: { data: Semester[] } = await response.json();
-        setSemesters(resp.data);
-      } else if (response.status === 401) {
-        navigate("/admin/login");
+        if (response.ok) {
+          const resp: { data: Semester[] } = await response.json();
+          setSemesters(resp.data);
+        } else if (response.status === 401) {
+          navigate("/admin/login");
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+        throw err;
       }
     },
     [navigate],

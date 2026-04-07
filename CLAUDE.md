@@ -15,16 +15,16 @@ go run main.go start
 
 # Run all backend tests (disable parallelization due to shared database)
 # IMPORTANT: The -C option must come immediately after 'test' and before package paths
-go test -C server ./internal/... -v -p=1
+go test -C server ./internal/... -p=1
 
 # Run specific test suite
-go test -C server ./internal/services -v -p=1 --run MembershipService
+go test -C server ./internal/services -p=1 --run MembershipService
 
 # Run tests for a specific package (e.g., controller tests)
-go test -C server ./internal/controller -v -p=1
+go test -C server ./internal/controller -p=1
 
 # Run a specific test function
-go test -C server ./internal/controller -v -p=1 --run TestRestartEvent
+go test -C server ./internal/controller -p=1 --run TestRestartEvent
 
 # Generate API documentation
 make generate-api-docs
@@ -152,38 +152,7 @@ When adding new endpoints, prefer the v2 controller pattern in `internal/control
 
 ## Go Testing Guidelines
 - **CRITICAL**: When running Go tests, always use the `-C` option immediately after `test` and before package paths
-- Example: `go test -C server ./internal/controller -v -p=1` (correct)
-- Never: `go test ./internal/controller -v -p=1 -C` (incorrect - will fail)
+- Example: `go test -C server ./internal/controller -p=1` (correct)
+- Never: `go test ./internal/controller -p=1 -C` (incorrect - will fail)
 - The `-C` option changes to the specified directory before running tests
 - Always disable parallelization with `-p=1` due to shared database in tests
-
-## Jira CLI (jira-cli)
-- **Project**: UWPSC at https://uwpokerclub.atlassian.net
-- **Config**: `~/.config/.jira/.config.yml`
-
-### Creating Issues
-```bash
-# Create issue with template file for body
-jira issue create --type Task --parent "UWPSC-XX" --priority High --no-input \
-  --summary "Issue summary" \
-  --template /path/to/body.md
-
-# Create epic
-jira epic create --name "Epic Name" --summary "Epic summary" --priority High --no-input \
-  --body "Epic description"
-```
-
-### Custom Fields
-- **IMPORTANT**: Use dash-case field names, not field keys
-- Example: `--custom acceptance-criteria="criteria here"` (correct)
-- Not: `--custom customfield_10040="criteria here"` (incorrect - will be ignored)
-
-### Editing Issues
-```bash
-# Update description via pipe
-cat description.md | jira issue edit UWPSC-XX --no-input
-
-# Set custom fields
-jira issue edit UWPSC-XX --no-input --custom acceptance-criteria="- Criterion 1
-- Criterion 2"
-```

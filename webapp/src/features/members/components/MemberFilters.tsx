@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Input, Select, Button } from "@uwpokerclub/components";
 import { FaTimes } from "react-icons/fa";
-import { FACULTIES } from "@/data/constants";
+import { FACULTY_VALUES } from "@/features/members/constants";
 import styles from "./MemberFilters.module.css";
 
 export interface MemberFilterValues {
@@ -21,7 +21,7 @@ interface MemberFiltersProps {
   onClear: () => void;
 }
 
-const FACULTY_OPTIONS = [{ value: "", label: "All" }, ...FACULTIES.map((f) => ({ value: f, label: f }))];
+const FACULTY_OPTIONS = [{ value: "", label: "All" }, ...FACULTY_VALUES.map((f) => ({ value: f, label: f }))];
 
 const BOOL_OPTIONS = [
   { value: "", label: "All" },

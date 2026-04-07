@@ -20,7 +20,7 @@ export function LoginPage() {
   const { login, error } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = (location.state as { from: { pathname: string } })?.from?.pathname || "/admin";
+  const from = (location.state as { from: { pathname: string } })?.from?.pathname || "/admin/dashboard";
 
   const handleLogin = async (username: string, password: string) => {
     setIsSubmitting(true);

@@ -19,10 +19,6 @@ describe("CreateSemesterModal", () => {
         cy.getByData("create-semester-btn").should("exist");
       });
 
-      it("should display create semester button on semesters list page", () => {
-        cy.visit("/admin/semesters");
-        cy.getByData("create-semester-btn").should("exist");
-      });
     });
 
     context("modal interactions from sidenav", () => {

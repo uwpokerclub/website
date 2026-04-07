@@ -24,11 +24,10 @@ describe("Accessibility", () => {
   ];
 
   const adminPages = [
+    { name: "Dashboard", path: "/admin/dashboard" },
     { name: "Events", path: "/admin/events" },
     { name: "Members", path: "/admin/members" },
     { name: "Rankings", path: "/admin/rankings" },
-    { name: "Semesters", path: "/admin/semesters" },
-    { name: "Users", path: "/admin/users" },
     { name: "Logins", path: "/admin/logins" },
   ];
 

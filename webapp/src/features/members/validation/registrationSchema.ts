@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { FACULTIES } from "../../../data/constants";
+import { FACULTY_VALUES } from "../constants";
 
 // Faculty enum from constants with custom error message
-const facultySchema = z.enum(FACULTIES as [string, ...string[]], {
+const facultySchema = z.enum(FACULTY_VALUES, {
   error: () => "Please select a faculty",
 });
 
@@ -26,7 +26,7 @@ export const createMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().min(1, "Email is required").email("Invalid email format"),
-  faculty: facultySchema.refine((val) => val !== "", { message: "Faculty is required" }),
+  faculty: facultySchema,
 });
 
 export type CreateMemberFormData = z.infer<typeof createMemberSchema>;
@@ -66,7 +66,7 @@ export const editMemberSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().min(1, "Email is required").email("Invalid email format"),
-  faculty: facultySchema.refine((val) => val !== "", { message: "Faculty is required" }),
+  faculty: facultySchema,
 });
 
 export type EditMemberFormData = z.infer<typeof editMemberSchema>;

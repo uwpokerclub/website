@@ -1,11 +1,11 @@
 import { useFormContext } from "react-hook-form";
 import { FormField, Input, Select } from "@uwpokerclub/components";
-import { FACULTIES } from "../../../../data/constants";
+import { FACULTY_VALUES } from "../../constants";
 import type { EditMemberMembershipFormData } from "../../validation/registrationSchema";
 import styles from "./EditMemberForm.module.css";
 
-// Transform FACULTIES array to SelectOption format
-const facultyOptions = FACULTIES.map((faculty) => ({
+// Transform FACULTY_VALUES array to SelectOption format
+const facultyOptions = FACULTY_VALUES.map((faculty) => ({
   value: faculty,
   label: faculty,
 }));

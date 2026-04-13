@@ -84,35 +84,22 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
     setIsSubmitting(true);
     setSubmitError(null);
 
-    // Update member data
-    const memberResult = await updateMember(String(membership.userId), {
-      firstName: data.member.firstName,
-      lastName: data.member.lastName,
-      email: data.member.email,
-      faculty: data.member.faculty,
-      questId: data.member.questId || "",
-    });
-
-    if (!memberResult.success) {
-      setIsSubmitting(false);
-      setSubmitError(memberResult.error);
-      showToast({
-        message: memberResult.error,
-        variant: "error",
-        duration: 5000,
+    try {
+      // Update member data
+      await updateMember(String(membership.userId), {
+        firstName: data.member.firstName,
+        lastName: data.member.lastName,
+        email: data.member.email,
+        faculty: data.member.faculty,
+        questId: data.member.questId || "",
       });
-      return;
-    }
 
-    // Update membership data
-    const membershipResult = await updateMembership(semesterContext.currentSemester.id, membership.id, {
-      paid: data.membership.paid,
-      discounted: data.membership.discounted,
-    });
+      // Update membership data
+      await updateMembership(semesterContext.currentSemester.id, membership.id, {
+        paid: data.membership.paid,
+        discounted: data.membership.discounted,
+      });
 
-    setIsSubmitting(false);
-
-    if (membershipResult.success) {
       showToast({
         message: `${data.member.firstName} ${data.member.lastName} updated successfully!`,
         variant: "success",
@@ -120,13 +107,16 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
       });
       onSuccess();
       handleClose();
-    } else {
-      setSubmitError(membershipResult.error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update member";
+      setSubmitError(message);
       showToast({
-        message: membershipResult.error,
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

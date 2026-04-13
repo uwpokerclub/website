@@ -31,16 +31,11 @@ export function useMemberSearch(): UseMemberSearchReturn {
     setIsSearching(true);
 
     try {
-      const result = await searchMembersApi(query);
-
-      if (!result.success) {
-        setError(result.error);
-        return [];
-      }
+      const members = await searchMembersApi(query);
 
       // Transform Member[] to ComboboxOption format
       // Note: API returns id as number, convert to string for form compatibility
-      return result.data.map((member) => ({
+      return members.map((member) => ({
         value: String(member.id),
         label: `${member.firstName} ${member.lastName} (${member.email})`,
         data: member,

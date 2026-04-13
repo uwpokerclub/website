@@ -121,37 +121,37 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const result = await createMembership(
-      semesterContext.currentSemester.id,
-      data.selectedMemberId,
-      data.membership.paid,
-      data.membership.discounted,
-    );
+    try {
+      const membership = await createMembership(
+        semesterContext.currentSemester.id,
+        data.selectedMemberId,
+        data.membership.paid,
+        data.membership.discounted,
+      );
 
-    setIsSubmitting(false);
-
-    if (result.success) {
       showToast({
         message: "Member registered successfully!",
         variant: "success",
         duration: 3000,
       });
       searchForm.reset();
-      // Pass membership data to callback, using stored name from selection
       onSuccess({
-        membershipId: result.data.id,
-        userId: result.data.userId,
-        firstName: selectedMemberName?.firstName ?? result.data.user?.firstName ?? "",
-        lastName: selectedMemberName?.lastName ?? result.data.user?.lastName ?? "",
+        membershipId: membership.id,
+        userId: membership.userId,
+        firstName: selectedMemberName?.firstName ?? membership.user?.firstName ?? "",
+        lastName: selectedMemberName?.lastName ?? membership.user?.lastName ?? "",
       });
       setSelectedMemberName(null);
-    } else {
-      setSubmitError(result.error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create membership";
+      setSubmitError(message);
       showToast({
-        message: result.error,
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,37 +165,36 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const result = await registerNewMemberWithMembership(
-      data.newMember,
-      semesterContext.currentSemester.id,
-      data.membership.paid,
-      data.membership.discounted,
-    );
+    try {
+      const { member, membership } = await registerNewMemberWithMembership(
+        data.newMember,
+        semesterContext.currentSemester.id,
+        data.membership.paid,
+        data.membership.discounted,
+      );
 
-    setIsSubmitting(false);
-
-    if (result.success) {
-      const { member, membership } = result.data;
       showToast({
         message: `${member.firstName} ${member.lastName} registered successfully!`,
         variant: "success",
         duration: 3000,
       });
       createForm.reset();
-      // Pass membership data to callback
       onSuccess({
         membershipId: membership.id,
         userId: membership.userId,
         firstName: member.firstName,
         lastName: member.lastName,
       });
-    } else {
-      setSubmitError(result.error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to register member";
+      setSubmitError(message);
       showToast({
-        message: result.error,
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

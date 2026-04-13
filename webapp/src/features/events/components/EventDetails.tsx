@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth, useCurrentSemester } from "../../../hooks";
 import { Entry, StructureWithBlinds } from "../../../types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { sendAPIRequest } from "../../../lib";
+import { apiClient } from "../../../lib/apiClient";
 import { EntriesTable } from "./EntriesTable";
 import { Spinner, Button, useToast } from "@uwpokerclub/components";
 import {
@@ -76,15 +76,14 @@ export function EventDetails() {
       setIsLoading(true);
       setError(null);
 
-      const result = await fetchEvent(currentSemester.id, eventId);
-
-      if (result.success) {
-        setEvent(result.data);
-      } else {
-        setError(result.error);
+      try {
+        const eventData = await fetchEvent(currentSemester.id, eventId);
+        setEvent(eventData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch event");
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     loadEvent();
@@ -156,11 +155,13 @@ export function EventDetails() {
   useEffect(() => {
     if (!event?.structureId) return;
 
-    sendAPIRequest<StructureWithBlinds>(`structures/${event.structureId}`).then(({ data }) => {
-      if (data) {
+    apiClient<StructureWithBlinds>(`structures/${event.structureId}`)
+      .then((data) => {
         setStructure(data);
-      }
-    });
+      })
+      .catch(() => {
+        setStructure(null);
+      });
   }, [event?.structureId]);
 
   // Event handlers
@@ -273,13 +274,19 @@ export function EventDetails() {
 
   const handleEditSuccess = useCallback(() => {
     if (currentSemester && event) {
-      fetchEvent(currentSemester.id, event.id).then((result) => {
-        if (result.success) {
-          setEvent(result.data);
-        }
-      });
+      fetchEvent(currentSemester.id, event.id)
+        .then((eventData) => {
+          setEvent(eventData);
+        })
+        .catch(() => {
+          showToast({
+            message: "Failed to reload event details",
+            variant: "error",
+            duration: 3000,
+          });
+        });
     }
-  }, [currentSemester, event]);
+  }, [currentSemester, event, showToast]);
 
   // Build overflow menu items
   const menuItems: DropdownMenuItem[] = useMemo(() => {

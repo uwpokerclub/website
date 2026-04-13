@@ -58,14 +58,19 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
     const loadStructures = async () => {
       setIsLoadingStructures(true);
       setStructureFetchError(null);
-      const result = await fetchStructures();
-      if (mounted) {
-        if (result.success) {
-          setStructures(result.data);
-        } else {
-          setStructureFetchError(result.error);
+      try {
+        const data = await fetchStructures();
+        if (mounted) {
+          setStructures(data);
         }
-        setIsLoadingStructures(false);
+      } catch (err) {
+        if (mounted) {
+          setStructureFetchError(err instanceof Error ? err.message : "Failed to fetch structures");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingStructures(false);
+        }
       }
     };
 
@@ -99,26 +104,14 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
 
       // If creating new structure, create it first
       if (data.structure.mode === "create") {
-        const structureResult = await createStructure(data.structure.name, data.structure.blinds);
-
-        if (!structureResult.success) {
-          setSubmitError(structureResult.error);
-          showToast({
-            message: structureResult.error,
-            variant: "error",
-            duration: 5000,
-          });
-          setIsSubmitting(false);
-          return;
-        }
-
-        structureId = structureResult.data.id;
+        const structure = await createStructure(data.structure.name, data.structure.blinds);
+        structureId = structure.id;
       } else {
         structureId = data.structure.structureId;
       }
 
       // Create the event
-      const eventResult = await createEvent(semesterContext.currentSemester.id, {
+      const createdEvent = await createEvent(semesterContext.currentSemester.id, {
         name: data.name,
         format: data.format,
         notes: data.notes || "",
@@ -126,17 +119,6 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
         structureId,
         pointsMultiplier: data.pointsMultiplier,
       });
-
-      if (!eventResult.success) {
-        setSubmitError(eventResult.error);
-        showToast({
-          message: eventResult.error,
-          variant: "error",
-          duration: 5000,
-        });
-        setIsSubmitting(false);
-        return;
-      }
 
       // Success!
       showToast({
@@ -149,9 +131,10 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
       handleClose();
 
       // Navigate to the new event page
-      navigate(`/admin/events/${eventResult.data.id}`);
-    } catch {
-      setSubmitError("An unexpected error occurred. Please try again.");
+      navigate(`/admin/events/${createdEvent.id}`);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };

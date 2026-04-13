@@ -21,28 +21,28 @@ export function DeleteMemberModal({ isOpen, member, onClose, onSuccess }: Delete
     setIsSubmitting(true);
     setError("");
 
-    const result = await deleteMember(member.id);
+    try {
+      await deleteMember(member.id);
 
-    if (!result.success) {
-      setError(result.error);
       showToast({
-        message: result.error,
+        message: `${member.firstName} ${member.lastName} deleted successfully`,
+        variant: "success",
+        duration: 3000,
+      });
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete member";
+      setError(message);
+      showToast({
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    showToast({
-      message: `${member.firstName} ${member.lastName} deleted successfully`,
-      variant: "success",
-      duration: 3000,
-    });
-
-    onSuccess();
-    onClose();
-    setIsSubmitting(false);
   }, [member, onClose, onSuccess, showToast]);
 
   const handleClose = useCallback(() => {

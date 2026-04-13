@@ -29,28 +29,28 @@ export function DeleteMembershipModal({
     setIsSubmitting(true);
     setError("");
 
-    const result = await deleteMembership(semesterId, membership.id);
+    try {
+      await deleteMembership(semesterId, membership.id);
 
-    if (!result.success) {
-      setError(result.error);
       showToast({
-        message: result.error,
+        message: `Membership for ${membership.user.firstName} ${membership.user.lastName} deleted successfully`,
+        variant: "success",
+        duration: 3000,
+      });
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete membership";
+      setError(message);
+      showToast({
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    showToast({
-      message: `Membership for ${membership.user.firstName} ${membership.user.lastName} deleted successfully`,
-      variant: "success",
-      duration: 3000,
-    });
-
-    onSuccess();
-    onClose();
-    setIsSubmitting(false);
   }, [membership, semesterId, onClose, onSuccess, showToast]);
 
   const handleClose = useCallback(() => {

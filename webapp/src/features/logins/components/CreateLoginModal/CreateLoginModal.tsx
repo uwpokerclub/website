@@ -38,33 +38,32 @@ export function CreateLoginModal({ isOpen, onClose, onSuccess }: CreateLoginModa
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const result = await createLogin({
-      username: data.username,
-      password: data.password,
-      role: data.role,
-    });
+    try {
+      await createLogin({
+        username: data.username,
+        password: data.password,
+        role: data.role,
+      });
 
-    if (!result.success) {
-      setSubmitError(result.error);
       showToast({
-        message: result.error,
+        message: `Login "${data.username}" created successfully!`,
+        variant: "success",
+        duration: 3000,
+      });
+
+      onSuccess();
+      handleClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create login";
+      setSubmitError(message);
+      showToast({
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    // Success!
-    showToast({
-      message: `Login "${data.username}" created successfully!`,
-      variant: "success",
-      duration: 3000,
-    });
-
-    onSuccess();
-    handleClose();
-    setIsSubmitting(false);
   };
 
   // Format role for display

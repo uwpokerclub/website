@@ -22,28 +22,28 @@ export function DeleteLoginModal({ isOpen, login, onClose, onSuccess }: DeleteLo
     setIsSubmitting(true);
     setError("");
 
-    const result = await deleteLogin(login.username);
+    try {
+      await deleteLogin(login.username);
 
-    if (!result.success) {
-      setError(result.error);
       showToast({
-        message: result.error,
+        message: `Login "${login.username}" deleted successfully`,
+        variant: "success",
+        duration: 3000,
+      });
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete login";
+      setError(message);
+      showToast({
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    showToast({
-      message: `Login "${login.username}" deleted successfully`,
-      variant: "success",
-      duration: 3000,
-    });
-
-    onSuccess();
-    onClose();
-    setIsSubmitting(false);
   }, [login, onClose, onSuccess, showToast]);
 
   const handleClose = useCallback(() => {

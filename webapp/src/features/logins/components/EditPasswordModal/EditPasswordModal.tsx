@@ -52,31 +52,30 @@ export function EditPasswordModal({ isOpen, login, onClose, onSuccess }: EditPas
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const result = await changePassword(login.username, {
-      newPassword: data.newPassword,
-    });
+    try {
+      await changePassword(login.username, {
+        newPassword: data.newPassword,
+      });
 
-    if (!result.success) {
-      setSubmitError(result.error);
       showToast({
-        message: result.error,
+        message: `Password for "${login.username}" updated successfully!`,
+        variant: "success",
+        duration: 3000,
+      });
+
+      onSuccess();
+      handleClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to change password";
+      setSubmitError(message);
+      showToast({
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    // Success!
-    showToast({
-      message: `Password for "${login.username}" updated successfully!`,
-      variant: "success",
-      duration: 3000,
-    });
-
-    onSuccess();
-    handleClose();
-    setIsSubmitting(false);
   };
 
   // Footer with actions

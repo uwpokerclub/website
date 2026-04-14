@@ -68,11 +68,10 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
       setIsLoadingEvent(true);
       setSubmitError(null);
 
-      const result = await fetchEvent(semesterContext.currentSemester!.id, event.id);
+      try {
+        const eventData = await fetchEvent(semesterContext.currentSemester!.id, event.id);
 
-      if (mounted) {
-        if (result.success) {
-          const eventData = result.data;
+        if (mounted) {
           // Format the date for datetime-local input
           const startDate = new Date(eventData.startDate);
           const formattedDate = startDate.toISOString().slice(0, 16);
@@ -84,10 +83,15 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
             pointsMultiplier: eventData.pointsMultiplier,
             notes: eventData.notes || "",
           });
-        } else {
-          setSubmitError(`Failed to load event details: ${result.error}`);
         }
-        setIsLoadingEvent(false);
+      } catch (err) {
+        if (mounted) {
+          setSubmitError(`Failed to load event details: ${err instanceof Error ? err.message : "Unknown error"}`);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingEvent(false);
+        }
       }
     };
 
@@ -115,17 +119,15 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const result = await updateEvent(semesterContext.currentSemester.id, event.id, {
-      name: data.name,
-      format: data.format,
-      notes: data.notes || "",
-      startDate: new Date(data.startDate).toISOString(),
-      pointsMultiplier: data.pointsMultiplier,
-    });
+    try {
+      await updateEvent(semesterContext.currentSemester.id, event.id, {
+        name: data.name,
+        format: data.format,
+        notes: data.notes || "",
+        startDate: new Date(data.startDate).toISOString(),
+        pointsMultiplier: data.pointsMultiplier,
+      });
 
-    setIsSubmitting(false);
-
-    if (result.success) {
       showToast({
         message: `"${data.name}" updated successfully!`,
         variant: "success",
@@ -133,13 +135,16 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
       });
       onSuccess();
       handleClose();
-    } else {
-      setSubmitError(result.error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update event";
+      setSubmitError(message);
       showToast({
-        message: result.error,
+        message,
         variant: "error",
         duration: 5000,
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

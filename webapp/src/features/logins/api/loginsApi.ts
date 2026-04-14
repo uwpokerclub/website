@@ -1,116 +1,33 @@
-import { sendAPIRequest } from "@/lib/sendAPIRequest";
-import { APIErrorResponse } from "@/types/error";
+import { apiClient } from "@/lib/apiClient";
 import { LoginResponse, CreateLoginRequest, ChangePasswordRequest } from "../types";
 
-/**
- * Result type for API operations that may fail
- */
-export type ApiResult<T> = { success: true; data: T } | { success: false; error: string };
-
-/**
- * Fetch logins with pagination
- * @param params - Optional pagination params (limit, offset)
- * @returns Array of logins with total count, or error
- */
 export async function fetchLogins(params: {
   limit: number;
   offset: number;
   search?: string;
-}): Promise<ApiResult<{ data: LoginResponse[]; total: number }>> {
+}): Promise<{ data: LoginResponse[]; total: number }> {
   let query = `?limit=${params.limit}&offset=${params.offset}`;
   if (params.search) {
     query += `&search=${encodeURIComponent(params.search)}`;
   }
-  const { status, data } = await sendAPIRequest<{ data: LoginResponse[]; total: number } | APIErrorResponse>(
-    `v2/logins${query}`,
-  );
-
-  if (status >= 200 && status < 300) {
-    const listResponse = data as { data: LoginResponse[]; total: number };
-    return { success: true, data: { data: listResponse?.data ?? [], total: listResponse?.total ?? 0 } };
-  }
-
-  const errorResponse = data as APIErrorResponse | undefined;
-  return {
-    success: false,
-    error: errorResponse?.message ?? "Failed to fetch logins",
-  };
+  const response = await apiClient<{ data: LoginResponse[]; total: number }>(`v2/logins${query}`);
+  return { data: response.data ?? [], total: response.total ?? 0 };
 }
 
-/**
- * Create a new login
- * @param loginData - Login credentials and role
- * @returns Created login or error
- */
-export async function createLogin(loginData: CreateLoginRequest): Promise<ApiResult<LoginResponse>> {
-  const { status, data } = await sendAPIRequest<LoginResponse | APIErrorResponse>(
-    "v2/logins",
-    "POST",
-    loginData as unknown as Record<string, unknown>,
-  );
-
-  if (status === 201) {
-    return { success: true, data: data as LoginResponse };
-  }
-
-  if (status === 409) {
-    return { success: false, error: "Username already exists" };
-  }
-
-  const errorResponse = data as APIErrorResponse | undefined;
-  return {
-    success: false,
-    error: errorResponse?.message ?? "Failed to create login",
-  };
+export async function createLogin(loginData: CreateLoginRequest): Promise<LoginResponse> {
+  return apiClient<LoginResponse>("v2/logins", {
+    method: "POST",
+    body: loginData,
+  });
 }
 
-/**
- * Change password for a login
- * @param username - Login username to update
- * @param passwordData - New password
- * @returns Success or error
- */
-export async function changePassword(username: string, passwordData: ChangePasswordRequest): Promise<ApiResult<void>> {
-  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(
-    `v2/logins/${username}/password`,
-    "PATCH",
-    passwordData as unknown as Record<string, unknown>,
-  );
-
-  if (status >= 200 && status < 300) {
-    return { success: true, data: undefined };
-  }
-
-  if (status === 404) {
-    return { success: false, error: "Login not found" };
-  }
-
-  const errorResponse = data as APIErrorResponse | undefined;
-  return {
-    success: false,
-    error: errorResponse?.message ?? "Failed to change password",
-  };
+export async function changePassword(username: string, passwordData: ChangePasswordRequest): Promise<void> {
+  return apiClient<void>(`v2/logins/${username}/password`, {
+    method: "PATCH",
+    body: passwordData,
+  });
 }
 
-/**
- * Delete a login
- * @param username - Login username to delete
- * @returns Success or error
- */
-export async function deleteLogin(username: string): Promise<ApiResult<void>> {
-  const { status, data } = await sendAPIRequest<void | APIErrorResponse>(`v2/logins/${username}`, "DELETE");
-
-  if (status === 204) {
-    return { success: true, data: undefined };
-  }
-
-  if (status === 404) {
-    return { success: false, error: "Login not found" };
-  }
-
-  const errorResponse = data as APIErrorResponse | undefined;
-  return {
-    success: false,
-    error: errorResponse?.message ?? "Failed to delete login",
-  };
+export async function deleteLogin(username: string): Promise<void> {
+  return apiClient<void>(`v2/logins/${username}`, { method: "DELETE" });
 }

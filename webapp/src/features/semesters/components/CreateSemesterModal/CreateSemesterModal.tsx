@@ -53,7 +53,7 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
     setSubmitError(null);
 
     try {
-      const result = await createSemester({
+      const semester = await createSemester({
         name: data.name,
         meta: data.meta || "",
         startDate: new Date(data.startDate),
@@ -64,28 +64,17 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
         rebuyFee: data.rebuyFee,
       });
 
-      if (!result.success) {
-        setSubmitError(result.error);
-        showToast({
-          message: result.error,
-          variant: "error",
-          duration: 5000,
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Success!
       showToast({
         message: `Semester "${data.name}" created successfully!`,
         variant: "success",
         duration: 3000,
       });
 
-      onSuccess(result.data);
+      onSuccess(semester);
       handleClose();
-    } catch {
-      setSubmitError("An unexpected error occurred. Please try again.");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };

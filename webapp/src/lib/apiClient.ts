@@ -11,7 +11,7 @@ export class ApiError extends Error {
 
 interface RequestOptions {
   method?: string;
-  body?: Record<string, unknown>;
+  body?: unknown;
 }
 
 export async function apiClient<T>(path: string, options: RequestOptions = {}): Promise<T> {

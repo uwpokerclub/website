@@ -47,17 +47,16 @@ export function LoginsList() {
       setIsLoading(true);
       setError(null);
 
-      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-      const result = await fetchLogins({ limit: ITEMS_PER_PAGE, offset, search: debouncedSearchQuery || undefined });
-
-      if (result.success) {
-        setLogins(result.data.data);
-        setTotalItems(result.data.total);
-      } else {
-        setError(result.error);
+      try {
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+        const result = await fetchLogins({ limit: ITEMS_PER_PAGE, offset, search: debouncedSearchQuery || undefined });
+        setLogins(result.data);
+        setTotalItems(result.total);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch logins");
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     loadLogins();

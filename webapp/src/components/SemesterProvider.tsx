@@ -1,6 +1,7 @@
 import { SemesterContext } from "@/contexts";
+import { useSemesters } from "@/features/semesters/hooks/useSemesterQueries";
 import { Semester } from "@/types";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
 interface SemesterProviderProps {
   children: ReactNode;
@@ -8,53 +9,23 @@ interface SemesterProviderProps {
 
 export default function SemesterProvider({ children }: SemesterProviderProps) {
   const [currentSemester, setCurrentSemester] = useState<Semester | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data: semesters, isLoading, error } = useSemesters();
+  const hasAutoSelected = useRef(false);
 
-  const fetchSemestersForInitialSelection = async (abortSignal: AbortSignal) => {
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/v2/semesters", {
-        credentials: "include",
-        signal: abortSignal,
-      });
-
-      if (response.ok) {
-        const resp: { data: Semester[] } = await response.json();
-
-        // Set the first semester (latest) as current if we don't have one selected
-        if (resp.data.length > 0) {
-          setCurrentSemester(resp.data[0]);
-        }
-      } else {
-        setError("Failed to fetch semesters");
-      }
-    } catch (err) {
-      if (!(err instanceof DOMException && err.name === "AbortError")) {
-        setError("Network error while fetching semesters");
-      }
-    } finally {
-      if (!abortSignal.aborted) {
-        setLoading(false);
-      }
+  // Auto-select the first semester (latest) on initial load only
+  useEffect(() => {
+    if (!hasAutoSelected.current && semesters && semesters.length > 0) {
+      hasAutoSelected.current = true;
+      setCurrentSemester(semesters[0]);
     }
-  };
+  }, [semesters]);
 
   const value = {
     currentSemester,
-    loading,
-    error,
+    loading: isLoading,
+    error: error?.message ?? "",
     setCurrentSemester,
   };
-
-  useEffect(() => {
-    const abortController = new AbortController();
-
-    fetchSemestersForInitialSelection(abortController.signal);
-
-    return () => abortController.abort();
-  }, []);
 
   return <SemesterContext.Provider value={value}>{children}</SemesterContext.Provider>;
 }

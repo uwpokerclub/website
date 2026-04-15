@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { SemesterDetailsForm } from "./SemesterDetailsForm";
 import { createSemesterSchema, type CreateSemesterFormData } from "./createSemesterSchema";
-import { createSemester } from "../../api/semesterApi";
+import { useCreateSemester } from "../../hooks/useSemesterQueries";
 import type { Semester } from "../../../../types";
 import styles from "./CreateSemesterModal.module.css";
 
@@ -22,8 +22,8 @@ export interface CreateSemesterModalProps {
  */
 export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemesterModalProps) {
   const { showToast } = useToast();
+  const createSemester = useCreateSemester();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<CreateSemesterFormData>({
@@ -48,12 +48,11 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
   }, [form, onClose]);
 
   // Handle form submission
-  const handleSubmit = async (data: CreateSemesterFormData) => {
-    setIsSubmitting(true);
+  const handleSubmit = (data: CreateSemesterFormData) => {
     setSubmitError(null);
 
-    try {
-      const semester = await createSemester({
+    createSemester.mutate(
+      {
         name: data.name,
         meta: data.meta || "",
         startDate: new Date(data.startDate),
@@ -62,31 +61,42 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
         membershipFee: data.membershipFee,
         membershipDiscountFee: data.membershipDiscountFee,
         rebuyFee: data.rebuyFee,
-      });
-
-      showToast({
-        message: `Semester "${data.name}" created successfully!`,
-        variant: "success",
-        duration: 3000,
-      });
-
-      onSuccess(semester);
-      handleClose();
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      },
+      {
+        onSuccess: (semester) => {
+          showToast({
+            message: `Semester "${data.name}" created successfully!`,
+            variant: "success",
+            duration: 3000,
+          });
+          onSuccess(semester);
+          handleClose();
+        },
+        onError: (err) => {
+          setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
+        },
+      },
+    );
   };
 
   // Footer with actions
   const footer = (
     <div className={styles.footer}>
-      <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting} data-qa="create-semester-cancel-btn">
+      <Button
+        variant="tertiary"
+        onClick={handleClose}
+        disabled={createSemester.isPending}
+        data-qa="create-semester-cancel-btn"
+      >
         Cancel
       </Button>
-      <Button type="submit" form="create-semester-form" disabled={isSubmitting} data-qa="create-semester-submit-btn">
-        {isSubmitting ? "Creating..." : "Create Semester"}
+      <Button
+        type="submit"
+        form="create-semester-form"
+        disabled={createSemester.isPending}
+        data-qa="create-semester-submit-btn"
+      >
+        {createSemester.isPending ? "Creating..." : "Create Semester"}
       </Button>
     </div>
   );

@@ -18,10 +18,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(
     async (username: string, password: string, cb: () => void) => {
       resetLogout();
-      await doLogin({ username, password });
-      // Wait for session to be fetched before navigating so RequireAuth sees the user
-      await queryClient.invalidateQueries({ queryKey: sessionKeys.current() });
-      cb();
+      try {
+        await doLogin({ username, password });
+        // Wait for session to be fetched before navigating so RequireAuth sees the user
+        await queryClient.invalidateQueries({ queryKey: sessionKeys.current() });
+        cb();
+      } catch {
+        // Error is captured by the mutation state and surfaced via the context error field
+      }
     },
     [doLogin, resetLogout, queryClient],
   );
@@ -29,8 +33,12 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(
     async (cb: () => void) => {
       resetLogin();
-      await doLogout();
-      cb();
+      try {
+        await doLogout();
+        cb();
+      } catch {
+        // Error is captured by the mutation state and surfaced via the context error field
+      }
     },
     [doLogout, resetLogin],
   );

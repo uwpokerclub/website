@@ -7,8 +7,31 @@ export const sessionKeys = {
   current: () => [...sessionKeys.all, "current"] as const,
 };
 
+/**
+ * Session fetch uses direct fetch instead of apiClient because a 401 here
+ * means "not authenticated" — not "session expired mid-use". The 401 redirect
+ * in apiClient would cause an infinite loop on the login page. Instead, the
+ * error is surfaced as a query error and RequireAuth handles the redirect.
+ */
 async function fetchSession(): Promise<UserSession> {
-  return apiClient<UserSession>("v2/session");
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/v2/session`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    let message = "An unexpected error occurred";
+    let type = "unknown";
+    try {
+      const errorData = await res.json();
+      message = errorData.message || message;
+      type = errorData.type || type;
+    } catch {
+      /* response may not be JSON */
+    }
+    throw new ApiError(res.status, type, message);
+  }
+
+  return res.json();
 }
 
 /**

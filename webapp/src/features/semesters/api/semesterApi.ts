@@ -1,6 +1,11 @@
 import { apiClient } from "../../../lib/apiClient";
 import { Semester } from "../../../types";
 
+export async function fetchSemesters(): Promise<Semester[]> {
+  const response = await apiClient<{ data: Semester[] }>("v2/semesters");
+  return response.data ?? [];
+}
+
 /**
  * Request type for creating a semester
  */

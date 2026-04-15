@@ -3,9 +3,10 @@ import { FaGraduationCap, FaPlus, FaChevronDown } from "react-icons/fa";
 import styles from "./SemesterSelector.module.css";
 import { useCurrentSemester, useAuth } from "@/hooks";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Semester } from "@/types";
 import { CreateSemesterModal } from "@/features/semesters";
+import { useSemesters } from "@/features/semesters/hooks/useSemesterQueries";
 
 type SemesterSelectorProps = {
   isExpanded: boolean;
@@ -15,43 +16,13 @@ type SemesterSelectorProps = {
 function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
   const { currentSemester, setCurrentSemester, error } = useCurrentSemester();
   const { hasPermission } = useAuth();
-  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const { data: semesters = [] } = useSemesters();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const canCreateSemester = hasPermission("create", "semester");
-
-  const fetchSemesters = useCallback(
-    async (signal?: AbortSignal) => {
-      try {
-        const response = await fetch("/api/v2/semesters", {
-          credentials: "include",
-          signal,
-        });
-
-        if (response.ok) {
-          const resp: { data: Semester[] } = await response.json();
-          setSemesters(resp.data);
-        } else if (response.status === 401) {
-          navigate("/admin/login");
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          return;
-        }
-        throw err;
-      }
-    },
-    [navigate],
-  );
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    fetchSemesters(abortController.signal);
-    return () => abortController.abort();
-  }, [fetchSemesters]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -85,9 +56,7 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
   };
 
   const handleCreateSuccess = (newSemester: Semester) => {
-    // Add new semester to the list (at the beginning since it's newest)
-    setSemesters((prev) => [newSemester, ...prev]);
-    // Auto-select the new semester
+    // Auto-select the new semester — the query cache is invalidated by the mutation
     setCurrentSemester(newSemester);
     setIsModalOpen(false);
   };

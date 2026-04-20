@@ -1,5 +1,5 @@
 ### ====================== WEBAPP BUILD IMAGE ======================
-FROM node:24.14.1-alpine AS webapp
+FROM node:24.15.0-alpine AS webapp
 
 WORKDIR /usr/app
 

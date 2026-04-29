@@ -1,19 +1,18 @@
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import { Table, TableColumn, Input, Pagination, Spinner, Button } from "@uwpokerclub/components";
 import { FaSearch, FaTimes, FaUsers, FaSignInAlt, FaSignOutAlt, FaTrash } from "react-icons/fa";
-import { Entry } from "../../../types";
+import { Entry, Event } from "@/types";
 import { useAuth } from "@/hooks";
 import { EventState } from "@/sdk/events";
-import { EventResponse } from "../api/eventApi";
+import { useSignInEntry, useSignOutEntry, useUnregisterEntry } from "@/features/entries/hooks/useEntryQueries";
 
 import styles from "./EntriesTable.module.css";
 
 type EntriesTableProps = {
   entries: Entry[];
-  event: EventResponse;
+  event: Event;
   semesterId: string;
   isLoading: boolean;
-  updateParticipants: () => void;
   totalItems: number;
   currentPage: number;
   pageSize: number;
@@ -40,7 +39,6 @@ export function EntriesTable({
   event,
   semesterId,
   isLoading,
-  updateParticipants,
   totalItems,
   currentPage,
   pageSize,
@@ -50,76 +48,41 @@ export function EntriesTable({
 }: EntriesTableProps) {
   const { hasPermission } = useAuth();
 
-  // Processing state for action buttons
-  const [processingEntry, setProcessingEntry] = useState<string | null>(null);
+  const signInMutation = useSignInEntry();
+  const signOutMutation = useSignOutEntry();
+  const unregisterMutation = useUnregisterEntry();
+
+  // Track which specific entry is being processed (mutations may fire in parallel)
+  const processingEntry =
+    (signInMutation.isPending && signInMutation.variables?.membershipId) ||
+    (signOutMutation.isPending && signOutMutation.variables?.membershipId) ||
+    (unregisterMutation.isPending && unregisterMutation.variables?.membershipId) ||
+    null;
 
   // Handle clear search
   const handleClearSearch = useCallback(() => {
     onSearchChange("");
   }, [onSearchChange]);
 
-  // V2 API actions
   const handleSignOut = useCallback(
-    async (membershipId: string) => {
-      setProcessingEntry(membershipId);
-      try {
-        const response = await fetch(
-          `/api/v2/semesters/${semesterId}/events/${event.id}/entries/${membershipId}/sign-out`,
-          {
-            method: "POST",
-            credentials: "include",
-          },
-        );
-
-        if (response.ok) {
-          updateParticipants();
-        }
-      } finally {
-        setProcessingEntry(null);
-      }
+    (membershipId: string) => {
+      signOutMutation.mutate({ semesterId, eventId: event.id, membershipId });
     },
-    [semesterId, event.id, updateParticipants],
+    [semesterId, event.id, signOutMutation],
   );
 
   const handleSignIn = useCallback(
-    async (membershipId: string) => {
-      setProcessingEntry(membershipId);
-      try {
-        const response = await fetch(
-          `/api/v2/semesters/${semesterId}/events/${event.id}/entries/${membershipId}/sign-in`,
-          {
-            method: "POST",
-            credentials: "include",
-          },
-        );
-
-        if (response.ok) {
-          updateParticipants();
-        }
-      } finally {
-        setProcessingEntry(null);
-      }
+    (membershipId: string) => {
+      signInMutation.mutate({ semesterId, eventId: event.id, membershipId });
     },
-    [semesterId, event.id, updateParticipants],
+    [semesterId, event.id, signInMutation],
   );
 
   const handleRemove = useCallback(
-    async (membershipId: string) => {
-      setProcessingEntry(membershipId);
-      try {
-        const response = await fetch(`/api/v2/semesters/${semesterId}/events/${event.id}/entries/${membershipId}`, {
-          method: "DELETE",
-          credentials: "include",
-        });
-
-        if (response.ok || response.status === 204) {
-          updateParticipants();
-        }
-      } finally {
-        setProcessingEntry(null);
-      }
+    (membershipId: string) => {
+      unregisterMutation.mutate({ semesterId, eventId: event.id, membershipId });
     },
-    [semesterId, event.id, updateParticipants],
+    [semesterId, event.id, unregisterMutation],
   );
 
   // Action buttons component

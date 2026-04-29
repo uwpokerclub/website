@@ -5,38 +5,29 @@ import { SemesterContext } from "@/contexts";
 import { useAuth } from "@/hooks";
 import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo } from "react-icons/fa";
 import { EventState } from "@/sdk/events";
-import { Participant } from "@/sdk/participants";
 import { CreateEventModal } from "./CreateEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
+import { Event } from "@/types";
+import { useEvents, useEndEvent, useRestartEvent } from "../hooks/useEventQueries";
 import styles from "./ListEvents.module.css";
 
 const ITEMS_PER_PAGE = 25;
 
-type ListEventsResponse = {
-  id: number;
-  name: string;
-  format: string;
-  notes: string;
-  semesterId: string;
-  startDate: string;
-  state: number;
-  entries?: Participant[];
-};
-
 type EventActionsProps = {
-  event: ListEventsResponse;
-  onActionComplete: () => void;
-  onEditClick: (event: ListEventsResponse) => void;
+  event: Event;
+  onEditClick: (event: Event) => void;
 };
 
-function EventActions({ event, onActionComplete, onEditClick }: EventActionsProps) {
+function EventActions({ event, onEditClick }: EventActionsProps) {
   const { hasPermission } = useAuth();
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isEndConfirmOpen, setIsEndConfirmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const endEventMutation = useEndEvent();
+  const restartEventMutation = useRestartEvent();
+  const isProcessing = endEventMutation.isPending || restartEventMutation.isPending;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -57,21 +48,13 @@ function EventActions({ event, onActionComplete, onEditClick }: EventActionsProp
   const handleEndEventConfirm = async () => {
     if (!semesterContext?.currentSemester) return;
 
-    setIsProcessing(true);
     try {
-      const response = await fetch(`/api/v2/semesters/${semesterContext.currentSemester.id}/events/${event.id}/end`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to end event: ${response.statusText}`);
-      }
+      await endEventMutation.mutateAsync({ semesterId: semesterContext.currentSemester.id, eventId: event.id });
       showToast({
         message: `"${event.name}" has been ended successfully`,
         variant: "success",
         duration: 3000,
       });
-      onActionComplete();
     } catch (err) {
       showToast({
         message: err instanceof Error ? err.message : "Failed to end event",
@@ -79,28 +62,19 @@ function EventActions({ event, onActionComplete, onEditClick }: EventActionsProp
         duration: 5000,
       });
     } finally {
-      setIsProcessing(false);
       setIsEndConfirmOpen(false);
     }
   };
 
   const handleRestartEvent = async () => {
     if (!semesterContext?.currentSemester) return;
-    setIsProcessing(true);
     try {
-      const response = await fetch(
-        `/api/v2/semesters/${semesterContext.currentSemester.id}/events/${event.id}/restart`,
-        { method: "POST", credentials: "include" },
-      );
-      if (!response.ok) {
-        throw new Error(`Failed to restart event: ${response.statusText}`);
-      }
+      await restartEventMutation.mutateAsync({ semesterId: semesterContext.currentSemester.id, eventId: event.id });
       showToast({
         message: `"${event.name}" has been restarted successfully`,
         variant: "success",
         duration: 3000,
       });
-      onActionComplete();
     } catch (err) {
       showToast({
         message: err instanceof Error ? err.message : "Failed to restart event",
@@ -108,7 +82,6 @@ function EventActions({ event, onActionComplete, onEditClick }: EventActionsProp
         duration: 5000,
       });
     } finally {
-      setIsProcessing(false);
       setIsMenuOpen(false);
     }
   };
@@ -231,13 +204,8 @@ const formatDate = (dateString: string): string => {
 export function ListEvents() {
   const semesterContext = useContext(SemesterContext);
   const { hasPermission } = useAuth();
-  const [events, setEvents] = useState<ListEventsResponse[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
@@ -254,41 +222,18 @@ export function ListEvents() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch events from API
-  useEffect(() => {
-    if (!semesterContext?.currentSemester) {
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchEvents = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        let url = `/api/v2/semesters/${semesterContext.currentSemester!.id}/events?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
-        if (debouncedSearchQuery) {
-          url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
-        }
-        const response = await fetch(url, { credentials: "include" });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch events: ${response.statusText}`);
-        }
-
-        const resp: { data: ListEventsResponse[]; total: number } = await response.json();
-        setEvents(resp.data);
-        setTotalItems(resp.total);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred while fetching events");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchEvents();
-  }, [semesterContext?.currentSemester, refreshTrigger, currentPage, debouncedSearchQuery]);
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const {
+    data: eventsResponse,
+    isLoading,
+    error,
+  } = useEvents(semesterContext?.currentSemester?.id, {
+    limit: ITEMS_PER_PAGE,
+    offset,
+    search: debouncedSearchQuery || undefined,
+  });
+  const events = eventsResponse?.data ?? [];
+  const totalItems = eventsResponse?.total ?? 0;
 
   // Reset pagination when semester changes
   useEffect(() => {
@@ -302,13 +247,8 @@ export function ListEvents() {
     setSearchQuery("");
   }, []);
 
-  // Handle refresh after actions
-  const handleRefresh = useCallback(() => {
-    setRefreshTrigger((prev) => prev + 1);
-  }, []);
-
   // Handle edit click
-  const handleEditClick = useCallback((event: ListEventsResponse) => {
+  const handleEditClick = useCallback((event: Event) => {
     setEditingEvent({
       id: event.id,
       name: event.name,
@@ -333,7 +273,7 @@ export function ListEvents() {
   );
 
   // Define table columns
-  const columns: TableColumn<ListEventsResponse>[] = [
+  const columns: TableColumn<Event>[] = [
     {
       key: "name",
       header: "Name",
@@ -387,9 +327,7 @@ export function ListEvents() {
             header: "Actions",
             accessor: () => "",
             sortable: false,
-            render: (_value: unknown, row: ListEventsResponse) => (
-              <EventActions event={row} onActionComplete={handleRefresh} onEditClick={handleEditClick} />
-            ),
+            render: (_value: unknown, row: Event) => <EventActions event={row} onEditClick={handleEditClick} />,
           },
         ]
       : []),
@@ -412,7 +350,7 @@ export function ListEvents() {
     return (
       <div className={styles.container} data-qa="events-error">
         <div className={styles.errorState}>
-          <p>Error: {error}</p>
+          <p>Error: {error.message}</p>
           <Button onClick={() => window.location.reload()} data-qa="events-retry-btn">
             Retry
           </Button>
@@ -518,19 +456,10 @@ export function ListEvents() {
       )}
 
       {/* Create Event Modal */}
-      <CreateEventModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleRefresh}
-      />
+      <CreateEventModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
 
       {/* Edit Event Modal */}
-      <EditEventModal
-        isOpen={isEditModalOpen}
-        event={editingEvent}
-        onClose={handleEditModalClose}
-        onSuccess={handleRefresh}
-      />
+      <EditEventModal isOpen={isEditModalOpen} event={editingEvent} onClose={handleEditModalClose} />
     </div>
   );
 }

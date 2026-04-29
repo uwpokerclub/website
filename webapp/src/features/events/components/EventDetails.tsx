@@ -1,8 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { useAuth, useCurrentSemester } from "../../../hooks";
-import { Entry, StructureWithBlinds } from "../../../types";
+import { useAuth, useCurrentSemester } from "@/hooks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiClient } from "../../../lib/apiClient";
 import { EntriesTable } from "./EntriesTable";
 import { Spinner, Button, useToast } from "@uwpokerclub/components";
 import {
@@ -27,32 +25,25 @@ import { EndEventModal } from "./EndEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
 import { EventRegistrationModal } from "./EventRegistrationModal";
 import { DropdownMenu, type DropdownMenuItem } from "./DropdownMenu";
-import { EventResponse, fetchEvent } from "../api/eventApi";
+import { useEvent, useRebuyEvent, useRestartEvent } from "../hooks/useEventQueries";
+import { useEntries } from "@/features/entries/hooks/useEntryQueries";
+import { participantToEntry } from "@/features/entries/api/entriesApi";
+import { useStructure } from "@/features/structures/hooks/useStructureQueries";
 
 const ENTRIES_PER_PAGE = 25;
 
 export function EventDetails() {
   const { eventId: eventIdParam = "" } = useParams<{ eventId: string }>();
-  const eventId = parseInt(eventIdParam, 10);
+  const parsedEventId = parseInt(eventIdParam, 10);
+  const eventId = Number.isNaN(parsedEventId) ? undefined : parsedEventId;
   const { currentSemester } = useCurrentSemester();
   const { hasPermission } = useAuth();
   const { showToast } = useToast();
 
-  // Data state
-  const [event, setEvent] = useState<EventResponse | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [totalEntries, setTotalEntries] = useState(0);
-  const [totalPlayerCount, setTotalPlayerCount] = useState(0);
   const [entriesPage, setEntriesPage] = useState(1);
-  const [structure, setStructure] = useState<StructureWithBlinds | null>(null);
-
-  // Loading/error state
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEntriesLoading, setIsEntriesLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [totalPlayerCount, setTotalPlayerCount] = useState(0);
 
   // UI state
   const [showEndModal, setShowEndModal] = useState(false);
@@ -60,34 +51,34 @@ export function EventDetails() {
   const [activeSubTab, setActiveSubTab] = useState<"entries" | "structure">("entries");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const endEventBtnRef = useRef<HTMLButtonElement | null>(null);
   const restartEventBtnRef = useRef<HTMLButtonElement | null>(null);
 
-  // Fetch event data
+  // Query hooks
+  const { data: event, isLoading, error } = useEvent(currentSemester?.id, eventId);
+
+  // Use the URL-derived eventId so this query fires in parallel with useEvent
+  const { data: entriesResponse, isLoading: isEntriesLoading } = useEntries(currentSemester?.id, eventId, {
+    limit: ENTRIES_PER_PAGE,
+    offset: (entriesPage - 1) * ENTRIES_PER_PAGE,
+    search: debouncedSearchQuery || undefined,
+  });
+  const entries = useMemo(() => (entriesResponse?.data ?? []).map(participantToEntry), [entriesResponse]);
+  const totalEntries = entriesResponse?.total ?? 0;
+
+  // Track the unfiltered total separately so the player count stat doesn't change with search
   useEffect(() => {
-    if (!currentSemester || isNaN(eventId)) {
-      setIsLoading(false);
-      return;
+    if (!debouncedSearchQuery && entriesResponse) {
+      setTotalPlayerCount(entriesResponse.total);
     }
+  }, [debouncedSearchQuery, entriesResponse]);
 
-    const loadEvent = async () => {
-      setIsLoading(true);
-      setError(null);
+  const { data: structure = null } = useStructure(event?.structureId);
 
-      try {
-        const eventData = await fetchEvent(currentSemester.id, eventId);
-        setEvent(eventData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch event");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadEvent();
-  }, [currentSemester, eventId]);
+  const rebuyMutation = useRebuyEvent();
+  const restartMutation = useRestartEvent();
+  const isProcessing = rebuyMutation.isPending || restartMutation.isPending;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -97,108 +88,25 @@ export function EventDetails() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch entries - only depends on IDs, not the full event object
-  const fetchEntries = useCallback(async () => {
-    if (!currentSemester || !eventId) return;
-
-    setIsEntriesLoading(true);
-    try {
-      const offset = (entriesPage - 1) * ENTRIES_PER_PAGE;
-      let url = `/api/v2/semesters/${currentSemester.id}/events/${eventId}/entries?limit=${ENTRIES_PER_PAGE}&offset=${offset}`;
-      if (debouncedSearchQuery) {
-        url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
-      }
-      const response = await fetch(url, { credentials: "include" });
-
-      if (response.ok) {
-        type ParticipantResponse = {
-          membershipId: string;
-          membership?: { user?: { firstName?: string; lastName?: string; id?: string } };
-          signedOutAt: Date;
-          placement?: number;
-          eventId: string;
-        };
-        const resp: { data: ParticipantResponse[]; total: number } = await response.json();
-        setTotalEntries(resp.total);
-        if (!debouncedSearchQuery) {
-          setTotalPlayerCount(resp.total);
-        }
-        // Transform API response to match Entry type
-        // API returns: { membershipId, membership: { user: { firstName, lastName, id } }, ... }
-        // Entry expects: { membershipId, firstName, lastName, id, ... }
-        const transformedEntries: Entry[] = resp.data.map((participant) => ({
-          id: participant.membership?.user?.id ?? "",
-          membershipId: participant.membershipId,
-          eventId: participant.eventId,
-          firstName: participant.membership?.user?.firstName ?? "",
-          lastName: participant.membership?.user?.lastName ?? "",
-          signedOutAt: participant.signedOutAt,
-          placement: participant.placement,
-        }));
-        setEntries(transformedEntries);
-      }
-    } catch {
-      // Silently handle entries fetch error
-    } finally {
-      setIsEntriesLoading(false);
-    }
-  }, [currentSemester, eventId, entriesPage, debouncedSearchQuery]);
-
-  // Fetch entries only when event is first loaded (event.id changes)
-  useEffect(() => {
-    if (event?.id) {
-      fetchEntries();
-    }
-  }, [event?.id, fetchEntries]);
-
-  // Fetch structure
-  useEffect(() => {
-    if (!event?.structureId) return;
-
-    apiClient<StructureWithBlinds>(`structures/${event.structureId}`)
-      .then((data) => {
-        setStructure(data);
-      })
-      .catch(() => {
-        setStructure(null);
-      });
-  }, [event?.structureId]);
-
   // Event handlers
   const handleRebuy = useCallback(async () => {
     if (!currentSemester || !event) return;
 
-    setIsProcessing(true);
     try {
-      const response = await fetch(`/api/v2/semesters/${currentSemester.id}/events/${event.id}/rebuy`, {
-        method: "POST",
-        credentials: "include",
+      await rebuyMutation.mutateAsync({ semesterId: currentSemester.id, eventId: event.id });
+      showToast({
+        message: "Rebuy recorded",
+        variant: "success",
+        duration: 2000,
       });
-
-      if (response.ok) {
-        setEvent((prev) => (prev ? { ...prev, rebuys: prev.rebuys + 1 } : prev));
-        showToast({
-          message: "Rebuy recorded",
-          variant: "success",
-          duration: 2000,
-        });
-      } else {
-        showToast({
-          message: "Failed to record rebuy",
-          variant: "error",
-          duration: 3000,
-        });
-      }
     } catch {
       showToast({
         message: "Failed to record rebuy",
         variant: "error",
         duration: 3000,
       });
-    } finally {
-      setIsProcessing(false);
     }
-  }, [currentSemester, event, showToast]);
+  }, [currentSemester, event, showToast, rebuyMutation]);
 
   const handleEndEventClick = useCallback(() => {
     setShowEndModal(true);
@@ -208,12 +116,10 @@ export function EventDetails() {
   }, []);
 
   const handleEndModalSuccess = useCallback(() => {
-    setEvent((prev) => (prev ? { ...prev, state: EventState.Ended } : prev));
-    fetchEntries();
     if (endEventBtnRef.current) {
       endEventBtnRef.current.disabled = false;
     }
-  }, [fetchEntries]);
+  }, []);
 
   const handleEndModalClose = useCallback(() => {
     setShowEndModal(false);
@@ -230,26 +136,12 @@ export function EventDetails() {
     }
 
     try {
-      const response = await fetch(`/api/v2/semesters/${currentSemester.id}/events/${event.id}/restart`, {
-        method: "POST",
-        credentials: "include",
+      await restartMutation.mutateAsync({ semesterId: currentSemester.id, eventId: event.id });
+      showToast({
+        message: "Event restarted",
+        variant: "success",
+        duration: 3000,
       });
-
-      if (response.ok) {
-        setEvent((prev) => (prev ? { ...prev, state: EventState.Started } : prev));
-        fetchEntries();
-        showToast({
-          message: "Event restarted",
-          variant: "success",
-          duration: 3000,
-        });
-      } else {
-        showToast({
-          message: "Failed to restart event",
-          variant: "error",
-          duration: 3000,
-        });
-      }
     } catch {
       showToast({
         message: "Failed to restart event",
@@ -261,7 +153,7 @@ export function EventDetails() {
         restartEventBtnRef.current.disabled = false;
       }
     }
-  }, [currentSemester, event, fetchEntries, showToast]);
+  }, [currentSemester, event, showToast, restartMutation]);
 
   // Edit modal handlers
   const handleEditClick = useCallback(() => {
@@ -271,22 +163,6 @@ export function EventDetails() {
   const handleEditModalClose = useCallback(() => {
     setIsEditModalOpen(false);
   }, []);
-
-  const handleEditSuccess = useCallback(() => {
-    if (currentSemester && event) {
-      fetchEvent(currentSemester.id, event.id)
-        .then((eventData) => {
-          setEvent(eventData);
-        })
-        .catch(() => {
-          showToast({
-            message: "Failed to reload event details",
-            variant: "error",
-            duration: 3000,
-          });
-        });
-    }
-  }, [currentSemester, event, showToast]);
 
   // Build overflow menu items
   const menuItems: DropdownMenuItem[] = useMemo(() => {
@@ -359,7 +235,7 @@ export function EventDetails() {
         <div className={styles.errorIcon}>
           <FaExclamationTriangle />
         </div>
-        <p className={styles.errorText}>{error}</p>
+        <p className={styles.errorText}>{error.message}</p>
         <Button onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
@@ -558,7 +434,6 @@ export function EventDetails() {
                   event={event}
                   semesterId={currentSemester.id}
                   isLoading={isEntriesLoading}
-                  updateParticipants={fetchEntries}
                   totalItems={totalEntries}
                   currentPage={entriesPage}
                   pageSize={ENTRIES_PER_PAGE}
@@ -619,19 +494,13 @@ export function EventDetails() {
         onSuccess={handleEndModalSuccess}
       />
 
-      <EditEventModal
-        isOpen={isEditModalOpen}
-        event={editEventData}
-        onClose={handleEditModalClose}
-        onSuccess={handleEditSuccess}
-      />
+      <EditEventModal isOpen={isEditModalOpen} event={editEventData} onClose={handleEditModalClose} />
 
       <EventRegistrationModal
         isOpen={isRegistrationModalOpen}
         onClose={() => setIsRegistrationModalOpen(false)}
         semesterId={currentSemester.id}
         eventId={event.id}
-        onRegistrationChange={fetchEntries}
       />
     </>
   );

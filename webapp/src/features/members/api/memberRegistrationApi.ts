@@ -125,3 +125,17 @@ export async function updateMembership(
 export async function deleteMembership(semesterId: string, membershipId: string): Promise<void> {
   return apiClient<void>(`v2/semesters/${semesterId}/memberships/${membershipId}`, { method: "DELETE" });
 }
+
+export async function fetchMemberships(
+  semesterId: string,
+  params: { limit: number; offset: number; search?: string },
+): Promise<{ data: Membership[]; total: number }> {
+  let query = `?limit=${params.limit}&offset=${params.offset}`;
+  if (params.search) {
+    query += `&search=${encodeURIComponent(params.search)}`;
+  }
+  const response = await apiClient<{ data: Membership[]; total: number }>(
+    `v2/semesters/${semesterId}/memberships${query}`,
+  );
+  return { data: response.data ?? [], total: response.total ?? 0 };
+}

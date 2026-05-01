@@ -1,57 +1,5 @@
-import { apiClient } from "../../../lib/apiClient";
-import { Structure, StructureWithBlinds, Blind } from "../../../types";
-
-/**
- * Event type for API responses
- */
-export interface EventResponse {
-  id: number;
-  name: string;
-  format: string;
-  notes: string;
-  semesterId: string;
-  startDate: string;
-  state: number;
-  rebuys: number;
-  pointsMultiplier: number;
-  structureId: number;
-  structure?: Structure;
-}
-
-export async function fetchStructures(): Promise<Structure[]> {
-  const response = await apiClient<{ data: Structure[]; total: number }>("v2/structures");
-  return response.data ?? [];
-}
-
-export async function fetchStructure(id: number): Promise<StructureWithBlinds> {
-  return apiClient<StructureWithBlinds>(`v2/structures/${id}`);
-}
-
-export async function createStructure(name: string, blinds: Blind[]): Promise<StructureWithBlinds> {
-  return apiClient<StructureWithBlinds>("v2/structures", {
-    method: "POST",
-    body: { name, blinds },
-  });
-}
-
-/**
- * Request type for updating a structure
- */
-export interface UpdateStructureRequest {
-  name?: string;
-  blinds?: Blind[];
-}
-
-export async function updateStructure(id: number, updates: UpdateStructureRequest): Promise<StructureWithBlinds> {
-  return apiClient<StructureWithBlinds>(`v2/structures/${id}`, {
-    method: "PATCH",
-    body: updates,
-  });
-}
-
-export async function deleteStructure(id: number): Promise<void> {
-  return apiClient<void>(`v2/structures/${id}`, { method: "DELETE" });
-}
+import { apiClient } from "@/lib/apiClient";
+import { Event } from "@/types";
 
 /**
  * Request type for creating an event
@@ -65,8 +13,8 @@ export interface CreateEventRequest {
   pointsMultiplier: number;
 }
 
-export async function createEvent(semesterId: string, eventData: CreateEventRequest): Promise<EventResponse> {
-  return apiClient<EventResponse>(`v2/semesters/${semesterId}/events`, {
+export async function createEvent(semesterId: string, eventData: CreateEventRequest): Promise<Event> {
+  return apiClient<Event>(`v2/semesters/${semesterId}/events`, {
     method: "POST",
     body: { ...eventData, semesterId },
   });
@@ -83,17 +31,37 @@ export interface UpdateEventRequest {
   pointsMultiplier: number;
 }
 
-export async function fetchEvent(semesterId: string, eventId: number): Promise<EventResponse> {
-  return apiClient<EventResponse>(`v2/semesters/${semesterId}/events/${eventId}`);
+export async function fetchEvent(semesterId: string, eventId: number): Promise<Event> {
+  return apiClient<Event>(`v2/semesters/${semesterId}/events/${eventId}`);
 }
 
-export async function updateEvent(
-  semesterId: string,
-  eventId: number,
-  eventData: UpdateEventRequest,
-): Promise<EventResponse> {
-  return apiClient<EventResponse>(`v2/semesters/${semesterId}/events/${eventId}`, {
+export async function updateEvent(semesterId: string, eventId: number, eventData: UpdateEventRequest): Promise<Event> {
+  return apiClient<Event>(`v2/semesters/${semesterId}/events/${eventId}`, {
     method: "PATCH",
     body: eventData,
   });
+}
+
+export async function fetchEvents(
+  semesterId: string,
+  params: { limit: number; offset: number; search?: string },
+): Promise<{ data: Event[]; total: number }> {
+  let query = `?limit=${params.limit}&offset=${params.offset}`;
+  if (params.search) {
+    query += `&search=${encodeURIComponent(params.search)}`;
+  }
+  const response = await apiClient<{ data: Event[]; total: number }>(`v2/semesters/${semesterId}/events${query}`);
+  return { data: response.data ?? [], total: response.total ?? 0 };
+}
+
+export async function endEvent(semesterId: string, eventId: number): Promise<void> {
+  return apiClient<void>(`v2/semesters/${semesterId}/events/${eventId}/end`, { method: "POST" });
+}
+
+export async function restartEvent(semesterId: string, eventId: number): Promise<void> {
+  return apiClient<void>(`v2/semesters/${semesterId}/events/${eventId}/restart`, { method: "POST" });
+}
+
+export async function rebuyEvent(semesterId: string, eventId: number): Promise<void> {
+  return apiClient<void>(`v2/semesters/${semesterId}/events/${eventId}/rebuy`, { method: "POST" });
 }

@@ -1,4 +1,4 @@
-import { useState, useContext, useCallback, useEffect } from "react";
+import { useState, useContext, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,14 +7,14 @@ import { SemesterContext } from "../../../../contexts";
 import { EventDetailsForm } from "./EventDetailsForm";
 import { StructureSelector } from "./StructureSelector";
 import { createEventSchema, type CreateEventFormData } from "../../schemas/eventSchema";
-import { fetchStructures, createStructure, createEvent } from "../../api/eventApi";
-import type { Structure } from "../../../../types";
+import { useCreateEvent } from "../../hooks/useEventQueries";
+import { useStructures, useCreateStructure } from "@/features/structures/hooks/useStructureQueries";
 import styles from "./CreateEventModal.module.css";
 
 export interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 /**
@@ -28,11 +28,14 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Only fetch structures when the modal is open
+  const { data: structures = [], isLoading: isLoadingStructures, error: structuresError } = useStructures();
+  const createStructureMutation = useCreateStructure();
+  const createEventMutation = useCreateEvent();
+
+  const structureFetchError = isOpen && structuresError ? (structuresError.message ?? null) : null;
+  const isSubmitting = createStructureMutation.isPending || createEventMutation.isPending;
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [structures, setStructures] = useState<Structure[]>([]);
-  const [isLoadingStructures, setIsLoadingStructures] = useState(false);
-  const [structureFetchError, setStructureFetchError] = useState<string | null>(null);
 
   const form = useForm<CreateEventFormData>({
     resolver: zodResolver(createEventSchema),
@@ -49,43 +52,10 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
     },
   });
 
-  // Fetch structures when modal opens
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let mounted = true;
-
-    const loadStructures = async () => {
-      setIsLoadingStructures(true);
-      setStructureFetchError(null);
-      try {
-        const data = await fetchStructures();
-        if (mounted) {
-          setStructures(data);
-        }
-      } catch (err) {
-        if (mounted) {
-          setStructureFetchError(err instanceof Error ? err.message : "Failed to fetch structures");
-        }
-      } finally {
-        if (mounted) {
-          setIsLoadingStructures(false);
-        }
-      }
-    };
-
-    loadStructures();
-
-    return () => {
-      mounted = false;
-    };
-  }, [isOpen]);
-
   // Reset form when modal closes
   const handleClose = useCallback(() => {
     form.reset();
     setSubmitError(null);
-    setStructureFetchError(null);
     onClose();
   }, [form, onClose]);
 
@@ -96,7 +66,6 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
@@ -104,20 +73,26 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
 
       // If creating new structure, create it first
       if (data.structure.mode === "create") {
-        const structure = await createStructure(data.structure.name, data.structure.blinds);
+        const structure = await createStructureMutation.mutateAsync({
+          name: data.structure.name,
+          blinds: data.structure.blinds,
+        });
         structureId = structure.id;
       } else {
         structureId = data.structure.structureId;
       }
 
       // Create the event
-      const createdEvent = await createEvent(semesterContext.currentSemester.id, {
-        name: data.name,
-        format: data.format,
-        notes: data.notes || "",
-        startDate: new Date(data.startDate),
-        structureId,
-        pointsMultiplier: data.pointsMultiplier,
+      const createdEvent = await createEventMutation.mutateAsync({
+        semesterId: semesterContext.currentSemester.id,
+        data: {
+          name: data.name,
+          format: data.format,
+          notes: data.notes || "",
+          startDate: new Date(data.startDate),
+          structureId,
+          pointsMultiplier: data.pointsMultiplier,
+        },
       });
 
       // Success!
@@ -127,15 +102,13 @@ export function CreateEventModal({ isOpen, onClose, onSuccess }: CreateEventModa
         duration: 3000,
       });
 
-      onSuccess();
+      onSuccess?.();
       handleClose();
 
       // Navigate to the new event page
       navigate(`/admin/events/${createdEvent.id}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

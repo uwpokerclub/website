@@ -1,8 +1,9 @@
 import { useCallback } from "react";
-import { Table, TableColumn, Input, Pagination, Button } from "@uwpokerclub/components";
+import { Table, TableColumn, Input, Pagination, Button, useToast } from "@uwpokerclub/components";
 import { Ranking } from "@/types";
 import { useAuth } from "@/hooks";
 import { FaSearch, FaTimes, FaTrophy, FaDownload } from "react-icons/fa";
+import { exportRankings } from "../api/rankingsApi";
 import styles from "./RankingsTable.module.css";
 
 type RankingsTableProps = {
@@ -29,28 +30,31 @@ export function RankingsTable({
   onSearchChange,
 }: RankingsTableProps) {
   const { hasPermission } = useAuth();
+  const { showToast } = useToast();
 
   const handleClearSearch = useCallback(() => {
     onSearchChange("");
   }, [onSearchChange]);
 
-  // Handle CSV export
   const handleExport = async () => {
-    const response = await fetch(`/api/v2/semesters/${semesterId}/rankings/export`, {
-      credentials: "include",
-    });
+    try {
+      const { blob, filename } = await exportRankings(semesterId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download =
-      response.headers.get("Content-Disposition")?.split("filename=")[1]?.replace(/"/g, "") || "rankings.csv";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      showToast({
+        message: err instanceof Error ? err.message : "Failed to export rankings",
+        variant: "error",
+        duration: 5000,
+      });
+    }
   };
 
   // Get rank for a given ranking (uses server-provided position)

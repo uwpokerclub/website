@@ -1,9 +1,8 @@
 import { useMemo, useCallback } from "react";
 import { Table, TableColumn, Input, Pagination, Spinner, Button } from "@uwpokerclub/components";
 import { FaSearch, FaTimes, FaUsers, FaSignInAlt, FaSignOutAlt, FaTrash } from "react-icons/fa";
-import { Entry, Event } from "@/types";
+import { Entry, Event, EventState } from "@/types";
 import { useAuth } from "@/hooks";
-import { EventState } from "@/sdk/events";
 import { useSignInEntry, useSignOutEntry, useUnregisterEntry } from "@/features/entries/hooks/useEntryQueries";
 
 import styles from "./EntriesTable.module.css";

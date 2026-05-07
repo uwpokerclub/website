@@ -1,5 +1,10 @@
 import type { Structure } from "./structures";
 
+export enum EventState {
+  Started = 0,
+  Ended,
+}
+
 /**
  * Event is the JSON object returned by the v2 events API.
  * `entries` and `structure` are populated on some endpoints (list, detail) but not others.
@@ -11,7 +16,7 @@ export type Event = {
   notes: string;
   semesterId: string;
   startDate: string;
-  state: number;
+  state: EventState;
   rebuys: number;
   pointsMultiplier: number;
   structureId: number;

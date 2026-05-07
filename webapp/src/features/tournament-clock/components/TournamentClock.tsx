@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Blind } from "../../../sdk/structures";
+import { Blind } from "@/types";
 import { useLocalStorage } from "../../../hooks";
 import { ClockDisplay } from "./ClockDisplay";
 import { LevelInfo } from "./LevelInfo";

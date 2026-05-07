@@ -4,10 +4,9 @@ import { Table, TableColumn, Button, Input, Pagination, Spinner, useToast, Modal
 import { SemesterContext } from "@/contexts";
 import { useAuth } from "@/hooks";
 import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo } from "react-icons/fa";
-import { EventState } from "@/sdk/events";
 import { CreateEventModal } from "./CreateEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
-import { Event } from "@/types";
+import { Event, EventState } from "@/types";
 import { useEvents, useEndEvent, useRestartEvent } from "../hooks/useEventQueries";
 import styles from "./ListEvents.module.css";
 

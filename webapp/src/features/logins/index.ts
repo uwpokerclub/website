@@ -5,3 +5,4 @@ export * from "./components/DeleteLoginModal";
 export * from "./pages/LoginsPage";
 export * from "./types";
 export * from "./api/loginsApi";
+export * from "./hooks/useLoginQueries";

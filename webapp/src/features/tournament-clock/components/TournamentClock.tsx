@@ -25,8 +25,11 @@ function formatChipValue(value: number): string {
 }
 
 export function TournamentClock({ levels }: Props) {
-  // The index of the current level, tracked in local storage
-  const [levelIndex, setLevelIndex] = useLocalStorage(import.meta.env.VITE_LOCAL_STORAGE_KEY, 0);
+  // The index of the current level, tracked in local storage. The key is shared
+  // across all events, so when navigating between events with different blind
+  // counts we must clamp the stored value to the current structure's bounds.
+  const [storedLevelIndex, setLevelIndex] = useLocalStorage(import.meta.env.VITE_LOCAL_STORAGE_KEY, 0);
+  const levelIndex = Math.min(Math.max(storedLevelIndex, 0), Math.max(levels.length - 1, 0));
   // Whether or not the clock sould automatically start
   const [shouldStart, setShouldStart] = useState(false);
 
@@ -97,6 +100,15 @@ export function TournamentClock({ levels }: Props) {
       clockElementRef.current!.requestFullscreen();
     }
   };
+
+  // Render an empty state when there are no blinds (structure not loaded or empty)
+  if (levels.length === 0) {
+    return (
+      <div className={`${styles.grid}`}>
+        <header className={styles.timerHeader}>No blind structure available</header>
+      </div>
+    );
+  }
 
   return (
     <div ref={clockElementRef} className={`${styles.grid}`}>

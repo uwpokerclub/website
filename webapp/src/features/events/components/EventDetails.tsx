@@ -74,7 +74,7 @@ export function EventDetails() {
     }
   }, [debouncedSearchQuery, entriesResponse]);
 
-  const { data: structure = null } = useStructure(event?.structureId);
+  const { data: structure = null, isLoading: isLoadingStructure } = useStructure(event?.structureId);
 
   const rebuyMutation = useRebuyEvent();
   const restartMutation = useRestartEvent();
@@ -480,6 +480,11 @@ export function EventDetails() {
                 </div>
               ) : null}
             </>
+          ) : isLoadingStructure ? (
+            <div className={styles.loadingContainer}>
+              <Spinner size="md" />
+              <p className={styles.loadingText}>Loading structure...</p>
+            </div>
           ) : (
             <TournamentClock levels={structure?.blinds || []} />
           )}

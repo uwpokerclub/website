@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, FormField, Input, Select, Textarea, Spinner, useToast } from "@uwpokerclub/components";
 import { SemesterContext } from "../../../../contexts";
 import { editEventSchema, POKER_FORMATS, type EditEventFormData } from "../../schemas/eventSchema";
-import { fetchEvent, updateEvent } from "../../api/eventApi";
+import { useEvent, useUpdateEvent } from "../../hooks/useEventQueries";
 import styles from "./EditEventModal.module.css";
 
 // Transform POKER_FORMATS to Select options
@@ -29,7 +29,7 @@ export interface EditEventModalProps {
   isOpen: boolean;
   event: EventData | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 /**
@@ -41,9 +41,19 @@ export interface EditEventModalProps {
 export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventModalProps) {
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingEvent, setIsLoadingEvent] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const semesterId = semesterContext?.currentSemester?.id;
+  const shouldLoad = isOpen && !!event && !!semesterId;
+
+  const {
+    data: eventData,
+    isLoading: isLoadingEvent,
+    error: loadError,
+  } = useEvent(shouldLoad ? semesterId : undefined, shouldLoad ? event.id : undefined);
+
+  const updateEventMutation = useUpdateEvent();
+  const isSubmitting = updateEventMutation.isPending;
 
   const form = useForm<EditEventFormData>({
     resolver: zodResolver(editEventSchema),
@@ -56,51 +66,28 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
     },
   });
 
-  // Fetch full event details and pre-populate form when modal opens
+  // Pre-populate form when event data loads
   useEffect(() => {
-    if (!isOpen || !event || !semesterContext?.currentSemester?.id) {
-      return;
+    if (!isOpen || !eventData) return;
+
+    const startDate = new Date(eventData.startDate);
+    const formattedDate = startDate.toISOString().slice(0, 16);
+
+    form.reset({
+      name: eventData.name,
+      startDate: formattedDate,
+      format: eventData.format as EditEventFormData["format"],
+      pointsMultiplier: eventData.pointsMultiplier,
+      notes: eventData.notes || "",
+    });
+  }, [isOpen, eventData, form]);
+
+  // Surface load errors in the submitError banner
+  useEffect(() => {
+    if (loadError) {
+      setSubmitError(`Failed to load event details: ${loadError.message}`);
     }
-
-    let mounted = true;
-
-    const loadEventDetails = async () => {
-      setIsLoadingEvent(true);
-      setSubmitError(null);
-
-      try {
-        const eventData = await fetchEvent(semesterContext.currentSemester!.id, event.id);
-
-        if (mounted) {
-          // Format the date for datetime-local input
-          const startDate = new Date(eventData.startDate);
-          const formattedDate = startDate.toISOString().slice(0, 16);
-
-          form.reset({
-            name: eventData.name,
-            startDate: formattedDate,
-            format: eventData.format as EditEventFormData["format"],
-            pointsMultiplier: eventData.pointsMultiplier,
-            notes: eventData.notes || "",
-          });
-        }
-      } catch (err) {
-        if (mounted) {
-          setSubmitError(`Failed to load event details: ${err instanceof Error ? err.message : "Unknown error"}`);
-        }
-      } finally {
-        if (mounted) {
-          setIsLoadingEvent(false);
-        }
-      }
-    };
-
-    loadEventDetails();
-
-    return () => {
-      mounted = false;
-    };
-  }, [isOpen, event, semesterContext?.currentSemester, form]);
+  }, [loadError]);
 
   // Handle modal close
   const handleClose = useCallback(() => {
@@ -111,21 +98,24 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
 
   // Handle form submit
   const handleSubmit = async (data: EditEventFormData) => {
-    if (!semesterContext?.currentSemester?.id || !event) {
+    if (!semesterId || !event) {
       setSubmitError("No semester or event selected");
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      await updateEvent(semesterContext.currentSemester.id, event.id, {
-        name: data.name,
-        format: data.format,
-        notes: data.notes || "",
-        startDate: new Date(data.startDate).toISOString(),
-        pointsMultiplier: data.pointsMultiplier,
+      await updateEventMutation.mutateAsync({
+        semesterId,
+        eventId: event.id,
+        data: {
+          name: data.name,
+          format: data.format,
+          notes: data.notes || "",
+          startDate: new Date(data.startDate).toISOString(),
+          pointsMultiplier: data.pointsMultiplier,
+        },
       });
 
       showToast({
@@ -133,7 +123,7 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
         variant: "success",
         duration: 3000,
       });
-      onSuccess();
+      onSuccess?.();
       handleClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update event";
@@ -143,8 +133,6 @@ export function EditEventModal({ isOpen, event, onClose, onSuccess }: EditEventM
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

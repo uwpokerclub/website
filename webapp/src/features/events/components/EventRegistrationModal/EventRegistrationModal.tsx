@@ -1,61 +1,30 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal, Spinner, useToast } from "@uwpokerclub/components";
 import { FaSearch, FaChevronRight, FaChevronLeft, FaUsers, FaUserCheck, FaUserPlus, FaPlus } from "react-icons/fa";
-import { RegisterMemberModal, type RegistrationSuccessData } from "../../../members/components/RegisterMemberModal";
+import { RegisterMemberModal, type RegistrationSuccessData } from "@/features/members/components/RegisterMemberModal";
+import { fetchMemberships } from "@/features/members/api/memberRegistrationApi";
+import { fetchEntries, registerEntries, unregisterEntry, ParticipantResponse } from "@/features/entries/api/entriesApi";
+import { entryKeys } from "@/features/entries/hooks/useEntryQueries";
+import { Membership } from "@/types";
 import styles from "./EventRegistrationModal.module.css";
 
 const PAGE_SIZE = 100;
-
-interface Membership {
-  id: string;
-  userId: number;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  semesterId: string;
-  paid: boolean;
-  discounted: boolean;
-  attendance: number;
-}
-
-interface Entry {
-  membershipId: string;
-  eventId: number;
-  membership?: {
-    id: string;
-    user: {
-      firstName: string;
-      lastName: string;
-    };
-  };
-}
-
-interface CreateEntryResult {
-  membershipId: string;
-  status: "created" | "error";
-  error?: string;
-}
 
 export interface EventRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   semesterId: string;
   eventId: number;
-  onRegistrationChange?: () => void;
 }
 
-export function EventRegistrationModal({
-  isOpen,
-  onClose,
-  semesterId,
-  eventId,
-  onRegistrationChange,
-}: EventRegistrationModalProps) {
+export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }: EventRegistrationModalProps) {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Track whether any registration changes happened so we can invalidate caches on close
+  const hasChangesRef = useRef(false);
 
   // Memberships (available panel) state
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -64,7 +33,7 @@ export function EventRegistrationModal({
   const [membershipsLoading, setMembershipsLoading] = useState(false);
 
   // Entries (registered panel) state
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<ParticipantResponse[]>([]);
   const [entriesTotal, setEntriesTotal] = useState(0);
   const [entriesOffset, setEntriesOffset] = useState(0);
   const [entriesLoading, setEntriesLoading] = useState(false);
@@ -119,15 +88,7 @@ export function EventRegistrationModal({
       setMembershipsLoading(true);
 
       try {
-        let url = `/api/v2/semesters/${semesterId}/memberships?limit=${PAGE_SIZE}&offset=${offset}`;
-        if (search) {
-          url += `&search=${encodeURIComponent(search)}`;
-        }
-
-        const response = await fetch(url, { credentials: "include" });
-        if (!response.ok) throw new Error("Failed to load members");
-
-        const resp: { data: Membership[]; total: number } = await response.json();
+        const resp = await fetchMemberships(semesterId, { limit: PAGE_SIZE, offset, search: search || undefined });
 
         setMemberships((prev) => (reset ? resp.data : [...prev, ...resp.data]));
         setMembershipsTotal(resp.total);
@@ -154,15 +115,7 @@ export function EventRegistrationModal({
       setEntriesLoading(true);
 
       try {
-        let url = `/api/v2/semesters/${semesterId}/events/${eventId}/entries?limit=${PAGE_SIZE}&offset=${offset}`;
-        if (search) {
-          url += `&search=${encodeURIComponent(search)}`;
-        }
-
-        const response = await fetch(url, { credentials: "include" });
-        if (!response.ok) throw new Error("Failed to load entries");
-
-        const resp: { data: Entry[]; total: number } = await response.json();
+        const resp = await fetchEntries(semesterId, eventId, { limit: PAGE_SIZE, offset, search: search || undefined });
 
         setEntries((prev) => (reset ? resp.data : [...prev, ...resp.data]));
         setEntriesTotal(resp.total);
@@ -205,20 +158,10 @@ export function EventRegistrationModal({
       setLoadError(null);
 
       try {
-        const [membersResponse, entriesResponse] = await Promise.all([
-          fetch(`/api/v2/semesters/${semesterId}/memberships?limit=${PAGE_SIZE}&offset=0`, {
-            credentials: "include",
-          }),
-          fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/entries?limit=${PAGE_SIZE}&offset=0`, {
-            credentials: "include",
-          }),
+        const [membersResp, entriesResp] = await Promise.all([
+          fetchMemberships(semesterId, { limit: PAGE_SIZE, offset: 0 }),
+          fetchEntries(semesterId, eventId, { limit: PAGE_SIZE, offset: 0 }),
         ]);
-
-        if (!membersResponse.ok) throw new Error("Failed to load members");
-        if (!entriesResponse.ok) throw new Error("Failed to load entries");
-
-        const membersResp: { data: Membership[]; total: number } = await membersResponse.json();
-        const entriesResp: { data: Entry[]; total: number } = await entriesResponse.json();
 
         if (mounted) {
           setMemberships(membersResp.data);
@@ -371,8 +314,16 @@ export function EventRegistrationModal({
     hasMoreEntriesRef.current = false;
     setRegisteredIds(new Set());
     debouncedQueryRef.current = "";
+
+    // The modal manages its own entries state imperatively; reconcile the shared cache
+    // (used by EntriesTable in EventDetails) once on close if any registrations changed.
+    if (hasChangesRef.current) {
+      hasChangesRef.current = false;
+      queryClient.invalidateQueries({ queryKey: entryKeys.byEvent(semesterId, eventId) });
+    }
+
     onClose();
-  }, [onClose]);
+  }, [onClose, queryClient, semesterId, eventId]);
 
   // Check if member should be highlighted as danger (unpaid with 3+ attendance)
   const isDangerMember = useCallback((member: Membership): boolean => {
@@ -385,64 +336,49 @@ export function EventRegistrationModal({
       setLoadingMemberIds((prev) => new Set(prev).add(membershipId));
 
       try {
-        const response = await fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/entries`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify([membershipId]),
-        });
+        const results = await registerEntries(semesterId, eventId, [membershipId]);
+        const result = results.find((r) => r.membershipId === membershipId);
 
-        if (response.ok || response.status === 207) {
-          const results: CreateEntryResult[] = await response.json();
-          const result = results.find((r) => r.membershipId === membershipId);
+        if (result?.status === "created") {
+          hasChangesRef.current = true;
+          setRegisteredIds((prev) => new Set(prev).add(membershipId));
 
-          if (result?.status === "created") {
-            setRegisteredIds((prev) => new Set(prev).add(membershipId));
-
-            // Add to entries list with membership data for display
-            setEntries((prev) => {
-              const membership = membershipsMap.get(membershipId);
-              const newEntry: Entry = {
-                membershipId,
-                eventId,
-                membership: membership
-                  ? {
-                      id: membership.id,
-                      user: {
-                        firstName: membership.user.firstName,
-                        lastName: membership.user.lastName,
-                      },
-                    }
-                  : undefined,
-              };
-              return [...prev, newEntry];
-            });
-            setEntriesTotal((prev) => prev + 1);
-            setEntriesOffset((prev) => {
-              const newOffset = prev + 1;
-              entriesOffsetRef.current = newOffset;
-              return newOffset;
-            });
-
-            onRegistrationChange?.();
-          } else {
-            showToast({
-              message: result?.error || "Failed to register member",
-              variant: "error",
-              duration: 4000,
-            });
-          }
+          // Add to entries list with membership data for display
+          setEntries((prev) => {
+            const membership = membershipsMap.get(membershipId);
+            const newEntry: ParticipantResponse = {
+              membershipId,
+              eventId: String(eventId),
+              membership: membership
+                ? {
+                    id: membership.id,
+                    user: {
+                      id: membership.user.id,
+                      firstName: membership.user.firstName,
+                      lastName: membership.user.lastName,
+                    },
+                  }
+                : undefined,
+              signedOutAt: null as unknown as Date,
+            };
+            return [...prev, newEntry];
+          });
+          setEntriesTotal((prev) => prev + 1);
+          setEntriesOffset((prev) => {
+            const newOffset = prev + 1;
+            entriesOffsetRef.current = newOffset;
+            return newOffset;
+          });
         } else {
-          const errorData = await response.json().catch(() => null);
           showToast({
-            message: errorData?.message || "Failed to register member",
+            message: result?.error || "Failed to register member",
             variant: "error",
             duration: 4000,
           });
         }
-      } catch {
+      } catch (err) {
         showToast({
-          message: "Network error - please try again",
+          message: err instanceof Error ? err.message : "Failed to register member",
           variant: "error",
           duration: 4000,
         });
@@ -454,7 +390,7 @@ export function EventRegistrationModal({
         });
       }
     },
-    [semesterId, eventId, membershipsMap, showToast, onRegistrationChange],
+    [semesterId, eventId, membershipsMap, showToast],
   );
 
   // Unregister a member
@@ -463,38 +399,25 @@ export function EventRegistrationModal({
       setLoadingMemberIds((prev) => new Set(prev).add(membershipId));
 
       try {
-        const response = await fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/entries/${membershipId}`, {
-          method: "DELETE",
-          credentials: "include",
+        await unregisterEntry(semesterId, eventId, membershipId);
+        hasChangesRef.current = true;
+
+        setRegisteredIds((prev) => {
+          const next = new Set(prev);
+          next.delete(membershipId);
+          return next;
         });
 
-        if (response.ok || response.status === 204) {
-          setRegisteredIds((prev) => {
-            const next = new Set(prev);
-            next.delete(membershipId);
-            return next;
-          });
-
-          setEntries((prev) => prev.filter((e) => e.membershipId !== membershipId));
-          setEntriesTotal((prev) => prev - 1);
-          setEntriesOffset((prev) => {
-            const newOffset = prev - 1;
-            entriesOffsetRef.current = newOffset;
-            return newOffset;
-          });
-
-          onRegistrationChange?.();
-        } else {
-          const errorData = await response.json().catch(() => null);
-          showToast({
-            message: errorData?.message || "Failed to unregister member",
-            variant: "error",
-            duration: 4000,
-          });
-        }
-      } catch {
+        setEntries((prev) => prev.filter((e) => e.membershipId !== membershipId));
+        setEntriesTotal((prev) => prev - 1);
+        setEntriesOffset((prev) => {
+          const newOffset = prev - 1;
+          entriesOffsetRef.current = newOffset;
+          return newOffset;
+        });
+      } catch (err) {
         showToast({
-          message: "Network error - please try again",
+          message: err instanceof Error ? err.message : "Failed to unregister member",
           variant: "error",
           duration: 4000,
         });
@@ -506,7 +429,7 @@ export function EventRegistrationModal({
         });
       }
     },
-    [semesterId, eventId, showToast, onRegistrationChange],
+    [semesterId, eventId, showToast],
   );
 
   // Handle new member creation - auto-register them for the event
@@ -527,6 +450,9 @@ export function EventRegistrationModal({
           firstName: data.firstName,
           lastName: data.lastName,
           email: "",
+          faculty: "",
+          questId: "",
+          createdAt: "",
         },
         semesterId,
         paid: false,
@@ -586,11 +512,11 @@ export function EventRegistrationModal({
   };
 
   // Render a member row for the registered panel
-  const renderRegisteredMemberRow = (entry: Entry, membership?: Membership) => {
+  const renderRegisteredMemberRow = (entry: ParticipantResponse, membership?: Membership) => {
     const membershipId = entry.membershipId;
     const isLoading = loadingMemberIds.has(membershipId);
-    const firstName = membership?.user.firstName ?? entry.membership?.user.firstName ?? "";
-    const lastName = membership?.user.lastName ?? entry.membership?.user.lastName ?? "";
+    const firstName = membership?.user.firstName ?? entry.membership?.user?.firstName ?? "";
+    const lastName = membership?.user.lastName ?? entry.membership?.user?.lastName ?? "";
     // Danger highlighting is best-effort: only applies when full membership data is locally loaded
     const isDanger = membership ? isDangerMember(membership) : false;
 

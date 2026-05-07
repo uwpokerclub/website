@@ -1,5 +1,6 @@
 import { Modal, Button } from "@uwpokerclub/components";
 import { useCallback, useState } from "react";
+import { useEndEvent } from "../hooks/useEventQueries";
 
 import styles from "./EndEventModal.module.css";
 
@@ -13,31 +14,20 @@ type EndEventModalProps = {
 
 export function EndEventModal({ show, semesterId, eventId, onClose, onSuccess }: EndEventModalProps) {
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const endEventMutation = useEndEvent();
+  const isSubmitting = endEventMutation.isPending;
 
   const handleSubmit = useCallback(async () => {
-    setIsSubmitting(true);
     setError("");
 
     try {
-      const response = await fetch(`/api/v2/semesters/${semesterId}/events/${eventId}/end`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.message || "Failed to end event");
-      }
-
+      await endEventMutation.mutateAsync({ semesterId, eventId });
       onSuccess();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to end event");
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [semesterId, eventId, onClose, onSuccess]);
+  }, [semesterId, eventId, onClose, onSuccess, endEventMutation]);
 
   const handleClose = useCallback(() => {
     setError("");

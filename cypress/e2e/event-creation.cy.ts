@@ -34,10 +34,10 @@ describe("CreateEventModal", () => {
         cy.getByData("create-event-cancel-btn").click();
         cy.getByData("create-event-modal").should("not.exist");
 
-        // Reopen modal
+        // Reopen modal — TanStack Query caches the structures response, so no new
+        // fetch fires on reopen. The form reset is what we're verifying here.
         cy.getByData("create-event-btn").click();
         cy.getByData("create-event-modal").should("exist");
-        cy.wait("@getStructures");
 
         // Verify form is reset
         cy.getByData("input-name").should("have.value", "");

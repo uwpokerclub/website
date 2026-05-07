@@ -9,6 +9,7 @@ import { RegisterMemberModal } from "./RegisterMemberModal";
 import { EditMemberModal } from "./EditMemberModal";
 import { DeleteMembershipModal } from "./DeleteMembershipModal";
 import { MemberFilters, type MemberFilterValues } from "./MemberFilters";
+import { useMemberships } from "../hooks/useMemberQueries";
 import styles from "./MembersList.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -38,10 +39,6 @@ export function MembersList() {
   const [debouncedFilters, setDebouncedFilters] = useState<MemberFilterValues>(filters);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const [members, setMembers] = useState<Membership[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(() => {
     const page = parseInt(searchParams.get("page") ?? "1", 10);
     return isNaN(page) || page < 1 ? 1 : page;
@@ -52,7 +49,6 @@ export function MembersList() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Debounce text filter changes, apply dropdown immediately
@@ -121,50 +117,25 @@ export function MembersList() {
     clearTimeout(debounceTimer.current);
   }, [semesterContext?.currentSemester?.id]);
 
-  // Fetch members from API
-  useEffect(() => {
-    if (!semesterContext?.currentSemester) {
-      setIsLoading(false);
-      return;
-    }
+  const semesterId = semesterContext?.currentSemester?.id;
+  const queryParams = useMemo(
+    () => ({
+      limit: ITEMS_PER_PAGE,
+      offset: (currentPage - 1) * ITEMS_PER_PAGE,
+      ...(debouncedFilters.name && { name: debouncedFilters.name }),
+      ...(debouncedFilters.email && { email: debouncedFilters.email }),
+      ...(debouncedFilters.faculty && { faculty: debouncedFilters.faculty }),
+      ...(debouncedFilters.studentId && { studentId: debouncedFilters.studentId }),
+      ...(debouncedFilters.paid && { paid: debouncedFilters.paid }),
+      ...(debouncedFilters.discounted && { discounted: debouncedFilters.discounted }),
+    }),
+    [currentPage, debouncedFilters],
+  );
 
-    const fetchMembers = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        const params = new URLSearchParams({
-          limit: String(ITEMS_PER_PAGE),
-          offset: String(offset),
-        });
-
-        if (debouncedFilters.name) params.set("name", debouncedFilters.name);
-        if (debouncedFilters.email) params.set("email", debouncedFilters.email);
-        if (debouncedFilters.faculty) params.set("faculty", debouncedFilters.faculty);
-        if (debouncedFilters.studentId) params.set("studentId", debouncedFilters.studentId);
-        if (debouncedFilters.paid) params.set("paid", debouncedFilters.paid);
-        if (debouncedFilters.discounted) params.set("discounted", debouncedFilters.discounted);
-
-        const url = `/api/v2/semesters/${semesterContext.currentSemester!.id}/memberships?${params.toString()}`;
-        const response = await fetch(url, { credentials: "include" });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch members: ${response.statusText}`);
-        }
-
-        const resp: { data: Membership[]; total: number } = await response.json();
-        setMembers(resp.data);
-        setTotalItems(resp.total);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred while fetching members");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMembers();
-  }, [semesterContext?.currentSemester, refreshTrigger, currentPage, debouncedFilters]);
+  const { data, isLoading, error: queryError } = useMemberships(semesterId, queryParams);
+  const members = useMemo(() => data?.data ?? [], [data]);
+  const totalItems = data?.total ?? 0;
+  const error = queryError?.message ?? null;
 
   // Sort members
   const sortedMembers = useMemo(() => {
@@ -214,10 +185,6 @@ export function MembersList() {
     setIsRegisterModalOpen(true);
   };
 
-  const handleRegistrationSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
-
   const handleViewEdit = (membership: Membership) => {
     setSelectedMembership(membership);
     setIsEditModalOpen(true);
@@ -228,10 +195,6 @@ export function MembersList() {
     setSelectedMembership(null);
   };
 
-  const handleEditSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
-
   const handleDelete = (membership: Membership) => {
     setSelectedMembership(membership);
     setIsDeleteModalOpen(true);
@@ -240,10 +203,6 @@ export function MembersList() {
   const handleDeleteModalClose = () => {
     setIsDeleteModalOpen(false);
     setSelectedMembership(null);
-  };
-
-  const handleDeleteSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1);
   };
 
   const activeFilterCount = Object.values(debouncedFilters).filter((v) => v !== "").length;
@@ -431,19 +390,10 @@ export function MembersList() {
         )}
 
         {/* Register Member Modal */}
-        <RegisterMemberModal
-          isOpen={isRegisterModalOpen}
-          onClose={() => setIsRegisterModalOpen(false)}
-          onSuccess={handleRegistrationSuccess}
-        />
+        <RegisterMemberModal isOpen={isRegisterModalOpen} onClose={() => setIsRegisterModalOpen(false)} />
 
         {/* Edit Member Modal */}
-        <EditMemberModal
-          isOpen={isEditModalOpen}
-          membership={selectedMembership}
-          onClose={handleEditModalClose}
-          onSuccess={handleEditSuccess}
-        />
+        <EditMemberModal isOpen={isEditModalOpen} membership={selectedMembership} onClose={handleEditModalClose} />
 
         {/* Delete Membership Modal */}
         <DeleteMembershipModal
@@ -451,7 +401,6 @@ export function MembersList() {
           membership={selectedMembership}
           semesterId={semesterContext.currentSemester.id}
           onClose={handleDeleteModalClose}
-          onSuccess={handleDeleteSuccess}
         />
       </>
     );

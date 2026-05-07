@@ -1,28 +1,28 @@
 import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { useCallback, useState } from "react";
-import { deleteMember } from "../../api/memberRegistrationApi";
+import { useDeleteMember } from "../../hooks/useMemberQueries";
 import styles from "./DeleteMemberModal.module.css";
 
 export interface DeleteMemberModalProps {
   isOpen: boolean;
   member: { id: string; firstName: string; lastName: string } | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function DeleteMemberModal({ isOpen, member, onClose, onSuccess }: DeleteMemberModalProps) {
   const { showToast } = useToast();
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const deleteMemberMutation = useDeleteMember();
+  const isSubmitting = deleteMemberMutation.isPending;
 
   const handleSubmit = useCallback(async () => {
     if (!member) return;
 
-    setIsSubmitting(true);
     setError("");
 
     try {
-      await deleteMember(member.id);
+      await deleteMemberMutation.mutateAsync(member.id);
 
       showToast({
         message: `${member.firstName} ${member.lastName} deleted successfully`,
@@ -30,7 +30,7 @@ export function DeleteMemberModal({ isOpen, member, onClose, onSuccess }: Delete
         duration: 3000,
       });
 
-      onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete member";
@@ -40,14 +40,11 @@ export function DeleteMemberModal({ isOpen, member, onClose, onSuccess }: Delete
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [member, onClose, onSuccess, showToast]);
+  }, [member, onClose, onSuccess, showToast, deleteMemberMutation]);
 
   const handleClose = useCallback(() => {
     setError("");
-    setIsSubmitting(false);
     onClose();
   }, [onClose]);
 

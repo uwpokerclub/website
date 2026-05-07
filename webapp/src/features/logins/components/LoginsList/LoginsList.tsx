@@ -5,7 +5,7 @@ import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey } from "react-icons/f
 import { LoginResponse } from "../../types";
 import { useLogins } from "../../hooks/useLoginQueries";
 import { CreateLoginModal } from "../CreateLoginModal";
-import { EditPasswordModal } from "../EditPasswordModal";
+import { EditLoginModal } from "../EditLoginModal";
 import { DeleteLoginModal } from "../DeleteLoginModal";
 import styles from "./LoginsList.module.css";
 
@@ -19,7 +19,7 @@ export function LoginsList() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditLoginModalOpen, setIsEditLoginModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedLogin, setSelectedLogin] = useState<LoginResponse | null>(null);
 
@@ -99,10 +99,10 @@ export function LoginsList() {
     setIsCreateModalOpen(true);
   };
 
-  // Handle edit password
-  const handleEditPassword = (login: LoginResponse) => {
+  // Handle edit login
+  const handleEditLogin = (login: LoginResponse) => {
     setSelectedLogin(login);
-    setIsEditModalOpen(true);
+    setIsEditLoginModalOpen(true);
   };
 
   // Handle delete
@@ -174,10 +174,10 @@ export function LoginsList() {
           {hasPermission("edit", "login") && (
             <button
               className={styles.iconButton}
-              onClick={() => handleEditPassword(row)}
-              title="Edit Password"
-              aria-label="Edit password"
-              data-qa={`edit-password-btn-${row.username}`}
+              onClick={() => handleEditLogin(row)}
+              title="Edit Login"
+              aria-label="Edit login"
+              data-qa={`edit-login-btn-${row.username}`}
             >
               <FaEdit />
             </button>
@@ -316,11 +316,11 @@ export function LoginsList() {
       {/* Modals */}
       <CreateLoginModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
 
-      <EditPasswordModal
-        isOpen={isEditModalOpen}
+      <EditLoginModal
+        isOpen={isEditLoginModalOpen}
         login={selectedLogin}
         onClose={() => {
-          setIsEditModalOpen(false);
+          setIsEditLoginModalOpen(false);
           setSelectedLogin(null);
         }}
       />

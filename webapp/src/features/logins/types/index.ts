@@ -28,8 +28,9 @@ export interface CreateLoginRequest {
 }
 
 /**
- * Request payload for changing password
+ * Request payload for updating a login. At least one field must be provided.
  */
-export interface ChangePasswordRequest {
-  newPassword: string;
+export interface UpdateLoginRequest {
+  password?: string;
+  role?: Role;
 }

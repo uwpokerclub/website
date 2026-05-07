@@ -40,14 +40,18 @@ export const createLoginSchema = z.object({
 export type CreateLoginFormData = z.infer<typeof createLoginSchema>;
 
 /**
- * Schema for editing password with confirmation
+ * Schema for editing a login: role plus optional password change.
+ * Password fields are optional — leave blank to keep the current password.
  */
-export const editPasswordSchema = z
+export const editLoginSchema = z
   .object({
+    role: roleSchema,
     newPassword: z
       .string()
-      .min(8, "Password must be at least 8 characters")
-      .max(128, "Password must not exceed 128 characters"),
+      .max(128, "Password must not exceed 128 characters")
+      .refine((v) => v === "" || v.length >= 8, {
+        message: "Password must be at least 8 characters",
+      }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -55,4 +59,4 @@ export const editPasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export type EditPasswordFormData = z.infer<typeof editPasswordSchema>;
+export type EditLoginFormData = z.infer<typeof editLoginSchema>;

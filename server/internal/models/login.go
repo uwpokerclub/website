@@ -26,10 +26,12 @@ type LoginWithMember struct {
 	LinkedMember *LinkedMemberInfo `json:"linkedMember"`
 } //@name LoginWithMember
 
-// ChangePasswordRequest represents the request body for changing a password
-type ChangePasswordRequest struct {
-	NewPassword string `json:"newPassword" binding:"required,min=8"`
-} //@name ChangePasswordRequest
+// UpdateLoginRequest represents the request body for updating a login.
+// At least one of password or role must be provided.
+type UpdateLoginRequest struct {
+	Password *string `json:"password,omitempty" binding:"omitempty,min=8"`
+	Role     *string `json:"role,omitempty" binding:"omitempty,oneof=bot executive tournament_director secretary treasurer vice_president president webmaster"`
+} //@name UpdateLoginRequest
 
 // CreateLoginRequest represents the request body for creating a new login
 type CreateLoginRequest struct {

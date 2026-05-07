@@ -55,12 +55,24 @@ func TestLoginService(t *testing.T) {
 			test: DeleteLoginNotFoundTest,
 		},
 		{
-			name: "ChangePassword",
-			test: ChangePasswordTest,
+			name: "UpdateLogin_PasswordOnly",
+			test: UpdateLoginPasswordOnlyTest,
 		},
 		{
-			name: "ChangePassword_NotFound",
-			test: ChangePasswordNotFoundTest,
+			name: "UpdateLogin_RoleOnly",
+			test: UpdateLoginRoleOnlyTest,
+		},
+		{
+			name: "UpdateLogin_PasswordAndRole",
+			test: UpdateLoginPasswordAndRoleTest,
+		},
+		{
+			name: "UpdateLogin_NoFields",
+			test: UpdateLoginNoFieldsTest,
+		},
+		{
+			name: "UpdateLogin_NotFound",
+			test: UpdateLoginNotFoundTest,
 		},
 		{
 			name: "CreateLoginFromRequest",
@@ -331,7 +343,9 @@ func DeleteLoginNotFoundTest(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, apiErr.Code)
 }
 
-func ChangePasswordTest(t *testing.T) {
+func ptr[T any](v T) *T { return &v }
+
+func UpdateLoginPasswordOnlyTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -340,29 +354,27 @@ func ChangePasswordTest(t *testing.T) {
 
 	svc := NewLoginService(db)
 
-	// Create test login
 	err = svc.CreateLogin("alice", "oldpassword", "executive")
 	assert.NoError(t, err)
 
-	// Change password
-	err = svc.ChangePassword("alice", "newpassword123")
+	err = svc.UpdateLogin("alice", ptr("newpassword123"), nil)
 	assert.NoError(t, err)
 
-	// Verify password was changed by checking the hash
 	var login models.Login
 	err = db.Where("username = ?", "alice").First(&login).Error
 	assert.NoError(t, err)
 
-	// Verify the new password works
 	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("newpassword123"))
 	assert.NoError(t, err)
 
-	// Verify the old password doesn't work
 	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("oldpassword"))
 	assert.Error(t, err)
+
+	// Role unchanged
+	assert.Equal(t, "executive", login.Role)
 }
 
-func ChangePasswordNotFoundTest(t *testing.T) {
+func UpdateLoginRoleOnlyTest(t *testing.T) {
 	db, err := database.OpenTestConnection()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -371,14 +383,80 @@ func ChangePasswordNotFoundTest(t *testing.T) {
 
 	svc := NewLoginService(db)
 
-	// Try to change password for non-existent login
-	err = svc.ChangePassword("nonexistent", "newpassword")
-	assert.Error(t, err)
+	err = svc.CreateLogin("alice", "originalpassword", "executive")
+	assert.NoError(t, err)
 
-	// Verify it's a NotFound error
-	apiErr, ok := err.(e.APIErrorResponse)
-	assert.True(t, ok)
-	assert.Equal(t, http.StatusNotFound, apiErr.Code)
+	// Capture original password hash to confirm it doesn't change.
+	var before models.Login
+	err = db.Where("username = ?", "alice").First(&before).Error
+	assert.NoError(t, err)
+
+	err = svc.UpdateLogin("alice", nil, ptr("president"))
+	assert.NoError(t, err)
+
+	var after models.Login
+	err = db.Where("username = ?", "alice").First(&after).Error
+	assert.NoError(t, err)
+
+	assert.Equal(t, "president", after.Role)
+	assert.Equal(t, before.Password, after.Password)
+
+	// Original password still works.
+	err = bcrypt.CompareHashAndPassword([]byte(after.Password), []byte("originalpassword"))
+	assert.NoError(t, err)
+}
+
+func UpdateLoginPasswordAndRoleTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	svc := NewLoginService(db)
+
+	err = svc.CreateLogin("alice", "oldpassword", "executive")
+	assert.NoError(t, err)
+
+	err = svc.UpdateLogin("alice", ptr("newpassword123"), ptr("treasurer"))
+	assert.NoError(t, err)
+
+	var login models.Login
+	err = db.Where("username = ?", "alice").First(&login).Error
+	assert.NoError(t, err)
+
+	assert.Equal(t, "treasurer", login.Role)
+	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("newpassword123"))
+	assert.NoError(t, err)
+}
+
+func UpdateLoginNoFieldsTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	svc := NewLoginService(db)
+
+	err = svc.CreateLogin("alice", "password123", "executive")
+	assert.NoError(t, err)
+
+	err = svc.UpdateLogin("alice", nil, nil)
+	assert.ErrorIs(t, err, ErrUpdateLoginNoFields)
+}
+
+func UpdateLoginNotFoundTest(t *testing.T) {
+	db, err := database.OpenTestConnection()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer database.WipeDB(db)
+
+	svc := NewLoginService(db)
+
+	err = svc.UpdateLogin("nonexistent", ptr("newpassword"), nil)
+	assert.ErrorIs(t, err, ErrLoginNotFound)
 }
 
 func CreateLoginFromRequestTest(t *testing.T) {

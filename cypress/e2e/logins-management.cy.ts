@@ -171,7 +171,7 @@ describe("Logins Management", () => {
     });
   });
 
-  context("edit password modal", () => {
+  context("edit login modal", () => {
     beforeEach(() => {
       cy.login();
       cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
@@ -181,25 +181,25 @@ describe("Logins Management", () => {
     });
 
     it("should open, display username, and close", () => {
-      cy.getByData("edit-password-btn-test_executive").click();
-      cy.getByData("edit-password-modal").should("exist");
-      cy.getByData("edit-password-modal").should("contain", "test_executive");
+      cy.getByData("edit-login-btn-test_executive").click();
+      cy.getByData("edit-login-modal").should("exist");
+      cy.getByData("edit-login-modal").should("contain", "test_executive");
 
-      cy.getByData("edit-password-cancel-btn").click();
-      cy.getByData("edit-password-modal").should("not.exist");
+      cy.getByData("edit-login-cancel-btn").click();
+      cy.getByData("edit-login-modal").should("not.exist");
     });
 
     it("should show validation error when passwords do not match", () => {
-      cy.getByData("edit-password-btn-test_executive").click();
-      cy.getByData("edit-password-modal").should("exist");
+      cy.getByData("edit-login-btn-test_executive").click();
+      cy.getByData("edit-login-modal").should("exist");
 
       cy.getByData("input-new-password").type("newpassword123");
       cy.getByData("input-confirm-password").type("differentpassword");
 
-      cy.getByData("edit-password-submit-btn").click();
+      cy.getByData("edit-login-submit-btn").click();
 
       // Should show validation error (modal stays open)
-      cy.getByData("edit-password-modal").should("exist");
+      cy.getByData("edit-login-modal").should("exist");
     });
   });
 
@@ -349,12 +349,24 @@ describe("Logins Management", () => {
       cy.visit("/admin/logins");
       cy.getByData("logins-table").should("exist");
 
-      cy.getByData("edit-password-btn-test_executive").click();
-      cy.getByData("edit-password-modal").should("exist");
+      cy.getByData("edit-login-btn-test_executive").click();
+      cy.getByData("edit-login-modal").should("exist");
       cy.getByData("input-new-password").type("newpassword123");
       cy.getByData("input-confirm-password").type("newpassword123");
-      cy.getByData("edit-password-submit-btn").click();
-      cy.getByData("edit-password-modal").should("not.exist");
+      cy.getByData("edit-login-submit-btn").click();
+      cy.getByData("edit-login-modal").should("not.exist");
+    });
+
+    it("should update role successfully", () => {
+      cy.visit("/admin/logins");
+      cy.getByData("logins-table").should("exist");
+
+      cy.getByData("edit-login-btn-test_executive").click();
+      cy.getByData("edit-login-modal").should("exist");
+      cy.getByData("select-role").select("treasurer");
+      cy.getByData("edit-login-submit-btn").click();
+      cy.getByData("edit-login-modal").should("not.exist");
+      cy.getByData("login-row-test_executive").should("contain", "Treasurer");
     });
   });
 });

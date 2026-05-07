@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { fetchLogins, createLogin, changePassword, deleteLogin, type FetchLoginsParams } from "../api/loginsApi";
-import type { CreateLoginRequest, ChangePasswordRequest } from "../types";
+import { fetchLogins, createLogin, updateLogin, deleteLogin, type FetchLoginsParams } from "../api/loginsApi";
+import type { CreateLoginRequest, UpdateLoginRequest } from "../types";
 
 export const loginKeys = {
   all: ["logins"] as const,
@@ -25,11 +25,14 @@ export function useCreateLogin() {
   });
 }
 
-export function useChangePassword() {
-  // No invalidation: password changes don't affect any list response.
+export function useUpdateLogin() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ username, data }: { username: string; data: ChangePasswordRequest }) =>
-      changePassword(username, data),
+    mutationFn: ({ username, data }: { username: string; data: UpdateLoginRequest }) => updateLogin(username, data),
+    onSuccess: () => {
+      // Role changes affect the list view, so invalidate even when only the password changed.
+      queryClient.invalidateQueries({ queryKey: loginKeys.all });
+    },
   });
 }
 

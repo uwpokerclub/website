@@ -3,9 +3,17 @@ package services
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"errors"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+)
+
+// Sentinel errors returned by loginService. Controllers map these to HTTP responses.
+var (
+	ErrLoginNotFound       = errors.New("login not found")
+	ErrUpdateLoginNoFields = errors.New("at least one of password or role must be provided")
 )
 
 type loginService struct {
@@ -150,22 +158,35 @@ func (svc *loginService) DeleteLogin(username string) error {
 	return nil
 }
 
-// ChangePassword changes the password for a login
-func (svc *loginService) ChangePassword(username string, newPassword string) error {
-	// Hash the new password
-	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return e.InternalServerError(err.Error())
+// UpdateLogin updates a login's password and/or role. At least one field must be provided.
+// Returns ErrUpdateLoginNoFields when both inputs are nil and ErrLoginNotFound when the
+// username does not exist.
+func (svc *loginService) UpdateLogin(username string, password *string, role *string) error {
+	if password == nil && role == nil {
+		return ErrUpdateLoginNoFields
 	}
 
-	// Update the password and check rows affected
-	res := svc.db.Model(&models.Login{}).Where("username = ?", username).Update("password", string(hash))
+	updates := map[string]any{}
+
+	if password != nil {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("hash password: %w", err)
+		}
+		updates["password"] = string(hash)
+	}
+
+	if role != nil {
+		updates["role"] = *role
+	}
+
+	res := svc.db.Model(&models.Login{}).Where("username = ?", username).Updates(updates)
 	if err := res.Error; err != nil {
-		return e.InternalServerError(err.Error())
+		return fmt.Errorf("update login: %w", err)
 	}
 
 	if res.RowsAffected == 0 {
-		return e.NotFound("login not found")
+		return ErrLoginNotFound
 	}
 
 	return nil

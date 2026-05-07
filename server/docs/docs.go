@@ -264,11 +264,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/logins/{username}/password": {
+            },
             "patch": {
-                "description": "Change the password for a login",
+                "description": "Update a login's password and/or role. At least one field must be provided.",
                 "consumes": [
                     "application/json"
                 ],
@@ -278,7 +276,7 @@ const docTemplate = `{
                 "tags": [
                     "Logins"
                 ],
-                "summary": "Change login password",
+                "summary": "Update a login",
                 "parameters": [
                     {
                         "type": "string",
@@ -288,12 +286,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "New password",
+                        "description": "Fields to update",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/ChangePasswordRequest"
+                            "$ref": "#/definitions/UpdateLoginRequest"
                         }
                     }
                 ],
@@ -2637,18 +2635,6 @@ const docTemplate = `{
                 }
             }
         },
-        "ChangePasswordRequest": {
-            "type": "object",
-            "required": [
-                "newPassword"
-            ],
-            "properties": {
-                "newPassword": {
-                    "type": "string",
-                    "minLength": 8
-                }
-            }
-        },
         "CreateEntryResult": {
             "type": "object",
             "properties": {
@@ -3216,6 +3202,28 @@ const docTemplate = `{
                 "startDate": {
                     "type": "string",
                     "example": "2023-10-01T18:00:00Z"
+                }
+            }
+        },
+        "UpdateLoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "bot",
+                        "executive",
+                        "tournament_director",
+                        "secretary",
+                        "treasurer",
+                        "vice_president",
+                        "president",
+                        "webmaster"
+                    ]
                 }
             }
         },

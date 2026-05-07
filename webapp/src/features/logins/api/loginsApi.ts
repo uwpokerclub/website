@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import { LoginResponse, CreateLoginRequest, ChangePasswordRequest } from "../types";
+import { LoginResponse, CreateLoginRequest, UpdateLoginRequest } from "../types";
 
 export interface FetchLoginsParams {
   limit: number;
@@ -23,10 +23,10 @@ export async function createLogin(loginData: CreateLoginRequest): Promise<LoginR
   });
 }
 
-export async function changePassword(username: string, passwordData: ChangePasswordRequest): Promise<void> {
-  return apiClient<void>(`v2/logins/${username}/password`, {
+export async function updateLogin(username: string, data: UpdateLoginRequest): Promise<void> {
+  return apiClient<void>(`v2/logins/${username}`, {
     method: "PATCH",
-    body: passwordData,
+    body: data,
   });
 }
 

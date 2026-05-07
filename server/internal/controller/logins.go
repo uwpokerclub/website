@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -26,7 +27,7 @@ func (c *loginsController) LoadRoutes(router *gin.RouterGroup) {
 	logins.GET("/:username", middleware.UseAuthorization("login.get"), c.getLogin)
 	logins.POST("", middleware.UseAuthorization("login.create"), c.createLogin)
 	logins.DELETE("/:username", middleware.UseAuthorization("login.delete"), c.deleteLogin)
-	logins.PATCH("/:username/password", middleware.UseAuthorization("login.edit"), c.changePassword)
+	logins.PATCH("/:username", middleware.UseAuthorization("login.edit"), c.updateLogin)
 }
 
 // listLogins handles listing all logins with linked member information
@@ -210,23 +211,23 @@ func (c *loginsController) deleteLogin(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
-// changePassword handles changing a login's password
+// updateLogin handles updating a login's password and/or role
 //
-// @Summary Change login password
-// @Description Change the password for a login
+// @Summary Update a login
+// @Description Update a login's password and/or role. At least one field must be provided.
 // @Tags Logins
 // @Accept json
 // @Produce json
 // @Param username path string true "Login username"
-// @Param request body ChangePasswordRequest true "New password"
+// @Param request body UpdateLoginRequest true "Fields to update"
 // @Success 204 "No Content"
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /logins/{username}/password [patch]
-func (c *loginsController) changePassword(ctx *gin.Context) {
+// @Router /logins/{username} [patch]
+func (c *loginsController) updateLogin(ctx *gin.Context) {
 	username := ctx.Param("username")
 	if username == "" {
 		ctx.AbortWithStatusJSON(
@@ -236,23 +237,25 @@ func (c *loginsController) changePassword(ctx *gin.Context) {
 		return
 	}
 
-	var req models.ChangePasswordRequest
+	var req models.UpdateLoginRequest
 	if !BindJSON(ctx, &req) {
 		return
 	}
 
 	svc := services.NewLoginService(c.db)
-	err := svc.ChangePassword(username, req.NewPassword)
+	err := svc.UpdateLogin(username, req.Password, req.Role)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
+		switch {
+		case errors.Is(err, services.ErrLoginNotFound):
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+		case errors.Is(err, services.ErrUpdateLoginNoFields):
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		default:
+			ctx.AbortWithStatusJSON(
+				http.StatusInternalServerError,
+				apierrors.InternalServerError(err.Error()),
+			)
 		}
-
-		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
-			apierrors.InternalServerError(err.Error()),
-		)
 		return
 	}
 

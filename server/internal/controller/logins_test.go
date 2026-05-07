@@ -411,7 +411,7 @@ func TestDeleteLogin(t *testing.T) {
 	}
 }
 
-func TestChangePassword(t *testing.T) {
+func TestUpdateLogin(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -423,8 +423,8 @@ func TestChangePassword(t *testing.T) {
 	apiServer := testutils.NewTestAPIServer(db)
 
 	// Test unauthorized/forbidden access
-	testutils.TestInvalidAuthForEndpoint(t, container, apiServer, "PATCH", "/api/v2/logins/testuser/password", loginsUnauthorizedRoles, map[string]any{
-		"newPassword": "newpassword123",
+	testutils.TestInvalidAuthForEndpoint(t, container, apiServer, "PATCH", "/api/v2/logins/testuser", loginsUnauthorizedRoles, map[string]any{
+		"password": "newpassword123",
 	})
 
 	testCases := []struct {
@@ -435,6 +435,7 @@ func TestChangePassword(t *testing.T) {
 		expectedStatus       int
 		expectError          bool
 		expectedErrorMessage string
+		verify               func(t *testing.T)
 	}{
 		{
 			name:     "successful password change",
@@ -442,32 +443,62 @@ func TestChangePassword(t *testing.T) {
 			setupLogin: func() {
 				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
 			},
-			requestBody: map[string]any{
-				"newPassword": "newpassword123",
-			},
+			requestBody:    map[string]any{"password": "newpassword123"},
 			expectedStatus: http.StatusNoContent,
-			expectError:    false,
-		},
-		{
-			name:       "login not found",
-			username:   "nonexistent",
-			setupLogin: func() {},
-			requestBody: map[string]any{
-				"newPassword": "newpassword123",
+			verify: func(t *testing.T) {
+				var login models.Login
+				require.NoError(t, db.Where("username = ?", "alice").First(&login).Error)
+				require.NotEqual(t, "oldhash", login.Password)
+				require.Equal(t, "executive", login.Role)
 			},
-			expectedStatus: http.StatusNotFound,
-			expectError:    true,
 		},
 		{
-			name:     "missing password",
+			name:     "successful role change",
 			username: "alice",
 			setupLogin: func() {
 				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
 			},
-			requestBody:          map[string]any{},
-			expectedStatus:       http.StatusBadRequest,
-			expectError:          true,
-			expectedErrorMessage: "Key: 'ChangePasswordRequest.NewPassword' Error:Field validation for 'NewPassword' failed on the 'required' tag",
+			requestBody:    map[string]any{"role": "president"},
+			expectedStatus: http.StatusNoContent,
+			verify: func(t *testing.T) {
+				var login models.Login
+				require.NoError(t, db.Where("username = ?", "alice").First(&login).Error)
+				require.Equal(t, "president", login.Role)
+				require.Equal(t, "oldhash", login.Password)
+			},
+		},
+		{
+			name:     "successful password and role change",
+			username: "alice",
+			setupLogin: func() {
+				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
+			},
+			requestBody:    map[string]any{"password": "newpassword123", "role": "treasurer"},
+			expectedStatus: http.StatusNoContent,
+			verify: func(t *testing.T) {
+				var login models.Login
+				require.NoError(t, db.Where("username = ?", "alice").First(&login).Error)
+				require.Equal(t, "treasurer", login.Role)
+				require.NotEqual(t, "oldhash", login.Password)
+			},
+		},
+		{
+			name:           "login not found",
+			username:       "nonexistent",
+			setupLogin:     func() {},
+			requestBody:    map[string]any{"password": "newpassword123"},
+			expectedStatus: http.StatusNotFound,
+			expectError:    true,
+		},
+		{
+			name:     "no fields provided",
+			username: "alice",
+			setupLogin: func() {
+				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
+			},
+			requestBody:    map[string]any{},
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
 		},
 		{
 			name:     "password too short",
@@ -475,12 +506,21 @@ func TestChangePassword(t *testing.T) {
 			setupLogin: func() {
 				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
 			},
-			requestBody: map[string]any{
-				"newPassword": "short",
-			},
+			requestBody:          map[string]any{"password": "short"},
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
-			expectedErrorMessage: "Key: 'ChangePasswordRequest.NewPassword' Error:Field validation for 'NewPassword' failed on the 'min' tag",
+			expectedErrorMessage: "Key: 'UpdateLoginRequest.Password' Error:Field validation for 'Password' failed on the 'min' tag",
+		},
+		{
+			name:     "invalid role",
+			username: "alice",
+			setupLogin: func() {
+				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
+			},
+			requestBody:          map[string]any{"role": "supreme_overlord"},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "Key: 'UpdateLoginRequest.Role' Error:Field validation for 'Role' failed on the 'oneof' tag",
 		},
 	}
 
@@ -497,7 +537,7 @@ func TestChangePassword(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create request
-			req, err := testutils.MakeJSONRequest("PATCH", "/api/v2/logins/"+tc.username+"/password", tc.requestBody)
+			req, err := testutils.MakeJSONRequest("PATCH", "/api/v2/logins/"+tc.username, tc.requestBody)
 			require.NoError(t, err)
 			testutils.SetAuthCookie(req, sessionID)
 
@@ -509,6 +549,10 @@ func TestChangePassword(t *testing.T) {
 
 			if tc.expectError && tc.expectedErrorMessage != "" {
 				testutils.AssertErrorResponse(t, w, tc.expectedStatus, tc.expectedErrorMessage)
+			}
+
+			if tc.verify != nil {
+				tc.verify(t)
 			}
 		})
 	}

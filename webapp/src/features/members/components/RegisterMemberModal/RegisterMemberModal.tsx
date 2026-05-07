@@ -2,7 +2,7 @@ import { useState, useContext, useCallback } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast } from "@uwpokerclub/components";
-import { SemesterContext } from "../../../../contexts";
+import { SemesterContext } from "@/contexts";
 import { MemberSearch, type SelectedMemberData } from "./MemberSearch";
 import { NewMemberForm } from "./NewMemberForm";
 import { MembershipConfig } from "./MembershipConfig";
@@ -12,7 +12,7 @@ import {
   type SearchModeFormData,
   type CreateModeFormData,
 } from "../../validation/registrationSchema";
-import { createMembership, registerNewMemberWithMembership } from "../../api/memberRegistrationApi";
+import { useCreateMembership, useRegisterNewMemberWithMembership } from "../../hooks/useMemberQueries";
 import styles from "./RegisterMemberModal.module.css";
 
 type Mode = "search" | "create";
@@ -31,7 +31,7 @@ export interface RegisterMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   /** Called on success. Optionally receives the created membership data. */
-  onSuccess: (data?: RegistrationSuccessData) => void;
+  onSuccess?: (data?: RegistrationSuccessData) => void;
 }
 
 /**
@@ -45,9 +45,12 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
   const [mode, setMode] = useState<Mode>("search");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedMemberName, setSelectedMemberName] = useState<{ firstName: string; lastName: string } | null>(null);
+
+  const createMembershipMutation = useCreateMembership();
+  const registerNewMemberMutation = useRegisterNewMemberWithMembership();
+  const isSubmitting = createMembershipMutation.isPending || registerNewMemberMutation.isPending;
 
   // Search mode form
   const searchForm = useForm<SearchModeFormData>({
@@ -118,16 +121,15 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const membership = await createMembership(
-        semesterContext.currentSemester.id,
-        data.selectedMemberId,
-        data.membership.paid,
-        data.membership.discounted,
-      );
+      const membership = await createMembershipMutation.mutateAsync({
+        semesterId: semesterContext.currentSemester.id,
+        memberId: data.selectedMemberId,
+        paid: data.membership.paid,
+        discounted: data.membership.discounted,
+      });
 
       showToast({
         message: "Member registered successfully!",
@@ -135,7 +137,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         duration: 3000,
       });
       searchForm.reset();
-      onSuccess({
+      onSuccess?.({
         membershipId: membership.id,
         userId: membership.userId,
         firstName: selectedMemberName?.firstName ?? membership.user?.firstName ?? "",
@@ -150,8 +152,6 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -162,16 +162,15 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const { member, membership } = await registerNewMemberWithMembership(
-        data.newMember,
-        semesterContext.currentSemester.id,
-        data.membership.paid,
-        data.membership.discounted,
-      );
+      const { member, membership } = await registerNewMemberMutation.mutateAsync({
+        memberData: data.newMember,
+        semesterId: semesterContext.currentSemester.id,
+        paid: data.membership.paid,
+        discounted: data.membership.discounted,
+      });
 
       showToast({
         message: `${member.firstName} ${member.lastName} registered successfully!`,
@@ -179,7 +178,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         duration: 3000,
       });
       createForm.reset();
-      onSuccess({
+      onSuccess?.({
         membershipId: membership.id,
         userId: membership.userId,
         firstName: member.firstName,
@@ -193,8 +192,6 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

@@ -2,21 +2,21 @@ import { useState, useContext, useCallback, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast } from "@uwpokerclub/components";
-import { SemesterContext } from "../../../../contexts";
-import { useAuth } from "../../../../hooks";
+import { SemesterContext } from "@/contexts";
+import { useAuth } from "@/hooks";
 import { EditMemberForm } from "./EditMemberForm";
 import { MembershipConfig } from "../RegisterMemberModal/MembershipConfig";
 import { DeleteMemberModal } from "../DeleteMemberModal";
 import { editMemberMembershipSchema, type EditMemberMembershipFormData } from "../../validation/registrationSchema";
-import { updateMember, updateMembership } from "../../api/memberRegistrationApi";
-import type { Membership } from "../../../../types";
+import { useUpdateMember, useUpdateMembership } from "../../hooks/useMemberQueries";
+import type { Membership } from "@/types";
 import styles from "./EditMemberModal.module.css";
 
 export interface EditMemberModalProps {
   isOpen: boolean;
   membership: Membership | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 /**
@@ -26,9 +26,12 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
   const semesterContext = useContext(SemesterContext);
   const { showToast } = useToast();
   const { hasPermission } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const updateMemberMutation = useUpdateMember();
+  const updateMembershipMutation = useUpdateMembership();
+  const isSubmitting = updateMemberMutation.isPending || updateMembershipMutation.isPending;
 
   const form = useForm<EditMemberMembershipFormData>({
     resolver: zodResolver(editMemberMembershipSchema),
@@ -81,31 +84,37 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      // Update member data
-      await updateMember(String(membership.userId), {
-        firstName: data.member.firstName,
-        lastName: data.member.lastName,
-        email: data.member.email,
-        faculty: data.member.faculty,
-        questId: data.member.questId || "",
-      });
-
-      // Update membership data
-      await updateMembership(semesterContext.currentSemester.id, membership.id, {
-        paid: data.membership.paid,
-        discounted: data.membership.discounted,
-      });
+      await Promise.all([
+        updateMemberMutation.mutateAsync({
+          memberId: String(membership.userId),
+          semesterId: semesterContext.currentSemester.id,
+          data: {
+            firstName: data.member.firstName,
+            lastName: data.member.lastName,
+            email: data.member.email,
+            faculty: data.member.faculty,
+            questId: data.member.questId || "",
+          },
+        }),
+        updateMembershipMutation.mutateAsync({
+          semesterId: semesterContext.currentSemester.id,
+          membershipId: membership.id,
+          data: {
+            paid: data.membership.paid,
+            discounted: data.membership.discounted,
+          },
+        }),
+      ]);
 
       showToast({
         message: `${data.member.firstName} ${data.member.lastName} updated successfully!`,
         variant: "success",
         duration: 3000,
       });
-      onSuccess();
+      onSuccess?.();
       handleClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update member";
@@ -115,8 +124,6 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -174,7 +181,7 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
           onClose={() => setIsDeleteModalOpen(false)}
           onSuccess={() => {
             setIsDeleteModalOpen(false);
-            onSuccess();
+            onSuccess?.();
             handleClose();
           }}
         />

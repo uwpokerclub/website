@@ -1,6 +1,6 @@
 import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { useCallback, useState } from "react";
-import { deleteMembership } from "../../api/memberRegistrationApi";
+import { useDeleteMembership } from "../../hooks/useMemberQueries";
 import { Membership } from "@/types";
 import styles from "./DeleteMembershipModal.module.css";
 
@@ -9,7 +9,7 @@ export interface DeleteMembershipModalProps {
   membership: Membership | null;
   semesterId: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function DeleteMembershipModal({
@@ -21,16 +21,16 @@ export function DeleteMembershipModal({
 }: DeleteMembershipModalProps) {
   const { showToast } = useToast();
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const deleteMembershipMutation = useDeleteMembership();
+  const isSubmitting = deleteMembershipMutation.isPending;
 
   const handleSubmit = useCallback(async () => {
     if (!membership) return;
 
-    setIsSubmitting(true);
     setError("");
 
     try {
-      await deleteMembership(semesterId, membership.id);
+      await deleteMembershipMutation.mutateAsync({ semesterId, membershipId: membership.id });
 
       showToast({
         message: `Membership for ${membership.user.firstName} ${membership.user.lastName} deleted successfully`,
@@ -38,7 +38,7 @@ export function DeleteMembershipModal({
         duration: 3000,
       });
 
-      onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete membership";
@@ -48,14 +48,11 @@ export function DeleteMembershipModal({
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [membership, semesterId, onClose, onSuccess, showToast]);
+  }, [membership, semesterId, onClose, onSuccess, showToast, deleteMembershipMutation]);
 
   const handleClose = useCallback(() => {
     setError("");
-    setIsSubmitting(false);
     onClose();
   }, [onClose]);
 

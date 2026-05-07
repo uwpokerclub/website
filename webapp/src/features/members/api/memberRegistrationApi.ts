@@ -1,6 +1,6 @@
-import { apiClient } from "../../../lib/apiClient";
-import { User } from "../../../types/user";
-import { Membership } from "../../../types/membership";
+import { apiClient } from "@/lib/apiClient";
+import { User } from "@/types/user";
+import { Membership } from "@/types/membership";
 import type { CreateMemberFormData } from "../validation/registrationSchema";
 
 /**
@@ -126,16 +126,36 @@ export async function deleteMembership(semesterId: string, membershipId: string)
   return apiClient<void>(`v2/semesters/${semesterId}/memberships/${membershipId}`, { method: "DELETE" });
 }
 
+export interface FetchMembershipsParams {
+  limit: number;
+  offset: number;
+  search?: string;
+  studentId?: string;
+  name?: string;
+  email?: string;
+  faculty?: string;
+  paid?: string;
+  discounted?: string;
+}
+
 export async function fetchMemberships(
   semesterId: string,
-  params: { limit: number; offset: number; search?: string },
+  params: FetchMembershipsParams,
 ): Promise<{ data: Membership[]; total: number }> {
-  let query = `?limit=${params.limit}&offset=${params.offset}`;
-  if (params.search) {
-    query += `&search=${encodeURIComponent(params.search)}`;
-  }
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+  });
+  if (params.search) query.set("search", params.search);
+  if (params.studentId) query.set("studentId", params.studentId);
+  if (params.name) query.set("name", params.name);
+  if (params.email) query.set("email", params.email);
+  if (params.faculty) query.set("faculty", params.faculty);
+  if (params.paid) query.set("paid", params.paid);
+  if (params.discounted) query.set("discounted", params.discounted);
+
   const response = await apiClient<{ data: Membership[]; total: number }>(
-    `v2/semesters/${semesterId}/memberships${query}`,
+    `v2/semesters/${semesterId}/memberships?${query.toString()}`,
   );
   return { data: response.data ?? [], total: response.total ?? 0 };
 }

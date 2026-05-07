@@ -1,11 +1,13 @@
 import { apiClient } from "@/lib/apiClient";
 import { LoginResponse, CreateLoginRequest, ChangePasswordRequest } from "../types";
 
-export async function fetchLogins(params: {
+export interface FetchLoginsParams {
   limit: number;
   offset: number;
   search?: string;
-}): Promise<{ data: LoginResponse[]; total: number }> {
+}
+
+export async function fetchLogins(params: FetchLoginsParams): Promise<{ data: LoginResponse[]; total: number }> {
   let query = `?limit=${params.limit}&offset=${params.offset}`;
   if (params.search) {
     query += `&search=${encodeURIComponent(params.search)}`;

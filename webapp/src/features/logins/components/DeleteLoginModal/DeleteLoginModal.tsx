@@ -1,6 +1,6 @@
 import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { useCallback, useState } from "react";
-import { deleteLogin } from "../../api/loginsApi";
+import { useDeleteLogin } from "../../hooks/useLoginQueries";
 import { LoginResponse } from "../../types";
 import styles from "./DeleteLoginModal.module.css";
 
@@ -8,22 +8,22 @@ export interface DeleteLoginModalProps {
   isOpen: boolean;
   login: LoginResponse | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function DeleteLoginModal({ isOpen, login, onClose, onSuccess }: DeleteLoginModalProps) {
   const { showToast } = useToast();
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const deleteLoginMutation = useDeleteLogin();
+  const isSubmitting = deleteLoginMutation.isPending;
 
   const handleSubmit = useCallback(async () => {
     if (!login) return;
 
-    setIsSubmitting(true);
     setError("");
 
     try {
-      await deleteLogin(login.username);
+      await deleteLoginMutation.mutateAsync(login.username);
 
       showToast({
         message: `Login "${login.username}" deleted successfully`,
@@ -31,7 +31,7 @@ export function DeleteLoginModal({ isOpen, login, onClose, onSuccess }: DeleteLo
         duration: 3000,
       });
 
-      onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete login";
@@ -41,10 +41,8 @@ export function DeleteLoginModal({ isOpen, login, onClose, onSuccess }: DeleteLo
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [login, onClose, onSuccess, showToast]);
+  }, [login, onClose, onSuccess, showToast, deleteLoginMutation]);
 
   const handleClose = useCallback(() => {
     setError("");

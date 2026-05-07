@@ -3,7 +3,7 @@ import { Table, TableColumn, Button, Input, Pagination, Spinner } from "@uwpoker
 import { useAuth } from "@/hooks";
 import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey } from "react-icons/fa";
 import { LoginResponse } from "../../types";
-import { fetchLogins } from "../../api/loginsApi";
+import { useLogins } from "../../hooks/useLoginQueries";
 import { CreateLoginModal } from "../CreateLoginModal";
 import { EditPasswordModal } from "../EditPasswordModal";
 import { DeleteLoginModal } from "../DeleteLoginModal";
@@ -13,23 +13,16 @@ const ITEMS_PER_PAGE = 25;
 
 export function LoginsList() {
   const { hasPermission } = useAuth();
-  const [logins, setLogins] = useState<LoginResponse[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedLogin, setSelectedLogin] = useState<LoginResponse | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Debounced search query
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   useEffect(() => {
@@ -41,26 +34,19 @@ export function LoginsList() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch logins from API
-  useEffect(() => {
-    const loadLogins = async () => {
-      setIsLoading(true);
-      setError(null);
+  const queryParams = useMemo(
+    () => ({
+      limit: ITEMS_PER_PAGE,
+      offset: (currentPage - 1) * ITEMS_PER_PAGE,
+      ...(debouncedSearchQuery && { search: debouncedSearchQuery }),
+    }),
+    [currentPage, debouncedSearchQuery],
+  );
 
-      try {
-        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        const result = await fetchLogins({ limit: ITEMS_PER_PAGE, offset, search: debouncedSearchQuery || undefined });
-        setLogins(result.data);
-        setTotalItems(result.total);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch logins");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadLogins();
-  }, [refreshTrigger, currentPage, debouncedSearchQuery]);
+  const { data, isLoading, error: queryError } = useLogins(queryParams);
+  const logins = useMemo(() => data?.data ?? [], [data]);
+  const totalItems = data?.total ?? 0;
+  const error = queryError?.message ?? null;
 
   // Sort logins
   const sortedLogins = useMemo(() => {
@@ -123,11 +109,6 @@ export function LoginsList() {
   const handleDelete = (login: LoginResponse) => {
     setSelectedLogin(login);
     setIsDeleteModalOpen(true);
-  };
-
-  // Handle success callbacks
-  const handleSuccess = () => {
-    setRefreshTrigger((prev) => prev + 1);
   };
 
   // Render role badge
@@ -333,11 +314,7 @@ export function LoginsList() {
       )}
 
       {/* Modals */}
-      <CreateLoginModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleSuccess}
-      />
+      <CreateLoginModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
 
       <EditPasswordModal
         isOpen={isEditModalOpen}
@@ -346,7 +323,6 @@ export function LoginsList() {
           setIsEditModalOpen(false);
           setSelectedLogin(null);
         }}
-        onSuccess={handleSuccess}
       />
 
       <DeleteLoginModal
@@ -356,7 +332,6 @@ export function LoginsList() {
           setIsDeleteModalOpen(false);
           setSelectedLogin(null);
         }}
-        onSuccess={handleSuccess}
       />
     </div>
   );

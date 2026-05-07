@@ -3,7 +3,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast, Input } from "@uwpokerclub/components";
 import { editPasswordSchema, type EditPasswordFormData } from "../../schemas/loginSchemas";
-import { changePassword } from "../../api/loginsApi";
+import { useChangePassword } from "../../hooks/useLoginQueries";
 import { LoginResponse } from "../../types";
 import styles from "./EditPasswordModal.module.css";
 
@@ -11,13 +11,14 @@ export interface EditPasswordModalProps {
   isOpen: boolean;
   login: LoginResponse | null;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function EditPasswordModal({ isOpen, login, onClose, onSuccess }: EditPasswordModalProps) {
   const { showToast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const changePasswordMutation = useChangePassword();
+  const isSubmitting = changePasswordMutation.isPending;
 
   const form = useForm<EditPasswordFormData>({
     resolver: zodResolver(editPasswordSchema),
@@ -49,12 +50,12 @@ export function EditPasswordModal({ isOpen, login, onClose, onSuccess }: EditPas
   const handleSubmit = async (data: EditPasswordFormData) => {
     if (!login) return;
 
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      await changePassword(login.username, {
-        newPassword: data.newPassword,
+      await changePasswordMutation.mutateAsync({
+        username: login.username,
+        data: { newPassword: data.newPassword },
       });
 
       showToast({
@@ -63,7 +64,7 @@ export function EditPasswordModal({ isOpen, login, onClose, onSuccess }: EditPas
         duration: 3000,
       });
 
-      onSuccess();
+      onSuccess?.();
       handleClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to change password";
@@ -73,8 +74,6 @@ export function EditPasswordModal({ isOpen, login, onClose, onSuccess }: EditPas
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

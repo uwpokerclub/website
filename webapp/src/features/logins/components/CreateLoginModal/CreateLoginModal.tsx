@@ -3,19 +3,20 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast, Input, Select } from "@uwpokerclub/components";
 import { createLoginSchema, type CreateLoginFormData, LOGIN_ROLES } from "../../schemas/loginSchemas";
-import { createLogin } from "../../api/loginsApi";
+import { useCreateLogin } from "../../hooks/useLoginQueries";
 import styles from "./CreateLoginModal.module.css";
 
 export interface CreateLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export function CreateLoginModal({ isOpen, onClose, onSuccess }: CreateLoginModalProps) {
   const { showToast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const createLoginMutation = useCreateLogin();
+  const isSubmitting = createLoginMutation.isPending;
 
   const form = useForm<CreateLoginFormData>({
     resolver: zodResolver(createLoginSchema),
@@ -35,11 +36,10 @@ export function CreateLoginModal({ isOpen, onClose, onSuccess }: CreateLoginModa
 
   // Handle form submission
   const handleSubmit = async (data: CreateLoginFormData) => {
-    setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      await createLogin({
+      await createLoginMutation.mutateAsync({
         username: data.username,
         password: data.password,
         role: data.role,
@@ -51,7 +51,7 @@ export function CreateLoginModal({ isOpen, onClose, onSuccess }: CreateLoginModa
         duration: 3000,
       });
 
-      onSuccess();
+      onSuccess?.();
       handleClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create login";
@@ -61,8 +61,6 @@ export function CreateLoginModal({ isOpen, onClose, onSuccess }: CreateLoginModa
         variant: "error",
         duration: 5000,
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

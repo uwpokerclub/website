@@ -17,7 +17,7 @@ import {
   FaChartLine,
   FaListOl,
 } from "react-icons/fa";
-import { EventState } from "@/sdk/events";
+import { EventState } from "@/types";
 
 import styles from "./EventDetails.module.css";
 import { TournamentClock } from "../../tournament-clock";

@@ -244,7 +244,7 @@ export function EventDetails() {
           <FaExclamationTriangle />
         </div>
         <p className={styles.errorText}>{error.message}</p>
-        <Button onClick={refetch}>Retry</Button>
+        <Button onClick={() => refetch()}>Retry</Button>
       </div>
     );
   }

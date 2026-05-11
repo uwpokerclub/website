@@ -351,7 +351,7 @@ export function ListEvents() {
       <div className={styles.container} data-qa="events-error">
         <div className={styles.errorState}>
           <p>Error: {error.message}</p>
-          <Button onClick={refetch} data-qa="events-retry-btn">
+          <Button onClick={() => refetch()} data-qa="events-retry-btn">
             Retry
           </Button>
         </div>

@@ -294,7 +294,7 @@ export function MembersList() {
       return (
         <div className={styles.errorState} data-qa="members-error">
           <p>Error: {error}</p>
-          <Button data-qa="retry-btn" onClick={refetch}>
+          <Button data-qa="retry-btn" onClick={() => refetch()}>
             Retry
           </Button>
         </div>

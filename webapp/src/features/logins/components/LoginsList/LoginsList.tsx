@@ -216,7 +216,7 @@ export function LoginsList() {
       <div className={styles.container}>
         <div className={styles.errorState} data-qa="logins-error">
           <p>Error: {error}</p>
-          <Button data-qa="retry-btn" onClick={refetch}>
+          <Button data-qa="retry-btn" onClick={() => refetch()}>
             Retry
           </Button>
         </div>

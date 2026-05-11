@@ -1,4 +1,4 @@
-import { Modal, Button } from "@uwpokerclub/components";
+import { Modal, Button, useToast } from "@uwpokerclub/components";
 import { useCallback, useState } from "react";
 import { useEndEvent } from "../hooks/useEventQueries";
 
@@ -13,6 +13,7 @@ type EndEventModalProps = {
 };
 
 export function EndEventModal({ show, semesterId, eventId, onClose, onSuccess }: EndEventModalProps) {
+  const { showToast } = useToast();
   const [error, setError] = useState("");
   const endEventMutation = useEndEvent();
   const isSubmitting = endEventMutation.isPending;
@@ -22,12 +23,13 @@ export function EndEventModal({ show, semesterId, eventId, onClose, onSuccess }:
 
     try {
       await endEventMutation.mutateAsync({ semesterId, eventId });
+      showToast({ message: "Event ended", variant: "success", duration: 3000 });
       onSuccess();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to end event");
     }
-  }, [semesterId, eventId, onClose, onSuccess, endEventMutation]);
+  }, [semesterId, eventId, onClose, onSuccess, showToast, endEventMutation]);
 
   const handleClose = useCallback(() => {
     setError("");

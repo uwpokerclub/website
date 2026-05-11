@@ -87,11 +87,6 @@ export function EditLoginModal({ isOpen, login, onClose, onSuccess }: EditLoginM
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update login";
       setSubmitError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   };
 

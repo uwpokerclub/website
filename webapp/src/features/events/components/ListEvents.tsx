@@ -226,6 +226,7 @@ export function ListEvents() {
     data: eventsResponse,
     isLoading,
     error,
+    refetch,
   } = useEvents(semesterContext?.currentSemester?.id, {
     limit: ITEMS_PER_PAGE,
     offset,
@@ -350,7 +351,7 @@ export function ListEvents() {
       <div className={styles.container} data-qa="events-error">
         <div className={styles.errorState}>
           <p>Error: {error.message}</p>
-          <Button onClick={() => window.location.reload()} data-qa="events-retry-btn">
+          <Button onClick={refetch} data-qa="events-retry-btn">
             Retry
           </Button>
         </div>

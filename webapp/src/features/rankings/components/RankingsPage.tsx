@@ -39,7 +39,7 @@ export function RankingsPage() {
     [currentPage, debouncedSearchQuery],
   );
 
-  const { data, isLoading, error: queryError } = useRankings(currentSemester?.id, queryParams);
+  const { data, isLoading, error: queryError, refetch } = useRankings(currentSemester?.id, queryParams);
   const rankings = useMemo(() => data?.data ?? [], [data]);
   const totalItems = data?.total ?? 0;
   const error = queryError?.message ?? null;
@@ -64,7 +64,7 @@ export function RankingsPage() {
       <div className={styles.container}>
         <div className={styles.errorState} data-qa="rankings-error">
           <p>Error: {error}</p>
-          <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
+          <Button data-qa="retry-btn" onClick={refetch}>
             Retry
           </Button>
         </div>

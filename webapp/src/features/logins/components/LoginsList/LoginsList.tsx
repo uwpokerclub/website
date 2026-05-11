@@ -43,7 +43,7 @@ export function LoginsList() {
     [currentPage, debouncedSearchQuery],
   );
 
-  const { data, isLoading, error: queryError } = useLogins(queryParams);
+  const { data, isLoading, error: queryError, refetch } = useLogins(queryParams);
   const logins = useMemo(() => data?.data ?? [], [data]);
   const totalItems = data?.total ?? 0;
   const error = queryError?.message ?? null;
@@ -216,7 +216,7 @@ export function LoginsList() {
       <div className={styles.container}>
         <div className={styles.errorState} data-qa="logins-error">
           <p>Error: {error}</p>
-          <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
+          <Button data-qa="retry-btn" onClick={refetch}>
             Retry
           </Button>
         </div>

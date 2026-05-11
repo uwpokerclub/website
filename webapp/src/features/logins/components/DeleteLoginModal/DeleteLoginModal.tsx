@@ -36,11 +36,6 @@ export function DeleteLoginModal({ isOpen, login, onClose, onSuccess }: DeleteLo
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete login";
       setError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   }, [login, onClose, onSuccess, showToast, deleteLoginMutation]);
 

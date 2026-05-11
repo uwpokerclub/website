@@ -119,11 +119,6 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update member";
       setSubmitError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   };
 

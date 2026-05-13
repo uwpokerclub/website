@@ -348,7 +348,12 @@ export function ListEvents() {
   if (error) {
     return (
       <div className={styles.container} data-qa="events-error">
-        <QueryErrorState title="Failed to load events" message={error.message} onRetry={() => refetch()} />
+        <QueryErrorState
+          title="Failed to load events"
+          message={error.message}
+          onRetry={() => refetch()}
+          retryDataQa="events-retry-btn"
+        />
       </div>
     );
   }

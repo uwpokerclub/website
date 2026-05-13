@@ -3,6 +3,7 @@ export * from "./InfoCard";
 export * from "./ResponsiveNavbar";
 export * from "./Icon";
 export * from "./LoadingScreen";
+export * from "./QueryErrorState";
 export * from "./ComingSoon";
 
 import AuthProvider from "./AuthProvider";

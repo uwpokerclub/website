@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Table, TableColumn, Button, Input, Pagination, Spinner, useToast, Modal } from "@uwpokerclub/components";
 import { SemesterContext } from "@/contexts";
 import { useAuth } from "@/hooks";
-import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo, FaExclamationTriangle } from "react-icons/fa";
+import { QueryErrorState } from "@/components";
+import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo } from "react-icons/fa";
 import { CreateEventModal } from "./CreateEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
 import { Event, EventState } from "@/types";
@@ -333,7 +334,6 @@ export function ListEvents() {
       : []),
   ];
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className={styles.container} data-qa="events-loading">
@@ -345,23 +345,14 @@ export function ListEvents() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className={styles.container} data-qa="events-error">
-        <div className={styles.errorState}>
-          <div className={styles.errorIcon}><FaExclamationTriangle /></div>
-          <h3>Failed to load events</h3>
-          <p>{error.message}</p>
-          <Button onClick={() => refetch()} data-qa="events-retry-btn">
-            Retry
-          </Button>
-        </div>
+        <QueryErrorState title="Failed to load events" message={error.message} onRetry={() => refetch()} />
       </div>
     );
   }
 
-  // Show empty state when no semester is selected
   if (!semesterContext?.currentSemester) {
     return (
       <div className={styles.container} data-qa="events-no-semester">

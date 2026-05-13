@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Table, TableColumn, Button, Input, Pagination, Spinner } from "@uwpokerclub/components";
+import { QueryErrorState } from "@/components";
 import { useAuth } from "@/hooks";
-import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey, FaExclamationTriangle } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey } from "react-icons/fa";
 import { LoginResponse } from "../../types";
 import { useLogins } from "../../hooks/useLoginQueries";
 import { CreateLoginModal } from "../CreateLoginModal";
@@ -198,7 +199,6 @@ export function LoginsList() {
     },
   ];
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className={styles.container}>
@@ -210,18 +210,15 @@ export function LoginsList() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.errorState} data-qa="logins-error">
-          <div className={styles.errorIcon}><FaExclamationTriangle /></div>
-          <h3>Failed to load logins</h3>
-          <p>{error}</p>
-          <Button data-qa="retry-btn" onClick={() => refetch()}>
-            Retry
-          </Button>
-        </div>
+        <QueryErrorState
+          data-qa="logins-error"
+          title="Failed to load logins"
+          message={error}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

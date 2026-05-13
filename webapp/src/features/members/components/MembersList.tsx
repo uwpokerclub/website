@@ -4,6 +4,7 @@ import { Table, TableColumn, Button, Pagination, Spinner } from "@uwpokerclub/co
 import { SemesterContext } from "@/contexts";
 import { Membership } from "@/types";
 import { useAuth } from "@/hooks";
+import { QueryErrorState } from "@/components";
 import { FaEdit, FaTrash, FaPlus, FaUsers, FaFilter } from "react-icons/fa";
 import { RegisterMemberModal } from "./RegisterMemberModal";
 import { EditMemberModal } from "./EditMemberModal";
@@ -132,7 +133,7 @@ export function MembersList() {
     [currentPage, debouncedFilters],
   );
 
-  const { data, isLoading, error: queryError } = useMemberships(semesterId, queryParams);
+  const { data, isLoading, error: queryError, refetch } = useMemberships(semesterId, queryParams);
   const members = useMemo(() => data?.data ?? [], [data]);
   const totalItems = data?.total ?? 0;
   const error = queryError?.message ?? null;
@@ -292,12 +293,12 @@ export function MembersList() {
 
     if (error) {
       return (
-        <div className={styles.errorState} data-qa="members-error">
-          <p>Error: {error}</p>
-          <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </div>
+        <QueryErrorState
+          data-qa="members-error"
+          title="Failed to load members"
+          message={error}
+          onRetry={() => refetch()}
+        />
       );
     }
 

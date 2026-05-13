@@ -96,15 +96,14 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         setMembershipsOffset(newOffset);
         membershipsOffsetRef.current = newOffset;
         hasMoreMembershipsRef.current = newOffset < resp.total;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to load members";
-        showToast({ message, variant: "error", duration: 5000 });
+      } catch {
+        // failed load results in empty list
       } finally {
         membershipsLoadingRef.current = false;
         setMembershipsLoading(false);
       }
     },
-    [semesterId, showToast],
+    [semesterId],
   );
 
   // Fetch a page of entries
@@ -136,15 +135,14 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
             return next;
           });
         }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to load entries";
-        showToast({ message, variant: "error", duration: 5000 });
+      } catch {
+        // failed load results in empty list
       } finally {
         entriesLoadingRef.current = false;
         setEntriesLoading(false);
       }
     },
-    [semesterId, eventId, showToast],
+    [semesterId, eventId],
   );
 
   // Initial load when modal opens
@@ -184,7 +182,6 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         if (mounted) {
           const message = error instanceof Error ? error.message : "Failed to load data";
           setLoadError(message);
-          showToast({ message, variant: "error", duration: 5000 });
         }
       } finally {
         if (mounted) {
@@ -198,7 +195,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     return () => {
       mounted = false;
     };
-  }, [isOpen, semesterId, eventId, showToast]);
+  }, [isOpen, semesterId, eventId]);
 
   // Reset and re-fetch when search changes
   useEffect(() => {

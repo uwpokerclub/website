@@ -213,21 +213,6 @@
   color: var(--color-gray-500, #9e9e9e) !important;
 }
 
-.errorState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  gap: 1rem;
-  text-align: center;
-}
-
-.errorState p {
-  color: var(--color-danger, #dc3545);
-  font-size: 1rem;
-  margin: 0;
-}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {

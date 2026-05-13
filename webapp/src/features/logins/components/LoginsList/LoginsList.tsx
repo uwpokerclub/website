@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Table, TableColumn, Button, Input, Pagination, Spinner } from "@uwpokerclub/components";
+import { QueryErrorState } from "@/components";
 import { useAuth } from "@/hooks";
 import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey } from "react-icons/fa";
 import { LoginResponse } from "../../types";
@@ -43,7 +44,7 @@ export function LoginsList() {
     [currentPage, debouncedSearchQuery],
   );
 
-  const { data, isLoading, error: queryError } = useLogins(queryParams);
+  const { data, isLoading, error: queryError, refetch } = useLogins(queryParams);
   const logins = useMemo(() => data?.data ?? [], [data]);
   const totalItems = data?.total ?? 0;
   const error = queryError?.message ?? null;
@@ -198,7 +199,6 @@ export function LoginsList() {
     },
   ];
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className={styles.container}>
@@ -210,16 +210,15 @@ export function LoginsList() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.errorState} data-qa="logins-error">
-          <p>Error: {error}</p>
-          <Button data-qa="retry-btn" onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </div>
+        <QueryErrorState
+          data-qa="logins-error"
+          title="Failed to load logins"
+          message={error}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

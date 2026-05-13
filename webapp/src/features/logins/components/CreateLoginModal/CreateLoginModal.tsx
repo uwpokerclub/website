@@ -56,11 +56,6 @@ export function CreateLoginModal({ isOpen, onClose, onSuccess }: CreateLoginModa
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create login";
       setSubmitError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   };
 

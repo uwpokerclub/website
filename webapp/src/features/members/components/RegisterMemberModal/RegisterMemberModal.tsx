@@ -147,11 +147,6 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create membership";
       setSubmitError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   };
 
@@ -187,11 +182,6 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to register member";
       setSubmitError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   };
 

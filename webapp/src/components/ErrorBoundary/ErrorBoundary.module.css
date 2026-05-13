@@ -1,0 +1,45 @@
+.container {
+  /* Fills the flex column of AdminLayout's <main> */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+  /* Fallback when rendered outside the admin layout (root boundary) */
+  min-height: 100dvh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.illustration {
+  width: min(360px, 60vw);
+  height: auto;
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+  font-weight: 700;
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--color-text-secondary, #666);
+  margin: 0;
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
+}
+
+.message {
+  color: var(--color-text-secondary, #888);
+  font-size: 0.82rem;
+  font-family: ui-monospace, monospace;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  max-width: 48ch;
+  overflow-wrap: break-word;
+  margin: 0.25rem 0 0.5rem;
+}

@@ -56,10 +56,14 @@ export function EventDetails() {
   const restartEventBtnRef = useRef<HTMLButtonElement | null>(null);
 
   // Query hooks
-  const { data: event, isLoading, error } = useEvent(currentSemester?.id, eventId);
+  const { data: event, isLoading, error, refetch } = useEvent(currentSemester?.id, eventId);
 
   // Use the URL-derived eventId so this query fires in parallel with useEvent
-  const { data: entriesResponse, isLoading: isEntriesLoading } = useEntries(currentSemester?.id, eventId, {
+  const {
+    data: entriesResponse,
+    isLoading: isEntriesLoading,
+    isError: isEntriesError,
+  } = useEntries(currentSemester?.id, eventId, {
     limit: ENTRIES_PER_PAGE,
     offset: (entriesPage - 1) * ENTRIES_PER_PAGE,
     search: debouncedSearchQuery || undefined,
@@ -74,7 +78,11 @@ export function EventDetails() {
     }
   }, [debouncedSearchQuery, entriesResponse]);
 
-  const { data: structure = null, isLoading: isLoadingStructure } = useStructure(event?.structureId);
+  const {
+    data: structure = null,
+    isLoading: isLoadingStructure,
+    isError: isStructureError,
+  } = useStructure(event?.structureId);
 
   const rebuyMutation = useRebuyEvent();
   const restartMutation = useRestartEvent();
@@ -236,7 +244,7 @@ export function EventDetails() {
           <FaExclamationTriangle />
         </div>
         <p className={styles.errorText}>{error.message}</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
+        <Button onClick={() => refetch()}>Retry</Button>
       </div>
     );
   }
@@ -429,55 +437,59 @@ export function EventDetails() {
 
               {/* Tab Content */}
               {activeSubTab === "entries" && hasPermission("list", "event", "participant") ? (
-                <EntriesTable
-                  entries={entries}
-                  event={event}
-                  semesterId={currentSemester.id}
-                  isLoading={isEntriesLoading}
-                  totalItems={totalEntries}
-                  currentPage={entriesPage}
-                  pageSize={ENTRIES_PER_PAGE}
-                  onPageChange={setEntriesPage}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                />
+                !isEntriesError ? (
+                  <EntriesTable
+                    entries={entries}
+                    event={event}
+                    semesterId={currentSemester.id}
+                    isLoading={isEntriesLoading}
+                    totalItems={totalEntries}
+                    currentPage={entriesPage}
+                    pageSize={ENTRIES_PER_PAGE}
+                    onPageChange={setEntriesPage}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                  />
+                ) : null
               ) : activeSubTab === "structure" ? (
-                <div className={styles.structureSection}>
-                  {structure ? (
-                    <>
-                      <div className={styles.structureHeader}>
-                        <span className={styles.structureName}>{structure.name || "Unknown Structure"}</span>
-                      </div>
-                      <table className={styles.structureTable}>
-                        <thead>
-                          <tr>
-                            <th>Level</th>
-                            <th>Small Blind</th>
-                            <th>Big Blind</th>
-                            <th>Ante</th>
-                            <th>Time (min)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {structure.blinds.map((blind, i) => (
-                            <tr key={i}>
-                              <td className={styles.levelNumber}>{i + 1}</td>
-                              <td className={styles.blindValue}>{blind.small}</td>
-                              <td className={styles.blindValue}>{blind.big}</td>
-                              <td className={styles.blindValue}>{blind.ante}</td>
-                              <td className={styles.timeValue}>{blind.time}</td>
+                !isStructureError ? (
+                  <div className={styles.structureSection}>
+                    {structure ? (
+                      <>
+                        <div className={styles.structureHeader}>
+                          <span className={styles.structureName}>{structure.name || "Unknown Structure"}</span>
+                        </div>
+                        <table className={styles.structureTable}>
+                          <thead>
+                            <tr>
+                              <th>Level</th>
+                              <th>Small Blind</th>
+                              <th>Big Blind</th>
+                              <th>Ante</th>
+                              <th>Time (min)</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </>
-                  ) : (
-                    <div className={styles.loadingContainer}>
-                      <Spinner size="md" />
-                      <p className={styles.loadingText}>Loading structure...</p>
-                    </div>
-                  )}
-                </div>
+                          </thead>
+                          <tbody>
+                            {structure.blinds.map((blind, i) => (
+                              <tr key={i}>
+                                <td className={styles.levelNumber}>{i + 1}</td>
+                                <td className={styles.blindValue}>{blind.small}</td>
+                                <td className={styles.blindValue}>{blind.big}</td>
+                                <td className={styles.blindValue}>{blind.ante}</td>
+                                <td className={styles.timeValue}>{blind.time}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    ) : (
+                      <div className={styles.loadingContainer}>
+                        <Spinner size="md" />
+                        <p className={styles.loadingText}>Loading structure...</p>
+                      </div>
+                    )}
+                  </div>
+                ) : null
               ) : null}
             </>
           ) : isLoadingStructure ? (

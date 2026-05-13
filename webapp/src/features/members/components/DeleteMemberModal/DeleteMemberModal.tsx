@@ -35,11 +35,6 @@ export function DeleteMemberModal({ isOpen, member, onClose, onSuccess }: Delete
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete member";
       setError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   }, [member, onClose, onSuccess, showToast, deleteMemberMutation]);
 

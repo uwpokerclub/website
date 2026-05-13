@@ -43,11 +43,6 @@ export function DeleteMembershipModal({
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete membership";
       setError(message);
-      showToast({
-        message,
-        variant: "error",
-        duration: 5000,
-      });
     }
   }, [membership, semesterId, onClose, onSuccess, showToast, deleteMembershipMutation]);
 

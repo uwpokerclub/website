@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Table, TableColumn, Button, Input, Pagination, Spinner, useToast, Modal } from "@uwpokerclub/components";
 import { SemesterContext } from "@/contexts";
 import { useAuth } from "@/hooks";
-import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo } from "react-icons/fa";
+import { FaSearch, FaTimes, FaPlus, FaCalendarAlt, FaPencilAlt, FaEllipsisV, FaStop, FaRedo, FaExclamationTriangle } from "react-icons/fa";
 import { CreateEventModal } from "./CreateEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
 import { Event, EventState } from "@/types";
@@ -350,7 +350,9 @@ export function ListEvents() {
     return (
       <div className={styles.container} data-qa="events-error">
         <div className={styles.errorState}>
-          <p>Error: {error.message}</p>
+          <div className={styles.errorIcon}><FaExclamationTriangle /></div>
+          <h3>Failed to load events</h3>
+          <p>{error.message}</p>
           <Button onClick={() => refetch()} data-qa="events-retry-btn">
             Retry
           </Button>

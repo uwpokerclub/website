@@ -4,7 +4,7 @@ import { Table, TableColumn, Button, Pagination, Spinner } from "@uwpokerclub/co
 import { SemesterContext } from "@/contexts";
 import { Membership } from "@/types";
 import { useAuth } from "@/hooks";
-import { FaEdit, FaTrash, FaPlus, FaUsers, FaFilter } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaUsers, FaFilter, FaExclamationTriangle } from "react-icons/fa";
 import { RegisterMemberModal } from "./RegisterMemberModal";
 import { EditMemberModal } from "./EditMemberModal";
 import { DeleteMembershipModal } from "./DeleteMembershipModal";
@@ -293,7 +293,9 @@ export function MembersList() {
     if (error) {
       return (
         <div className={styles.errorState} data-qa="members-error">
-          <p>Error: {error}</p>
+          <div className={styles.errorIcon}><FaExclamationTriangle /></div>
+          <h3>Failed to load members</h3>
+          <p>{error}</p>
           <Button data-qa="retry-btn" onClick={() => refetch()}>
             Retry
           </Button>

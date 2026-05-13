@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Spinner, Button } from "@uwpokerclub/components";
+import { FaExclamationTriangle } from "react-icons/fa";
 import { useCurrentSemester } from "@/hooks";
 import { useRankings } from "../hooks/useRankingQueries";
 import { RankingsPodium } from "./RankingsPodium";
@@ -63,7 +64,9 @@ export function RankingsPage() {
     return (
       <div className={styles.container}>
         <div className={styles.errorState} data-qa="rankings-error">
-          <p>Error: {error}</p>
+          <div className={styles.errorIcon}><FaExclamationTriangle /></div>
+          <h3>Failed to load rankings</h3>
+          <p>{error}</p>
           <Button data-qa="retry-btn" onClick={() => refetch()}>
             Retry
           </Button>

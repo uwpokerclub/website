@@ -223,10 +223,29 @@
   text-align: center;
 }
 
+.errorState h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-gray-900, #212121);
+  margin: 0;
+}
+
 .errorState p {
   color: var(--color-danger, #dc3545);
   font-size: 1rem;
   margin: 0;
+}
+
+.errorIcon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 50%;
+  color: var(--color-danger, #dc3545);
+  font-size: 1.5rem;
 }
 
 /* Responsive adjustments */

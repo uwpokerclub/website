@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Table, TableColumn, Button, Input, Pagination, Spinner } from "@uwpokerclub/components";
 import { useAuth } from "@/hooks";
-import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch, FaPlus, FaTimes, FaKey, FaExclamationTriangle } from "react-icons/fa";
 import { LoginResponse } from "../../types";
 import { useLogins } from "../../hooks/useLoginQueries";
 import { CreateLoginModal } from "../CreateLoginModal";
@@ -215,7 +215,9 @@ export function LoginsList() {
     return (
       <div className={styles.container}>
         <div className={styles.errorState} data-qa="logins-error">
-          <p>Error: {error}</p>
+          <div className={styles.errorIcon}><FaExclamationTriangle /></div>
+          <h3>Failed to load logins</h3>
+          <p>{error}</p>
           <Button data-qa="retry-btn" onClick={() => refetch()}>
             Retry
           </Button>

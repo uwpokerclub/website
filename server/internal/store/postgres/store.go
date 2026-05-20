@@ -43,7 +43,8 @@ var _ store.Store = (*PostgresStore)(nil)
 
 func NewStore(db *gorm.DB) store.Store {
 	return &PostgresStore{
-		db:          db,
+		db:        db,
+		semesters: NewSemesterRepository(db),
 	}
 }
 

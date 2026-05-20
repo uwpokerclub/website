@@ -3,6 +3,7 @@ package server
 import (
 	"api/internal/controller"
 	"api/internal/middleware"
+	"api/internal/store/postgres"
 	"net/http"
 	"os"
 	"strings"
@@ -141,11 +142,15 @@ func (s *apiServer) SetupV2Routes() {
 	// Serve Swagger documentation
 	apiV2Route.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+
+	// Setup model store
+	store := postgres.NewStore(s.db)
+
 	// Load routes from controllers
 	controllers := []controller.Controller{
 		controller.NewHealthController(),
 		controller.NewAuthenticationController(s.db),
-		controller.NewSemestersController(s.db),
+		controller.NewSemestersController(s.db, store),
 		controller.NewEventsController(s.db),
 		controller.NewEntriesController(s.db),
 		controller.NewMembersController(s.db),

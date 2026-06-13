@@ -56,6 +56,16 @@
   font-size: 0.875rem;
 }
 
+.warningAlert {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background-color: #fff8e1;
+  border: 1px solid var(--color-primary, #f4b80f);
+  border-radius: 4px;
+  color: #5c4a00;
+  font-size: 0.875rem;
+}
+
 .footer {
   display: flex;
   justify-content: flex-end;

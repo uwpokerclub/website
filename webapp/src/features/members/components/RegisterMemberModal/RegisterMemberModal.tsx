@@ -13,6 +13,7 @@ import {
   type CreateModeFormData,
 } from "../../validation/registrationSchema";
 import { useCreateMembership, useRegisterNewMemberWithMembership } from "../../hooks/useMemberQueries";
+import { fetchMemberships } from "../../api/memberRegistrationApi";
 import styles from "./RegisterMemberModal.module.css";
 
 type Mode = "search" | "create";
@@ -47,10 +48,13 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
   const [mode, setMode] = useState<Mode>("search");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedMemberName, setSelectedMemberName] = useState<{ firstName: string; lastName: string } | null>(null);
+  const [existingMembership, setExistingMembership] = useState(false);
+  const [isCheckingMembership, setIsCheckingMembership] = useState(false);
 
   const createMembershipMutation = useCreateMembership();
   const registerNewMemberMutation = useRegisterNewMemberWithMembership();
-  const isSubmitting = createMembershipMutation.isPending || registerNewMemberMutation.isPending;
+  const isSubmitting =
+    createMembershipMutation.isPending || registerNewMemberMutation.isPending || isCheckingMembership;
 
   // Search mode form
   const searchForm = useForm<SearchModeFormData>({
@@ -89,6 +93,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
     createForm.reset();
     setSubmitError(null);
     setSelectedMemberName(null);
+    setExistingMembership(false);
   }, [searchForm, createForm]);
 
   // Handle mode toggle
@@ -105,10 +110,26 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
   };
 
   // Handle search mode selection
-  const handleMemberSelect = (member: SelectedMemberData | null) => {
+  const handleMemberSelect = async (member: SelectedMemberData | null) => {
     searchForm.setValue("selectedMemberId", member?.id ?? "", { shouldValidate: true });
+    setExistingMembership(false);
+
     if (member) {
       setSelectedMemberName({ firstName: member.firstName, lastName: member.lastName });
+
+      if (semesterContext?.currentSemester?.id) {
+        setIsCheckingMembership(true);
+        try {
+          const result = await fetchMemberships(semesterContext.currentSemester.id, {
+            limit: 1,
+            offset: 0,
+            studentId: member.id,
+          });
+          setExistingMembership(result.total > 0);
+        } finally {
+          setIsCheckingMembership(false);
+        }
+      }
     } else {
       setSelectedMemberName(null);
     }
@@ -195,9 +216,9 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         data-qa="register-submit-btn"
         type="submit"
         form={mode === "search" ? "search-form" : "create-form"}
-        disabled={isSubmitting}
+        disabled={isSubmitting || existingMembership}
       >
-        {isSubmitting ? "Registering..." : "Register Member"}
+        {isCheckingMembership ? "Checking..." : isSubmitting ? "Registering..." : "Register Member"}
       </Button>
     </div>
   );
@@ -227,6 +248,13 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         {submitError && (
           <div className={styles.errorAlert} data-qa="register-error-alert">
             {submitError}
+          </div>
+        )}
+
+        {/* Already registered warning */}
+        {existingMembership && (
+          <div className={styles.warningAlert} data-qa="register-existing-membership-warning">
+            This member is already registered for this semester.
           </div>
         )}
 

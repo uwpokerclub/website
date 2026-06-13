@@ -3,7 +3,8 @@ package controller
 import (
 	"api/internal/middleware"
 	"api/internal/models"
-	"api/internal/services"
+	"api/internal/store"
+	"errors"
 	"net/http"
 
 	apierrors "api/internal/errors"
@@ -14,11 +15,12 @@ import (
 )
 
 type semestersController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
-func NewSemestersController(db *gorm.DB) Controller {
-	return &semestersController{db: db}
+func NewSemestersController(db *gorm.DB, st store.Store) Controller {
+	return &semestersController{db: db, store: st}
 }
 
 func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
@@ -44,20 +46,24 @@ func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters [post]
 func (s *semestersController) createSemester(ctx *gin.Context) {
-	// Retrieve the request body and bind it to CreateSemesterRequest
 	var req models.CreateSemesterRequest
 	if !BindJSON(ctx, &req) {
 		return
 	}
 
-	// Initialize the semester service and create the semester
-	svc := services.NewSemesterService(s.db)
-	semester, err := svc.CreateSemester(&req)
-	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
+	semester := models.Semester{
+		Name:                  req.Name,
+		Meta:                  req.Meta,
+		StartDate:             req.StartDate,
+		EndDate:               req.EndDate,
+		StartingBudget:        req.StartingBudget,
+		CurrentBudget:         req.StartingBudget,
+		MembershipFee:         req.MembershipFee,
+		MembershipDiscountFee: req.MembershipDiscountFee,
+		RebuyFee:              req.RebuyFee,
+	}
+
+	if err := s.store.Semesters().Create(&semester); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
@@ -84,18 +90,13 @@ func (s *semestersController) listSemesters(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewSemesterService(s.db)
-	semesters, total, err := svc.ListSemestersV2(&pagination)
+	semesters, total, err := s.store.Semesters().List(&pagination)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.ListResponse[models.Semester]{
+	ctx.JSON(http.StatusOK, models.ListResponse[*models.Semester]{
 		Data:  semesters,
 		Total: total,
 	})
@@ -116,7 +117,6 @@ func (s *semestersController) listSemesters(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{id} [get]
 func (s *semestersController) getSemester(c *gin.Context) {
-	// Retrieve semester UUID from query parameters
 	semesterId := c.Param("semesterId")
 	id, err := uuid.Parse(semesterId)
 	if err != nil {
@@ -124,12 +124,10 @@ func (s *semestersController) getSemester(c *gin.Context) {
 		return
 	}
 
-	// Initialize the semester service and get the semester by ID
-	svc := services.NewSemesterService(s.db)
-	semester, err := svc.GetSemester(id)
+	semester, err := s.store.Semesters().FindByID(id)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			c.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
 			return
 		}
 		c.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))

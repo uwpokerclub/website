@@ -19,7 +19,9 @@ type InMemoryStore struct {
 var _ store.Store = (*InMemoryStore)(nil)
 
 func NewStore() store.Store {
-	return &InMemoryStore{}
+	return &InMemoryStore{
+		semesters: NewSemesterRepository(),
+	}
 }
 
 func (s *InMemoryStore) Semesters() store.SemesterRepository {

@@ -38,11 +38,13 @@ func (r *postgresSemesterRepository) List(pagination *models.Pagination) ([]*mod
 	var semesters []*models.Semester
 	var total int64
 
-	if err := r.db.Model(&models.Semester{}).Count(&total).Error; err != nil {
+	base := r.db.Model(&models.Semester{})
+
+	if err := base.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	query := r.db.Order("start_date DESC")
+	query := base.Order("start_date DESC")
 	query = pagination.Apply(query)
 
 	if err := query.Find(&semesters).Error; err != nil {
@@ -53,5 +55,8 @@ func (r *postgresSemesterRepository) List(pagination *models.Pagination) ([]*mod
 }
 
 func (r *postgresSemesterRepository) Update(semester *models.Semester) error {
+	if semester.ID == uuid.Nil {
+		return store.ErrNotFound
+	}
 	return r.db.Save(semester).Error
 }

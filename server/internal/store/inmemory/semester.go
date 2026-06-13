@@ -3,6 +3,7 @@ package inmemory
 import (
 	"api/internal/models"
 	"api/internal/store"
+	"sort"
 	"sync"
 
 	"github.com/google/uuid"
@@ -24,7 +25,11 @@ func NewSemesterRepository() store.SemesterRepository {
 func (r *inMemorySemesterRepository) Create(semester *models.Semester) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.semesters[semester.ID] = semester
+	if semester.ID == uuid.Nil {
+		semester.ID = uuid.New()
+	}
+	copy := *semester
+	r.semesters[semester.ID] = &copy
 	return nil
 }
 
@@ -45,6 +50,9 @@ func (r *inMemorySemesterRepository) List(pagination *models.Pagination) ([]*mod
 	for _, semester := range r.semesters {
 		semesters = append(semesters, semester)
 	}
+	sort.Slice(semesters, func(i, j int) bool {
+		return semesters[i].StartDate.After(semesters[j].StartDate)
+	})
 	total := int64(len(semesters))
 
 	offset := 0

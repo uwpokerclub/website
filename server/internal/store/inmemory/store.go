@@ -21,6 +21,7 @@ var _ store.Store = (*InMemoryStore)(nil)
 func NewStore() store.Store {
 	return &InMemoryStore{
 		semesters: NewSemesterRepository(),
+		members: NewMemberRepository(),
 	}
 }
 

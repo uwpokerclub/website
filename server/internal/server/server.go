@@ -153,7 +153,7 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewSemestersController(s.db, store),
 		controller.NewEventsController(s.db),
 		controller.NewEntriesController(s.db),
-		controller.NewMembersController(s.db),
+		controller.NewMembersController(s.db, store),
 		controller.NewMembershipsController(s.db),
 		controller.NewRankingsController(s.db),
 		controller.NewStructuresController(s.db),

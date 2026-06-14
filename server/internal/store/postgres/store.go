@@ -45,6 +45,7 @@ func NewStore(db *gorm.DB) store.Store {
 	return &PostgresStore{
 		db:        db,
 		semesters: NewSemesterRepository(db),
+		members: 	NewMemberRepository(db),
 	}
 }
 
@@ -91,7 +92,9 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 	}
 
 	return &PostgresStore{
-		db:          tx,
+		db:        tx,
+		semesters: NewSemesterRepository(tx),
+		members:   NewMemberRepository(tx),
 	}, nil
 }
 

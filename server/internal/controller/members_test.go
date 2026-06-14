@@ -465,7 +465,7 @@ func TestDeleteMember(t *testing.T) {
 			name:           "member not found",
 			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
 			memberID:       "99999998",
-			expectedStatus: http.StatusNotFound,
+			expectedStatus: http.StatusNoContent,
 		},
 		{
 			name:           "invalid ID format",

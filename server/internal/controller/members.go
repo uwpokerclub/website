@@ -4,7 +4,8 @@ import (
 	apierrors "api/internal/errors"
 	"api/internal/middleware"
 	"api/internal/models"
-	"api/internal/services"
+	"api/internal/store"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,12 +15,16 @@ import (
 )
 
 type membersController struct {
-	db *gorm.DB
+	store store.Store
+	db    *gorm.DB
 }
 
 // NewMembersController creates a new instance of membersController
-func NewMembersController(db *gorm.DB) Controller {
-	return &membersController{db: db}
+func NewMembersController(db *gorm.DB, st store.Store) Controller {
+	return &membersController{
+		store: st,
+		db:    db,
+	}
 }
 
 func (c *membersController) LoadRoutes(router *gin.RouterGroup) {
@@ -67,14 +72,16 @@ func (c *membersController) createMember(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewUserService(c.db)
-	member, err := svc.CreateUser(&req)
-	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
+	member := models.User{
+		ID:        req.ID,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Email:     req.Email,
+		Faculty:   req.Faculty,
+		QuestID:   req.QuestID,
+	}
 
+	if err := c.store.Members().Create(&member); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -89,24 +96,20 @@ func (c *membersController) createMember(ctx *gin.Context) {
 func (c *membersController) parseListMembersQueryParams(ctx *gin.Context) *models.ListUsersFilter {
 	filter := &models.ListUsersFilter{}
 
-	// Parse ID filter
 	if idStr, exists := ctx.GetQuery("id"); exists {
 		if id, err := strconv.ParseUint(idStr, 10, 64); err == nil {
 			filter.ID = &id
 		}
 	}
 
-	// Parse email filter
 	if email, exists := ctx.GetQuery("email"); exists {
 		filter.Email = &email
 	}
 
-	// Parse name filter
 	if name, exists := ctx.GetQuery("name"); exists {
 		filter.Name = &name
 	}
 
-	// Parse faculty filter
 	if faculty, exists := ctx.GetQuery("faculty"); exists {
 		filter.Faculty = &faculty
 	}
@@ -140,14 +143,8 @@ func (c *membersController) listMembers(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewUserService(c.db)
-	members, total, err := svc.ListUsersV2(filter, &pagination)
+	members, total, err := c.store.Members().List(filter, &pagination)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -155,7 +152,7 @@ func (c *membersController) listMembers(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.ListResponse[models.User]{
+	ctx.JSON(http.StatusOK, models.ListResponse[*models.User]{
 		Data:  members,
 		Total: total,
 	})
@@ -183,14 +180,15 @@ func (c *membersController) getMember(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewUserService(c.db)
-	member, err := svc.GetUser(memberID)
+	member, err := c.store.Members().FindByID(memberID)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(fmt.Sprintf("Member with ID %d not found", memberID)),
+			)
 			return
 		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -229,14 +227,54 @@ func (c *membersController) updateMember(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewUserService(c.db)
-	member, err := svc.UpdateUser(memberID, &req)
+	tx, err := c.store.BeginTx()
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+	defer tx.Rollback()
+
+	member, err := tx.Members().FindByID(memberID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(fmt.Sprintf("Member with ID %d not found", memberID)),
+			)
 			return
 		}
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
 
+	if req.FirstName != "" {
+		member.FirstName = req.FirstName
+	}
+	if req.LastName != "" {
+		member.LastName = req.LastName
+	}
+	if req.Email != "" {
+		member.Email = req.Email
+	}
+	if req.Faculty != "" {
+		member.Faculty = req.Faculty
+	}
+	if req.QuestID != "" {
+		member.QuestID = req.QuestID
+	}
+
+	if err := tx.Members().Update(member); err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -269,14 +307,8 @@ func (c *membersController) deleteMember(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewUserService(c.db)
-	err = svc.DeleteUser(memberID)
-	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
+	err = c.store.Members().Delete(memberID)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),

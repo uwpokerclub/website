@@ -156,7 +156,7 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewMembersController(s.db, store),
 		controller.NewMembershipsController(s.db),
 		controller.NewRankingsController(s.db),
-		controller.NewStructuresController(s.db),
+		controller.NewStructuresController(s.db, store),
 		controller.NewLoginsController(s.db),
 	}
 

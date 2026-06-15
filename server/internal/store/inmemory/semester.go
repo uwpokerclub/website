@@ -16,10 +16,28 @@ type inMemorySemesterRepository struct {
 
 var _ store.SemesterRepository = (*inMemorySemesterRepository)(nil)
 
-func NewSemesterRepository() store.SemesterRepository {
+func newSemesterRepository() *inMemorySemesterRepository {
 	return &inMemorySemesterRepository{
 		semesters: make(map[uuid.UUID]*models.Semester),
 	}
+}
+
+func NewSemesterRepository() store.SemesterRepository {
+	return newSemesterRepository()
+}
+
+func (r *inMemorySemesterRepository) clone() *inMemorySemesterRepository {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	c := &inMemorySemesterRepository{
+		semesters: make(map[uuid.UUID]*models.Semester, len(r.semesters)),
+	}
+	for id, s := range r.semesters {
+		sc := *s
+		c.semesters[id] = &sc
+	}
+	return c
 }
 
 func (r *inMemorySemesterRepository) Create(semester *models.Semester) error {
@@ -33,22 +51,22 @@ func (r *inMemorySemesterRepository) Create(semester *models.Semester) error {
 	return nil
 }
 
-func (r *inMemorySemesterRepository) FindByID(id uuid.UUID) (*models.Semester, error) {
+func (r *inMemorySemesterRepository) FindByID(id uuid.UUID) (models.Semester, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	semester, exists := r.semesters[id]
 	if !exists {
-		return nil, store.ErrNotFound
+		return models.Semester{}, store.ErrNotFound
 	}
-	return semester, nil
+	return *semester, nil
 }
 
-func (r *inMemorySemesterRepository) List(pagination *models.Pagination) ([]*models.Semester, int64, error) {
+func (r *inMemorySemesterRepository) List(pagination *models.Pagination) ([]models.Semester, int64, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var semesters []*models.Semester
+	var semesters []models.Semester
 	for _, semester := range r.semesters {
-		semesters = append(semesters, semester)
+		semesters = append(semesters, *semester)
 	}
 	sort.Slice(semesters, func(i, j int) bool {
 		return semesters[i].StartDate.After(semesters[j].StartDate)
@@ -60,7 +78,7 @@ func (r *inMemorySemesterRepository) List(pagination *models.Pagination) ([]*mod
 		offset = *pagination.Offset
 	}
 	if offset >= len(semesters) {
-		return []*models.Semester{}, total, nil
+		return []models.Semester{}, total, nil
 	}
 	semesters = semesters[offset:]
 

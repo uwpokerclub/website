@@ -16,10 +16,28 @@ type inMemoryMemberRepository struct {
 
 var _ store.MemberRepository = (*inMemoryMemberRepository)(nil)
 
-func NewMemberRepository() store.MemberRepository {
+func newMemberRepository() *inMemoryMemberRepository {
 	return &inMemoryMemberRepository{
 		members: make(map[uint64]*models.User),
 	}
+}
+
+func NewMemberRepository() store.MemberRepository {
+	return newMemberRepository()
+}
+
+func (r *inMemoryMemberRepository) clone() *inMemoryMemberRepository {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	c := &inMemoryMemberRepository{
+		members: make(map[uint64]*models.User, len(r.members)),
+	}
+	for id, u := range r.members {
+		uc := *u
+		c.members[id] = &uc
+	}
+	return c
 }
 
 func (r *inMemoryMemberRepository) Create(member *models.User) error {
@@ -36,23 +54,23 @@ func (r *inMemoryMemberRepository) Create(member *models.User) error {
 	return nil
 }
 
-func (r *inMemoryMemberRepository) FindByID(id uint64) (*models.User, error) {
+func (r *inMemoryMemberRepository) FindByID(id uint64) (models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	member, exists := r.members[id]
 	if !exists {
-		return nil, store.ErrNotFound
+		return models.User{}, store.ErrNotFound
 	}
 
-	return member, nil
+	return *member, nil
 }
 
-func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]*models.User, int64, error) {
+func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var members []*models.User
+	var members []models.User
 	for _, member := range r.members {
 		if filter.ID != nil && member.ID != *filter.ID {
 			continue
@@ -69,7 +87,7 @@ func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, paginati
 		if filter.Faculty != nil && member.Faculty != *filter.Faculty {
 			continue
 		}
-		members = append(members, member)
+		members = append(members, *member)
 	}
 
 	sort.Slice(members, func(i, j int) bool {
@@ -84,7 +102,7 @@ func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, paginati
 	}
 
 	if offset >= len(members) {
-		return []*models.User{}, total, nil
+		return []models.User{}, total, nil
 	}
 
 	members = members[offset:]

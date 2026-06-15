@@ -22,21 +22,21 @@ func (r *postgresMemberRepository) Create(member *models.User) error {
 	return r.db.Create(member).Error
 }
 
-func (r *postgresMemberRepository) FindByID(id uint64) (*models.User, error) {
+func (r *postgresMemberRepository) FindByID(id uint64) (models.User, error) {
 	var member models.User
 	if err := r.db.First(&member, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, store.ErrNotFound
+			return models.User{}, store.ErrNotFound
 		}
 
-		return nil, err
+		return models.User{}, err
 	}
 
-	return &member, nil
+	return member, nil
 }
 
-func (r *postgresMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]*models.User, int64, error) {
-	var members []*models.User
+func (r *postgresMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
+	var members []models.User
 	var total int64
 
 	base := r.db.Model(&models.User{})

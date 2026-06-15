@@ -4,7 +4,7 @@ import (
 	apierrors "api/internal/errors"
 	"api/internal/middleware"
 	"api/internal/models"
-	"api/internal/services"
+	"api/internal/store"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,10 +16,11 @@ import (
 
 type structuresController struct {
 	db *gorm.DB
+  store store.Store
 }
 
-func NewStructuresController(db *gorm.DB) Controller {
-	return &structuresController{db: db}
+func NewStructuresController(db *gorm.DB, store store.Store) Controller {
+  return &structuresController{db: db, store: store}
 }
 
 func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
@@ -51,8 +52,7 @@ func (s *structuresController) listStructures(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	structures, total, err := svc.ListStructuresV2(&pagination)
+  structures, total, err := s.store.Structures().List(&pagination)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -88,9 +88,23 @@ func (s *structuresController) createStructure(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	structure, err := svc.CreateStructure(&req)
-	if err != nil {
+  blinds := make([]models.Blind, len(req.Blinds))
+  for i, blind := range req.Blinds {
+    blinds[i] = models.Blind{
+      Small: blind.Small,
+      Big:   blind.Big,
+      Ante:  blind.Ante,
+      Time:  blind.Time,
+      Index: int8(i),
+    }
+  }
+
+  structure := models.Structure{
+    Name: req.Name,
+    Blinds: blinds,
+  }
+
+  if err := s.store.Structures().Create(&structure); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -124,11 +138,10 @@ func (s *structuresController) getStructure(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	structure, err := svc.GetStructure(id)
+  structure, err := s.store.Structures().FindByID(id)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
 			return
 		}
 		ctx.AbortWithStatusJSON(
@@ -172,28 +185,75 @@ func (s *structuresController) updateStructure(ctx *gin.Context) {
 
 	updateMap, err := s.validateAndCreateStructureUpdateMap(requestValues)
 	if err != nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			apierrors.InvalidRequest(err.Error()),
-		)
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	structure, err := svc.UpdateStructureV2(id, updateMap)
+	tx, err := s.store.BeginTx()
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+	defer tx.Rollback()
+
+	structure, err := tx.Structures().FindByID(id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("Structure not found"))
 			return
 		}
-		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
-			apierrors.InternalServerError(err.Error()),
-		)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, structure)
+	if len(updateMap) == 0 {
+		ctx.JSON(http.StatusOK, structure)
+		return
+	}
+
+	if name, ok := updateMap["name"]; ok {
+		structure.Name = name.(string)
+		if err := tx.Structures().Update(&structure); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+	}
+
+	if blindsData, ok := updateMap["blinds"]; ok {
+		blindsJSON := blindsData.([]models.BlindJSON)
+		blinds := make([]models.Blind, len(blindsJSON))
+		for i, b := range blindsJSON {
+			blinds[i] = models.Blind{
+				Small:       b.Small,
+				Big:         b.Big,
+				Ante:        b.Ante,
+				Time:        b.Time,
+				StructureId: id,
+				Index:       int8(i),
+			}
+		}
+		if err := tx.Structures().ReplaceBlindsByStructureID(id, blinds); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	result, err := s.store.Structures().FindByID(id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("Structure not found"))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }
 
 // deleteStructure handles the deletion of an existing structure.
@@ -209,7 +269,6 @@ func (s *structuresController) updateStructure(ctx *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /structures/{id} [delete]
 func (s *structuresController) deleteStructure(ctx *gin.Context) {
@@ -219,17 +278,9 @@ func (s *structuresController) deleteStructure(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	err = svc.DeleteStructure(id)
-	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-		ctx.AbortWithStatusJSON(
-			http.StatusInternalServerError,
-			apierrors.InternalServerError(err.Error()),
-		)
+	err = s.store.Structures().Delete(id)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
 

@@ -96,7 +96,7 @@ func (s *semestersController) listSemesters(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.ListResponse[*models.Semester]{
+	ctx.JSON(http.StatusOK, models.ListResponse[models.Semester]{
 		Data:  semesters,
 		Total: total,
 	})

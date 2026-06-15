@@ -23,19 +23,19 @@ func (r *postgresSemesterRepository) Create(semester *models.Semester) error {
 	return r.db.Create(semester).Error
 }
 
-func (r *postgresSemesterRepository) FindByID(id uuid.UUID) (*models.Semester, error) {
+func (r *postgresSemesterRepository) FindByID(id uuid.UUID) (models.Semester, error) {
 	var semester models.Semester
 	if err := r.db.First(&semester, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, store.ErrNotFound
+			return models.Semester{}, store.ErrNotFound
 		}
-		return nil, err
+		return models.Semester{}, err
 	}
-	return &semester, nil
+	return semester, nil
 }
 
-func (r *postgresSemesterRepository) List(pagination *models.Pagination) ([]*models.Semester, int64, error) {
-	var semesters []*models.Semester
+func (r *postgresSemesterRepository) List(pagination *models.Pagination) ([]models.Semester, int64, error) {
+	var semesters []models.Semester
 	var total int64
 
 	base := r.db.Model(&models.Semester{})

@@ -21,8 +21,8 @@ type Event struct {
 	Semester         *Semester     `json:"semester,omitempty"`
 	StartDate        time.Time     `json:"startDate"           gorm:"not null;default:CURRENT_TIMESTAMP"`
 	State            uint8         `json:"state"               gorm:"default:0"`
-	StructureID      int32         `json:"structureId"         gorm:"type:integer;not null;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Structure        *Structure    `json:"structure,omitempty"`
+	StructureID      int32         `json:"structureId"         gorm:"type:integer;not null"`
+	Structure        *Structure    `json:"structure,omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Rebuys           uint8         `json:"rebuys"              gorm:"not null;default:0"`
 	PointsMultiplier float32       `json:"pointsMultiplier"    gorm:"not null;default:1"`
 	Entries          []Participant `json:"entries,omitempty"   gorm:"foreignKey:EventID"`

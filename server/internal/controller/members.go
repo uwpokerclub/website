@@ -152,7 +152,7 @@ func (c *membersController) listMembers(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.ListResponse[*models.User]{
+	ctx.JSON(http.StatusOK, models.ListResponse[models.User]{
 		Data:  members,
 		Total: total,
 	})
@@ -266,7 +266,7 @@ func (c *membersController) updateMember(ctx *gin.Context) {
 		member.QuestID = req.QuestID
 	}
 
-	if err := tx.Members().Update(member); err != nil {
+	if err := tx.Members().Update(&member); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -282,7 +282,16 @@ func (c *membersController) updateMember(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, member)
+	result, err := c.store.Members().FindByID(memberID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }
 
 // deleteMember handles deleting a Member by ID

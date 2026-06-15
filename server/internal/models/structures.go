@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 type Structure struct {
 	ID     int32   `json:"id" gorm:"type:integer;primaryKey;autoIncrement"`
 	Name   string  `json:"name" gorm:"not null"`
-	Blinds []Blind `json:"blinds" gorm:"foreignKey:StructureId"`
+	Blinds []Blind `json:"blinds" gorm:"foreignKey:StructureId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 } //@name Structure
 
 func (Structure) TableName() string {
@@ -41,7 +41,7 @@ type Blind struct {
 	Ante        int32 `json:"ante" gorm:"not null"`
 	Time        int8  `json:"time" gorm:"not null"`
 	Index       int8  `json:"-" gorm:"not null"`
-	StructureId int32 `json:"-" gorm:"type:integer;not null;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	StructureId int32 `json:"-" gorm:"type:integer;not null"`
 }//@name Blind
 
 type BlindJSON struct {

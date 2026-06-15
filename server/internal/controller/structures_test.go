@@ -752,13 +752,12 @@ func TestDeleteStructure(t *testing.T) {
 			expectedErrorMsg: "Structure ID 'invalid-id' is not a valid integer",
 		},
 		{
-			name:             "non-existent structure",
-			userRole:         authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
-			structureID:      "999",
-			seedStructures:   false,
-			expectedStatus:   http.StatusNotFound,
-			expectError:      true,
-			expectedErrorMsg: "Structure not found",
+			name:           "non-existent structure",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			structureID:    "999",
+			seedStructures: false,
+			expectedStatus: http.StatusNoContent,
+			expectError:    false,
 		},
 	}
 

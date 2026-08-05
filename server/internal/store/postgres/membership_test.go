@@ -184,6 +184,20 @@ func TestMembershipRepository_Update(t *testing.T) {
 	require.False(t, found.Discounted)
 }
 
+func TestMembershipRepository_Update_NotFound(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	repo := postgres.NewMembershipRepository(container.GetDB())
+
+	err = repo.Update(&models.Membership{ID: uuid.New()})
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
 func TestMembershipRepository_Delete(t *testing.T) {
 	t.Parallel()
 

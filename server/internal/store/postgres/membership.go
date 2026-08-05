@@ -83,7 +83,16 @@ func (r *postgresMembershipRepository) List(filter *models.ListMembershipsFilter
 }
 
 func (r *postgresMembershipRepository) Update(membership *models.Membership) error {
-	return r.db.Model(membership).Select("paid", "discounted").Updates(membership).Error
+	result := r.db.Model(membership).Select("paid", "discounted").Updates(membership)
+	if err := result.Error; err != nil {
+		return err
+	}
+
+	if result.RowsAffected == 0 {
+		return store.ErrNotFound
+	}
+
+	return nil
 }
 
 func (r *postgresMembershipRepository) Delete(id uuid.UUID, semesterID uuid.UUID) error {

@@ -42,6 +42,18 @@ func TestMembershipRepository_Create_DuplicateID(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMembershipRepository_Create_DuplicateUserSemester(t *testing.T) {
+	t.Parallel()
+
+	repo := newMembershipRepository()
+
+	semesterID := uuid.New()
+	require.NoError(t, repo.Create(&models.Membership{UserID: 1, SemesterID: semesterID}))
+
+	err := repo.Create(&models.Membership{UserID: 1, SemesterID: semesterID})
+	require.Error(t, err)
+}
+
 func TestMembershipRepository_FindByID_NotFound(t *testing.T) {
 	t.Parallel()
 

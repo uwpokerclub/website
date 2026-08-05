@@ -51,6 +51,12 @@ func (r *inMemoryMembershipRepository) Create(membership *models.Membership) err
 		return fmt.Errorf("membership with ID %s already exists", membership.ID)
 	}
 
+	for _, m := range r.memberships {
+		if m.UserID == membership.UserID && m.SemesterID == membership.SemesterID {
+			return fmt.Errorf("membership for user %d in semester %s already exists", membership.UserID, membership.SemesterID)
+		}
+	}
+
 	copy := *membership
 	r.memberships[membership.ID] = &copy
 

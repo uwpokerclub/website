@@ -6,20 +6,22 @@ import (
 )
 
 type InMemoryStore struct {
-	mu         sync.RWMutex
-	semesters  *inMemorySemesterRepository
-	members    *inMemoryMemberRepository
-	structures *inMemoryStructureRepository
-	parent     *InMemoryStore
+	mu          sync.RWMutex
+	semesters   *inMemorySemesterRepository
+	members     *inMemoryMemberRepository
+	memberships *inMemoryMembershipRepository
+	structures  *inMemoryStructureRepository
+	parent      *InMemoryStore
 }
 
 var _ store.Store = (*InMemoryStore)(nil)
 
 func NewStore() store.Store {
 	return &InMemoryStore{
-		semesters:  newSemesterRepository(),
-		members:    newMemberRepository(),
-		structures: newStructureRepository(),
+		semesters:   newSemesterRepository(),
+		members:     newMemberRepository(),
+		memberships: newMembershipRepository(),
+		structures:  newStructureRepository(),
 	}
 }
 
@@ -41,12 +43,17 @@ func (s *InMemoryStore) Structures() store.StructureRepository {
 	return s.structures
 }
 
-func (s *InMemoryStore) Memberships() store.MembershipRepository { return nil }
-func (s *InMemoryStore) Events() store.EventRepository           { return nil }
-func (s *InMemoryStore) Entries() store.EntryRepository          { return nil }
-func (s *InMemoryStore) Rankings() store.RankingRepository       { return nil }
-func (s *InMemoryStore) Logins() store.LoginRepository           { return nil }
-func (s *InMemoryStore) Sessions() store.SessionRepository       { return nil }
+func (s *InMemoryStore) Memberships() store.MembershipRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.memberships
+}
+
+func (s *InMemoryStore) Events() store.EventRepository     { return nil }
+func (s *InMemoryStore) Entries() store.EntryRepository    { return nil }
+func (s *InMemoryStore) Rankings() store.RankingRepository { return nil }
+func (s *InMemoryStore) Logins() store.LoginRepository     { return nil }
+func (s *InMemoryStore) Sessions() store.SessionRepository { return nil }
 
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
 // store operates on its own copy of the data, leaving the parent untouched
@@ -61,6 +68,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	}
 	if s.members != nil {
 		tx.members = s.members.clone()
+	}
+	if s.memberships != nil {
+		tx.memberships = s.memberships.clone()
 	}
 	if s.semesters != nil {
 		tx.semesters = s.semesters.clone()
@@ -80,6 +90,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	if s.members != nil {
 		s.parent.members = s.members
+	}
+	if s.memberships != nil {
+		s.parent.memberships = s.memberships
 	}
 	if s.semesters != nil {
 		s.parent.semesters = s.semesters

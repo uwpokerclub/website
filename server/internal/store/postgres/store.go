@@ -43,10 +43,11 @@ var _ store.Store = (*PostgresStore)(nil)
 
 func NewStore(db *gorm.DB) store.Store {
 	return &PostgresStore{
-		db:        db,
-		semesters: NewSemesterRepository(db),
-		members: 	NewMemberRepository(db),
-    structures: NewStructureRepository(db),
+		db:          db,
+		semesters:   NewSemesterRepository(db),
+		memberships: NewMembershipRepository(db),
+		members:     NewMemberRepository(db),
+		structures:  NewStructureRepository(db),
 	}
 }
 
@@ -93,10 +94,11 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 	}
 
 	return &PostgresStore{
-		db:        tx,
-		semesters: NewSemesterRepository(tx),
-		members:   NewMemberRepository(tx),
-    structures: NewStructureRepository(tx),
+		db:          tx,
+		semesters:   NewSemesterRepository(tx),
+		memberships: NewMembershipRepository(tx),
+		members:     NewMemberRepository(tx),
+		structures:  NewStructureRepository(tx),
 	}, nil
 }
 

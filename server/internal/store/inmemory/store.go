@@ -12,6 +12,7 @@ type InMemoryStore struct {
 	memberships *inMemoryMembershipRepository
 	structures  *inMemoryStructureRepository
 	events      *inMemoryEventRepository
+	entries     *inMemoryEntryRepository
 	parent      *InMemoryStore
 }
 
@@ -24,6 +25,7 @@ func NewStore() store.Store {
 		memberships: newMembershipRepository(),
 		structures:  newStructureRepository(),
 		events:      newEventRepository(),
+		entries:     newEntryRepository(),
 	}
 }
 
@@ -57,7 +59,12 @@ func (s *InMemoryStore) Events() store.EventRepository {
 	return s.events
 }
 
-func (s *InMemoryStore) Entries() store.EntryRepository    { return nil }
+func (s *InMemoryStore) Entries() store.EntryRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.entries
+}
+
 func (s *InMemoryStore) Rankings() store.RankingRepository { return nil }
 func (s *InMemoryStore) Logins() store.LoginRepository     { return nil }
 func (s *InMemoryStore) Sessions() store.SessionRepository { return nil }
@@ -85,6 +92,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	if s.events != nil {
 		tx.events = s.events.clone()
 	}
+	if s.entries != nil {
+		tx.entries = s.entries.clone()
+	}
 	return tx, nil
 }
 
@@ -109,6 +119,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	if s.events != nil {
 		s.parent.events = s.events
+	}
+	if s.entries != nil {
+		s.parent.entries = s.entries
 	}
 	return nil
 }

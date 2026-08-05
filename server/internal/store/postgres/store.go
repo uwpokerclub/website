@@ -49,6 +49,7 @@ func NewStore(db *gorm.DB) store.Store {
 		members:     NewMemberRepository(db),
 		structures:  NewStructureRepository(db),
 		events:      NewEventRepository(db),
+		entries:     NewEntryRepository(db),
 	}
 }
 
@@ -101,6 +102,7 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 		members:     NewMemberRepository(tx),
 		structures:  NewStructureRepository(tx),
 		events:      NewEventRepository(tx),
+		entries:     NewEntryRepository(tx),
 	}, nil
 }
 

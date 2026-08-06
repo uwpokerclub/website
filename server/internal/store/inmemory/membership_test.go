@@ -90,9 +90,9 @@ func TestMembershipRepository_List(t *testing.T) {
 	semesterA := uuid.New()
 	semesterB := uuid.New()
 
-	m1 := &models.Membership{UserID: 1, SemesterID: semesterA, Paid: true}
-	m2 := &models.Membership{UserID: 2, SemesterID: semesterA, Paid: false}
-	m3 := &models.Membership{UserID: 3, SemesterID: semesterB, Paid: true}
+	m1 := &models.Membership{UserID: 1, SemesterID: semesterA, Paid: true, User: &models.User{ID: 1, FirstName: "Alice", LastName: "A", Email: "alice@example.com"}}
+	m2 := &models.Membership{UserID: 2, SemesterID: semesterA, Paid: false, User: &models.User{ID: 2, FirstName: "Bob", LastName: "B", Email: "bob@example.com"}}
+	m3 := &models.Membership{UserID: 3, SemesterID: semesterB, Paid: true, User: &models.User{ID: 3, FirstName: "Cara", LastName: "C", Email: "cara@example.com"}}
 	require.NoError(t, repo.Create(m1))
 	require.NoError(t, repo.Create(m2))
 	require.NoError(t, repo.Create(m3))
@@ -103,6 +103,7 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.Len(t, results, 2)
 	require.Equal(t, uint64(1), results[0].UserID)
 	require.Equal(t, uint64(2), results[1].UserID)
+	require.Equal(t, 0, results[0].Attendance)
 
 	paidTrue := true
 	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA, Paid: &paidTrue})
@@ -120,6 +121,18 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.EqualValues(t, 2, total)
 	require.Len(t, results, 1)
 	require.Equal(t, uint64(2), results[0].UserID)
+
+	name := "bob"
+	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA, Name: &name})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Equal(t, uint64(2), results[0].UserID)
+
+	otherSemester := uuid.New()
+	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &otherSemester})
+	require.NoError(t, err)
+	require.EqualValues(t, 0, total)
+	require.Empty(t, results)
 }
 
 func TestMembershipRepository_Update(t *testing.T) {

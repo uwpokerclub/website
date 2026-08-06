@@ -15,6 +15,7 @@ type InMemoryStore struct {
 	entries     *inMemoryEntryRepository
 	rankings    *inMemoryRankingRepository
 	logins      *inMemoryLoginRepository
+	sessions    *inMemorySessionRepository
 	parent      *InMemoryStore
 }
 
@@ -30,6 +31,7 @@ func NewStore() store.Store {
 		entries:     newEntryRepository(),
 		rankings:    newRankingRepository(),
 		logins:      newLoginRepository(),
+		sessions:    newSessionRepository(),
 	}
 }
 
@@ -81,7 +83,11 @@ func (s *InMemoryStore) Logins() store.LoginRepository {
 	return s.logins
 }
 
-func (s *InMemoryStore) Sessions() store.SessionRepository { return nil }
+func (s *InMemoryStore) Sessions() store.SessionRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.sessions
+}
 
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
 // store operates on its own copy of the data, leaving the parent untouched
@@ -114,6 +120,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	}
 	if s.logins != nil {
 		tx.logins = s.logins.clone()
+	}
+	if s.sessions != nil {
+		tx.sessions = s.sessions.clone()
 	}
 	return tx, nil
 }
@@ -148,6 +157,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	if s.logins != nil {
 		s.parent.logins = s.logins
+	}
+	if s.sessions != nil {
+		s.parent.sessions = s.sessions
 	}
 	return nil
 }

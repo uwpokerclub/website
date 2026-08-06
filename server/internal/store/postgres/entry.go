@@ -54,15 +54,26 @@ func (r *postgresEntryRepository) FindByMembershipAndEventID(membershipID uuid.U
 }
 
 func (r *postgresEntryRepository) List(filter *models.ListParticipantsFilter) ([]models.Participant, int64, error) {
+	applyFilter := func(q *gorm.DB) *gorm.DB {
+		q = q.Where("participants.event_id = ?", filter.EventID)
+		if filter.Search != "" {
+			pattern := "%" + eventNameLikeReplacer.Replace(filter.Search) + "%"
+			q = q.Joins("JOIN memberships ON memberships.id = participants.membership_id").
+				Joins("JOIN users ON users.id = memberships.user_id").
+				Where(
+					"users.first_name ILIKE ? OR users.last_name ILIKE ? OR (users.first_name || ' ' || users.last_name) ILIKE ? OR CAST(users.id AS TEXT) ILIKE ?",
+					pattern, pattern, pattern, pattern,
+				)
+		}
+		return q
+	}
+
 	var total int64
-	if err := r.db.Model(&models.Participant{}).
-		Where("participants.event_id = ?", filter.EventID).
-		Count(&total).Error; err != nil {
+	if err := applyFilter(r.db.Model(&models.Participant{})).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	query := models.Participant{}.Preload(r.db).
-		Where("participants.event_id = ?", filter.EventID).
+	query := applyFilter(models.Participant{}.Preload(r.db)).
 		Order("participants.signed_out_at DESC")
 	query = filter.Pagination.Apply(query)
 

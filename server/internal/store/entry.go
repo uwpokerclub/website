@@ -22,8 +22,9 @@ type EntryRepository interface {
 
 	// List retrieves entries for a given event, preloaded with their membership (and the
 	// membership's user, semester, and ranking), ordered by signed-out time descending
-	// (entries that have not yet signed out sort first), along with the total matching count
-	// before pagination is applied.
+	// (entries that have not yet signed out sort first), optionally filtered by filter.Search
+	// against the joined membership's user name/ID, along with the total matching count before
+	// pagination is applied.
 	List(filter *models.ListParticipantsFilter) ([]models.Participant, int64, error)
 
 	// Update applies a partial update to an entry using the given column/value map, and writes

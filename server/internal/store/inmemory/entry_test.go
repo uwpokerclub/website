@@ -198,3 +198,30 @@ func TestEntryRepository_Clone_Isolation(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 2, originalTotal)
 }
+
+func TestEntryRepository_List_Search(t *testing.T) {
+	t.Parallel()
+
+	repo := newEntryRepository()
+
+	membershipID := uuid.New()
+	participant := &models.Participant{
+		MembershipID: &membershipID,
+		EventID:      1,
+		Membership: &models.Membership{
+			ID:   membershipID,
+			User: &models.User{FirstName: "Katherine", LastName: "Johnson"},
+		},
+	}
+	require.NoError(t, repo.Create(participant))
+
+	results, total, err := repo.List(&models.ListParticipantsFilter{EventID: 1, Search: "katherine"})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Len(t, results, 1)
+
+	results, total, err = repo.List(&models.ListParticipantsFilter{EventID: 1, Search: "nobody"})
+	require.NoError(t, err)
+	require.EqualValues(t, 0, total)
+	require.Empty(t, results)
+}

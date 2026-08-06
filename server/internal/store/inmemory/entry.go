@@ -5,6 +5,8 @@ import (
 	"api/internal/store"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -106,6 +108,9 @@ func (r *inMemoryEntryRepository) List(filter *models.ListParticipantsFilter) ([
 		if p.EventID != filter.EventID {
 			continue
 		}
+		if filter.Search != "" && !entryMatchesSearch(p, filter.Search) {
+			continue
+		}
 		participants = append(participants, *p)
 	}
 
@@ -145,6 +150,19 @@ func (r *inMemoryEntryRepository) List(filter *models.ListParticipantsFilter) ([
 	}
 
 	return participants, total, nil
+}
+
+func entryMatchesSearch(p *models.Participant, search string) bool {
+	if p.Membership == nil || p.Membership.User == nil {
+		return false
+	}
+	s := strings.ToLower(search)
+	u := p.Membership.User
+	full := strings.ToLower(u.FirstName + " " + u.LastName)
+	return strings.Contains(strings.ToLower(u.FirstName), s) ||
+		strings.Contains(strings.ToLower(u.LastName), s) ||
+		strings.Contains(full, s) ||
+		strings.Contains(strings.ToLower(strconv.FormatUint(u.ID, 10)), s)
 }
 
 func (r *inMemoryEntryRepository) Update(participant *models.Participant, values map[string]any) error {

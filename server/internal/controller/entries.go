@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -15,13 +16,14 @@ import (
 )
 
 type entriesController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
 // NewEntriesController creates a new instance of the entries controller
 // with the provided database connection.
-func NewEntriesController(db *gorm.DB) Controller {
-	return &entriesController{db: db}
+func NewEntriesController(db *gorm.DB, st store.Store) Controller {
+	return &entriesController{db: db, store: st}
 }
 
 func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {

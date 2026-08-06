@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,12 +14,13 @@ import (
 )
 
 type membershipsController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
 // NewMembershipsController creates a new instance of membershipsController
-func NewMembershipsController(db *gorm.DB) Controller {
-	return &membershipsController{db: db}
+func NewMembershipsController(db *gorm.DB, st store.Store) Controller {
+	return &membershipsController{db: db, store: st}
 }
 
 func (c *membershipsController) LoadRoutes(router *gin.RouterGroup) {

@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"errors"
 	"net/http"
 
@@ -13,12 +14,13 @@ import (
 )
 
 type loginsController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
 // NewLoginsController creates a new instance of loginsController
-func NewLoginsController(db *gorm.DB) Controller {
-	return &loginsController{db: db}
+func NewLoginsController(db *gorm.DB, st store.Store) Controller {
+	return &loginsController{db: db, store: st}
 }
 
 func (c *loginsController) LoadRoutes(router *gin.RouterGroup) {

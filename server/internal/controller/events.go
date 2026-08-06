@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,11 +18,12 @@ import (
 )
 
 type eventsController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
-func NewEventsController(db *gorm.DB) Controller {
-	return &eventsController{db: db}
+func NewEventsController(db *gorm.DB, st store.Store) Controller {
+	return &eventsController{db: db, store: st}
 }
 
 func (s *eventsController) LoadRoutes(router *gin.RouterGroup) {

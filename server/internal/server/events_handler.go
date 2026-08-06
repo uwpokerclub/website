@@ -84,8 +84,8 @@ func (s *apiServer) CreateEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) GetEvent(ctx *gin.Context) {
-	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
-	if err != nil {
+	eventId, err := strconv.ParseInt(ctx.Param("eventId"), 10, 32)
+	if err != nil || eventId < 0 {
 		ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
 	}
@@ -104,8 +104,8 @@ func (s *apiServer) GetEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) UpdateEvent(ctx *gin.Context) {
-	eventID, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
-	if err != nil {
+	eventID, err := strconv.ParseInt(ctx.Param("eventId"), 10, 32)
+	if err != nil || eventID < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
 	}
@@ -128,8 +128,8 @@ func (s *apiServer) UpdateEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) UndoEndEvent(ctx *gin.Context) {
-	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
-	if err != nil {
+	eventId, err := strconv.ParseInt(ctx.Param("eventId"), 10, 32)
+	if err != nil || eventId < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
 	}
@@ -145,8 +145,8 @@ func (s *apiServer) UndoEndEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) EndEvent(ctx *gin.Context) {
-	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
-	if err != nil {
+	eventId, err := strconv.ParseInt(ctx.Param("eventId"), 10, 32)
+	if err != nil || eventId < 0 {
 		ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
 	}
@@ -162,8 +162,8 @@ func (s *apiServer) EndEvent(ctx *gin.Context) {
 }
 
 func (s *apiServer) NewRebuy(ctx *gin.Context) {
-	eventId, err := strconv.ParseUint(ctx.Param("eventId"), 10, 32)
-	if err != nil {
+	eventId, err := strconv.ParseInt(ctx.Param("eventId"), 10, 32)
+	if err != nil || eventId < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID specified in request"))
 		return
 	}

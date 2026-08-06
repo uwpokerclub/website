@@ -12,8 +12,8 @@ import (
 )
 
 func (s *apiServer) ListParticipants(ctx *gin.Context) {
-	eventId, err := strconv.Atoi(ctx.Query("eventId"))
-	if err != nil {
+	eventId, err := strconv.ParseInt(ctx.Query("eventId"), 10, 32)
+	if err != nil || eventId < 0 {
 		ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid event ID in query"))
 		return
 	}

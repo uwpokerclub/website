@@ -54,8 +54,8 @@ func (s *apiServer) ListStructures(ctx *gin.Context) {
 }
 
 func (s *apiServer) GetStructure(ctx *gin.Context) {
-	structureId, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err != nil {
+	structureId, err := strconv.ParseInt(ctx.Param("id"), 10, 32)
+	if err != nil || structureId < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid structure ID specified in request"))
 		return
 	}
@@ -74,8 +74,8 @@ func (s *apiServer) GetStructure(ctx *gin.Context) {
 }
 
 func (s *apiServer) UpdateStructure(ctx *gin.Context) {
-	structureId, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err != nil {
+	structureId, err := strconv.ParseInt(ctx.Param("id"), 10, 32)
+	if err != nil || structureId < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid structure ID specified in request"))
 		return
 	}

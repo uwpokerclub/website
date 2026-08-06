@@ -54,14 +54,8 @@ func (c *loginsController) listLogins(ctx *gin.Context) {
 
 	search := ctx.Query("search")
 
-	svc := services.NewLoginService(c.db)
-	logins, total, err := svc.ListLogins(&pagination, search)
+	logins, total, err := c.store.Logins().List(&pagination, search)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -99,14 +93,12 @@ func (c *loginsController) getLogin(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewLoginService(c.db)
-	login, err := svc.GetLogin(username)
+	login, err := c.store.Logins().FindByUsernameWithMember(username)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("login not found"))
 			return
 		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -137,14 +129,9 @@ func (c *loginsController) createLogin(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewLoginService(c.db)
-	err := svc.CreateLoginFromRequest(&req)
+	svc := services.NewLoginService(c.store)
+	err := svc.CreateLogin(req.Username, req.Password, req.Role)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -153,13 +140,8 @@ func (c *loginsController) createLogin(ctx *gin.Context) {
 	}
 
 	// Return the created login (without password)
-	login, err := svc.GetLogin(req.Username)
+	login, err := c.store.Logins().FindByUsernameWithMember(req.Username)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -195,14 +177,12 @@ func (c *loginsController) deleteLogin(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewLoginService(c.db)
-	err := svc.DeleteLogin(username)
+	err := c.store.Logins().Delete(username)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("login not found"))
 			return
 		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -244,7 +224,7 @@ func (c *loginsController) updateLogin(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewLoginService(c.db)
+	svc := services.NewLoginService(c.store)
 	err := svc.UpdateLogin(username, req.Password, req.Role)
 	if err != nil {
 		switch {

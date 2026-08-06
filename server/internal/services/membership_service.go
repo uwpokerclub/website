@@ -3,19 +3,19 @@ package services
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"errors"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type membershipService struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewMembershipService(db *gorm.DB) *membershipService {
+func NewMembershipService(st store.Store) *membershipService {
 	return &membershipService{
-		db: db,
+		store: st,
 	}
 }
 
@@ -25,11 +25,11 @@ func (ms *membershipService) CreateMembership(req *models.CreateMembershipReques
 		return nil, e.InvalidRequest("Invalid semester ID specified in request")
 	}
 
-	// Create transaction since memberships also affect the semester budget
-	tx := ms.db.Begin()
-	if err := tx.Error; err != nil {
+	tx, err := ms.store.BeginTx()
+	if err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
+	defer tx.Rollback()
 
 	membership := models.Membership{
 		UserID:     req.UserID,
@@ -38,253 +38,95 @@ func (ms *membershipService) CreateMembership(req *models.CreateMembershipReques
 		Discounted: req.Discounted,
 	}
 
-	res := tx.Create(&membership)
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Memberships().Create(&membership); err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	// Retrieve semester to update the budget
-	ss := NewSemesterService(tx)
-	semester, err := ss.GetSemester(semesterId)
+	semester, err := tx.Semesters().FindByID(semesterId)
 	if err != nil {
-		tx.Rollback()
-		return nil, err
+		return nil, e.InternalServerError(err.Error())
 	}
 
-	// Only update the budget if the membership has been paid for
 	if req.Paid {
-		// If the membership has been discounted, use the discounted rate instead
+		fee := semester.MembershipFee
 		if req.Discounted {
-			err = ss.UpdateBudget(semesterId, float32(semester.MembershipDiscountFee))
-			if err != nil {
-				tx.Rollback()
-				return nil, err
-			}
-		} else {
-			err = ss.UpdateBudget(semesterId, float32(semester.MembershipFee))
-			if err != nil {
-				tx.Rollback()
-				return nil, err
-			}
+			fee = semester.MembershipDiscountFee
+		}
+		if err := tx.Semesters().IncrementBudget(semesterId, float32(fee)); err != nil {
+			return nil, e.InternalServerError(err.Error())
 		}
 	}
 
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Commit(); err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
 	return &membership, nil
-}
-
-func (ms *membershipService) GetMembership(membershipId uuid.UUID) (*models.Membership, error) {
-	membership := models.Membership{ID: membershipId}
-
-	res := ms.db.Joins("User").Joins("Semester").First(&membership)
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	return &membership, nil
-}
-
-func addFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gorm.DB {
-	// Add a WHERE clause for userID if it is present
-	if filter.UserID != nil {
-		query = query.Where("memberships.user_id = ?", *filter.UserID)
-	}
-
-	if filter.Search != "" {
-		sanitized := sanitizeLikeInput(filter.Search)
-		pattern := "%" + sanitized + "%"
-		query = query.Where(
-			"\"User\".first_name ILIKE ? OR \"User\".last_name ILIKE ? OR \"User\".email ILIKE ? OR (\"User\".first_name || ' ' || \"User\".last_name) ILIKE ?",
-			pattern, pattern, pattern, pattern,
-		)
-	}
-
-	if filter.Name != nil {
-		sanitized := sanitizeLikeInput(*filter.Name)
-		pattern := "%" + sanitized + "%"
-		query = query.Where(
-			"\"User\".first_name ILIKE ? OR \"User\".last_name ILIKE ? OR (\"User\".first_name || ' ' || \"User\".last_name) ILIKE ?",
-			pattern, pattern, pattern,
-		)
-	}
-
-	if filter.Email != nil {
-		sanitized := sanitizeLikeInput(*filter.Email)
-		pattern := "%" + sanitized + "%"
-		query = query.Where("\"User\".email ILIKE ?", pattern)
-	}
-
-	if filter.Faculty != nil {
-		query = query.Where("\"User\".faculty = ?", *filter.Faculty)
-	}
-
-	if filter.StudentID != nil {
-		query = query.Where("CAST(\"User\".id AS TEXT) = ?", *filter.StudentID)
-	}
-
-	if filter.Paid != nil {
-		query = query.Where("memberships.paid = ?", *filter.Paid)
-	}
-
-	if filter.Discounted != nil {
-		query = query.Where("memberships.discounted = ?", *filter.Discounted)
-	}
-
-	return query
-}
-
-func (ms *membershipService) ListMemberships(filter *models.ListMembershipsFilter) ([]models.ListMembershipsResult, error) {
-	ret := []models.ListMembershipsResult{}
-
-	// TODO: Update after participants associations have been setup
-	// Find the amount of events each member has participated in the semester
-	attendanceQuery := ms.db.
-		Select("participants.membership_id, COUNT(*) as total").
-		Table("participants").
-		Joins("INNER JOIN events ON participants.event_id = events.id").
-		Where("events.semester_id = ?", filter.SemesterID).
-		Group("participants.membership_id")
-
-	// Get a list of all members in the semester with the number of events they have attended
-	// ordered by the members name.
-	res := ms.db.
-		Select([]string{
-			"memberships.id", "users.id as user_id", "users.first_name", "users.last_name",
-			"memberships.paid", "memberships.discounted", "COALESCE(attendance.total, 0) as attendance",
-		}).
-		Table("memberships").
-		Joins("LEFT JOIN (?) as attendance ON memberships.id = attendance.membership_id", attendanceQuery).
-		Joins("INNER JOIN users ON memberships.user_id = users.id").
-		Where("memberships.semester_id = ?", filter.SemesterID).
-		Order("users.first_name ASC").
-		Order("users.last_name ASC")
-
-	res = addFilterClauses(res, filter)
-	res = filter.Pagination.Apply(res)
-
-	// Fetch the results and return an error if one occured
-	res = res.Scan(&ret)
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	return ret, nil
 }
 
 func (ms *membershipService) UpdateMembership(req *models.UpdateMembershipRequest) (*models.Membership, error) {
-	// Fetch existing membership
-	existingMembership := models.Membership{ID: req.ID}
-	res := ms.db.First(&existingMembership)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
+	existingMembership, err := ms.store.Memberships().FindByID(req.ID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, e.NotFound(err.Error())
+		}
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	// Validate the request won't put membership into invalid state
 	if !req.Paid && req.Discounted {
 		return nil, e.InvalidRequest("Cannot set membership to not paid and discounted.")
 	}
 
-	// Create transaction
-	tx := ms.db.Begin()
-	if err := tx.Error; err != nil {
+	tx, err := ms.store.BeginTx()
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+	defer tx.Rollback()
+
+	semester, err := tx.Semesters().FindByID(existingMembership.SemesterID)
+	if err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	// Retrieve semester
-	ss := NewSemesterService(tx)
-	semester, err := ss.GetSemester(existingMembership.SemesterID)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	// Request the membership to be updated to not paid
 	if !req.Paid {
 		if existingMembership.Paid {
-			// Update semester's budget
+			fee := float32(semester.MembershipFee)
 			if existingMembership.Discounted {
-				err = ss.UpdateBudget(existingMembership.SemesterID, -float32(semester.MembershipDiscountFee))
-				if err != nil {
-					tx.Rollback()
-					return nil, err
-				}
-			} else {
-				err = ss.UpdateBudget(existingMembership.SemesterID, -float32(semester.MembershipFee))
-				if err != nil {
-					tx.Rollback()
-					return nil, err
-				}
+				fee = float32(semester.MembershipDiscountFee)
+			}
+			if err := tx.Semesters().IncrementBudget(existingMembership.SemesterID, -fee); err != nil {
+				return nil, e.InternalServerError(err.Error())
 			}
 		}
 	} else {
-		// Requesting to update the member to paid
-		// First check if the member is already marked as paid
 		if existingMembership.Paid {
-			// Next compare the discounted flag
 			if !req.Discounted && existingMembership.Discounted {
-				// Member is marked as discounted and updating them to not discounted
-				err = ss.UpdateBudget(semester.ID, float32(semester.MembershipFee-semester.MembershipDiscountFee))
-				if err != nil {
-					tx.Rollback()
-					return nil, err
+				if err := tx.Semesters().IncrementBudget(semester.ID, float32(semester.MembershipFee-semester.MembershipDiscountFee)); err != nil {
+					return nil, e.InternalServerError(err.Error())
 				}
 			} else if req.Discounted && !existingMembership.Discounted {
-				// Member is not marked as discounted and updating them to discounted
-				err = ss.UpdateBudget(semester.ID, -float32(semester.MembershipFee-semester.MembershipDiscountFee))
-				if err != nil {
-					tx.Rollback()
-					return nil, err
+				if err := tx.Semesters().IncrementBudget(semester.ID, -float32(semester.MembershipFee-semester.MembershipDiscountFee)); err != nil {
+					return nil, e.InternalServerError(err.Error())
 				}
 			}
 		} else {
-			// Existing member has not paid, and we are updating them to paid
+			fee := float32(semester.MembershipFee)
 			if req.Discounted {
-				err = ss.UpdateBudget(semester.ID, float32(semester.MembershipDiscountFee))
-				if err != nil {
-					tx.Rollback()
-					return nil, err
-				}
-			} else {
-				err = ss.UpdateBudget(semester.ID, float32(semester.MembershipFee))
-				if err != nil {
-					tx.Rollback()
-					return nil, err
-				}
+				fee = float32(semester.MembershipDiscountFee)
+			}
+			if err := tx.Semesters().IncrementBudget(semester.ID, fee); err != nil {
+				return nil, e.InternalServerError(err.Error())
 			}
 		}
 	}
 
 	existingMembership.Paid = req.Paid
 	existingMembership.Discounted = req.Discounted
-	tx.Save(&existingMembership)
-
-	if err := tx.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Memberships().Update(&existingMembership); err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Commit(); err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
@@ -292,17 +134,15 @@ func (ms *membershipService) UpdateMembership(req *models.UpdateMembershipReques
 }
 
 func (ms *membershipService) CreateMembershipV2(semesterID uuid.UUID, req *models.CreateMembershipRequestV2) (*models.Membership, error) {
-	// Validate the request won't create membership in invalid state
-	// Invalid state: paid = false and discounted = true
 	if !req.Paid && req.Discounted {
 		return nil, errors.New("cannot create membership that is not paid and discounted")
 	}
 
-	// Create transaction since memberships also affect the semester budget
-	tx := ms.db.Begin()
-	if err := tx.Error; err != nil {
+	tx, err := ms.store.BeginTx()
+	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
 
 	membership := models.Membership{
 		UserID:     req.UserID,
@@ -311,56 +151,26 @@ func (ms *membershipService) CreateMembershipV2(semesterID uuid.UUID, req *model
 		Discounted: req.Discounted,
 	}
 
-	res := tx.Create(&membership)
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Memberships().Create(&membership); err != nil {
 		return nil, err
 	}
 
-	// Retrieve semester to update the budget
-	ss := NewSemesterService(tx)
-	semester, err := ss.GetSemester(semesterID)
+	semester, err := tx.Semesters().FindByID(semesterID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	// Only update the budget if the membership has been paid for
 	if req.Paid {
-		// If the membership has been discounted, use the discounted rate instead
+		fee := semester.MembershipFee
 		if req.Discounted {
-			err = ss.UpdateBudget(semesterID, float32(semester.MembershipDiscountFee))
-			if err != nil {
-				tx.Rollback()
-				return nil, err
-			}
-		} else {
-			err = ss.UpdateBudget(semesterID, float32(semester.MembershipFee))
-			if err != nil {
-				tx.Rollback()
-				return nil, err
-			}
+			fee = semester.MembershipDiscountFee
+		}
+		if err := tx.Semesters().IncrementBudget(semesterID, float32(fee)); err != nil {
+			return nil, err
 		}
 	}
 
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	return &membership, nil
-}
-
-func (ms *membershipService) GetMembershipV2(id uuid.UUID, semesterID uuid.UUID) (*models.Membership, error) {
-	var membership models.Membership
-	res := models.Membership{}.Preload(ms.db).
-		Where("memberships.id = ? AND memberships.semester_id = ?", id, semesterID).
-		First(&membership)
-
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	} else if err := res.Error; err != nil {
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
@@ -368,27 +178,16 @@ func (ms *membershipService) GetMembershipV2(id uuid.UUID, semesterID uuid.UUID)
 }
 
 func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequestV2) (*models.Membership, error) {
-	// Fetch existing membership
-	var existingMembership models.Membership
-	res := models.Membership{}.Preload(ms.db).
-		Where("memberships.id = ? AND memberships.semester_id = ?", id, semesterID).
-		First(&existingMembership)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
+	existingMembership, err := ms.store.Memberships().FindByIDAndSemesterID(id, semesterID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	// Validate the request won't put membership into invalid state
-	// Determine final state after applying updates
 	finalPaid := existingMembership.Paid
 	finalDiscounted := existingMembership.Discounted
-
 	if req.Paid != nil {
 		finalPaid = *req.Paid
 	}
@@ -396,33 +195,25 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 		finalDiscounted = *req.Discounted
 	}
 
-	// Invalid state: paid = false and discounted = true
 	if !finalPaid && finalDiscounted {
 		return nil, errors.New("cannot set membership to not paid and discounted")
 	}
 
-	// Save original values before updating
 	originalPaid := existingMembership.Paid
 	originalDiscounted := existingMembership.Discounted
 
-	// Create transaction
-	tx := ms.db.Begin()
-	if err := tx.Error; err != nil {
-		return nil, err
-	}
-
-	// Retrieve semester to update the budget
-	ss := NewSemesterService(tx)
-	semester, err := ss.GetSemester(existingMembership.SemesterID)
+	tx, err := ms.store.BeginTx()
 	if err != nil {
-		tx.Rollback()
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	semester, err := tx.Semesters().FindByID(existingMembership.SemesterID)
+	if err != nil {
 		return nil, err
 	}
 
-	// Determine budget adjustment based on original vs final state
 	var budgetAdjustment float32
-
-	// Membership changed from paid to not paid
 	if originalPaid && !finalPaid {
 		if originalDiscounted {
 			budgetAdjustment -= float32(semester.MembershipDiscountFee)
@@ -430,14 +221,12 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 			budgetAdjustment -= float32(semester.MembershipFee)
 		}
 	} else if !originalPaid && finalPaid {
-		// Membership changed from not paid to paid
 		if finalDiscounted {
 			budgetAdjustment += float32(semester.MembershipDiscountFee)
 		} else {
 			budgetAdjustment += float32(semester.MembershipFee)
 		}
 	} else if originalPaid && finalPaid {
-		// Membership remained paid, check for discount changes
 		if originalDiscounted && !finalDiscounted {
 			budgetAdjustment += float32(semester.MembershipFee - semester.MembershipDiscountFee)
 		} else if !originalDiscounted && finalDiscounted {
@@ -445,85 +234,21 @@ func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UU
 		}
 	}
 
-	// Apply budget adjustment if needed
 	if budgetAdjustment != 0 {
-		err = ss.UpdateBudget(existingMembership.SemesterID, budgetAdjustment)
-		if err != nil {
-			tx.Rollback()
+		if err := tx.Semesters().IncrementBudget(existingMembership.SemesterID, budgetAdjustment); err != nil {
 			return nil, err
 		}
 	}
 
-	// Update the membership with new values
 	existingMembership.Paid = finalPaid
 	existingMembership.Discounted = finalDiscounted
-	tx.Save(&existingMembership)
-
-	if err := tx.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Memberships().Update(&existingMembership); err != nil {
 		return nil, err
 	}
 
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	return &existingMembership, nil
-}
-
-func (ms *membershipService) DeleteMembershipV2(id uuid.UUID, semesterID uuid.UUID) (bool, error) {
-	result := ms.db.Where("id = ? AND semester_id = ?", id, semesterID).Delete(&models.Membership{})
-	if result.Error != nil {
-		return false, result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// ListMembershipsV2 lists all memberships with embedded User and computed attendance count
-func (ms *membershipService) ListMembershipsV2(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
-	// Count query: separate, add User JOIN only when filtering on user fields
-	countQuery := ms.db.Where("memberships.semester_id = ?", filter.SemesterID)
-	if filter.Search != "" || filter.Name != nil || filter.Email != nil || filter.Faculty != nil || filter.StudentID != nil {
-		countQuery = countQuery.Joins("User")
-	}
-	countQuery = addFilterClauses(countQuery, filter)
-
-	var total int64
-	if err := countQuery.Model(&models.Membership{}).Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	// Attendance subquery
-	attendanceSubquery := ms.db.
-		Select("participants.membership_id, COUNT(*) as total").
-		Table("participants").
-		Joins("INNER JOIN events ON participants.event_id = events.id").
-		Where("events.semester_id = ?", filter.SemesterID).
-		Group("participants.membership_id")
-
-	// Data query: single query with LEFT JOIN for attendance
-	var results []models.MembershipWithAttendance
-	query := ms.db.
-		Select("memberships.*, COALESCE(att.total, 0) as attendance").
-		Joins("User").
-		Joins("LEFT JOIN (?) as att ON att.membership_id = memberships.id", attendanceSubquery).
-		Where("memberships.semester_id = ?", filter.SemesterID).
-		Order("\"User\".first_name ASC").
-		Order("\"User\".last_name ASC")
-
-	query = addFilterClauses(query, filter)
-	query = filter.Pagination.Apply(query)
-
-	if err := query.Find(&results).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return results, total, nil
 }

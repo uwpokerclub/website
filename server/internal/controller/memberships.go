@@ -6,6 +6,7 @@ import (
 	"api/internal/models"
 	"api/internal/services"
 	"api/internal/store"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -87,7 +88,7 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(c.db)
+	svc := services.NewMembershipService(c.store)
 	membership, err := svc.CreateMembershipV2(semesterID, &req)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
@@ -181,14 +182,8 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 		filter.Discounted = &v
 	}
 
-	svc := services.NewMembershipService(c.db)
-	memberships, total, err := svc.ListMembershipsV2(filter)
+	memberships, total, err := c.store.Memberships().List(filter)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -231,25 +226,18 @@ func (c *membershipsController) getMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(c.db)
-	membership, err := svc.GetMembershipV2(membershipID, semesterID)
+	membership, err := c.store.Memberships().FindByIDAndSemesterID(membershipID, semesterID)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
+			)
 			return
 		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
-		)
-		return
-	}
-
-	if membership == nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusNotFound,
-			apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
 		)
 		return
 	}
@@ -292,7 +280,7 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(c.db)
+	svc := services.NewMembershipService(c.store)
 	membership, err := svc.UpdateMembershipV2(membershipID, semesterID, &req)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
@@ -357,25 +345,18 @@ func (c *membershipsController) deleteMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(c.db)
-	found, err := svc.DeleteMembershipV2(membershipID, semesterID)
+	err = c.store.Memberships().Delete(membershipID, semesterID)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
+			)
 			return
 		}
-
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
-		)
-		return
-	}
-
-	if !found {
-		ctx.AbortWithStatusJSON(
-			http.StatusNotFound,
-			apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
 		)
 		return
 	}

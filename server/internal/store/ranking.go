@@ -23,4 +23,15 @@ type RankingRepository interface {
 	// operation: memberships with no existing ranking get one created with the given points;
 	// memberships with an existing ranking have their points incremented by the given amount.
 	BatchIncrementPoints(updates map[uuid.UUID]int32) error
+
+	// FindBySemesterAndMembershipID retrieves the points and position (from
+	// models.SemesterRankingsView) for a single membership within a semester. Returns
+	// store.ErrNotFound if no ranking row exists for that membership within that semester.
+	FindBySemesterAndMembershipID(semesterID uuid.UUID, membershipID uuid.UUID) (models.GetRankingResponse, error)
+
+	// List retrieves all rankings (from models.SemesterRankingsView) within filter.SemesterID,
+	// ordered by position ascending then last/first name ascending, optionally filtered by
+	// filter.Search against the ranked user's name, along with the total matching count before
+	// pagination is applied.
+	List(filter *models.ListRankingsFilter) ([]models.RankingResponse, int64, error)
 }

@@ -163,3 +163,57 @@ func TestRankingRepository_Clone_Isolation(t *testing.T) {
 	require.Len(t, clone.rankings, 1)
 	require.Len(t, repo.rankings, 2)
 }
+
+func TestRankingRepository_FindBySemesterAndMembershipID(t *testing.T) {
+	t.Parallel()
+
+	repo := newRankingRepository()
+
+	semesterID := uuid.New()
+	membershipID := uuid.New()
+	require.NoError(t, repo.Create(&models.Ranking{
+		MembershipID: membershipID,
+		Points:       42,
+		Membership:   &models.Membership{ID: membershipID, SemesterID: semesterID},
+	}))
+
+	found, err := repo.FindBySemesterAndMembershipID(semesterID, membershipID)
+	require.NoError(t, err)
+	require.EqualValues(t, 42, found.Points)
+	require.EqualValues(t, 1, found.Position)
+
+	_, err = repo.FindBySemesterAndMembershipID(semesterID, uuid.New())
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestRankingRepository_List(t *testing.T) {
+	t.Parallel()
+
+	repo := newRankingRepository()
+
+	semesterID := uuid.New()
+	m1, m2 := uuid.New(), uuid.New()
+	require.NoError(t, repo.Create(&models.Ranking{
+		MembershipID: m1, Points: 10,
+		Membership: &models.Membership{ID: m1, SemesterID: semesterID, User: &models.User{FirstName: "Rosalind", LastName: "Franklin"}},
+	}))
+	require.NoError(t, repo.Create(&models.Ranking{
+		MembershipID: m2, Points: 20,
+		Membership: &models.Membership{ID: m2, SemesterID: semesterID, User: &models.User{FirstName: "Marie", LastName: "Curie"}},
+	}))
+
+	results, total, err := repo.List(&models.ListRankingsFilter{SemesterID: semesterID})
+	require.NoError(t, err)
+	require.EqualValues(t, 2, total)
+	require.Len(t, results, 2)
+	// Higher points ranks first (position 1).
+	require.Equal(t, "Marie", results[0].FirstName)
+	require.EqualValues(t, 1, results[0].Position)
+	require.Equal(t, "Rosalind", results[1].FirstName)
+	require.EqualValues(t, 2, results[1].Position)
+
+	results, total, err = repo.List(&models.ListRankingsFilter{SemesterID: semesterID, Search: "franklin"})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Equal(t, "Rosalind", results[0].FirstName)
+}

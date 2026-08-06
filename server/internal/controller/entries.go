@@ -6,6 +6,7 @@ import (
 	"api/internal/models"
 	"api/internal/services"
 	"api/internal/store"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -124,7 +125,7 @@ func (c *entriesController) createEntry(ctx *gin.Context) {
 	}
 
 	// Create participants and collect results
-	svc := services.NewParticipantsService(c.db)
+	svc := services.NewParticipantsService(c.store)
 	results := make([]models.CreateEntryResult, 0, len(membershipIds))
 
 	for _, membershipId := range membershipIds {
@@ -198,13 +199,12 @@ func (c *entriesController) listEntries(ctx *gin.Context) {
 	search := ctx.Query("search")
 
 	// List participants
-	svc := services.NewParticipantsService(c.db)
-	participants, total, err := svc.ListParticipantsV2(eventID, &pagination, search)
+	participants, total, err := c.store.Entries().List(&models.ListParticipantsFilter{
+		EventID:    eventID,
+		Pagination: pagination,
+		Search:     search,
+	})
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -264,7 +264,7 @@ func (c *entriesController) signOutEntry(ctx *gin.Context) {
 	}
 
 	// Update participant
-	svc := services.NewParticipantsService(c.db)
+	svc := services.NewParticipantsService(c.store)
 	req := models.UpdateParticipantRequest{
 		MembershipID: membershipID,
 		EventID:      eventID,
@@ -334,7 +334,7 @@ func (c *entriesController) signInEntry(ctx *gin.Context) {
 	}
 
 	// Update participant
-	svc := services.NewParticipantsService(c.db)
+	svc := services.NewParticipantsService(c.store)
 	req := models.UpdateParticipantRequest{
 		MembershipID: membershipID,
 		EventID:      eventID,
@@ -404,16 +404,10 @@ func (c *entriesController) deleteEntry(ctx *gin.Context) {
 	}
 
 	// Delete participant
-	svc := services.NewParticipantsService(c.db)
-	req := models.DeleteParticipantRequest{
-		MembershipID: membershipID,
-		EventID:      eventID,
-	}
-
-	err = svc.DeleteParticipant(&req)
+	err = c.store.Entries().Delete(membershipID, eventID)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("Entry not found"))
 			return
 		}
 		ctx.AbortWithStatusJSON(

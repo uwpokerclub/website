@@ -4,6 +4,7 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"net/http"
 	"strconv"
 
@@ -17,14 +18,31 @@ func (s *apiServer) ListParticipants(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewParticipantsService(s.db)
-	participants, err := svc.ListParticipants(int32(eventId))
+	participants, _, err := s.store.Entries().List(&models.ListParticipantsFilter{EventID: int32(eventId)})
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, participants)
+	// Preserves the field mapping of the original raw-SQL query this replaces: "id" is the
+	// linked user's numeric ID (not the participant/entry ID), "membershipId" is the
+	// membership's UUID.
+	ret := make([]models.ListParticipantsResult, 0, len(participants))
+	for _, p := range participants {
+		if p.Membership == nil || p.Membership.User == nil {
+			continue
+		}
+		ret = append(ret, models.ListParticipantsResult{
+			ID:           int32(p.Membership.User.ID),
+			MembershipId: p.Membership.ID,
+			FirstName:    p.Membership.User.FirstName,
+			LastName:     p.Membership.User.LastName,
+			SignedOutAt:  p.SignedOutAt,
+			Placement:    p.Placement,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, ret)
 }
 
 func (s *apiServer) CreateParticipant(ctx *gin.Context) {
@@ -35,7 +53,7 @@ func (s *apiServer) CreateParticipant(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewParticipantsService(s.db)
+	svc := services.NewParticipantsService(s.store)
 	participant, err := svc.CreateParticipant(&req)
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -54,7 +72,7 @@ func (s *apiServer) SignOutParticipant(ctx *gin.Context) {
 	}
 	req.SignOut = true
 
-	svc := services.NewParticipantsService(s.db)
+	svc := services.NewParticipantsService(s.store)
 	participant, err := svc.UpdateParticipant(&req)
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -73,7 +91,7 @@ func (s *apiServer) SignInParticipant(ctx *gin.Context) {
 	}
 	req.SignIn = true
 
-	svc := services.NewParticipantsService(s.db)
+	svc := services.NewParticipantsService(s.store)
 	participant, err := svc.UpdateParticipant(&req)
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -91,10 +109,13 @@ func (s *apiServer) DeleteParticipant(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewParticipantsService(s.db)
-	err = svc.DeleteParticipant(&req)
+	err = s.store.Entries().Delete(req.MembershipID, req.EventID)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		if err == store.ErrNotFound {
+			ctx.JSON(http.StatusNotFound, e.NotFound("Entry not found"))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

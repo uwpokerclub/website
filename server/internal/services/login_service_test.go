@@ -170,17 +170,17 @@ func ListLoginsWithLinkedMemberTest(t *testing.T) {
 	defer database.WipeDB(db)
 
 	svc := NewLoginService(db)
-	userSvc := NewUserService(db)
 
 	// Create a user with QuestID
-	user, err := userSvc.CreateUser(&models.CreateUserRequest{
+	user := &models.User{
 		ID:        12345678,
 		FirstName: "Alice",
 		LastName:  "Smith",
 		Email:     "alice@example.com",
 		Faculty:   "Math",
 		QuestID:   "asmith",
-	})
+	}
+	err = db.Create(user).Error
 	assert.NoError(t, err)
 
 	// Create login matching QuestID
@@ -249,17 +249,17 @@ func GetLoginWithLinkedMemberTest(t *testing.T) {
 	defer database.WipeDB(db)
 
 	svc := NewLoginService(db)
-	userSvc := NewUserService(db)
 
 	// Create user
-	user, err := userSvc.CreateUser(&models.CreateUserRequest{
+	user := &models.User{
 		ID:        12345678,
 		FirstName: "Alice",
 		LastName:  "Smith",
 		Email:     "alice@example.com",
 		Faculty:   "Math",
 		QuestID:   "asmith",
-	})
+	}
+	err = db.Create(user).Error
 	assert.NoError(t, err)
 
 	// Create matching login

@@ -75,14 +75,12 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 
 	search := ctx.Query("search")
 
-	svc := services.NewSemesterService(c.db)
-	rankings, total, err := svc.GetRankingsV2(semesterID, &pagination, search)
+	rankings, total, err := c.store.Rankings().List(&models.ListRankingsFilter{
+		SemesterID: semesterID,
+		Pagination: pagination,
+		Search:     search,
+	})
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
@@ -155,7 +153,7 @@ func (c *rankingsController) exportRankings(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewSemesterService(c.db)
+	svc := services.NewSemesterService(c.store)
 	fp, err := svc.ExportRankings(semesterID)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {

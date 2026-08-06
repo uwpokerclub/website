@@ -51,6 +51,7 @@ func NewStore(db *gorm.DB) store.Store {
 		events:      NewEventRepository(db),
 		entries:     NewEntryRepository(db),
 		rankings:    NewRankingRepository(db),
+		logins:      NewLoginRepository(db),
 	}
 }
 
@@ -105,6 +106,7 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 		events:      NewEventRepository(tx),
 		entries:     NewEntryRepository(tx),
 		rankings:    NewRankingRepository(tx),
+		logins:      NewLoginRepository(tx),
 	}, nil
 }
 

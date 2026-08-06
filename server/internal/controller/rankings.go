@@ -118,14 +118,12 @@ func (c *rankingsController) getRanking(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewRankingService(c.db)
-	ranking, err := svc.GetRanking(semesterID, membershipID)
+	ranking, err := c.store.Rankings().FindBySemesterAndMembershipID(semesterID, membershipID)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
 			return
 		}
-
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}

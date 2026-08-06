@@ -92,8 +92,6 @@ func (s *apiServer) GetRankings(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, rankings)
 }
 
-// GetRanking is untouched by this task — Task 16 replaces this one function once
-// rankingService is ready to be deleted.
 func (s *apiServer) GetRanking(ctx *gin.Context) {
 	queryValue := ctx.Param("semesterId")
 	semesterID, err := uuid.Parse(queryValue)
@@ -109,10 +107,13 @@ func (s *apiServer) GetRanking(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewRankingService(s.db)
-	ranking, err := svc.GetRanking(semesterID, membershipID)
+	ranking, err := s.store.Rankings().FindBySemesterAndMembershipID(semesterID, membershipID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, e.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

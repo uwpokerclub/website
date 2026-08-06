@@ -6,6 +6,8 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -133,7 +135,11 @@ func (s *apiServer) GetMembership(ctx *gin.Context) {
 
 	membership, err := s.store.Memberships().FindByID(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, e.NotFound(err.Error()))
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, e.NotFound(err.Error()))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

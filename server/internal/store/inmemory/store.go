@@ -14,6 +14,7 @@ type InMemoryStore struct {
 	events      *inMemoryEventRepository
 	entries     *inMemoryEntryRepository
 	rankings    *inMemoryRankingRepository
+	logins      *inMemoryLoginRepository
 	parent      *InMemoryStore
 }
 
@@ -28,6 +29,7 @@ func NewStore() store.Store {
 		events:      newEventRepository(),
 		entries:     newEntryRepository(),
 		rankings:    newRankingRepository(),
+		logins:      newLoginRepository(),
 	}
 }
 
@@ -73,7 +75,12 @@ func (s *InMemoryStore) Rankings() store.RankingRepository {
 	return s.rankings
 }
 
-func (s *InMemoryStore) Logins() store.LoginRepository     { return nil }
+func (s *InMemoryStore) Logins() store.LoginRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.logins
+}
+
 func (s *InMemoryStore) Sessions() store.SessionRepository { return nil }
 
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
@@ -105,6 +112,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	if s.rankings != nil {
 		tx.rankings = s.rankings.clone()
 	}
+	if s.logins != nil {
+		tx.logins = s.logins.clone()
+	}
 	return tx, nil
 }
 
@@ -135,6 +145,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	if s.rankings != nil {
 		s.parent.rankings = s.rankings
+	}
+	if s.logins != nil {
+		s.parent.logins = s.logins
 	}
 	return nil
 }

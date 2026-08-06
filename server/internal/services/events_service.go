@@ -411,7 +411,7 @@ func (svc *eventService) ListEventsV2(filter *models.ListEventsFilter) ([]models
 
 	// Count total before pagination
 	var total int64
-	countQuery := applySearch(svc.db.Model(&models.Event{}).Where("semester_id = ?", filter.SemesterID))
+	countQuery := applySearch(svc.db.Model(&models.Event{}).Where("semester_id = ?", *filter.SemesterID))
 	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to count events: %w", err)
 	}
@@ -420,7 +420,7 @@ func (svc *eventService) ListEventsV2(filter *models.ListEventsFilter) ([]models
 
 	query := applySearch(
 		models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
-			Where("semester_id = ?", filter.SemesterID).
+			Where("semester_id = ?", *filter.SemesterID).
 			Order("start_date DESC"),
 	)
 	query = filter.Pagination.Apply(query)

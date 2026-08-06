@@ -131,7 +131,7 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 
 	filter := &models.ListEventsFilter{
 		Pagination: pagination,
-		SemesterID: semesterID,
+		SemesterID: &semesterID,
 		Search:     search,
 	}
 

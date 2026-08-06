@@ -92,7 +92,7 @@ func (r *inMemoryEventRepository) List(filter *models.ListEventsFilter) ([]model
 
 	var events []models.Event
 	for _, event := range r.events {
-		if event.SemesterID != filter.SemesterID {
+		if filter.SemesterID != nil && event.SemesterID != *filter.SemesterID {
 			continue
 		}
 		if filter.Search != "" &&

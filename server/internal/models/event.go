@@ -92,8 +92,9 @@ type UpdateEventRequestV2 struct {
 type ListEventsFilter struct {
 	Pagination
 
-	// SemesterID is the ID of the semester to list events for.
-	SemesterID uuid.UUID
+	// SemesterID is the ID of the semester to list events for. If nil, events from every
+	// semester are returned.
+	SemesterID *uuid.UUID
 
 	// Search filters events by name (case-insensitive substring match).
 	Search string

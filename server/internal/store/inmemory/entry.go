@@ -187,6 +187,33 @@ func (r *inMemoryEntryRepository) Update(participant *models.Participant, values
 	return nil
 }
 
+func (r *inMemoryEntryRepository) SignOutAllUnsigned(eventID int32, signedOutAt time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	t := signedOutAt
+	for _, p := range r.participants {
+		if p.EventID == eventID && p.SignedOutAt == nil {
+			p.SignedOutAt = &t
+		}
+	}
+
+	return nil
+}
+
+func (r *inMemoryEntryRepository) BatchUpdatePlacements(placements map[int32]uint16) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for id, placement := range placements {
+		if p, exists := r.participants[id]; exists {
+			p.Placement = placement
+		}
+	}
+
+	return nil
+}
+
 func (r *inMemoryEntryRepository) Delete(membershipID uuid.UUID, eventID int32) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

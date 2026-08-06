@@ -360,3 +360,60 @@ func TestEntryRepository_List_Search(t *testing.T) {
 	require.EqualValues(t, 0, total)
 	require.Empty(t, results)
 }
+
+func TestEntryRepository_SignOutAllUnsigned(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedSemesters(db))
+	require.NoError(t, testutils.SeedStructures(db))
+	require.NoError(t, testutils.SeedUsers(db))
+	event, err := testutils.CreateTestEvent(db, testutils.TEST_SEMESTERS[0].ID, testutils.TEST_STRUCTURES[0].ID, "Test Event")
+	require.NoError(t, err)
+	membership, err := testutils.CreateTestMembership(db, testutils.TEST_USERS[0].ID, testutils.TEST_SEMESTERS[0].ID)
+	require.NoError(t, err)
+
+	repo := postgres.NewEntryRepository(db)
+	require.NoError(t, repo.Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+
+	now := time.Now().UTC()
+	require.NoError(t, repo.SignOutAllUnsigned(event.ID, now))
+
+	found, err := repo.FindByMembershipAndEventID(membership.ID, event.ID)
+	require.NoError(t, err)
+	require.NotNil(t, found.SignedOutAt)
+	require.WithinDuration(t, now, *found.SignedOutAt, time.Second)
+}
+
+func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedSemesters(db))
+	require.NoError(t, testutils.SeedStructures(db))
+	require.NoError(t, testutils.SeedUsers(db))
+	event, err := testutils.CreateTestEvent(db, testutils.TEST_SEMESTERS[0].ID, testutils.TEST_STRUCTURES[0].ID, "Test Event")
+	require.NoError(t, err)
+	membership, err := testutils.CreateTestMembership(db, testutils.TEST_USERS[0].ID, testutils.TEST_SEMESTERS[0].ID)
+	require.NoError(t, err)
+
+	repo := postgres.NewEntryRepository(db)
+	participant := &models.Participant{MembershipID: &membership.ID, EventID: event.ID}
+	require.NoError(t, repo.Create(participant))
+
+	require.NoError(t, repo.BatchUpdatePlacements(map[int32]uint16{participant.ID: 3}))
+
+	found, err := repo.FindByID(participant.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 3, found.Placement)
+}

@@ -225,3 +225,34 @@ func TestEntryRepository_List_Search(t *testing.T) {
 	require.EqualValues(t, 0, total)
 	require.Empty(t, results)
 }
+
+func TestEntryRepository_SignOutAllUnsigned(t *testing.T) {
+	t.Parallel()
+
+	repo := newEntryRepository()
+	membershipID := uuid.New()
+	require.NoError(t, repo.Create(&models.Participant{MembershipID: &membershipID, EventID: 1}))
+
+	now := time.Now().UTC()
+	require.NoError(t, repo.SignOutAllUnsigned(1, now))
+
+	found, err := repo.FindByMembershipAndEventID(membershipID, 1)
+	require.NoError(t, err)
+	require.NotNil(t, found.SignedOutAt)
+	require.Equal(t, now, *found.SignedOutAt)
+}
+
+func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
+	t.Parallel()
+
+	repo := newEntryRepository()
+	membershipID := uuid.New()
+	participant := &models.Participant{MembershipID: &membershipID, EventID: 1}
+	require.NoError(t, repo.Create(participant))
+
+	require.NoError(t, repo.BatchUpdatePlacements(map[int32]uint16{participant.ID: 3}))
+
+	found, err := repo.FindByID(participant.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 3, found.Placement)
+}

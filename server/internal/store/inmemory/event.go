@@ -152,6 +152,10 @@ func (r *inMemoryEventRepository) Update(event *models.Event, values map[string]
 			existing.StartDate = value.(time.Time)
 		case "points_multiplier":
 			existing.PointsMultiplier = value.(float32)
+		case "state":
+			existing.State = uint8(value.(int))
+		case "rebuys":
+			existing.Rebuys = value.(uint8)
 		}
 	}
 

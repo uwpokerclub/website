@@ -2,6 +2,7 @@ package store
 
 import (
 	"api/internal/models"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,4 +35,12 @@ type EntryRepository interface {
 	// Delete deletes an entry from the data store by its membership ID, scoped to a specific
 	// event. Returns store.ErrNotFound if no matching record exists.
 	Delete(membershipID uuid.UUID, eventID int32) error
+
+	// SignOutAllUnsigned sets signed_out_at to signedOutAt for every entry in the given event
+	// that has not yet signed out (signed_out_at IS NULL).
+	SignOutAllUnsigned(eventID int32, signedOutAt time.Time) error
+
+	// BatchUpdatePlacements sets the placement for each entry ID in placements, in a single
+	// operation.
+	BatchUpdatePlacements(placements map[int32]uint16) error
 }

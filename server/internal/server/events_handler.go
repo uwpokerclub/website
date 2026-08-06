@@ -4,23 +4,49 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func (s *apiServer) ListEvents(ctx *gin.Context) {
-	semesterId := ctx.Query("semesterId")
+	semesterIdParam := ctx.Query("semesterId")
 
-	svc := services.NewEventService(s.db)
-	events, err := svc.ListEvents(semesterId)
+	filter := &models.ListEventsFilter{Pagination: models.Pagination{}}
+	if semesterIdParam != "" {
+		semesterUUID, err := uuid.Parse(semesterIdParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester ID specified in request"))
+			return
+		}
+		filter.SemesterID = &semesterUUID
+	}
+
+	events, _, err := s.store.Events().List(filter)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, events)
+	ret := make([]models.ListEventsResponse, len(events))
+	for i, ev := range events {
+		ret[i] = models.ListEventsResponse{
+			ID:         ev.ID,
+			Name:       ev.Name,
+			Format:     ev.Format,
+			Notes:      ev.Notes,
+			SemesterID: ev.SemesterID.String(),
+			StartDate:  ev.StartDate,
+			State:      ev.State,
+			Count:      int32(len(ev.Entries)),
+		}
+	}
+
+	ctx.JSON(http.StatusOK, ret)
 }
 
 func (s *apiServer) CreateEvent(ctx *gin.Context) {
@@ -31,10 +57,26 @@ func (s *apiServer) CreateEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
-	event, err := svc.CreateEvent(&req)
+	semesterId, err := uuid.Parse(req.SemesterID)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		ctx.JSON(http.StatusBadRequest, e.InvalidRequest("Invalid semester ID specified in request"))
+		return
+	}
+
+	event := models.Event{
+		Name:             req.Name,
+		Format:           req.Format,
+		Notes:            req.Notes,
+		SemesterID:       semesterId,
+		StartDate:        req.StartDate,
+		State:            models.EventStateStarted,
+		StructureID:      req.StructureID,
+		Rebuys:           0,
+		PointsMultiplier: req.PointsMultiplier,
+	}
+
+	if err := s.store.Events().Create(&event); err != nil {
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -48,10 +90,13 @@ func (s *apiServer) GetEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
-	event, err := svc.GetEvent(int32(eventId))
+	event, err := s.store.Events().FindByID(int32(eventId))
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, e.NotFound(err.Error()))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -72,7 +117,7 @@ func (s *apiServer) UpdateEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	event, err := svc.UpdateEvent(int32(eventID), &req)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
@@ -89,7 +134,7 @@ func (s *apiServer) UndoEndEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	err = svc.UndoEndEvent(int32(eventId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
@@ -106,7 +151,7 @@ func (s *apiServer) EndEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	err = svc.EndEvent(int32(eventId))
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -123,7 +168,7 @@ func (s *apiServer) NewRebuy(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	err = svc.NewRebuy(int32(eventId))
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)

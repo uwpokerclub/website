@@ -94,6 +94,32 @@ func TestMembershipRepository_FindByIDAndSemesterID(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
+func TestMembershipRepository_FindByID_Preloads(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	user, err := testutils.CreateTestUser(db, 20260001, "Ada", "Lovelace", "ada@example.com", "Math", "alovelace")
+	require.NoError(t, err)
+	semester, err := testutils.CreateTestSemester(db, "Fall 2026")
+	require.NoError(t, err)
+
+	repo := postgres.NewMembershipRepository(db)
+	membership := &models.Membership{UserID: user.ID, SemesterID: semester.ID, Paid: true}
+	require.NoError(t, repo.Create(membership))
+
+	found, err := repo.FindByID(membership.ID)
+	require.NoError(t, err)
+	require.NotNil(t, found.User)
+	require.Equal(t, "Ada", found.User.FirstName)
+	require.NotNil(t, found.Semester)
+	require.Equal(t, "Fall 2026", found.Semester.Name)
+}
+
 func TestMembershipRepository_List(t *testing.T) {
 	t.Parallel()
 
@@ -125,13 +151,23 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.NoError(t, repo.Create(m2))
 	require.NoError(t, repo.Create(m3))
 
-	// Filter by semester only: expect m1 and m2, ordered by user ID ascending.
+	structure, err := testutils.CreateTestStructure(db, "Standard")
+	require.NoError(t, err)
+	event, err := testutils.CreateTestEvent(db, semesterA.ID, structure.ID, "Weekly")
+	require.NoError(t, err)
+	_, err = testutils.CreateTestParticipant(db, m1.ID, event.ID)
+	require.NoError(t, err)
+
+	// Filter by semester only: expect m1 and m2, ordered by first/last name ascending, with
+	// m1's attendance reflecting the one event it participated in.
 	results, total, err := repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA.ID})
 	require.NoError(t, err)
 	require.EqualValues(t, 2, total)
 	require.Len(t, results, 2)
 	require.Equal(t, user1.ID, results[0].UserID)
+	require.Equal(t, 1, results[0].Attendance)
 	require.Equal(t, user2.ID, results[1].UserID)
+	require.Equal(t, 0, results[1].Attendance)
 
 	// Filter by semester and paid status: expect only m1.
 	paidTrue := true
@@ -141,7 +177,7 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.Len(t, results, 1)
 	require.Equal(t, m1.ID, results[0].ID)
 
-	// Pagination: limit 1, offset 1 within semester A returns the second member.
+	// Pagination: limit 1, offset 1 within semester A returns the second member (Bob).
 	limit := 1
 	offset := 1
 	results, total, err = repo.List(&models.ListMembershipsFilter{
@@ -152,6 +188,21 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.EqualValues(t, 2, total)
 	require.Len(t, results, 1)
 	require.Equal(t, user2.ID, results[0].UserID)
+
+	// Name filter matching only Bob.
+	name := "bob"
+	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA.ID, Name: &name})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Len(t, results, 1)
+	require.Equal(t, user2.ID, results[0].UserID)
+
+	// Name filter matching nobody.
+	noMatch := "nobody"
+	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA.ID, Name: &noMatch})
+	require.NoError(t, err)
+	require.EqualValues(t, 0, total)
+	require.Empty(t, results)
 }
 
 func TestMembershipRepository_Update(t *testing.T) {

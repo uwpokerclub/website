@@ -47,15 +47,17 @@ type DeleteParticipantRequest struct {
 
 // ListParticipantsFilter is the set of parameters that will be used to filter the
 // list entries query. EventID must be set by the caller; the zero value for the
-// embedded Pagination is the same as not paginating the result. Filtering by
-// participant/user name or student number requires a join against the memberships
-// and users tables and is not performed at this layer -- callers needing that
-// filtering continue to use the service layer for now.
+// embedded Pagination is the same as not paginating the result. Search filters by
+// participant/user first name, last name, full name, or student ID (case-insensitive),
+// requiring a join against the memberships and users tables.
 type ListParticipantsFilter struct {
 	Pagination
 
 	// EventID is the ID of the event to list entries for.
 	EventID int32
+
+	// Search filters entries by participant name or student ID (case-insensitive).
+	Search string
 }
 
 type ListParticipantsResult struct {

@@ -19,4 +19,13 @@ type LoginRepository interface {
 	// Delete deletes a login from the data store by its username.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	Delete(username string) error
+
+	// List retrieves all logins with their linked member information (matched by
+	// quest ID), ordered by username ascending, optionally filtered by search across username,
+	// role, and linked member name, along with the total matching count before pagination.
+	List(pagination *models.Pagination, search string) ([]models.LoginWithMember, int64, error)
+
+	// FindByUsernameWithMember retrieves a single login with its linked member information.
+	// Returns store.ErrNotFound if no login exists for the given username.
+	FindByUsernameWithMember(username string) (models.LoginWithMember, error)
 }

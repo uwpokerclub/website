@@ -3,6 +3,7 @@ package services
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"api/internal/store/postgres"
 	"errors"
 
 	"github.com/google/uuid"
@@ -39,7 +40,7 @@ func (ts *transactionService) CreateTransaction(semesterId uuid.UUID, req *model
 	}
 
 	// Update semester's budget with transaction amount
-	ss := NewSemesterService(tx)
+	ss := NewSemesterService(postgres.NewStore(tx))
 	err := ss.UpdateBudget(semesterId, transaction.Amount)
 	if err != nil {
 		tx.Rollback()
@@ -129,7 +130,7 @@ func (ts *transactionService) UpdateTransaction(semesterId uuid.UUID, req *model
 	// reflect this change. This calculation can be formed as follows:
 	// NEW_TOTAL = OLD_TOTAL - (OLD_AMOUNT - NEW_AMOUNT)
 	// Therefore we update the budget with -(OLD_AMOUNT - NEW_AMOUNT)
-	ss := NewSemesterService(tx)
+	ss := NewSemesterService(postgres.NewStore(tx))
 	err := ss.UpdateBudget(semesterId, -(oldAmount - req.Amount))
 	if err != nil {
 		tx.Rollback()
@@ -175,7 +176,7 @@ func (ts *transactionService) DeleteTransaction(semesterId uuid.UUID, transactio
 	}
 
 	// Update the semesters budget by adding the negation of the transaction amount
-	ss := NewSemesterService(tx)
+	ss := NewSemesterService(postgres.NewStore(tx))
 	err := ss.UpdateBudget(semesterId, -transaction.Amount)
 	if err != nil {
 		tx.Rollback()

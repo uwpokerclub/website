@@ -64,3 +64,52 @@ func (r *postgresRankingRepository) BatchIncrementPoints(updates map[uuid.UUID]i
 
 	return r.db.Exec(query, args...).Error
 }
+
+func (r *postgresRankingRepository) FindBySemesterAndMembershipID(semesterID uuid.UUID, membershipID uuid.UUID) (models.GetRankingResponse, error) {
+	var ret models.GetRankingResponse
+
+	err := r.db.
+		Table(models.SemesterRankingsView).
+		Select("points", "position").
+		Where("semester_id = ? AND membership_id = ?", semesterID, membershipID).
+		First(&ret).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.GetRankingResponse{}, store.ErrNotFound
+		}
+		return models.GetRankingResponse{}, err
+	}
+
+	return ret, nil
+}
+
+func (r *postgresRankingRepository) List(filter *models.ListRankingsFilter) ([]models.RankingResponse, int64, error) {
+	base := func() *gorm.DB {
+		q := r.db.Table(models.SemesterRankingsView).Where("semester_id = ?", filter.SemesterID)
+		if filter.Search != "" {
+			pattern := "%" + eventNameLikeReplacer.Replace(filter.Search) + "%"
+			q = q.Where(
+				"first_name ILIKE ? OR last_name ILIKE ? OR (first_name || ' ' || last_name) ILIKE ?",
+				pattern, pattern, pattern,
+			)
+		}
+		return q
+	}
+
+	var total int64
+	if err := base().Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var rankings []models.RankingResponse
+	query := base().
+		Select("user_id as id, first_name, last_name, points, position").
+		Order("position ASC, last_name ASC, first_name ASC")
+	query = filter.Pagination.Apply(query)
+
+	if err := query.Find(&rankings).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return rankings, total, nil
+}

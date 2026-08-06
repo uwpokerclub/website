@@ -92,7 +92,7 @@ func (r *inMemoryEventRepository) List(filter *models.ListEventsFilter) ([]model
 
 	var events []models.Event
 	for _, event := range r.events {
-		if event.SemesterID != filter.SemesterID {
+		if filter.SemesterID != nil && event.SemesterID != *filter.SemesterID {
 			continue
 		}
 		if filter.Search != "" &&
@@ -152,6 +152,10 @@ func (r *inMemoryEventRepository) Update(event *models.Event, values map[string]
 			existing.StartDate = value.(time.Time)
 		case "points_multiplier":
 			existing.PointsMultiplier = value.(float32)
+		case "state":
+			existing.State = uint8(value.(int))
+		case "rebuys":
+			existing.Rebuys = value.(uint8)
 		}
 	}
 

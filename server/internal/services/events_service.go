@@ -3,336 +3,177 @@ package services
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type eventService struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewEventService(db *gorm.DB) *eventService {
+func NewEventService(st store.Store) *eventService {
 	return &eventService{
-		db: db,
+		store: st,
 	}
 }
 
-func (es *eventService) CreateEvent(req *models.CreateEventRequest) (*models.Event, error) {
-	semesterId, err := uuid.Parse(req.SemesterID)
+func (svc *eventService) UpdateEvent(eventID int32, req *models.UpdateEventRequest) (*models.Event, error) {
+	event, err := svc.store.Events().FindByID(eventID)
 	if err != nil {
-		return nil, e.InvalidRequest("Invalid semester ID specified in request")
-	}
-
-	event := models.Event{
-		Name:             req.Name,
-		Format:           req.Format,
-		Notes:            req.Notes,
-		SemesterID:       semesterId,
-		StartDate:        req.StartDate,
-		State:            models.EventStateStarted,
-		StructureID:      req.StructureID,
-		Rebuys:           0,
-		PointsMultiplier: req.PointsMultiplier,
-	}
-
-	res := es.db.Create(&event)
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	return &event, nil
-}
-
-func (es *eventService) GetEvent(eventId int32) (*models.Event, error) {
-	event := models.Event{ID: eventId}
-
-	res := event.Preload(es.db, models.EventPreloadOptions{
-		Semester:  true,
-		Structure: true,
-		Entries:   true,
-	}).First(&event)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	return &event, nil
-}
-
-func (es *eventService) ListEvents(semesterId string) ([]models.ListEventsResponse, error) {
-	var events []models.ListEventsResponse
-
-	query := es.db.
-		Table("events").
-		Joins(
-			"LEFT JOIN (?) as entries ON events.id = entries.event_id",
-			es.db.Table("participants").Select("event_id, COUNT(*)").Group("event_id"),
-		)
-
-	if semesterId != "" {
-		semesterUUID, err := uuid.Parse(semesterId)
-		if err != nil {
-			return nil, e.InvalidRequest("Invalid semester ID specified in request")
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, e.NotFound(err.Error())
 		}
-
-		query = query.Where("events.semester_id = ?", semesterUUID)
-	}
-
-	res := query.Order("events.start_date DESC").Scan(&events)
-	if err := res.Error; err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	return events, nil
-}
-
-func (svc *eventService) UpdateEvent(
-	eventID int32,
-	req *models.UpdateEventRequest,
-) (*models.Event, error) {
-	event := models.Event{ID: eventID}
-
-	// Query DB for this event
-	res := svc.db.First(&event)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.NotFound(err.Error())
-	}
-
-	// Check for any other error and return
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	// Prevent updates on events that have already ended
 	if event.State == models.EventStateEnded {
 		return nil, e.Forbidden("This event has ended. It cannot be updated.")
 	}
 
-	// Update fields on the event
+	values := map[string]any{}
 	if req.Name != nil {
-		event.Name = *req.Name
+		values["name"] = *req.Name
 	}
-
 	if req.Format != nil {
-		event.Format = *req.Format
+		values["format"] = *req.Format
 	}
-
 	if req.Notes != nil {
-		event.Notes = *req.Notes
+		values["notes"] = *req.Notes
 	}
-
 	if req.StartDate != nil {
-		event.StartDate = *req.StartDate
+		values["start_date"] = *req.StartDate
 	}
-
 	if req.PointsMultiplier != nil {
-		event.PointsMultiplier = *req.PointsMultiplier
+		values["points_multiplier"] = *req.PointsMultiplier
 	}
 
-	// Save the changes to the database
-	res = svc.db.Save(&event)
-	if res.Error != nil {
-		return nil, e.InternalServerError(res.Error.Error())
+	if err := svc.store.Events().Update(&event, values); err != nil {
+		return nil, e.InternalServerError(err.Error())
 	}
 
-	// Return the updated event
 	return &event, nil
 }
 
-func (es *eventService) EndEvent(eventId int32) error {
-	// Retrieve the event first
-	event := models.Event{ID: eventId}
-	res := es.db.First(&event)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
+func (svc *eventService) EndEvent(eventId int32) error {
+	event, err := svc.store.Events().FindByID(eventId)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return e.NotFound(err.Error())
+		}
 		return e.InternalServerError(err.Error())
 	}
 
-	// Events cannot be ended twice, so reject any request attempting to do this
 	if event.State == models.EventStateEnded {
 		return e.Forbidden("This event has already ended, it cannot be ended again.")
 	}
 
-	// Start transaction for the event update and ranking update process
-	tx := es.db.Begin()
-	if err := tx.Error; err != nil {
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return e.InternalServerError(err.Error())
+	}
+	defer tx.Rollback()
+
+	if err := tx.Entries().SignOutAllUnsigned(event.ID, event.StartDate); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Update all entries who are not signed out to sign them out in last place
-	res = tx.Model(&models.Participant{}).
-		Where("event_id = ? AND signed_out_at IS NULL", event.ID).
-		Update("signed_out_at", event.StartDate)
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Events().Update(&event, map[string]any{"state": models.EventStateEnded}); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Update events state
-	event.State = models.EventStateEnded
-	tx.Save(&event)
-	if err := tx.Error; err != nil {
-		tx.Rollback()
+	// Every entry now has a non-nil SignedOutAt (the step above set it for anyone still signed
+	// in), so List's existing "signed_out_at DESC" order is exactly the placement order: the
+	// most-recently-signed-out entry (the last one remaining, or the one force-ended) is placed
+	// first.
+	entries, _, err := tx.Entries().List(&models.ListParticipantsFilter{EventID: eventId})
+	if err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Retrieve list of entries for the event
-	entries := []models.Participant{}
-	res = tx.Where("event_id = ?", eventId).Order("signed_out_at DESC").Find(&entries)
-	if err := res.Error; err != nil {
-		tx.Rollback()
-		return e.InternalServerError(err.Error())
-	}
-
-	// Calculate points and placements for each entry
 	eventSize := len(entries)
-	rankingUpdates := make(map[uuid.UUID]int, eventSize)
-	caseExprs := make([]string, 0, eventSize)
-	args := make([]interface{}, 0, eventSize*3)
-
-	argIdx := 1
+	rankingUpdates := make(map[uuid.UUID]int32, eventSize)
+	placements := make(map[int32]uint16, eventSize)
 	for i, entry := range entries {
 		placement := i + 1
-		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = $%d THEN $%d::integer", argIdx, argIdx+1))
-		args = append(args, entry.ID, placement)
-		argIdx += 2
+		placements[entry.ID] = uint16(placement)
 
 		if entry.MembershipID != nil {
 			points := CalculatePoints(eventSize, placement, event.PointsMultiplier)
-			rankingUpdates[*entry.MembershipID] = points
+			rankingUpdates[*entry.MembershipID] = int32(points)
 		}
 	}
 
-	// Batch update placements in a single SQL statement
-	if len(caseExprs) > 0 {
-		inPlaceholders := make([]string, eventSize)
-		for i, entry := range entries {
-			inPlaceholders[i] = fmt.Sprintf("$%d", argIdx+i)
-			args = append(args, entry.ID)
-		}
-		query := fmt.Sprintf(
-			"UPDATE participants SET placement = CASE %s END WHERE id IN (%s)",
-			strings.Join(caseExprs, " "),
-			strings.Join(inPlaceholders, ", "),
-		)
-		if err := tx.Exec(query, args...).Error; err != nil {
-			tx.Rollback()
-			return e.InternalServerError(err.Error())
-		}
+	if err := tx.Entries().BatchUpdatePlacements(placements); err != nil {
+		return e.InternalServerError(err.Error())
 	}
 
-	// Batch update rankings in a single UPSERT
-	rankingService := NewRankingService(tx)
-	if err := rankingService.BatchUpdateRankings(rankingUpdates); err != nil {
-		tx.Rollback()
-		return err
+	if err := tx.Rankings().BatchIncrementPoints(rankingUpdates); err != nil {
+		return e.InternalServerError(err.Error())
 	}
 
-	// Save all changes to the database
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Commit(); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
 	return nil
 }
 
-func (es *eventService) UndoEndEvent(eventId int32) error {
-	// Retrieve event
-	event := models.Event{ID: eventId}
-	res := es.db.First(&event)
-
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
+func (svc *eventService) UndoEndEvent(eventId int32) error {
+	event, err := svc.store.Events().FindByID(eventId)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return e.NotFound(err.Error())
+		}
 		return e.InternalServerError(err.Error())
 	}
 
-	// Events which are not ended (i.e., EventStateStarted) cannot be UndoEnded
 	if event.State == models.EventStateStarted {
 		return e.Forbidden("This event has not been ended")
 	}
 
-	// Start transaction for the event update and ranking update process
-	tx := es.db.Begin()
-	if err := tx.Error; err != nil {
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return e.InternalServerError(err.Error())
+	}
+	defer tx.Rollback()
+
+	if err := tx.Events().Update(&event, map[string]any{"state": models.EventStateStarted}); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Update events state
-	event.State = models.EventStateStarted
-	tx.Save(&event)
-	if err := tx.Error; err != nil {
-		tx.Rollback()
+	entries, _, err := tx.Entries().List(&models.ListParticipantsFilter{EventID: eventId})
+	if err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Retrieve list of entries for the event using stored placements
-	entries := []models.Participant{}
-	res = tx.Where("event_id = ?", eventId).Find(&entries)
-	if err := res.Error; err != nil {
-		tx.Rollback()
-		return e.InternalServerError(err.Error())
-	}
-
-	// Reverse rankings using stored placements from EndEvent
 	eventSize := len(entries)
-	rankingUpdates := make(map[uuid.UUID]int, eventSize)
+	rankingUpdates := make(map[uuid.UUID]int32, eventSize)
 	for _, entry := range entries {
 		if entry.MembershipID != nil && entry.Placement > 0 {
 			points := CalculatePoints(eventSize, int(entry.Placement), event.PointsMultiplier)
-			rankingUpdates[*entry.MembershipID] = -points
+			rankingUpdates[*entry.MembershipID] = -int32(points)
 		}
 	}
 
-	// Batch reverse rankings in a single UPSERT
-	rankingService := NewRankingService(tx)
-	if err := rankingService.BatchUpdateRankings(rankingUpdates); err != nil {
-		tx.Rollback()
-		return err
+	if err := tx.Rankings().BatchIncrementPoints(rankingUpdates); err != nil {
+		return e.InternalServerError(err.Error())
 	}
 
-	// Save all changes to the database
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Commit(); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
 	return nil
 }
 
-func (es *eventService) NewRebuy(eventId int32) error {
-	event := models.Event{ID: eventId}
-	res := es.db.First(&event)
-
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return e.NotFound(err.Error())
-	} else if err := res.Error; err != nil {
+func (svc *eventService) NewRebuy(eventId int32) error {
+	event, err := svc.store.Events().FindByID(eventId)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return e.NotFound(err.Error())
+		}
 		return e.InternalServerError(err.Error())
 	}
 
@@ -340,120 +181,27 @@ func (es *eventService) NewRebuy(eventId int32) error {
 		return e.Forbidden("This event has already ended, it cannot be ended again.")
 	}
 
-	tx := es.db.Begin()
-	if err := tx.Error; err != nil {
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return e.InternalServerError(err.Error())
+	}
+	defer tx.Rollback()
+
+	semester, err := tx.Semesters().FindByID(event.SemesterID)
+	if err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	event.Rebuys += 1
-
-	semesterService := NewSemesterService(tx)
-
-	semester, err := semesterService.GetSemester(event.SemesterID)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	err = semesterService.UpdateBudget(event.SemesterID, float32(semester.RebuyFee))
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	res = tx.Save(&event)
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Semesters().IncrementBudget(event.SemesterID, float32(semester.RebuyFee)); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := tx.Events().Update(&event, map[string]any{"rebuys": event.Rebuys + 1}); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
-	return nil
-}
-
-func (svc *eventService) CreateEventV2(
-	semesterID uuid.UUID,
-	req *models.CreateEventRequest,
-) (*models.Event, error) {
-	event := models.Event{
-		Name:             req.Name,
-		Format:           req.Format,
-		Notes:            req.Notes,
-		SemesterID:       semesterID,
-		StartDate:        req.StartDate,
-		State:            models.EventStateStarted,
-		StructureID:      req.StructureID,
-		Rebuys:           0,
-		PointsMultiplier: req.PointsMultiplier,
-	}
-
-	res := svc.db.Create(&event)
-	if err := res.Error; err != nil {
-		return nil, err
-	}
-
-	return &event, nil
-}
-
-func (svc *eventService) ListEventsV2(filter *models.ListEventsFilter) ([]models.Event, int64, error) {
-	applySearch := func(q *gorm.DB) *gorm.DB {
-		if filter.Search != "" {
-			pattern := "%" + sanitizeLikeInput(filter.Search) + "%"
-			return q.Where("events.name ILIKE ?", pattern)
-		}
-		return q
-	}
-
-	// Count total before pagination
-	var total int64
-	countQuery := applySearch(svc.db.Model(&models.Event{}).Where("semester_id = ?", filter.SemesterID))
-	if err := countQuery.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to count events: %w", err)
-	}
-
-	events := make([]models.Event, 0)
-
-	query := applySearch(
-		models.Event{}.Preload(svc.db, models.EventPreloadOptions{Entries: true}).
-			Where("semester_id = ?", filter.SemesterID).
-			Order("start_date DESC"),
-	)
-	query = filter.Pagination.Apply(query)
-
-	if err := query.Find(&events).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to list events: %w", err)
-	}
-
-	return events, total, nil
-}
-
-func (svc *eventService) GetEventByID(semesterID uuid.UUID, eventID int32) (*models.Event, error) {
-	var event models.Event
-
-	err := models.Event{}.Preload(svc.db, models.EventPreloadOptions{Semester: true, Structure: true, Entries: true}).
-		Where("\"Semester\".\"id\" = ?", semesterID).
-		Where("events.id = ?", eventID).
-		First(&event).
-		Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get event: %w", err)
-	}
-
-	return &event, nil
-}
-
-func (svc *eventService) UpdateEventV2(event *models.Event, updateValues map[string]any) error {
-	result := svc.db.Omit(clause.Associations).Model(event).Updates(updateValues)
-	if result.Error != nil {
-		return fmt.Errorf("failed to update event: %w", result.Error)
+	if err := tx.Commit(); err != nil {
+		return e.InternalServerError(err.Error())
 	}
 
 	return nil

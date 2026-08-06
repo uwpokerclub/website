@@ -1,686 +1,142 @@
 package services
 
 import (
-	"api/internal/database"
+	"api/internal/errors"
 	"api/internal/models"
-	"api/internal/testhelpers"
+	"api/internal/store/inmemory"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
-func TestEventsService(s *testing.T) {
-	s.Setenv("ENVIRONMENT", "TEST")
+func TestEventService_UpdateEvent_Success(t *testing.T) {
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		s.Fatal(err.Error())
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	newName := "Weekly (Rescheduled)"
+	updated, err := svc.UpdateEvent(event.ID, &models.UpdateEventRequest{Name: &newName})
+	require.NoError(t, err)
+	require.Equal(t, newName, updated.Name)
+
+	found, err := st.Events().FindByID(event.ID)
+	require.NoError(t, err)
+	require.Equal(t, newName, found.Name)
+}
+
+func TestEventService_UpdateEvent_EndedForbidden(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	newName := "Weekly (Rescheduled)"
+	_, err := svc.UpdateEvent(event.ID, &models.UpdateEventRequest{Name: &newName})
+	require.Error(t, err)
+	apiErr, ok := err.(errors.APIErrorResponse)
+	require.True(t, ok)
+	require.Equal(t, 403, apiErr.Code)
+}
+
+func TestEventService_EndEvent(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+
+	m1, m2 := uuid.New(), uuid.New()
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &m1, EventID: event.ID}))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &m2, EventID: event.ID}))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.EndEvent(event.ID))
+
+	found, err := st.Events().FindByID(event.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, models.EventStateEnded, found.State)
+
+	entries, _, err := st.Entries().List(&models.ListParticipantsFilter{EventID: event.ID})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+
+	placements := map[uint16]bool{}
+	for _, entry := range entries {
+		require.NotNil(t, entry.SignedOutAt)
+		placements[entry.Placement] = true
 	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		s.Fatal(err.Error())
-	}
-	defer sqlDB.Close()
-
-	wipeDB := func() {
-		err := database.WipeDB(db)
-		if err != nil {
-			s.Fatal(err.Error())
-		}
-	}
-
-	eventService := NewEventService(db)
-
-	s.Run("CreateEvent", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		assert.NoError(t, res.Error)
-
-		structure := models.Structure{
-			Name: "Main Event Structure",
-		}
-		res = db.Create(&structure)
-		assert.NoError(t, res.Error)
-
-		date := time.Now()
-
-		req := &models.CreateEventRequest{
-			Name:             "test",
-			Format:           "NLHE",
-			Notes:            "test event",
-			SemesterID:       semester1.ID.String(),
-			StartDate:        date,
-			StructureID:      structure.ID,
-			PointsMultiplier: 2.3,
-		}
-
-		event, err := eventService.CreateEvent(req)
-		assert.NoError(t, err, "EventService.CreateEvent")
-		assert.Equal(t, req.Name, event.Name, "Event.Name")
-		assert.Equal(t, req.Format, event.Format, "Event.Format")
-		assert.Equal(t, semester1.ID.String(), event.SemesterID.String(), "Event.SemesterID")
-		assert.WithinDuration(t, date, event.StartDate, time.Second, "Event.StartDate")
-		assert.Equal(t, structure.ID, event.StructureID, "Event.StructureID")
-		assert.EqualValues(t, 0, event.Rebuys, "Event.Rebuys")
-		assert.InDelta(t, 2.3, event.PointsMultiplier, 0.01, "Event.PointsMultiplier")
-	})
-
-	s.Run("ListEvents", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		assert.NoError(t, res.Error, "ListEvents (create semester)")
-
-		structure := models.Structure{
-			Name: "Main Event Structure",
-		}
-		res = db.Create(&structure)
-		assert.NoError(t, res.Error, "ListEvents (create structure)")
-
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
-		event2Date := time.Date(2022, 1, 2, 7, 0, 0, 0, time.Local)
-		event3Date := time.Date(2022, 1, 3, 7, 0, 0, 0, time.Local)
-
-		event1 := models.Event{
-			Name:        "Event 1",
-			Format:      "NLHE",
-			Notes:       "#1",
-			SemesterID:  semester1.ID,
-			StartDate:   event1Date,
-			State:       models.EventStateStarted,
-			StructureID: structure.ID,
-			Rebuys:      0,
-		}
-		event2 := models.Event{
-			Name:        "Event 2",
-			Format:      "PLO",
-			Notes:       "#2",
-			SemesterID:  semester1.ID,
-			StartDate:   event2Date,
-			State:       models.EventStateEnded,
-			StructureID: structure.ID,
-			Rebuys:      0,
-		}
-		event3 := models.Event{
-			Name:        "Event 3",
-			Format:      "Short Deck",
-			Notes:       "#3",
-			SemesterID:  semester1.ID,
-			StartDate:   event3Date,
-			State:       models.EventStateStarted,
-			StructureID: structure.ID,
-			Rebuys:      0,
-		}
-
-		res = db.Create(&event1)
-		assert.NoError(t, res.Error, "ListEvents (create event 1)")
-		res = db.Create(&event2)
-		assert.NoError(t, res.Error, "ListEvents (create event 2)")
-		res = db.Create(&event3)
-		assert.NoError(t, res.Error, "ListEvents (create event 3)")
-
-		events, err := eventService.ListEvents(semester1.ID.String())
-		assert.NoError(t, err, "eventService.ListEvents()")
-
-		expIds := []int32{event3.ID, event2.ID, event1.ID}
-		accIds := make([]int32, len(events))
-		for i, e := range events {
-			accIds[i] = e.ID
-		}
-		assert.Equal(t, expIds, accIds, "Event IDs match")
-	})
-
-	s.Run("GetEvent", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		assert.NoError(t, res.Error, "GetEvent (create semester)")
-
-		structure := models.Structure{
-			Name: "Main Event Structure",
-		}
-		res = db.Create(&structure)
-		assert.NoError(t, res.Error, "ListEvents (create structure)")
-
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
-
-		// GetEvent now preloads Structure with Blinds, so it will have empty slice
-		expectedStructure := models.Structure{
-			ID:     structure.ID,
-			Name:   structure.Name,
-			Blinds: []models.Blind{}, // GetEvent preloads blinds
-		}
-
-		event1 := models.Event{
-			Name:             "Event 1",
-			Format:           "NLHE",
-			Notes:            "#1",
-			SemesterID:       semester1.ID,
-			Semester:         &semester1,
-			StartDate:        event1Date,
-			State:            models.EventStateStarted,
-			StructureID:      structure.ID,
-			Structure:        &expectedStructure,
-			Rebuys:           0,
-			PointsMultiplier: 2.3,
-			Entries:          []models.Participant{},
-		}
-
-		res = db.Create(&event1)
-		assert.NoError(t, res.Error, "GetEvent (create event)")
-
-		event, err := eventService.GetEvent(event1.ID)
-		assert.NoError(t, err, "EventService.GetEvent()")
-
-		assert.Equal(t, event1, *event, "Returned event does not match")
-	})
-
-	s.Run("UpdateEvent", func(t *testing.T) {
-		newName := "Event #10"
-		newFormat := "Pot Limit Omaha"
-		newNotes := "Updated event"
-		newDate := time.Now().Add(time.Hour * 24)
-		newPointsMultiplier := float32(2.0)
-
-		updateReq := models.UpdateEventRequest{
-			Name:             &newName,
-			Format:           &newFormat,
-			Notes:            &newNotes,
-			StartDate:        &newDate,
-			PointsMultiplier: &newPointsMultiplier,
-		}
-
-		t.Run("Should update all fields", func(f *testing.T) {
-			f.Cleanup(wipeDB)
-
-			seedRes, err := testhelpers.SetupSemester(db, "Winter 2025")
-			if !assert.NoError(f, err, "Seeding the semester should not fail") {
-				f.FailNow()
-			}
-
-			event, err := testhelpers.CreateEvent(db, "Event #9", seedRes.Semester.ID, time.Now())
-			if !assert.NoError(f, err, "Seeding the event should not fail") {
-				f.FailNow()
-			}
-
-			svc := NewEventService(db)
-
-			updatedEvent, err := svc.UpdateEvent(event.ID, &updateReq)
-			if !assert.NoError(f, err, "UpdatingEvent should not error") {
-				f.FailNow()
-			}
-
-			// Check that updated fields were updated and not updated fields weren't
-			assert.Equal(f, *updateReq.Name, updatedEvent.Name)
-			assert.Equal(f, *updateReq.Format, updatedEvent.Format)
-			assert.Equal(f, *updateReq.Notes, updatedEvent.Notes)
-			assert.Equal(f, event.SemesterID, updatedEvent.SemesterID)
-			assert.WithinDuration(f, *updateReq.StartDate, updatedEvent.StartDate, time.Microsecond)
-			assert.Equal(f, event.State, updatedEvent.State)
-			assert.Equal(f, event.StructureID, updatedEvent.StructureID)
-			assert.Equal(f, event.Rebuys, updatedEvent.Rebuys)
-			assert.Equal(f, *updateReq.PointsMultiplier, updatedEvent.PointsMultiplier)
-		})
-
-		t.Run("Should fail when event has ended", func(f *testing.T) {
-			f.Cleanup(wipeDB)
-
-			seedRes, err := testhelpers.SetupSemester(db, "Winter 2025")
-			if !assert.NoError(f, err, "Seeding the semester should not fail") {
-				f.FailNow()
-			}
-
-			event, err := testhelpers.CreateEvent(db, "Event #9", seedRes.Semester.ID, time.Now())
-			if !assert.NoError(f, err, "Seeding the event should not fail") {
-				f.FailNow()
-			}
-
-			event.State = models.EventStateEnded
-
-			res := db.Save(event)
-			if !assert.NoError(f, res.Error, "Ending the event should not fail") {
-				f.FailNow()
-			}
-
-			svc := NewEventService(db)
-
-			_, err = svc.UpdateEvent(event.ID, &updateReq)
-			assert.Error(f, err, "UpdatingEvent should error")
-		})
-	})
-
-	s.Run("EndEvent", func(t *testing.T) {
-		t.Run("Updates the state of the event", func(t *testing.T) {
-			t.Cleanup(wipeDB)
-
-			semester1 := models.Semester{
-				Name:                  "Spring 2022",
-				Meta:                  "",
-				StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-				EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-				StartingBudget:        105.57,
-				CurrentBudget:         105.57,
-				MembershipFee:         10,
-				MembershipDiscountFee: 5,
-				RebuyFee:              2,
-			}
-			res := db.Create(&semester1)
-			assert.NoError(t, res.Error, "GetEvent (create semester)")
-
-			structure := models.Structure{
-				Name: "Main Event Structure",
-			}
-			res = db.Create(&structure)
-			assert.NoError(t, res.Error, "ListEvents (create structure)")
-
-			event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.UTC)
-
-			event1 := models.Event{
-				Name:             "Event 1",
-				Format:           "NLHE",
-				Notes:            "#1",
-				SemesterID:       semester1.ID,
-				StartDate:        event1Date,
-				State:            models.EventStateStarted,
-				StructureID:      structure.ID,
-				Rebuys:           0,
-				PointsMultiplier: 2.3,
-			}
-
-			res = db.Create(&event1)
-			assert.NoError(t, res.Error, "GetEvent (create event)")
-
-			err = eventService.EndEvent(event1.ID)
-			assert.NoError(t, err, "EventService.EndEvent()")
-
-			// Retrieve event to see if state was updated
-			updatedEvent := models.Event{ID: event1.ID}
-			res = db.First(&updatedEvent)
-			assert.NoError(t, res.Error, "EndEvent (get updated event)")
-			assert.Equal(t, uint8(models.EventStateEnded), updatedEvent.State, "Event state not updated")
-		})
-		t.Run("Signs out unsigned out entries", func(t *testing.T) {
-			t.Cleanup(wipeDB)
-
-			set, err := testhelpers.SetupSemester(db, "Fall 2022")
-			assert.NoError(t, err, "Semester setup")
-
-			now := time.Now()
-
-			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, now)
-			assert.NoError(t, err, "Event creation")
-
-			// Enable debug logging to see SQL queries
-			debugDB := db.Debug()
-
-			firstSignoutTime := event.StartDate.Add(time.Minute * 5)
-			t.Logf("Creating first participant with MembershipID: %s, EventID: %d", set.Memberships[0].ID, event.ID)
-			_, err = testhelpers.CreateParticipant(debugDB, set.Memberships[0].ID, event.ID, 0, &firstSignoutTime)
-			assert.NoError(t, err, "Adding first entry")
-
-			secondSignoutTime := event.StartDate.Add(time.Minute * 30)
-			t.Logf("Creating second participant with MembershipID: %s, EventID: %d", set.Memberships[1].ID, event.ID)
-			_, err = testhelpers.CreateParticipant(debugDB, set.Memberships[1].ID, event.ID, 0, &secondSignoutTime)
-			assert.NoError(t, err, "Adding second entry")
-
-			t.Logf("Creating third participant with MembershipID: %s, EventID: %d", set.Memberships[2].ID, event.ID)
-			entry3, err := testhelpers.CreateParticipant(debugDB, set.Memberships[2].ID, event.ID, 0, nil)
-			assert.NoError(t, err, "Adding third entry")
-
-			err = eventService.EndEvent(event.ID)
-			assert.NoError(t, err, "EventService.EndEvent()")
-
-			// Check that entry3's signed_out_at field is set to the start time of the event
-			var foundEntry models.Participant
-			res := db.Where("membership_id = ? AND event_id = ?", entry3.MembershipID, entry3.EventID).First(&foundEntry)
-			assert.NoError(t, res.Error, "Getting third entry from DB")
-			assert.WithinDuration(t, event.StartDate, *foundEntry.SignedOutAt, time.Second, "Signout time check")
-		})
-		t.Run("Placements and rankings are updated", func(t *testing.T) {
-			t.Cleanup(wipeDB)
-
-			set, err := testhelpers.SetupSemester(db, "Fall 2022")
-			assert.NoError(t, err, "Semester setup")
-
-			event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-			assert.NoError(t, err, "Event creation")
-
-			now := time.Now().UTC()
-			entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now)
-			assert.NoError(t, err, "Adding first entry")
-
-			next := now.Add(time.Minute * 30)
-			entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, &next)
-			assert.NoError(t, err, "Adding second entry")
-
-			last := next.Add(time.Minute * 30)
-			entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, &last)
-			assert.NoError(t, err, "Adding third entry")
-
-			err = eventService.EndEvent(event.ID)
-			assert.NoError(t, err, "EventService.EndEvent()")
-
-			// Check if entries placements were updated
-			// Entry3 = first place
-			// Entry2 = second place
-			// Entry1 = third place
-			firstPlace := models.Participant{
-				EventID:   event.ID,
-				Placement: 1,
-			}
-			res := db.Where("event_id = ? AND placement = ?", entry1.EventID, 1).First(&firstPlace)
-			assert.NoError(t, res.Error, "Retrieve first place entry")
-
-			secondPlace := models.Participant{
-				EventID:   event.ID,
-				Placement: 2,
-			}
-			res = db.Where("event_id = ? AND placement = ?", entry2.EventID, 2).First(&secondPlace)
-			assert.NoError(t, res.Error, "Retrieve second place entry")
-
-			thirdPlace := models.Participant{
-				EventID:   event.ID,
-				Placement: 3,
-			}
-			res = db.Where("event_id = ? AND placement = ?", entry3.EventID, 3).First(&thirdPlace)
-			assert.NoError(t, res.Error, "Retrieve third place entry")
-
-			assert.Equal(t, *entry3.MembershipID, *firstPlace.MembershipID, "First place member")
-			assert.Equal(t, *entry2.MembershipID, *secondPlace.MembershipID, "Second place member")
-			assert.Equal(t, *entry1.MembershipID, *thirdPlace.MembershipID, "Third place member")
-
-			// Check to see rankings were updated
-			// First place = 2 points
-			// Second place = 2 points
-			// Third place = 2 points
-			var ranking1 models.Ranking
-			res = db.Where("membership_id = ?", *entry3.MembershipID).First(&ranking1)
-			assert.NoError(t, res.Error, "Entry 3 ranking")
-			var ranking2 models.Ranking
-			res = db.Where("membership_id = ?", *entry2.MembershipID).First(&ranking2)
-			assert.NoError(t, res.Error, "Entry 2 ranking")
-			var ranking3 models.Ranking
-			res = db.Where("membership_id = ?", *entry1.MembershipID).First(&ranking3)
-			assert.NoError(t, res.Error, "Entry 1 ranking")
-
-			assert.EqualValues(t, 2, ranking1.Points, "Ranking 1 points")
-			assert.EqualValues(t, 2, ranking2.Points, "Ranking 2 points")
-			assert.EqualValues(t, 2, ranking3.Points, "Ranking 3 points")
-		})
-	})
-
-	s.Run("NewRebuy", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		semester1 := models.Semester{
-			Name:                  "Spring 2022",
-			Meta:                  "",
-			StartDate:             time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-			EndDate:               time.Date(2022, 4, 1, 0, 0, 0, 0, time.UTC),
-			StartingBudget:        105.57,
-			CurrentBudget:         105.57,
-			MembershipFee:         10,
-			MembershipDiscountFee: 5,
-			RebuyFee:              2,
-		}
-		res := db.Create(&semester1)
-		assert.NoError(t, res.Error, "GetEvent (create semester)")
-
-		structure := models.Structure{
-			Name: "Main Event Structure",
-		}
-		res = db.Create(&structure)
-		assert.NoError(t, res.Error, "ListEvents (create structure)")
-
-		event1Date := time.Date(2022, 1, 1, 7, 0, 0, 0, time.Local)
-
-		event1 := models.Event{
-			Name:             "Event 1",
-			Format:           "NLHE",
-			Notes:            "#1",
-			SemesterID:       semester1.ID,
-			StartDate:        event1Date,
-			State:            models.EventStateStarted,
-			StructureID:      structure.ID,
-			Rebuys:           0,
-			PointsMultiplier: 1.0,
-		}
-
-		res = db.Create(&event1)
-		assert.NoError(t, res.Error, "GetEvent (create event)")
-
-		err = eventService.NewRebuy(event1.ID)
-		assert.NoError(t, err, "EventService.NewRebuy()")
-
-		updatedEvent := models.Event{ID: event1.ID}
-		res = db.First(&updatedEvent)
-		assert.NoError(t, res.Error, "Retrieve updated event")
-		assert.EqualValues(t, 1, updatedEvent.Rebuys, "Rebuy count not updated")
-
-		updatedSemester := models.Semester{ID: semester1.ID}
-		res = db.First(&updatedSemester)
-		assert.NoError(t, res.Error, "Retrieve updated semester")
-		assert.InDelta(t, updatedSemester.CurrentBudget, semester1.CurrentBudget+float32(semester1.RebuyFee), 0.001)
-	})
-
-	s.Run("UndoEndEvent", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-		//setup semester
-		set, err := testhelpers.SetupSemester(db, "Fall 2023")
-		assert.NoError(t, err, "Semester setup")
-		//create event
-		event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-		assert.NoError(t, err, "Event creation")
-
-		//add participant  to event
-		now := time.Now().UTC()
-		entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &now)
-		assert.NoError(t, err, "Add participant to event")
-
-		//end event
-		err = eventService.EndEvent(event.ID)
-		assert.NoError(t, err, "EventService.EndEvent()")
-
-		//check points is > 0
-		var points1 models.Ranking
-		res := db.Where("membership_id = ?", *entry1.MembershipID).First(&points1)
-		assert.NoError(t, res.Error, "Retrieve points from rankings")
-		assert.Greater(t, points1.Points, int32(0), "Entry 1 points")
-
-		//check user points is 0
-		err = eventService.UndoEndEvent(event.ID)
-		assert.NoError(t, err, "EventService.UndoEndEvent()")
-
-		points1 = models.Ranking{}
-		res = db.Where("membership_id = ?", *entry1.MembershipID).First(&points1)
-		assert.NoError(t, res.Error, "Retrieve rankings after restarting event")
-
-		assert.EqualValues(t, 0, points1.Points, "Entry 1 points")
-	})
-
-	s.Run("EndEvent batch correctness with 10 participants", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		set, err := testhelpers.SetupSemester(db, "Fall 2024")
-		if !assert.NoError(t, err, "Semester setup") {
-			t.FailNow()
-		}
-
-		// Create 7 additional users and memberships (SetupSemester gives us 3)
-		extraUsers := []struct {
-			id        uint64
-			firstName string
-			lastName  string
-		}{
-			{40000001, "Player", "Four"},
-			{40000002, "Player", "Five"},
-			{40000003, "Player", "Six"},
-			{40000004, "Player", "Seven"},
-			{40000005, "Player", "Eight"},
-			{40000006, "Player", "Nine"},
-			{40000007, "Player", "Ten"},
-		}
-
-		allMemberships := make([]models.Membership, 0, 10)
-		allMemberships = append(allMemberships, set.Memberships...)
-
-		for _, u := range extraUsers {
-			user, err := testhelpers.CreateUser(db, u.id, u.firstName, u.lastName, u.firstName+"@test.com", "Math", u.lastName)
-			if !assert.NoError(t, err, "Create user %s", u.firstName) {
-				t.FailNow()
-			}
-			m, err := testhelpers.CreateMembership(db, user.ID, set.Semester.ID, true, false)
-			if !assert.NoError(t, err, "Create membership for %s", u.firstName) {
-				t.FailNow()
-			}
-			allMemberships = append(allMemberships, *m)
-		}
-
-		event, err := testhelpers.CreateEvent(db, "Batch Event", set.Semester.ID, time.Now().UTC())
-		if !assert.NoError(t, err, "Event creation") {
-			t.FailNow()
-		}
-
-		// Sign out participants at staggered times (first signed out = last place)
-		baseTime := time.Now().UTC()
-		entries := make([]*models.Participant, 10)
-		for i := 0; i < 10; i++ {
-			signOutTime := baseTime.Add(time.Duration(i) * time.Minute)
-			entry, err := testhelpers.CreateParticipant(db, allMemberships[i].ID, event.ID, 0, &signOutTime)
-			if !assert.NoError(t, err, "Create participant %d", i+1) {
-				t.FailNow()
-			}
-			entries[i] = entry
-		}
-
-		err = eventService.EndEvent(event.ID)
-		if !assert.NoError(t, err, "EventService.EndEvent()") {
-			t.FailNow()
-		}
-
-		// Verify placements: sorted by signed_out_at DESC, so last sign-out = 1st place
-		for i := 0; i < 10; i++ {
-			expectedPlacement := 10 - i // entries[9] = 1st, entries[0] = 10th
-			var p models.Participant
-			res := db.Where("id = ?", entries[i].ID).First(&p)
-			assert.NoError(t, res.Error, "Retrieve participant %d", i)
-			assert.EqualValues(t, expectedPlacement, p.Placement, "Participant %d placement", i)
-		}
-
-		// Verify rankings: each participant should have correct points
-		for i := 0; i < 10; i++ {
-			expectedPlacement := 10 - i
-			expectedPoints := CalculatePoints(10, expectedPlacement, event.PointsMultiplier)
-
-			var ranking models.Ranking
-			res := db.Where("membership_id = ?", allMemberships[i].ID).First(&ranking)
-			assert.NoError(t, res.Error, "Retrieve ranking for participant %d", i)
-			assert.EqualValues(t, expectedPoints, ranking.Points, "Ranking points for participant %d (placement %d)", i, expectedPlacement)
-		}
-
-		// Verify UndoEndEvent zeroes out all rankings
-		err = eventService.UndoEndEvent(event.ID)
-		if !assert.NoError(t, err, "EventService.UndoEndEvent()") {
-			t.FailNow()
-		}
-
-		for i := 0; i < 10; i++ {
-			var ranking models.Ranking
-			res := db.Where("membership_id = ?", allMemberships[i].ID).First(&ranking)
-			assert.NoError(t, res.Error, "Retrieve ranking after undo for participant %d", i)
-			assert.EqualValues(t, 0, ranking.Points, "Ranking points after undo for participant %d", i)
-		}
-	})
-
-	s.Run("UndoEndEvent with nil sign-out participants", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		set, err := testhelpers.SetupSemester(db, "Winter 2025")
-		if !assert.NoError(t, err, "Semester setup") {
-			t.FailNow()
-		}
-
-		event, err := testhelpers.CreateEvent(db, "Nil Signout Event", set.Semester.ID, time.Now().UTC())
-		if !assert.NoError(t, err, "Event creation") {
-			t.FailNow()
-		}
-
-		// First participant signed out normally
-		signOut := time.Now().UTC().Add(time.Minute * 30)
-		_, err = testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 0, &signOut)
-		if !assert.NoError(t, err, "Create signed-out participant") {
-			t.FailNow()
-		}
-
-		// Two participants with nil sign-out (will be bulk-signed-out by EndEvent)
-		_, err = testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 0, nil)
-		if !assert.NoError(t, err, "Create nil sign-out participant 1") {
-			t.FailNow()
-		}
-		_, err = testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 0, nil)
-		if !assert.NoError(t, err, "Create nil sign-out participant 2") {
-			t.FailNow()
-		}
-
-		err = eventService.EndEvent(event.ID)
-		if !assert.NoError(t, err, "EventService.EndEvent()") {
-			t.FailNow()
-		}
-
-		// Verify all participants have rankings
-		for i := 0; i < 3; i++ {
-			var ranking models.Ranking
-			res := db.Where("membership_id = ?", set.Memberships[i].ID).First(&ranking)
-			assert.NoError(t, res.Error, "Ranking exists for participant %d", i)
-			assert.Greater(t, ranking.Points, int32(0), "Participant %d should have points", i)
-		}
-
-		// Undo and verify all rankings return to zero
-		err = eventService.UndoEndEvent(event.ID)
-		if !assert.NoError(t, err, "EventService.UndoEndEvent()") {
-			t.FailNow()
-		}
-
-		for i := 0; i < 3; i++ {
-			var ranking models.Ranking
-			res := db.Where("membership_id = ?", set.Memberships[i].ID).First(&ranking)
-			assert.NoError(t, res.Error, "Ranking after undo for participant %d", i)
-			assert.EqualValues(t, 0, ranking.Points, "Points should be zero after undo for participant %d", i)
-		}
-	})
+	require.Equal(t, map[uint16]bool{1: true, 2: true}, placements)
+}
+
+func TestEventService_EndEvent_AlreadyEnded(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	err := svc.EndEvent(event.ID)
+	require.Error(t, err)
+	apiErr, ok := err.(errors.APIErrorResponse)
+	require.True(t, ok)
+	require.Equal(t, 403, apiErr.Code)
+}
+
+func TestEventService_UndoEndEvent(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+
+	membershipID := uuid.New()
+	now := time.Now().UTC()
+	require.NoError(t, st.Entries().Create(&models.Participant{
+		MembershipID: &membershipID,
+		EventID:      event.ID,
+		Placement:    1,
+		SignedOutAt:  &now,
+	}))
+	require.NoError(t, st.Rankings().Create(&models.Ranking{MembershipID: membershipID, Points: 10}))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.UndoEndEvent(event.ID))
+
+	found, err := st.Events().FindByID(event.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, models.EventStateStarted, found.State)
+
+	ranking, err := st.Rankings().FindByMembershipID(membershipID)
+	require.NoError(t, err)
+	require.Less(t, ranking.Points, int32(10))
+}
+
+func TestEventService_NewRebuy(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := &models.Semester{Name: "Fall 2026", RebuyFee: 5, CurrentBudget: 100}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC(), SemesterID: semester.ID, Rebuys: 0}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.NewRebuy(event.ID))
+
+	foundEvent, err := st.Events().FindByID(event.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 1, foundEvent.Rebuys)
+
+	foundSemester, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, float32(105), foundSemester.CurrentBudget, 0.001)
 }

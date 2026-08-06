@@ -1,492 +1,76 @@
 package services
 
 import (
-	e "api/internal/errors"
-	"api/internal/database"
-	"api/internal/models"
-	"net/http"
+	"api/internal/store/inmemory"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func TestLoginService(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+func TestLoginService_CreateLogin(t *testing.T) {
+	t.Parallel()
 
-	tests := []struct {
-		name string
-		test func(*testing.T)
-	}{
-		{
-			name: "CreateLogin",
-			test: CreateLoginTest,
-		},
-		{
-			name: "ListLogins_Empty",
-			test: ListLoginsEmptyTest,
-		},
-		{
-			name: "ListLogins_Multiple",
-			test: ListLoginsMultipleTest,
-		},
-		{
-			name: "ListLogins_WithLinkedMember",
-			test: ListLoginsWithLinkedMemberTest,
-		},
-		{
-			name: "GetLogin",
-			test: GetLoginTest,
-		},
-		{
-			name: "GetLogin_WithLinkedMember",
-			test: GetLoginWithLinkedMemberTest,
-		},
-		{
-			name: "GetLogin_NotFound",
-			test: GetLoginNotFoundTest,
-		},
-		{
-			name: "DeleteLogin",
-			test: DeleteLoginTest,
-		},
-		{
-			name: "DeleteLogin_NotFound",
-			test: DeleteLoginNotFoundTest,
-		},
-		{
-			name: "UpdateLogin_PasswordOnly",
-			test: UpdateLoginPasswordOnlyTest,
-		},
-		{
-			name: "UpdateLogin_RoleOnly",
-			test: UpdateLoginRoleOnlyTest,
-		},
-		{
-			name: "UpdateLogin_PasswordAndRole",
-			test: UpdateLoginPasswordAndRoleTest,
-		},
-		{
-			name: "UpdateLogin_NoFields",
-			test: UpdateLoginNoFieldsTest,
-		},
-		{
-			name: "UpdateLogin_NotFound",
-			test: UpdateLoginNotFoundTest,
-		},
-		{
-			name: "CreateLoginFromRequest",
-			test: CreateLoginFromRequestTest,
-		},
-	}
+	st := inmemory.NewStore()
+	svc := NewLoginService(st)
 
-	for _, tt := range tests {
-		t.Run(tt.name, tt.test)
-	}
+	require.NoError(t, svc.CreateLogin("alice", "password123", "executive"))
+
+	login, err := st.Logins().FindByUsername("alice")
+	require.NoError(t, err)
+	require.Equal(t, "executive", login.Role)
+	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("password123")))
 }
 
-func CreateLoginTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+func TestLoginService_UpdateLogin_NoFields(t *testing.T) {
+	t.Parallel()
 
-	svc := NewLoginService(db)
+	st := inmemory.NewStore()
+	svc := NewLoginService(st)
+	require.NoError(t, svc.CreateLogin("alice", "password123", "executive"))
 
-	err = svc.CreateLogin("testuser", "password123", "executive")
-	assert.NoError(t, err)
-
-	// Verify login was created
-	var login models.Login
-	err = db.Where("username = ?", "testuser").First(&login).Error
-	assert.NoError(t, err)
-	assert.Equal(t, "testuser", login.Username)
-	assert.Equal(t, "executive", login.Role)
-
-	// Verify password was hashed
-	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("password123"))
-	assert.NoError(t, err)
+	err := svc.UpdateLogin("alice", nil, nil)
+	require.ErrorIs(t, err, ErrUpdateLoginNoFields)
 }
 
-func ListLoginsEmptyTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+func TestLoginService_UpdateLogin_Password(t *testing.T) {
+	t.Parallel()
 
-	svc := NewLoginService(db)
+	st := inmemory.NewStore()
+	svc := NewLoginService(st)
+	require.NoError(t, svc.CreateLogin("alice", "password123", "executive"))
 
-	// List logins when none exist
-	logins, _, err := svc.ListLogins(&models.Pagination{}, "")
-	assert.NoError(t, err)
-	assert.Empty(t, logins)
+	newPassword := "newpassword456"
+	require.NoError(t, svc.UpdateLogin("alice", &newPassword, nil))
+
+	login, err := st.Logins().FindByUsername("alice")
+	require.NoError(t, err)
+	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte(newPassword)))
+	require.Equal(t, "executive", login.Role)
 }
 
-func ListLoginsMultipleTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+func TestLoginService_UpdateLogin_Role(t *testing.T) {
+	t.Parallel()
 
-	svc := NewLoginService(db)
+	st := inmemory.NewStore()
+	svc := NewLoginService(st)
+	require.NoError(t, svc.CreateLogin("alice", "password123", "executive"))
 
-	// Create test logins
-	err = svc.CreateLogin("alice", "password123", "executive")
-	assert.NoError(t, err)
-	err = svc.CreateLogin("bob", "password456", "president")
-	assert.NoError(t, err)
-	err = svc.CreateLogin("charlie", "password789", "webmaster")
-	assert.NoError(t, err)
+	newRole := "treasurer"
+	require.NoError(t, svc.UpdateLogin("alice", nil, &newRole))
 
-	// List logins
-	logins, _, err := svc.ListLogins(&models.Pagination{}, "")
-	assert.NoError(t, err)
-	assert.Len(t, logins, 3)
-
-	// Verify ordering (alphabetical by username)
-	assert.Equal(t, "alice", logins[0].Username)
-	assert.Equal(t, "bob", logins[1].Username)
-	assert.Equal(t, "charlie", logins[2].Username)
-
-	// Verify roles
-	assert.Equal(t, "executive", logins[0].Role)
-	assert.Equal(t, "president", logins[1].Role)
-	assert.Equal(t, "webmaster", logins[2].Role)
-
-	// Verify no linked members (since we didn't create users)
-	assert.Nil(t, logins[0].LinkedMember)
-	assert.Nil(t, logins[1].LinkedMember)
-	assert.Nil(t, logins[2].LinkedMember)
+	login, err := st.Logins().FindByUsername("alice")
+	require.NoError(t, err)
+	require.Equal(t, "treasurer", login.Role)
 }
 
-func ListLoginsWithLinkedMemberTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-	userSvc := NewUserService(db)
-
-	// Create a user with QuestID
-	user, err := userSvc.CreateUser(&models.CreateUserRequest{
-		ID:        12345678,
-		FirstName: "Alice",
-		LastName:  "Smith",
-		Email:     "alice@example.com",
-		Faculty:   "Math",
-		QuestID:   "asmith",
-	})
-	assert.NoError(t, err)
-
-	// Create login matching QuestID
-	err = svc.CreateLogin("asmith", "password123", "executive")
-	assert.NoError(t, err)
-
-	// Create login without matching user
-	err = svc.CreateLogin("webmaster", "password456", "webmaster")
-	assert.NoError(t, err)
-
-	// List logins
-	logins, _, err := svc.ListLogins(&models.Pagination{}, "")
-	assert.NoError(t, err)
-	assert.Len(t, logins, 2)
-
-	// Find alice login (alphabetically first)
-	var aliceLogin *models.LoginWithMember
-	var webmasterLogin *models.LoginWithMember
-	for i := range logins {
-		if logins[i].Username == "asmith" {
-			aliceLogin = &logins[i]
-		}
-		if logins[i].Username == "webmaster" {
-			webmasterLogin = &logins[i]
-		}
-	}
-
-	// Verify alice has linked member
-	assert.NotNil(t, aliceLogin)
-	assert.NotNil(t, aliceLogin.LinkedMember)
-	assert.Equal(t, user.ID, aliceLogin.LinkedMember.ID)
-	assert.Equal(t, "Alice", aliceLogin.LinkedMember.FirstName)
-	assert.Equal(t, "Smith", aliceLogin.LinkedMember.LastName)
-
-	// Verify webmaster has no linked member
-	assert.NotNil(t, webmasterLogin)
-	assert.Nil(t, webmasterLogin.LinkedMember)
-}
-
-func GetLoginTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	// Create test login
-	err = svc.CreateLogin("alice", "password123", "executive")
-	assert.NoError(t, err)
-
-	// Get login
-	login, err := svc.GetLogin("alice")
-	assert.NoError(t, err)
-	assert.Equal(t, "alice", login.Username)
-	assert.Equal(t, "executive", login.Role)
-	assert.Nil(t, login.LinkedMember)
-}
-
-func GetLoginWithLinkedMemberTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-	userSvc := NewUserService(db)
-
-	// Create user
-	user, err := userSvc.CreateUser(&models.CreateUserRequest{
-		ID:        12345678,
-		FirstName: "Alice",
-		LastName:  "Smith",
-		Email:     "alice@example.com",
-		Faculty:   "Math",
-		QuestID:   "asmith",
-	})
-	assert.NoError(t, err)
-
-	// Create matching login
-	err = svc.CreateLogin("asmith", "password123", "executive")
-	assert.NoError(t, err)
-
-	// Get login
-	login, err := svc.GetLogin("asmith")
-	assert.NoError(t, err)
-	assert.NotNil(t, login.LinkedMember)
-	assert.Equal(t, user.ID, login.LinkedMember.ID)
-	assert.Equal(t, "Alice", login.LinkedMember.FirstName)
-	assert.Equal(t, "Smith", login.LinkedMember.LastName)
-}
-
-func GetLoginNotFoundTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	// Try to get non-existent login
-	_, err = svc.GetLogin("nonexistent")
-	assert.Error(t, err)
-
-	// Verify it's a NotFound error
-	apiErr, ok := err.(e.APIErrorResponse)
-	assert.True(t, ok)
-	assert.Equal(t, http.StatusNotFound, apiErr.Code)
-}
-
-func DeleteLoginTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	// Create test login
-	err = svc.CreateLogin("alice", "password123", "executive")
-	assert.NoError(t, err)
-
-	// Verify login exists
-	_, err = svc.GetLogin("alice")
-	assert.NoError(t, err)
-
-	// Delete login
-	err = svc.DeleteLogin("alice")
-	assert.NoError(t, err)
-
-	// Verify login is gone
-	_, err = svc.GetLogin("alice")
-	assert.Error(t, err)
-
-	apiErr, ok := err.(e.APIErrorResponse)
-	assert.True(t, ok)
-	assert.Equal(t, http.StatusNotFound, apiErr.Code)
-}
-
-func DeleteLoginNotFoundTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	// Try to delete non-existent login
-	err = svc.DeleteLogin("nonexistent")
-	assert.Error(t, err)
-
-	// Verify it's a NotFound error
-	apiErr, ok := err.(e.APIErrorResponse)
-	assert.True(t, ok)
-	assert.Equal(t, http.StatusNotFound, apiErr.Code)
-}
-
-func ptr[T any](v T) *T { return &v }
-
-func UpdateLoginPasswordOnlyTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	err = svc.CreateLogin("alice", "oldpassword", "executive")
-	assert.NoError(t, err)
-
-	err = svc.UpdateLogin("alice", ptr("newpassword123"), nil)
-	assert.NoError(t, err)
-
-	var login models.Login
-	err = db.Where("username = ?", "alice").First(&login).Error
-	assert.NoError(t, err)
-
-	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("newpassword123"))
-	assert.NoError(t, err)
-
-	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("oldpassword"))
-	assert.Error(t, err)
-
-	// Role unchanged
-	assert.Equal(t, "executive", login.Role)
-}
-
-func UpdateLoginRoleOnlyTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	err = svc.CreateLogin("alice", "originalpassword", "executive")
-	assert.NoError(t, err)
-
-	// Capture original password hash to confirm it doesn't change.
-	var before models.Login
-	err = db.Where("username = ?", "alice").First(&before).Error
-	assert.NoError(t, err)
-
-	err = svc.UpdateLogin("alice", nil, ptr("president"))
-	assert.NoError(t, err)
-
-	var after models.Login
-	err = db.Where("username = ?", "alice").First(&after).Error
-	assert.NoError(t, err)
-
-	assert.Equal(t, "president", after.Role)
-	assert.Equal(t, before.Password, after.Password)
-
-	// Original password still works.
-	err = bcrypt.CompareHashAndPassword([]byte(after.Password), []byte("originalpassword"))
-	assert.NoError(t, err)
-}
-
-func UpdateLoginPasswordAndRoleTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	err = svc.CreateLogin("alice", "oldpassword", "executive")
-	assert.NoError(t, err)
-
-	err = svc.UpdateLogin("alice", ptr("newpassword123"), ptr("treasurer"))
-	assert.NoError(t, err)
-
-	var login models.Login
-	err = db.Where("username = ?", "alice").First(&login).Error
-	assert.NoError(t, err)
-
-	assert.Equal(t, "treasurer", login.Role)
-	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("newpassword123"))
-	assert.NoError(t, err)
-}
-
-func UpdateLoginNoFieldsTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	err = svc.CreateLogin("alice", "password123", "executive")
-	assert.NoError(t, err)
-
-	err = svc.UpdateLogin("alice", nil, nil)
-	assert.ErrorIs(t, err, ErrUpdateLoginNoFields)
-}
-
-func UpdateLoginNotFoundTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	err = svc.UpdateLogin("nonexistent", ptr("newpassword"), nil)
-	assert.ErrorIs(t, err, ErrLoginNotFound)
-}
-
-func CreateLoginFromRequestTest(t *testing.T) {
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	svc := NewLoginService(db)
-
-	// Create login from request
-	req := &models.CreateLoginRequest{
-		Username: "alice",
-		Password: "password123",
-		Role:     "executive",
-	}
-	err = svc.CreateLoginFromRequest(req)
-	assert.NoError(t, err)
-
-	// Verify login was created
-	login, err := svc.GetLogin("alice")
-	assert.NoError(t, err)
-	assert.Equal(t, "alice", login.Username)
-	assert.Equal(t, "executive", login.Role)
-
-	// Verify password was hashed correctly
-	var rawLogin models.Login
-	err = db.Where("username = ?", "alice").First(&rawLogin).Error
-	assert.NoError(t, err)
-	err = bcrypt.CompareHashAndPassword([]byte(rawLogin.Password), []byte("password123"))
-	assert.NoError(t, err)
+func TestLoginService_UpdateLogin_NotFound(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	svc := NewLoginService(st)
+
+	newRole := "treasurer"
+	err := svc.UpdateLogin("nobody", nil, &newRole)
+	require.ErrorIs(t, err, ErrLoginNotFound)
 }

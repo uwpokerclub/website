@@ -31,3 +31,16 @@ type GetRankingResponse struct {
 	Points   int32 `json:"points"`
 	Position int32 `json:"position"`
 } //@name GetRankingResponse
+
+// ListRankingsFilter is the set of parameters used to filter the list rankings query.
+// SemesterID must be set by the caller; the zero value for the embedded Pagination is the
+// same as not paginating the result.
+type ListRankingsFilter struct {
+	Pagination
+
+	SemesterID uuid.UUID
+
+	// Search filters rankings by the ranked user's first name, last name, or full name
+	// (case-insensitive).
+	Search string
+}

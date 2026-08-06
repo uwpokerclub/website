@@ -99,3 +99,17 @@ func (r *inMemorySemesterRepository) Update(semester *models.Semester) error {
 	r.semesters[semester.ID] = semester
 	return nil
 }
+
+func (r *inMemorySemesterRepository) IncrementBudget(id uuid.UUID, amount float32) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	semester, exists := r.semesters[id]
+	if !exists {
+		return store.ErrNotFound
+	}
+
+	semester.CurrentBudget += amount
+
+	return nil
+}

@@ -147,12 +147,12 @@ func TestEventRepository_List(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	events, total, err := repo.List(&models.ListEventsFilter{SemesterID: semesterID})
+	events, total, err := repo.List(&models.ListEventsFilter{SemesterID: &semesterID})
 	require.NoError(t, err)
 	require.EqualValues(t, 2, total)
 	require.Len(t, events, 2)
 
-	events, total, err = repo.List(&models.ListEventsFilter{SemesterID: semesterID, Search: "Alpha"})
+	events, total, err = repo.List(&models.ListEventsFilter{SemesterID: &semesterID, Search: "Alpha"})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, total)
 	require.Len(t, events, 1)
@@ -188,4 +188,36 @@ func TestEventRepository_Update(t *testing.T) {
 	found, err := repo.FindByID(created.ID)
 	require.NoError(t, err)
 	require.Equal(t, "Updated Name", found.Name)
+}
+
+func TestEventRepository_List_AllSemesters(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	structure := &models.Structure{Name: "Standard"}
+	require.NoError(t, db.Create(structure).Error)
+	semesterA := &models.Semester{Name: "Fall 2026"}
+	require.NoError(t, db.Create(semesterA).Error)
+	semesterB := &models.Semester{Name: "Winter 2026"}
+	require.NoError(t, db.Create(semesterB).Error)
+
+	repo := postgres.NewEventRepository(db)
+	require.NoError(t, repo.Create(&models.Event{Name: "A", Format: "NL", SemesterID: semesterA.ID, StructureID: structure.ID, StartDate: time.Now().UTC()}))
+	require.NoError(t, repo.Create(&models.Event{Name: "B", Format: "NL", SemesterID: semesterB.ID, StructureID: structure.ID, StartDate: time.Now().UTC()}))
+
+	results, total, err := repo.List(&models.ListEventsFilter{})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, total, int64(2))
+	require.GreaterOrEqual(t, len(results), 2)
+
+	results, total, err = repo.List(&models.ListEventsFilter{SemesterID: &semesterA.ID})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Len(t, results, 1)
+	require.Equal(t, "A", results[0].Name)
 }

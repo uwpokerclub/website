@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"errors"
 	"log"
 	"net/http"
@@ -17,12 +18,13 @@ import (
 )
 
 type rankingsController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
 // NewRankingsController creates a new instance of rankingsController
-func NewRankingsController(db *gorm.DB) Controller {
-	return &rankingsController{db: db}
+func NewRankingsController(db *gorm.DB, st store.Store) Controller {
+	return &rankingsController{db: db, store: st}
 }
 
 func (c *rankingsController) LoadRoutes(router *gin.RouterGroup) {
@@ -73,14 +75,12 @@ func (c *rankingsController) listRankings(ctx *gin.Context) {
 
 	search := ctx.Query("search")
 
-	svc := services.NewSemesterService(c.db)
-	rankings, total, err := svc.GetRankingsV2(semesterID, &pagination, search)
+	rankings, total, err := c.store.Rankings().List(&models.ListRankingsFilter{
+		SemesterID: semesterID,
+		Pagination: pagination,
+		Search:     search,
+	})
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
-
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
@@ -118,14 +118,12 @@ func (c *rankingsController) getRanking(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewRankingService(c.db)
-	ranking, err := svc.GetRanking(semesterID, membershipID)
+	ranking, err := c.store.Rankings().FindBySemesterAndMembershipID(semesterID, membershipID)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
 			return
 		}
-
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
@@ -153,7 +151,7 @@ func (c *rankingsController) exportRankings(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewSemesterService(c.db)
+	svc := services.NewSemesterService(c.store)
 	fp, err := svc.ExportRankings(semesterID)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {

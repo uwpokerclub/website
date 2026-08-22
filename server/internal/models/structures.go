@@ -42,7 +42,7 @@ type Blind struct {
 	Time        int8  `json:"time" gorm:"not null"`
 	Index       int8  `json:"-" gorm:"not null"`
 	StructureId int32 `json:"-" gorm:"type:integer;not null"`
-}//@name Blind
+} //@name Blind
 
 type BlindJSON struct {
 	Small int32 `json:"small" binding:"required,gte=0"`

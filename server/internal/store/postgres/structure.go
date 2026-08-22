@@ -27,8 +27,8 @@ func (r *postgresStructureRepository) FindByID(id int32) (models.Structure, erro
 		ID: id,
 	}
 
-	res := structure.Preload(r.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)	
-	if err := res.Error; err != nil {	
+	res := structure.Preload(r.db, models.StructurePreloadOptions{Blinds: true}).First(&structure)
+	if err := res.Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return models.Structure{}, store.ErrNotFound
 		}

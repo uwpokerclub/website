@@ -72,10 +72,10 @@ func (s *apiServer) SetupRoutes() {
 	{
 		sessionRoute.POST("", s.SessionLoginHandler)
 		sessionRoute.POST("logout", s.SessionLogoutHandler)
-		sessionRoute.GET("", middleware.UseAuthentication(s.db), s.GetSessionHandler)
+		sessionRoute.GET("", middleware.UseAuthentication(s.store), s.GetSessionHandler)
 	}
 
-	usersRoute := apiRoute.Group("/users", middleware.UseAuthentication(s.db))
+	usersRoute := apiRoute.Group("/users", middleware.UseAuthentication(s.store))
 	{
 		usersRoute.GET("", middleware.UseAuthorization("user.list"), s.ListUsers)
 		usersRoute.POST("", middleware.UseAuthorization("user.create"), s.CreateUser)
@@ -84,7 +84,7 @@ func (s *apiServer) SetupRoutes() {
 		usersRoute.DELETE(":id", middleware.UseAuthorization("user.delete"), s.DeleteUser)
 	}
 
-	semestersRoute := apiRoute.Group("/semesters", middleware.UseAuthentication(s.db))
+	semestersRoute := apiRoute.Group("/semesters", middleware.UseAuthentication(s.store))
 	{
 		semestersRoute.GET("", middleware.UseAuthorization("semester.list"), s.ListSemesters)
 		semestersRoute.POST("", middleware.UseAuthorization("semester.create"), s.CreateSemester)
@@ -101,7 +101,7 @@ func (s *apiServer) SetupRoutes() {
 		semestersRoute.DELETE(":semesterId/transactions/:transactionId", middleware.UseAuthorization("semester.transaction.delete"), s.DeleteTransaction)
 	}
 
-	eventsRoute := apiRoute.Group("/events", middleware.UseAuthentication(s.db))
+	eventsRoute := apiRoute.Group("/events", middleware.UseAuthentication(s.store))
 	{
 		eventsRoute.GET("", middleware.UseAuthorization("event.list"), s.ListEvents)
 		eventsRoute.POST("", middleware.UseAuthorization("event.create"), s.CreateEvent)
@@ -112,7 +112,7 @@ func (s *apiServer) SetupRoutes() {
 		eventsRoute.POST(":eventId/rebuy", middleware.UseAuthorization("event.rebuy"), s.NewRebuy)
 	}
 
-	membershipRoutes := apiRoute.Group("/memberships", middleware.UseAuthentication(s.db))
+	membershipRoutes := apiRoute.Group("/memberships", middleware.UseAuthentication(s.store))
 	{
 		membershipRoutes.GET("", middleware.UseAuthorization("membership.list"), s.ListMemberships)
 		membershipRoutes.POST("", middleware.UseAuthorization("membership.create"), s.CreateMembership)
@@ -120,7 +120,7 @@ func (s *apiServer) SetupRoutes() {
 		membershipRoutes.PATCH(":id", middleware.UseAuthorization("membership.edit"), s.UpdateMembership)
 	}
 
-	participantRoute := apiRoute.Group("/participants", middleware.UseAuthentication(s.db))
+	participantRoute := apiRoute.Group("/participants", middleware.UseAuthentication(s.store))
 	{
 		participantRoute.GET("", middleware.UseAuthorization("event.participant.list"), s.ListParticipants)
 		participantRoute.POST("", middleware.UseAuthorization("event.participant.create"), s.CreateParticipant)
@@ -129,7 +129,7 @@ func (s *apiServer) SetupRoutes() {
 		participantRoute.DELETE("", middleware.UseAuthorization("event.participant.delete"), s.DeleteParticipant)
 	}
 
-	structuresRoute := apiRoute.Group("/structures", middleware.UseAuthentication(s.db))
+	structuresRoute := apiRoute.Group("/structures", middleware.UseAuthentication(s.store))
 	{
 		structuresRoute.POST("", middleware.UseAuthorization("structure.list"), s.CreateStructure)
 		structuresRoute.GET("", middleware.UseAuthorization("structure.create"), s.ListStructures)
@@ -147,15 +147,15 @@ func (s *apiServer) SetupV2Routes() {
 	// Load routes from controllers
 	controllers := []controller.Controller{
 		controller.NewHealthController(),
-		controller.NewAuthenticationController(s.db),
-		controller.NewSemestersController(s.db, s.store),
-		controller.NewEventsController(s.db, s.store),
-		controller.NewEntriesController(s.db, s.store),
-		controller.NewMembersController(s.db, s.store),
-		controller.NewMembershipsController(s.db, s.store),
-		controller.NewRankingsController(s.db, s.store),
-		controller.NewStructuresController(s.db, s.store),
-		controller.NewLoginsController(s.db, s.store),
+		controller.NewAuthenticationController(s.store),
+		controller.NewSemestersController(s.store),
+		controller.NewEventsController(s.store),
+		controller.NewEntriesController(s.store),
+		controller.NewMembersController(s.store),
+		controller.NewMembershipsController(s.store),
+		controller.NewRankingsController(s.store),
+		controller.NewStructuresController(s.store),
+		controller.NewLoginsController(s.store),
 	}
 
 	controllers = append(controllers, registerTestControllers(s.db)...)

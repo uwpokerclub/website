@@ -11,21 +11,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type membershipsController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
 // NewMembershipsController creates a new instance of membershipsController
-func NewMembershipsController(db *gorm.DB, st store.Store) Controller {
-	return &membershipsController{db: db, store: st}
+func NewMembershipsController(st store.Store) Controller {
+	return &membershipsController{store: st}
 }
 
 func (c *membershipsController) LoadRoutes(router *gin.RouterGroup) {
-	memberships := router.Group("semesters/:semesterId/memberships", middleware.UseAuthentication(c.db))
+	memberships := router.Group("semesters/:semesterId/memberships", middleware.UseAuthentication(c.store))
 	memberships.POST("", middleware.UseAuthorization("membership.create"), c.createMembership)
 	memberships.GET("", middleware.UseAuthorization("membership.list"), c.listMemberships)
 	memberships.GET("/:id", middleware.UseAuthorization("membership.get"), c.getMembership)
@@ -115,7 +113,6 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, membership)
 }
-
 
 // listMemberships handles listing all memberships
 //

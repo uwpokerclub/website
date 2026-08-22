@@ -58,4 +58,3 @@ func FindSemesterByIDAsMap(id string) (map[string]any, error) {
 	}
 	return ToMapInterface(semester)
 }
-

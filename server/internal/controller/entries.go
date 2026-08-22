@@ -13,22 +13,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type entriesController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
 // NewEntriesController creates a new instance of the entries controller
-// with the provided database connection.
-func NewEntriesController(db *gorm.DB, st store.Store) Controller {
-	return &entriesController{db: db, store: st}
+// with the provided data store.
+func NewEntriesController(st store.Store) Controller {
+	return &entriesController{store: st}
 }
 
 func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {
-	group := router.Group("semesters/:semesterId/events/:eventId/entries", middleware.UseAuthentication(c.db))
+	group := router.Group("semesters/:semesterId/events/:eventId/entries", middleware.UseAuthentication(c.store))
 	group.POST("", middleware.UseAuthorization("event.participant.create"), c.createEntry)
 	group.GET("", middleware.UseAuthorization("event.participant.list"), c.listEntries)
 	group.POST(":entryId/sign-out", middleware.UseAuthorization("event.participant.signout"), c.signOutEntry)

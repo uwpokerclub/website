@@ -11,24 +11,21 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type membersController struct {
 	store store.Store
-	db    *gorm.DB
 }
 
 // NewMembersController creates a new instance of membersController
-func NewMembersController(db *gorm.DB, st store.Store) Controller {
+func NewMembersController(st store.Store) Controller {
 	return &membersController{
 		store: st,
-		db:    db,
 	}
 }
 
 func (c *membersController) LoadRoutes(router *gin.RouterGroup) {
-	members := router.Group("members", middleware.UseAuthentication(c.db))
+	members := router.Group("members", middleware.UseAuthentication(c.store))
 	members.POST("", middleware.UseAuthorization("user.create"), c.createMember)
 	members.GET("", middleware.UseAuthorization("user.list"), c.listMembers)
 	members.GET("/:id", middleware.UseAuthorization("user.get"), c.getMember)

@@ -11,20 +11,18 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type structuresController struct {
-	db *gorm.DB
-  store store.Store
+	store store.Store
 }
 
-func NewStructuresController(db *gorm.DB, store store.Store) Controller {
-  return &structuresController{db: db, store: store}
+func NewStructuresController(st store.Store) Controller {
+	return &structuresController{store: st}
 }
 
 func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
-	group := router.Group("structures", middleware.UseAuthentication(s.db))
+	group := router.Group("structures", middleware.UseAuthentication(s.store))
 	group.GET("", middleware.UseAuthorization("structure.list"), s.listStructures)
 	group.POST("", middleware.UseAuthorization("structure.create"), s.createStructure)
 	group.GET(":id", middleware.UseAuthorization("structure.get"), s.getStructure)
@@ -52,7 +50,7 @@ func (s *structuresController) listStructures(ctx *gin.Context) {
 		return
 	}
 
-  structures, total, err := s.store.Structures().List(&pagination)
+	structures, total, err := s.store.Structures().List(&pagination)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -88,23 +86,23 @@ func (s *structuresController) createStructure(ctx *gin.Context) {
 		return
 	}
 
-  blinds := make([]models.Blind, len(req.Blinds))
-  for i, blind := range req.Blinds {
-    blinds[i] = models.Blind{
-      Small: blind.Small,
-      Big:   blind.Big,
-      Ante:  blind.Ante,
-      Time:  blind.Time,
-      Index: int8(i),
-    }
-  }
+	blinds := make([]models.Blind, len(req.Blinds))
+	for i, blind := range req.Blinds {
+		blinds[i] = models.Blind{
+			Small: blind.Small,
+			Big:   blind.Big,
+			Ante:  blind.Ante,
+			Time:  blind.Time,
+			Index: int8(i),
+		}
+	}
 
-  structure := models.Structure{
-    Name: req.Name,
-    Blinds: blinds,
-  }
+	structure := models.Structure{
+		Name:   req.Name,
+		Blinds: blinds,
+	}
 
-  if err := s.store.Structures().Create(&structure); err != nil {
+	if err := s.store.Structures().Create(&structure); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -138,7 +136,7 @@ func (s *structuresController) getStructure(ctx *gin.Context) {
 		return
 	}
 
-  structure, err := s.store.Structures().FindByID(id)
+	structure, err := s.store.Structures().FindByID(id)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))

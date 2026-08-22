@@ -3,6 +3,7 @@ package authentication
 import (
 	"api/internal/database"
 	"api/internal/models"
+	"api/internal/store/postgres"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,7 +47,7 @@ func TestCredentialsService(t *testing.T) {
 		}
 	}
 
-	credSvc := NewCredentialService(db)
+	credSvc := NewCredentialService(postgres.NewStore(db))
 
 	t.Run("Validate_IncorrectUsername", func(t *testing.T) {
 		t.Cleanup(wipeDB)

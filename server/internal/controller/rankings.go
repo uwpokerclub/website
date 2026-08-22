@@ -14,21 +14,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type rankingsController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
 // NewRankingsController creates a new instance of rankingsController
-func NewRankingsController(db *gorm.DB, st store.Store) Controller {
-	return &rankingsController{db: db, store: st}
+func NewRankingsController(st store.Store) Controller {
+	return &rankingsController{store: st}
 }
 
 func (c *rankingsController) LoadRoutes(router *gin.RouterGroup) {
-	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.db))
+	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.store))
 	rankings.GET("", middleware.UseAuthorization("semester.rankings.list"), c.listRankings)
 	rankings.GET("export", middleware.UseAuthorization("semester.rankings.export"), c.exportRankings)
 	rankings.GET(":membershipId", middleware.UseAuthorization("semester.rankings.get"), c.getRanking)

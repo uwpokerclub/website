@@ -33,10 +33,10 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 	}
 
 	// Valdiate that the credentials provided are valid credentials
-	credentialSvc := authentication.NewCredentialService(s.db)
+	credentialSvc := authentication.NewCredentialService(s.store)
 	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -46,10 +46,10 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 	}
 
 	// Once credentials have been validated, create a new session in the database
-	sessionManager := authentication.NewSessionManager(s.db)
+	sessionManager := authentication.NewSessionManager(s.store)
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -86,10 +86,10 @@ func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
 
 	sessionUUID, _ := uuid.Parse(sessionID)
 
-	sessionManger := authentication.NewSessionManager(s.db)
+	sessionManger := authentication.NewSessionManager(s.store)
 	err = sessionManger.Invalidate(sessionUUID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

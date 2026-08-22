@@ -1,22 +1,29 @@
 package authentication
 
 import (
-	e "api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
+// ErrSessionNotFound is returned when no session exists for the given ID.
+var ErrSessionNotFound = errors.New("session not found")
+
+// ErrSessionExpired is returned when a session exists but is past its expiry.
+// The session is deleted before this error is returned.
+var ErrSessionExpired = errors.New("session has expired")
+
 type sessionManager struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewSessionManager(db *gorm.DB) *sessionManager {
+func NewSessionManager(st store.Store) *sessionManager {
 	return &sessionManager{
-		db: db,
+		store: st,
 	}
 }
 
@@ -28,48 +35,43 @@ func (svc *sessionManager) Create(username string, role string) (uuid.UUID, erro
 
 	// Create the session in the database
 	session := models.Session{StartedAt: now, ExpiresAt: expiry, Username: username, Role: role}
-	res := svc.db.Create(&session)
-
-	if err := res.Error; err != nil {
-		return uuid.UUID{}, e.InternalServerError(err.Error())
+	if err := svc.store.Sessions().Create(&session); err != nil {
+		return uuid.UUID{}, fmt.Errorf("create session: %w", err)
 	}
 
 	return session.ID, nil
 }
 
 func (svc *sessionManager) Invalidate(sessionID uuid.UUID) error {
-	session := models.Session{ID: sessionID}
-
-	res := svc.db.Delete(&session)
-	if err := res.Error; err != nil {
-		return e.InternalServerError(err.Error())
+	// Deleting a session that no longer exists is not an error: the caller's
+	// intent (this session must not be usable) is already satisfied. The
+	// previous GORM implementation reported RowsAffected == 0 as success, and
+	// logout depends on that.
+	if err := svc.store.Sessions().Delete(sessionID); err != nil && !errors.Is(err, store.ErrNotFound) {
+		return fmt.Errorf("invalidate session: %w", err)
 	}
 
 	return nil
 }
 
 func (svc *sessionManager) Authenticate(sessionID uuid.UUID) (*models.Session, error) {
-	session := models.Session{ID: sessionID}
-	res := svc.db.First(&session)
-
-	// Check if session exists
-	err := res.Error
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.Unauthorized("Authentication required")
-	}
-
+	session, err := svc.store.Sessions().FindByID(sessionID)
 	if err != nil {
-		return nil, e.InternalServerError(err.Error())
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, ErrSessionNotFound
+		}
+
+		return nil, fmt.Errorf("find session: %w", err)
 	}
 
 	// Check if session has expired, if it is delete it from the table and return 401
 	if time.Now().UTC().After(session.ExpiresAt) {
-		res = svc.db.Delete(&session)
-		if err := res.Error; err != nil {
-			return nil, e.InternalServerError(err.Error())
+		// A concurrent logout may have already removed it; that is not a failure.
+		if err := svc.store.Sessions().Delete(session.ID); err != nil && !errors.Is(err, store.ErrNotFound) {
+			return nil, fmt.Errorf("delete expired session: %w", err)
 		}
 
-		return nil, e.Unauthorized("Session has expired. Please reauthenticate")
+		return nil, ErrSessionExpired
 	}
 
 	return &session, nil

@@ -3,6 +3,7 @@ package authentication
 import (
 	"api/internal/database"
 	"api/internal/models"
+	"api/internal/store/postgres"
 	"testing"
 	"time"
 
@@ -51,7 +52,7 @@ func TestSessionManager(t *testing.T) {
 		}
 	}
 
-	sessManager := NewSessionManager(db)
+	sessManager := NewSessionManager(postgres.NewStore(db))
 	t.Run("Create_NoAssociatedLogin", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 
@@ -106,7 +107,7 @@ func TestSessionManager(t *testing.T) {
 		t.Cleanup(wipeDB)
 
 		_, err := sessManager.Authenticate(uuid.New())
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrSessionNotFound)
 	})
 
 	t.Run("Authenticate__SessionExpired", func(t *testing.T) {
@@ -116,7 +117,7 @@ func TestSessionManager(t *testing.T) {
 		assert.NoError(t, err)
 
 		_, err = sessManager.Authenticate(session.ID)
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrSessionExpired)
 
 		// Ensure session was deleted
 		foundSession := models.Session{

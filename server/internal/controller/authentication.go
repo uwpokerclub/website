@@ -5,6 +5,7 @@ import (
 	"api/internal/authorization"
 	"api/internal/middleware"
 	"api/internal/models"
+	"api/internal/store"
 	"net/http"
 	"os"
 	"strings"
@@ -12,17 +13,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	e "api/internal/errors"
 )
 
 type authenticationController struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewAuthenticationController(db *gorm.DB) Controller {
-	return &authenticationController{db: db}
+func NewAuthenticationController(st store.Store) Controller {
+	return &authenticationController{store: st}
 }
 
 // getCookieKey returns the key of the session ID cookie for the environment
@@ -36,7 +36,7 @@ func getCookieKey() string {
 
 func (controller *authenticationController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("session")
-	group.GET("", middleware.UseAuthentication(controller.db), controller.getSession)
+	group.GET("", middleware.UseAuthentication(controller.store), controller.getSession)
 	group.POST("", controller.login)
 	group.POST("logout", controller.logout)
 }
@@ -85,10 +85,10 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	credentialSvc := authentication.NewCredentialService(controller.db)
+	credentialSvc := authentication.NewCredentialService(controller.store)
 	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -100,10 +100,10 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	sessionManager := authentication.NewSessionManager(controller.db)
+	sessionManager := authentication.NewSessionManager(controller.store)
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -157,10 +157,10 @@ func (controller *authenticationController) logout(ctx *gin.Context) {
 
 	sessionUUID, _ := uuid.Parse(sessionID)
 
-	sessionManager := authentication.NewSessionManager(controller.db)
+	sessionManager := authentication.NewSessionManager(controller.store)
 	err = sessionManager.Invalidate(sessionUUID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

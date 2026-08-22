@@ -1,19 +1,20 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"strings"
 
 	"api/internal/authentication"
 	e "api/internal/errors"
+	"api/internal/store"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
-func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
+func UseAuthentication(st store.Store) func(ctx *gin.Context) {
 	var cookieKey string
 	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
 		cookieKey = "uwpsc-session-id"
@@ -21,7 +22,7 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		cookieKey = "uwpsc-dev-session-id"
 	}
 
-	sessionManager := authentication.NewSessionManager(db)
+	sessionManager := authentication.NewSessionManager(st)
 
 	return func(ctx *gin.Context) {
 		cookie, err := ctx.Cookie(cookieKey)
@@ -42,7 +43,14 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		// Authenticate this session ID
 		session, err := sessionManager.Authenticate(sessionID)
 		if err != nil {
-			ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+			switch {
+			case errors.Is(err, authentication.ErrSessionNotFound):
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
+			case errors.Is(err, authentication.ErrSessionExpired):
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Session has expired. Please reauthenticate"))
+			default:
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+			}
 			return
 		}
 

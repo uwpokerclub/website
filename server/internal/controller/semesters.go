@@ -11,20 +11,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type semestersController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
-func NewSemestersController(db *gorm.DB, st store.Store) Controller {
-	return &semestersController{db: db, store: st}
+func NewSemestersController(st store.Store) Controller {
+	return &semestersController{store: st}
 }
 
 func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
-	group := router.Group("semesters", middleware.UseAuthentication(s.db))
+	group := router.Group("semesters", middleware.UseAuthentication(s.store))
 	group.POST("", middleware.UseAuthorization("semester.create"), s.createSemester)
 	group.GET("", middleware.UseAuthorization("semester.list"), s.listSemesters)
 	group.GET(":semesterId", middleware.UseAuthorization("semester.get"), s.getSemester)

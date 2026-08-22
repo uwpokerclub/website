@@ -25,13 +25,13 @@ type PostgresStore struct {
 
 	// entries is the repository for accessing the entries in the data store. It provides methods for creating, reading, updating, and deleting entries.
 	entries store.EntryRepository
-	
+
 	// rankings is the repository for accessing the rankings in the data store. It provides methods for creating, reading, updating, and deleting rankings.
 	rankings store.RankingRepository
 
 	// structures is the repository for accessing the structures in the data store. It provides methods for creating, reading, updating, and deleting structures.
 	structures store.StructureRepository
-	
+
 	// logins is the repository for accessing the logins in the data store. It provides methods for creating, reading, updating, and deleting logins.
 	logins store.LoginRepository
 

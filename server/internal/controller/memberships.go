@@ -11,17 +11,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type membershipsController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
 // NewMembershipsController creates a new instance of membershipsController
-func NewMembershipsController(db *gorm.DB, st store.Store) Controller {
-	return &membershipsController{db: db, store: st}
+func NewMembershipsController(st store.Store) Controller {
+	return &membershipsController{store: st}
 }
 
 func (c *membershipsController) LoadRoutes(router *gin.RouterGroup) {

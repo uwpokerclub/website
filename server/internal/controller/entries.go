@@ -13,18 +13,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type entriesController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
 // NewEntriesController creates a new instance of the entries controller
-// with the provided database connection.
-func NewEntriesController(db *gorm.DB, st store.Store) Controller {
-	return &entriesController{db: db, store: st}
+// with the provided data store.
+func NewEntriesController(st store.Store) Controller {
+	return &entriesController{store: st}
 }
 
 func (c *entriesController) LoadRoutes(router *gin.RouterGroup) {

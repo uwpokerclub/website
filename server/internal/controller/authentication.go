@@ -13,20 +13,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	e "api/internal/errors"
 )
 
 type authenticationController struct {
-	// db is retained only for middleware.UseAuthentication, which has not been
-	// migrated to store.Store yet.
-	db    *gorm.DB
 	store store.Store
 }
 
-func NewAuthenticationController(db *gorm.DB, st store.Store) Controller {
-	return &authenticationController{db: db, store: st}
+func NewAuthenticationController(st store.Store) Controller {
+	return &authenticationController{store: st}
 }
 
 // getCookieKey returns the key of the session ID cookie for the environment

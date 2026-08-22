@@ -11,16 +11,14 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type structuresController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
-func NewStructuresController(db *gorm.DB, store store.Store) Controller {
-	return &structuresController{db: db, store: store}
+func NewStructuresController(st store.Store) Controller {
+	return &structuresController{store: st}
 }
 
 func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {

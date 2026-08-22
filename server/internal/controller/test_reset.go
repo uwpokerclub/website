@@ -15,6 +15,12 @@ import (
 //go:embed testdata/seed.sql
 var seedSQL string
 
+// testResetController is the one controller that deliberately still holds a
+// raw *gorm.DB. It issues TRUNCATE ... RESTART IDENTITY CASCADE followed by a
+// raw embedded seed script — schema-level statements with no base-table
+// repository equivalent, so routing them through store.Store would mean adding
+// an arbitrary-SQL escape hatch to the interface. It is compiled only under the
+// `e2e` build tag and is never part of a production binary. See #358.
 type testResetController struct {
 	db *gorm.DB
 }

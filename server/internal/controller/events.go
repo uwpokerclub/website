@@ -14,16 +14,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type eventsController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
-func NewEventsController(db *gorm.DB, st store.Store) Controller {
-	return &eventsController{db: db, store: st}
+func NewEventsController(st store.Store) Controller {
+	return &eventsController{store: st}
 }
 
 func (s *eventsController) LoadRoutes(router *gin.RouterGroup) {

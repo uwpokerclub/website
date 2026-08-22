@@ -11,19 +11,16 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type membersController struct {
 	store store.Store
-	db    *gorm.DB
 }
 
 // NewMembersController creates a new instance of membersController
-func NewMembersController(db *gorm.DB, st store.Store) Controller {
+func NewMembersController(st store.Store) Controller {
 	return &membersController{
 		store: st,
-		db:    db,
 	}
 }
 

@@ -10,17 +10,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type loginsController struct {
-	db    *gorm.DB
 	store store.Store
 }
 
 // NewLoginsController creates a new instance of loginsController
-func NewLoginsController(db *gorm.DB, st store.Store) Controller {
-	return &loginsController{db: db, store: st}
+func NewLoginsController(st store.Store) Controller {
+	return &loginsController{store: st}
 }
 
 func (c *loginsController) LoadRoutes(router *gin.RouterGroup) {

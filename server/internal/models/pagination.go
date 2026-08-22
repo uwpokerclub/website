@@ -42,4 +42,3 @@ func (p *Pagination) Apply(query *gorm.DB) *gorm.DB {
 
 	return query
 }
-

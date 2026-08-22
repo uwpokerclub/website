@@ -116,7 +116,6 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, membership)
 }
 
-
 // listMemberships handles listing all memberships
 //
 // @Summary List all Memberships

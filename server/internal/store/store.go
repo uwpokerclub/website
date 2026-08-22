@@ -16,4 +16,3 @@ type Store interface {
 	Commit() error
 	Rollback() error
 }
-

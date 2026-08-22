@@ -4,6 +4,8 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -94,4 +96,58 @@ func (r *inMemoryLoginRepository) Delete(username string) error {
 	delete(r.logins, username)
 
 	return nil
+}
+
+// List retrieves logins matching search across username/role. Unlike the Postgres
+// implementation, the in-memory store has no users table to join against (same accepted gap as
+// inMemoryMembershipRepository.List's attendance count), so LinkedMember is always nil here.
+func (r *inMemoryLoginRepository) List(pagination *models.Pagination, search string) ([]models.LoginWithMember, int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var usernames []string
+	for username, l := range r.logins {
+		if search != "" {
+			s := strings.ToLower(search)
+			if !strings.Contains(strings.ToLower(l.Username), s) && !strings.Contains(strings.ToLower(l.Role), s) {
+				continue
+			}
+		}
+		usernames = append(usernames, username)
+	}
+	sort.Strings(usernames)
+
+	total := int64(len(usernames))
+
+	offset := 0
+	if pagination.Offset != nil && *pagination.Offset > 0 {
+		offset = *pagination.Offset
+	}
+	if offset >= len(usernames) {
+		return []models.LoginWithMember{}, total, nil
+	}
+	usernames = usernames[offset:]
+	if pagination.Limit != nil && *pagination.Limit > 0 && *pagination.Limit < len(usernames) {
+		usernames = usernames[:*pagination.Limit]
+	}
+
+	results := make([]models.LoginWithMember, len(usernames))
+	for i, username := range usernames {
+		l := r.logins[username]
+		results[i] = models.LoginWithMember{Username: l.Username, Role: l.Role}
+	}
+
+	return results, total, nil
+}
+
+func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (models.LoginWithMember, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	login, exists := r.logins[username]
+	if !exists {
+		return models.LoginWithMember{}, store.ErrNotFound
+	}
+
+	return models.LoginWithMember{Username: login.Username, Role: login.Role}, nil
 }

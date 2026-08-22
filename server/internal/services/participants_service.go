@@ -3,28 +3,28 @@ package services
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"errors"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type participantsService struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewParticipantsService(db *gorm.DB) *participantsService {
+func NewParticipantsService(st store.Store) *participantsService {
 	return &participantsService{
-		db: db,
+		store: st,
 	}
 }
 
 func (svc *participantsService) CreateParticipant(req *models.CreateParticipantRequest) (*models.Participant, error) {
-	eventService := NewEventService(svc.db)
-
-	event, err := eventService.GetEvent(req.EventID)
+	event, err := svc.store.Events().FindByID(req.EventID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, e.NotFound(err.Error())
+		}
+		return nil, e.InternalServerError(err.Error())
 	}
 
 	if event.State == models.EventStateEnded {
@@ -38,141 +38,46 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 		SignedOutAt:  nil,
 	}
 
-	res := svc.db.Create(&participant)
-	if err := res.Error; err != nil {
+	if err := svc.store.Entries().Create(&participant); err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
 	return &participant, nil
 }
 
-func (svc *participantsService) ListParticipants(eventId int32) ([]models.ListParticipantsResult, error) {
-	ret := []models.ListParticipantsResult{}
-
-	// TODO: Update this query eventually to return a specific array of objects
-	subQuery := svc.db.
-		Table("participants").
-		Select("memberships.id, memberships.user_id, participants.signed_out_at, participants.placement").
-		Joins("INNER JOIN memberships on memberships.id = participants.membership_id").
-		Where("participants.event_id = ?", eventId)
-
-	res := svc.db.
-		Table("(?) as entries", subQuery).
-		Select("users.first_name, users.last_name, users.id, entries.signed_out_at, entries.placement, entries.id as membership_id").
-		Joins("INNER JOIN users ON users.id = entries.user_id").
-		Order("entries.signed_out_at DESC").
-		Find(&ret)
-
-	if err := res.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	return ret, nil
-}
-
-func (svc *participantsService) ListParticipantsV2(eventId int32, pagination *models.Pagination, search string) ([]models.Participant, int64, error) {
-	buildBase := func() *gorm.DB {
-		q := svc.db.Model(&models.Participant{}).Where("participants.event_id = ?", eventId)
-		if search != "" {
-			sanitized := sanitizeLikeInput(search)
-			pattern := "%" + sanitized + "%"
-			q = q.Joins("JOIN memberships ON memberships.id = participants.membership_id").
-				Joins("JOIN users ON users.id = memberships.user_id").
-				Where(
-					"users.first_name ILIKE ? OR users.last_name ILIKE ? OR (users.first_name || ' ' || users.last_name) ILIKE ? OR CAST(users.id AS TEXT) ILIKE ?",
-					pattern, pattern, pattern, pattern,
-				)
-		}
-		return q
-	}
-
-	var total int64
-	if err := buildBase().Count(&total).Error; err != nil {
-		return nil, 0, e.InternalServerError(err.Error())
-	}
-
-	var participants []models.Participant
-
-	fetchQuery := models.Participant{}.Preload(buildBase()).
-		Order("participants.signed_out_at DESC")
-	fetchQuery = pagination.Apply(fetchQuery)
-
-	if err := fetchQuery.Find(&participants).Error; err != nil {
-		return nil, 0, e.InternalServerError(err.Error())
-	}
-
-	return participants, total, nil
-}
-
 func (svc *participantsService) UpdateParticipant(req *models.UpdateParticipantRequest) (*models.Participant, error) {
-	eventService := NewEventService(svc.db)
-
-	event, err := eventService.GetEvent(req.EventID)
+	event, err := svc.store.Events().FindByID(req.EventID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, e.NotFound(err.Error())
+		}
+		return nil, e.InternalServerError(err.Error())
 	}
 
 	if event.State == models.EventStateEnded {
 		return nil, e.Forbidden("Modification of a completed event is forbidden")
 	}
 
-	participant := models.Participant{
-		MembershipID: &req.MembershipID,
-		EventID:      req.EventID,
-	}
-
-	res := svc.db.Where("membership_id = ? AND event_id = ?", req.MembershipID, req.EventID).First(&participant)
-	// Check if the error is a not found error
-	if err := res.Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.NotFound(err.Error())
-	}
-
-	// Any other DB error is a server error
-	if err := res.Error; err != nil {
+	participant, err := svc.store.Entries().FindByMembershipAndEventID(req.MembershipID, req.EventID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, e.NotFound(err.Error())
+		}
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	// Create transaction since we need to update the semester budget
-	tx := svc.db.Begin()
-	if err := tx.Error; err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
+	values := map[string]any{}
 	if req.SignIn {
-		participant.SignedOutAt = nil
+		values["signed_out_at"] = nil
 	}
-
 	if req.SignOut {
 		now := time.Now().UTC()
-		participant.SignedOutAt = &now
+		values["signed_out_at"] = &now
 	}
 
-	res = tx.Save(&participant)
-	if err := res.Error; err != nil {
-		tx.Rollback()
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	res = tx.Commit()
-	if err := res.Error; err != nil {
-		tx.Rollback()
+	if err := svc.store.Entries().Update(&participant, values); err != nil {
 		return nil, e.InternalServerError(err.Error())
 	}
 
 	return &participant, nil
-}
-
-func (svc *participantsService) DeleteParticipant(req *models.DeleteParticipantRequest) error {
-	// Do not need to update semester budget
-	res := svc.db.Where("membership_id = ? AND event_id = ?", req.MembershipID, req.EventID).Delete(models.Participant{})
-	if err := res.Error; err != nil {
-		return e.InternalServerError(err.Error())
-	}
-
-	// Check if any rows were actually deleted
-	if res.RowsAffected == 0 {
-		return e.NotFound("Entry not found")
-	}
-
-	return nil
 }

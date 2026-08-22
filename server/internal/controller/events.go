@@ -5,6 +5,7 @@ import (
 	"api/internal/middleware"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,11 +18,12 @@ import (
 )
 
 type eventsController struct {
-	db *gorm.DB
+	db    *gorm.DB
+	store store.Store
 }
 
-func NewEventsController(db *gorm.DB) Controller {
-	return &eventsController{db: db}
+func NewEventsController(db *gorm.DB, st store.Store) Controller {
+	return &eventsController{db: db, store: st}
 }
 
 func (s *eventsController) LoadRoutes(router *gin.RouterGroup) {
@@ -75,10 +77,19 @@ func (s *eventsController) createEvent(ctx *gin.Context) {
 		return
 	}
 
-	// Initialize the event service and create the event
-	svc := services.NewEventService(s.db)
-	event, err := svc.CreateEventV2(semesterUUID, &req)
-	if err != nil {
+	event := models.Event{
+		Name:             req.Name,
+		Format:           req.Format,
+		Notes:            req.Notes,
+		SemesterID:       semesterUUID,
+		StartDate:        req.StartDate,
+		State:            models.EventStateStarted,
+		StructureID:      req.StructureID,
+		Rebuys:           0,
+		PointsMultiplier: req.PointsMultiplier,
+	}
+
+	if err := s.store.Events().Create(&event); err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -129,13 +140,11 @@ func (s *eventsController) listEvents(ctx *gin.Context) {
 
 	filter := &models.ListEventsFilter{
 		Pagination: pagination,
-		SemesterID: semesterID,
+		SemesterID: &semesterID,
 		Search:     search,
 	}
 
-	// Initialize the event service and list events for the semester
-	svc := services.NewEventService(s.db)
-	events, total, err := svc.ListEventsV2(filter)
+	events, total, err := s.store.Events().List(filter)
 	if err != nil {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
@@ -192,23 +201,20 @@ func (s *eventsController) getEvent(ctx *gin.Context) {
 		return
 	}
 
-	// Initialize the event service and get the event by ID
-	svc := services.NewEventService(s.db)
-	event, err := svc.GetEventByID(semesterID, int32(eventID))
+	event, err := s.store.Events().FindBySemesterAndID(semesterID, int32(eventID))
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(
+					fmt.Sprintf("Event '%d' not found for semester '%s'", eventID, semesterID),
+				),
+			)
+			return
+		}
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
-		)
-		return
-	}
-
-	if event == nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusNotFound,
-			apierrors.NotFound(
-				fmt.Sprintf("Event '%d' not found for semester '%s'", eventID, semesterID),
-			),
 		)
 		return
 	}
@@ -274,10 +280,17 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
-
-	event, err := svc.GetEventByID(semesterID, int32(eventID))
+	event, err := s.store.Events().FindBySemesterAndID(semesterID, int32(eventID))
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(
+					fmt.Sprintf("Event '%d' not found for semester '%s'", eventID, semesterID),
+				),
+			)
+			return
+		}
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -285,22 +298,8 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 		return
 	}
 
-	if event == nil {
-		ctx.AbortWithStatusJSON(
-			http.StatusNotFound,
-			apierrors.NotFound(
-				fmt.Sprintf("Event '%d' not found for semester '%s'", eventID, semesterID),
-			),
-		)
-		return
-	}
-
-	err = svc.UpdateEventV2(event, updateMap)
+	err = s.store.Events().Update(&event, updateMap)
 	if err != nil {
-		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
-			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
-			return
-		}
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
@@ -428,7 +427,7 @@ func (s *eventsController) endEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	if err := svc.EndEvent(int32(eventID)); err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -484,7 +483,7 @@ func (s *eventsController) restartEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	if err := svc.UndoEndEvent(int32(eventID)); err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -539,7 +538,7 @@ func (s *eventsController) rebuyEvent(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewEventService(s.db)
+	svc := services.NewEventService(s.store)
 	err = svc.NewRebuy(int32(eventID))
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {

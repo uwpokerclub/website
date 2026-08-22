@@ -255,3 +255,66 @@ func TestRankingRepository_BatchIncrementPoints_Empty(t *testing.T) {
 
 	require.NoError(t, repo.BatchIncrementPoints(map[uuid.UUID]int32{}))
 }
+
+func TestRankingRepository_FindBySemesterAndMembershipID(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	user := &models.User{ID: 20260030, FirstName: "Marie", LastName: "Curie", Email: "mc@example.com", Faculty: "Science"}
+	require.NoError(t, db.Create(user).Error)
+	semester := &models.Semester{Name: "Fall 2026"}
+	require.NoError(t, db.Create(semester).Error)
+	membership := &models.Membership{UserID: user.ID, SemesterID: semester.ID}
+	require.NoError(t, db.Create(membership).Error)
+
+	repo := postgres.NewRankingRepository(db)
+	require.NoError(t, repo.Create(&models.Ranking{MembershipID: membership.ID, Points: 42}))
+
+	found, err := repo.FindBySemesterAndMembershipID(semester.ID, membership.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 42, found.Points)
+	require.EqualValues(t, 1, found.Position)
+
+	_, err = repo.FindBySemesterAndMembershipID(semester.ID, uuid.New())
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestRankingRepository_List(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	user := &models.User{ID: 20260031, FirstName: "Rosalind", LastName: "Franklin", Email: "rf@example.com", Faculty: "Science"}
+	require.NoError(t, db.Create(user).Error)
+	semester := &models.Semester{Name: "Winter 2026"}
+	require.NoError(t, db.Create(semester).Error)
+	membership := &models.Membership{UserID: user.ID, SemesterID: semester.ID}
+	require.NoError(t, db.Create(membership).Error)
+
+	repo := postgres.NewRankingRepository(db)
+	require.NoError(t, repo.Create(&models.Ranking{MembershipID: membership.ID, Points: 10}))
+
+	results, total, err := repo.List(&models.ListRankingsFilter{SemesterID: semester.ID})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Len(t, results, 1)
+	require.Equal(t, "Rosalind", results[0].FirstName)
+
+	results, total, err = repo.List(&models.ListRankingsFilter{SemesterID: semester.ID, Search: "franklin"})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+
+	results, total, err = repo.List(&models.ListRankingsFilter{SemesterID: semester.ID, Search: "nobody"})
+	require.NoError(t, err)
+	require.EqualValues(t, 0, total)
+	require.Empty(t, results)
+}

@@ -21,9 +21,9 @@ type EventRepository interface {
 	// exists within the given semester.
 	FindBySemesterAndID(semesterID uuid.UUID, id int32) (models.Event, error)
 
-	// List retrieves events matching the given filter (semester, optional name
-	// search), ordered by start date descending, along with the total matching
-	// count before pagination is applied.
+	// List retrieves events matching the given filter (semester — or every semester if nil —
+	// plus optional name search), ordered by start date descending, along with the total
+	// matching count before pagination is applied.
 	List(filter *models.ListEventsFilter) ([]models.Event, int64, error)
 
 	// Update applies a partial update to an event using the given column/value

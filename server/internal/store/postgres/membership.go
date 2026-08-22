@@ -25,7 +25,7 @@ func (r *postgresMembershipRepository) Create(membership *models.Membership) err
 
 func (r *postgresMembershipRepository) FindByID(id uuid.UUID) (models.Membership, error) {
 	var membership models.Membership
-	if err := r.db.First(&membership, "id = ?", id).Error; err != nil {
+	if err := (models.Membership{}).Preload(r.db).First(&membership, "memberships.id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return models.Membership{}, store.ErrNotFound
 		}
@@ -38,7 +38,7 @@ func (r *postgresMembershipRepository) FindByID(id uuid.UUID) (models.Membership
 
 func (r *postgresMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error) {
 	var membership models.Membership
-	if err := r.db.First(&membership, "id = ? AND semester_id = ?", id, semesterID).Error; err != nil {
+	if err := (models.Membership{}).Preload(r.db).First(&membership, "memberships.id = ? AND memberships.semester_id = ?", id, semesterID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return models.Membership{}, store.ErrNotFound
 		}
@@ -49,37 +49,96 @@ func (r *postgresMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semes
 	return membership, nil
 }
 
-func (r *postgresMembershipRepository) List(filter *models.ListMembershipsFilter) ([]models.Membership, int64, error) {
-	var memberships []models.Membership
-	var total int64
+func (r *postgresMembershipRepository) applyJoinedFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gorm.DB {
+	if filter.Search != "" {
+		pattern := "%" + eventNameLikeReplacer.Replace(filter.Search) + "%"
+		query = query.Where(
+			`"User".first_name ILIKE ? OR "User".last_name ILIKE ? OR "User".email ILIKE ? OR ("User".first_name || ' ' || "User".last_name) ILIKE ?`,
+			pattern, pattern, pattern, pattern,
+		)
+	}
+	if filter.Name != nil {
+		pattern := "%" + eventNameLikeReplacer.Replace(*filter.Name) + "%"
+		query = query.Where(
+			`"User".first_name ILIKE ? OR "User".last_name ILIKE ? OR ("User".first_name || ' ' || "User".last_name) ILIKE ?`,
+			pattern, pattern, pattern,
+		)
+	}
+	if filter.Email != nil {
+		pattern := "%" + eventNameLikeReplacer.Replace(*filter.Email) + "%"
+		query = query.Where(`"User".email ILIKE ?`, pattern)
+	}
+	if filter.Faculty != nil {
+		query = query.Where(`"User".faculty = ?`, *filter.Faculty)
+	}
+	if filter.StudentID != nil {
+		query = query.Where(`CAST("User".id AS TEXT) = ?`, *filter.StudentID)
+	}
+	return query
+}
 
-	base := r.db.Model(&models.Membership{})
+func (r *postgresMembershipRepository) List(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error) {
+	needsUserJoin := filter.Search != "" || filter.Name != nil || filter.Email != nil || filter.Faculty != nil || filter.StudentID != nil
 
+	countQuery := r.db.Model(&models.Membership{})
 	if filter.SemesterID != nil {
-		base = base.Where("semester_id = ?", *filter.SemesterID)
+		countQuery = countQuery.Where("memberships.semester_id = ?", *filter.SemesterID)
 	}
 	if filter.UserID != nil {
-		base = base.Where("user_id = ?", *filter.UserID)
+		countQuery = countQuery.Where("memberships.user_id = ?", *filter.UserID)
 	}
 	if filter.Paid != nil {
-		base = base.Where("paid = ?", *filter.Paid)
+		countQuery = countQuery.Where("memberships.paid = ?", *filter.Paid)
 	}
 	if filter.Discounted != nil {
-		base = base.Where("discounted = ?", *filter.Discounted)
+		countQuery = countQuery.Where("memberships.discounted = ?", *filter.Discounted)
 	}
+	if needsUserJoin {
+		countQuery = countQuery.Joins("User")
+	}
+	countQuery = r.applyJoinedFilterClauses(countQuery, filter)
 
-	if err := base.Count(&total).Error; err != nil {
+	var total int64
+	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	query := base.Order("user_id ASC")
+	attendanceSubquery := r.db.
+		Select("participants.membership_id, COUNT(*) as total").
+		Table("participants").
+		Joins("INNER JOIN events ON participants.event_id = events.id")
+	if filter.SemesterID != nil {
+		attendanceSubquery = attendanceSubquery.Where("events.semester_id = ?", *filter.SemesterID)
+	}
+	attendanceSubquery = attendanceSubquery.Group("participants.membership_id")
+
+	query := r.db.
+		Select("memberships.*, COALESCE(att.total, 0) as attendance").
+		Joins("User").
+		Joins("LEFT JOIN (?) as att ON att.membership_id = memberships.id", attendanceSubquery).
+		Order(`"User".first_name ASC`).
+		Order(`"User".last_name ASC`)
+	if filter.SemesterID != nil {
+		query = query.Where("memberships.semester_id = ?", *filter.SemesterID)
+	}
+	if filter.UserID != nil {
+		query = query.Where("memberships.user_id = ?", *filter.UserID)
+	}
+	if filter.Paid != nil {
+		query = query.Where("memberships.paid = ?", *filter.Paid)
+	}
+	if filter.Discounted != nil {
+		query = query.Where("memberships.discounted = ?", *filter.Discounted)
+	}
+	query = r.applyJoinedFilterClauses(query, filter)
 	query = filter.Pagination.Apply(query)
 
-	if err := query.Find(&memberships).Error; err != nil {
+	var results []models.MembershipWithAttendance
+	if err := query.Find(&results).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return memberships, total, nil
+	return results, total, nil
 }
 
 func (r *postgresMembershipRepository) Update(membership *models.Membership) error {

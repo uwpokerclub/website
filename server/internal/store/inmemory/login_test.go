@@ -133,3 +133,39 @@ func TestLoginRepository_Clone_Isolation(t *testing.T) {
 	require.Len(t, clone.logins, 1)
 	require.Len(t, repo.logins, 2)
 }
+
+func TestLoginRepository_List(t *testing.T) {
+	t.Parallel()
+
+	repo := newLoginRepository()
+	require.NoError(t, repo.Create(&models.Login{Username: "aturing", Password: "hash", Role: "executive"}))
+	require.NoError(t, repo.Create(&models.Login{Username: "bturing", Password: "hash", Role: "bot"}))
+
+	results, total, err := repo.List(&models.Pagination{}, "")
+	require.NoError(t, err)
+	require.EqualValues(t, 2, total)
+	require.Len(t, results, 2)
+	for _, r := range results {
+		require.Nil(t, r.LinkedMember)
+	}
+
+	results, total, err = repo.List(&models.Pagination{}, "aturing")
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Equal(t, "aturing", results[0].Username)
+}
+
+func TestLoginRepository_FindByUsernameWithMember(t *testing.T) {
+	t.Parallel()
+
+	repo := newLoginRepository()
+	require.NoError(t, repo.Create(&models.Login{Username: "aturing", Password: "hash", Role: "executive"}))
+
+	found, err := repo.FindByUsernameWithMember("aturing")
+	require.NoError(t, err)
+	require.Equal(t, "aturing", found.Username)
+	require.Nil(t, found.LinkedMember)
+
+	_, err = repo.FindByUsernameWithMember("nobody")
+	require.ErrorIs(t, err, store.ErrNotFound)
+}

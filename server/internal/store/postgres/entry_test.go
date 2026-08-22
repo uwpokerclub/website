@@ -326,3 +326,94 @@ func TestEntryRepository_Delete_NotFound(t *testing.T) {
 	err = repo.Delete(uuid.New(), 99999)
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestEntryRepository_List_Search(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	user := &models.User{ID: 20260020, FirstName: "Katherine", LastName: "Johnson", Email: "kj@example.com", Faculty: "Math"}
+	require.NoError(t, db.Create(user).Error)
+	semester := &models.Semester{Name: "Fall 2026"}
+	require.NoError(t, db.Create(semester).Error)
+	structure := &models.Structure{Name: "Standard"}
+	require.NoError(t, db.Create(structure).Error)
+	event := &models.Event{Name: "Weekly", Format: "No Limit", SemesterID: semester.ID, StructureID: structure.ID, StartDate: time.Now().UTC()}
+	require.NoError(t, db.Create(event).Error)
+	membership := &models.Membership{UserID: user.ID, SemesterID: semester.ID}
+	require.NoError(t, db.Create(membership).Error)
+
+	repo := postgres.NewEntryRepository(db)
+	require.NoError(t, repo.Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+
+	results, total, err := repo.List(&models.ListParticipantsFilter{EventID: event.ID, Search: "katherine"})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Len(t, results, 1)
+
+	results, total, err = repo.List(&models.ListParticipantsFilter{EventID: event.ID, Search: "nobody"})
+	require.NoError(t, err)
+	require.EqualValues(t, 0, total)
+	require.Empty(t, results)
+}
+
+func TestEntryRepository_SignOutAllUnsigned(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedSemesters(db))
+	require.NoError(t, testutils.SeedStructures(db))
+	require.NoError(t, testutils.SeedUsers(db))
+	event, err := testutils.CreateTestEvent(db, testutils.TEST_SEMESTERS[0].ID, testutils.TEST_STRUCTURES[0].ID, "Test Event")
+	require.NoError(t, err)
+	membership, err := testutils.CreateTestMembership(db, testutils.TEST_USERS[0].ID, testutils.TEST_SEMESTERS[0].ID)
+	require.NoError(t, err)
+
+	repo := postgres.NewEntryRepository(db)
+	require.NoError(t, repo.Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+
+	now := time.Now().UTC()
+	require.NoError(t, repo.SignOutAllUnsigned(event.ID, now))
+
+	found, err := repo.FindByMembershipAndEventID(membership.ID, event.ID)
+	require.NoError(t, err)
+	require.NotNil(t, found.SignedOutAt)
+	require.WithinDuration(t, now, *found.SignedOutAt, time.Second)
+}
+
+func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedSemesters(db))
+	require.NoError(t, testutils.SeedStructures(db))
+	require.NoError(t, testutils.SeedUsers(db))
+	event, err := testutils.CreateTestEvent(db, testutils.TEST_SEMESTERS[0].ID, testutils.TEST_STRUCTURES[0].ID, "Test Event")
+	require.NoError(t, err)
+	membership, err := testutils.CreateTestMembership(db, testutils.TEST_USERS[0].ID, testutils.TEST_SEMESTERS[0].ID)
+	require.NoError(t, err)
+
+	repo := postgres.NewEntryRepository(db)
+	participant := &models.Participant{MembershipID: &membership.ID, EventID: event.ID}
+	require.NoError(t, repo.Create(participant))
+
+	require.NoError(t, repo.BatchUpdatePlacements(map[int32]uint16{participant.ID: 3}))
+
+	found, err := repo.FindByID(participant.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 3, found.Placement)
+}

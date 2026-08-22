@@ -4,6 +4,8 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -118,4 +120,75 @@ func (r *inMemoryRankingRepository) BatchIncrementPoints(updates map[uuid.UUID]i
 	}
 
 	return nil
+}
+
+func (r *inMemoryRankingRepository) rankingsInSemesterLocked(semesterID uuid.UUID) []*models.Ranking {
+	var results []*models.Ranking
+	for _, rk := range r.rankings {
+		if rk.Membership != nil && rk.Membership.SemesterID == semesterID {
+			results = append(results, rk)
+		}
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Points > results[j].Points
+	})
+	return results
+}
+
+func (r *inMemoryRankingRepository) FindBySemesterAndMembershipID(semesterID uuid.UUID, membershipID uuid.UUID) (models.GetRankingResponse, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	ranked := r.rankingsInSemesterLocked(semesterID)
+	for i, rk := range ranked {
+		if rk.MembershipID == membershipID {
+			return models.GetRankingResponse{Points: rk.Points, Position: int32(i + 1)}, nil
+		}
+	}
+
+	return models.GetRankingResponse{}, store.ErrNotFound
+}
+
+func (r *inMemoryRankingRepository) List(filter *models.ListRankingsFilter) ([]models.RankingResponse, int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	ranked := r.rankingsInSemesterLocked(filter.SemesterID)
+
+	var matched []models.RankingResponse
+	for i, rk := range ranked {
+		var firstName, lastName string
+		var userID uint64
+		if rk.Membership.User != nil {
+			firstName = rk.Membership.User.FirstName
+			lastName = rk.Membership.User.LastName
+			userID = rk.Membership.User.ID
+		}
+		if filter.Search != "" {
+			s := strings.ToLower(filter.Search)
+			full := strings.ToLower(firstName + " " + lastName)
+			if !strings.Contains(strings.ToLower(firstName), s) && !strings.Contains(strings.ToLower(lastName), s) && !strings.Contains(full, s) {
+				continue
+			}
+		}
+		matched = append(matched, models.RankingResponse{
+			ID: userID, FirstName: firstName, LastName: lastName, Points: rk.Points, Position: int32(i + 1),
+		})
+	}
+
+	total := int64(len(matched))
+
+	offset := 0
+	if filter.Pagination.Offset != nil && *filter.Pagination.Offset > 0 {
+		offset = *filter.Pagination.Offset
+	}
+	if offset >= len(matched) {
+		return []models.RankingResponse{}, total, nil
+	}
+	matched = matched[offset:]
+	if filter.Pagination.Limit != nil && *filter.Pagination.Limit > 0 && *filter.Pagination.Limit < len(matched) {
+		matched = matched[:*filter.Pagination.Limit]
+	}
+
+	return matched, total, nil
 }

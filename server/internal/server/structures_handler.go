@@ -3,7 +3,8 @@ package server
 import (
 	e "api/internal/errors"
 	"api/internal/models"
-	"api/internal/services"
+	"api/internal/store"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -18,10 +19,24 @@ func (s *apiServer) CreateStructure(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	structure, err := svc.CreateStructure(&req)
-	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+	blinds := make([]models.Blind, len(req.Blinds))
+	for i, blind := range req.Blinds {
+		blinds[i] = models.Blind{
+			Small: blind.Small,
+			Big:   blind.Big,
+			Ante:  blind.Ante,
+			Time:  blind.Time,
+			Index: int8(i),
+		}
+	}
+
+	structure := models.Structure{
+		Name:   req.Name,
+		Blinds: blinds,
+	}
+
+	if err := s.store.Structures().Create(&structure); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -29,10 +44,9 @@ func (s *apiServer) CreateStructure(ctx *gin.Context) {
 }
 
 func (s *apiServer) ListStructures(ctx *gin.Context) {
-	svc := services.NewStructureService(s.db)
-	structures, err := svc.ListStructures()
+	structures, _, err := s.store.Structures().List(&models.Pagination{})
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -40,16 +54,19 @@ func (s *apiServer) ListStructures(ctx *gin.Context) {
 }
 
 func (s *apiServer) GetStructure(ctx *gin.Context) {
-	structureId, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err != nil {
+	structureId, err := strconv.ParseInt(ctx.Param("id"), 10, 32)
+	if err != nil || structureId < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid structure ID specified in request"))
 		return
 	}
 
-	svc := services.NewStructureService(s.db)
-	structure, err := svc.GetStructure(int32(structureId))
+	structure, err := s.store.Structures().FindByID(int32(structureId))
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, e.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -57,8 +74,8 @@ func (s *apiServer) GetStructure(ctx *gin.Context) {
 }
 
 func (s *apiServer) UpdateStructure(ctx *gin.Context) {
-	structureId, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err != nil {
+	structureId, err := strconv.ParseInt(ctx.Param("id"), 10, 32)
+	if err != nil || structureId < 0 {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, e.InvalidRequest("Invalid structure ID specified in request"))
 		return
 	}
@@ -71,12 +88,56 @@ func (s *apiServer) UpdateStructure(ctx *gin.Context) {
 	}
 	req.ID = int32(structureId)
 
-	svc := services.NewStructureService(s.db)
-	structure, err := svc.UpdateStructure(&req)
+	structure, err := s.store.Structures().FindByID(req.ID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, e.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+	structure.Name = req.Name
+
+	blinds := make([]models.Blind, len(req.Blinds))
+	for i, blind := range req.Blinds {
+		blinds[i] = models.Blind{
+			Small:       blind.Small,
+			Big:         blind.Big,
+			Ante:        blind.Ante,
+			Time:        blind.Time,
+			StructureId: req.ID,
+			Index:       int8(i),
+		}
+	}
+
+	tx, err := s.store.BeginTx()
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+	defer tx.Rollback()
+
+	if err := tx.Structures().Update(&structure); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, structure)
+	if err := tx.Structures().ReplaceBlindsByStructureID(req.ID, blinds); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+
+	result, err := s.store.Structures().FindByID(req.ID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }

@@ -6,6 +6,8 @@ import (
 	e "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -80,16 +82,30 @@ func (s *apiServer) ListMemberships(ctx *gin.Context) {
 	filter := parseListMembershipFilter(ctx)
 	filter.SemesterID = &semesterId
 
-	// Get the list fo all the members
-	svc := services.NewMembershipService(s.db)
-	memberships, err := svc.ListMemberships(filter)
+	memberships, _, err := s.store.Memberships().List(filter)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
+	ret := make([]models.ListMembershipsResult, len(memberships))
+	for i, m := range memberships {
+		result := models.ListMembershipsResult{
+			ID:         m.ID,
+			UserID:     m.UserID,
+			Paid:       m.Paid,
+			Discounted: m.Discounted,
+			Attendance: m.Attendance,
+		}
+		if m.User != nil {
+			result.FirstName = m.User.FirstName
+			result.LastName = m.User.LastName
+		}
+		ret[i] = result
+	}
+
 	// Return as JSON with status 200
-	ctx.JSON(http.StatusOK, memberships)
+	ctx.JSON(http.StatusOK, ret)
 }
 
 func (s *apiServer) CreateMembership(ctx *gin.Context) {
@@ -100,7 +116,7 @@ func (s *apiServer) CreateMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(s.db)
+	svc := services.NewMembershipService(s.store)
 	membership, err := svc.CreateMembership(&req)
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)
@@ -117,10 +133,13 @@ func (s *apiServer) GetMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(s.db)
-	membership, err := svc.GetMembership(id)
+	membership, err := s.store.Memberships().FindByID(id)
 	if err != nil {
-		ctx.JSON(err.(e.APIErrorResponse).Code, err)
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, e.NotFound(err.Error()))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -142,7 +161,7 @@ func (s *apiServer) UpdateMembership(ctx *gin.Context) {
 	}
 	req.ID = id
 
-	svc := services.NewMembershipService(s.db)
+	svc := services.NewMembershipService(s.store)
 	membership, err := svc.UpdateMembership(&req)
 	if err != nil {
 		ctx.JSON(err.(e.APIErrorResponse).Code, err)

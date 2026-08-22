@@ -75,7 +75,9 @@ func (r *postgresEventRepository) FindBySemesterAndID(semesterID uuid.UUID, id i
 
 func (r *postgresEventRepository) List(filter *models.ListEventsFilter) ([]models.Event, int64, error) {
 	applyFilter := func(q *gorm.DB) *gorm.DB {
-		q = q.Where("semester_id = ?", filter.SemesterID)
+		if filter.SemesterID != nil {
+			q = q.Where("semester_id = ?", *filter.SemesterID)
+		}
 		if filter.Search != "" {
 			pattern := "%" + eventNameLikeReplacer.Replace(filter.Search) + "%"
 			q = q.Where("name ILIKE ?", pattern)

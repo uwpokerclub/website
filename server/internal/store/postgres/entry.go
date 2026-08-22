@@ -4,6 +4,9 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -54,15 +57,26 @@ func (r *postgresEntryRepository) FindByMembershipAndEventID(membershipID uuid.U
 }
 
 func (r *postgresEntryRepository) List(filter *models.ListParticipantsFilter) ([]models.Participant, int64, error) {
+	applyFilter := func(q *gorm.DB) *gorm.DB {
+		q = q.Where("participants.event_id = ?", filter.EventID)
+		if filter.Search != "" {
+			pattern := "%" + eventNameLikeReplacer.Replace(filter.Search) + "%"
+			q = q.Joins("JOIN memberships ON memberships.id = participants.membership_id").
+				Joins("JOIN users ON users.id = memberships.user_id").
+				Where(
+					"users.first_name ILIKE ? OR users.last_name ILIKE ? OR (users.first_name || ' ' || users.last_name) ILIKE ? OR CAST(users.id AS TEXT) ILIKE ?",
+					pattern, pattern, pattern, pattern,
+				)
+		}
+		return q
+	}
+
 	var total int64
-	if err := r.db.Model(&models.Participant{}).
-		Where("participants.event_id = ?", filter.EventID).
-		Count(&total).Error; err != nil {
+	if err := applyFilter(r.db.Model(&models.Participant{})).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	query := models.Participant{}.Preload(r.db).
-		Where("participants.event_id = ?", filter.EventID).
+	query := applyFilter(models.Participant{}.Preload(r.db)).
 		Order("participants.signed_out_at DESC")
 	query = filter.Pagination.Apply(query)
 
@@ -91,4 +105,45 @@ func (r *postgresEntryRepository) Delete(membershipID uuid.UUID, eventID int32) 
 	}
 
 	return nil
+}
+
+func (r *postgresEntryRepository) SignOutAllUnsigned(eventID int32, signedOutAt time.Time) error {
+	return r.db.Model(&models.Participant{}).
+		Where("event_id = ? AND signed_out_at IS NULL", eventID).
+		Update("signed_out_at", signedOutAt).Error
+}
+
+func (r *postgresEntryRepository) BatchUpdatePlacements(placements map[int32]uint16) error {
+	if len(placements) == 0 {
+		return nil
+	}
+
+	ids := make([]int32, 0, len(placements))
+	for id := range placements {
+		ids = append(ids, id)
+	}
+
+	caseExprs := make([]string, 0, len(ids))
+	args := make([]interface{}, 0, len(ids)*2)
+	argIdx := 1
+	for _, id := range ids {
+		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = $%d THEN $%d::integer", argIdx, argIdx+1))
+		args = append(args, id, placements[id])
+		argIdx += 2
+	}
+
+	idPlaceholders := make([]string, 0, len(ids))
+	for _, id := range ids {
+		idPlaceholders = append(idPlaceholders, fmt.Sprintf("$%d", argIdx))
+		args = append(args, id)
+		argIdx++
+	}
+
+	query := fmt.Sprintf(
+		"UPDATE participants SET placement = CASE %s END WHERE id IN (%s)",
+		strings.Join(caseExprs, " "),
+		strings.Join(idPlaceholders, ", "),
+	)
+
+	return r.db.Exec(query, args...).Error
 }

@@ -3,6 +3,7 @@ package server
 import (
 	"api/internal/controller"
 	"api/internal/middleware"
+	"api/internal/store"
 	"api/internal/store/postgres"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 type apiServer struct {
 	Router *gin.Engine
 	db     *gorm.DB
+	store  store.Store
 }
 
 func NewAPIServer(db *gorm.DB) *apiServer {
@@ -48,7 +50,7 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 		c.File("./public/index.html")
 	})
 
-	s := &apiServer{Router: r, db: db}
+	s := &apiServer{Router: r, db: db, store: postgres.NewStore(db)}
 
 	// Initialize all routes
 	s.SetupRoutes()
@@ -142,22 +144,18 @@ func (s *apiServer) SetupV2Routes() {
 	// Serve Swagger documentation
 	apiV2Route.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-
-	// Setup model store
-	store := postgres.NewStore(s.db)
-
 	// Load routes from controllers
 	controllers := []controller.Controller{
 		controller.NewHealthController(),
 		controller.NewAuthenticationController(s.db),
-		controller.NewSemestersController(s.db, store),
-		controller.NewEventsController(s.db),
-		controller.NewEntriesController(s.db),
-		controller.NewMembersController(s.db, store),
-		controller.NewMembershipsController(s.db),
-		controller.NewRankingsController(s.db),
-		controller.NewStructuresController(s.db, store),
-		controller.NewLoginsController(s.db),
+		controller.NewSemestersController(s.db, s.store),
+		controller.NewEventsController(s.db, s.store),
+		controller.NewEntriesController(s.db, s.store),
+		controller.NewMembersController(s.db, s.store),
+		controller.NewMembershipsController(s.db, s.store),
+		controller.NewRankingsController(s.db, s.store),
+		controller.NewStructuresController(s.db, s.store),
+		controller.NewLoginsController(s.db, s.store),
 	}
 
 	controllers = append(controllers, registerTestControllers(s.db)...)

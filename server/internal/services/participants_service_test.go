@@ -1,339 +1,72 @@
 package services
 
 import (
-	"api/internal/database"
+	"api/internal/errors"
 	"api/internal/models"
-	"api/internal/testhelpers"
-	"errors"
+	"api/internal/store/inmemory"
 	"testing"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParticipantsService_CreateParticipant(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
 
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
-
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	req := models.CreateParticipantRequest{
-		MembershipID: set.Memberships[0].ID,
-		EventID:      event.ID,
-	}
-
-	svc := NewParticipantsService(db)
-	res, err := svc.CreateParticipant(&req)
-	if err != nil {
-		t.Errorf("CreateParticipant() error = %v", err)
-		return
-	}
-
-	if res.Placement != 0 {
-		t.Errorf("Placement = %v, expected = %v", res.Placement, 0)
-		return
-	}
-
-	if res.SignedOutAt != nil {
-		t.Errorf("SignedOutAt not nil")
-		return
-	}
+	svc := NewParticipantsService(st)
+	membershipID := uuid.New()
+	participant, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membershipID, EventID: event.ID})
+	require.NoError(t, err)
+	require.Equal(t, membershipID, *participant.MembershipID)
 }
 
-func TestParticipantsService_ListParticipants(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+func TestParticipantsService_CreateParticipant_EventEnded(t *testing.T) {
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
 
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
-
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	next := now.Add(time.Minute * 30)
-	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 2, &next)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 1, nil)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	svc := NewParticipantsService(db)
-	res, err := svc.ListParticipants(event.ID)
-	if err != nil {
-		t.Errorf("ListParticipants() error = %v", err)
-		return
-	}
-
-	if res[0].MembershipId != *entry3.MembershipID {
-		t.Errorf("ListParticipants() result order incorrect, got[0]: %v, wanted: %v", res[0], *entry3.MembershipID)
-		return
-	}
-
-	if res[1].MembershipId != *entry2.MembershipID {
-		t.Errorf("ListParticipants() result order incorrect, got[1]: %v, wanted: %v", res[1], *entry2.MembershipID)
-		return
-	}
-
-	if res[2].MembershipId != *entry1.MembershipID {
-		t.Errorf("ListParticipants() result order incorrect, got[2]: %v, wanted: %v", res[2], *entry1.MembershipID)
-		return
-	}
-}
-
-func TestParticipantsService_ListParticipantsV2(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
-
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
-
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	next := now.Add(time.Minute * 30)
-	entry2, err := testhelpers.CreateParticipant(db, set.Memberships[1].ID, event.ID, 2, &next)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	entry3, err := testhelpers.CreateParticipant(db, set.Memberships[2].ID, event.ID, 1, nil)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	svc := NewParticipantsService(db)
-	res, _, err := svc.ListParticipantsV2(event.ID, &models.Pagination{}, "")
-	if err != nil {
-		t.Errorf("ListParticipantsV2() error = %v", err)
-		return
-	}
-
-	// Verify we got 3 participants
-	if len(res) != 3 {
-		t.Errorf("ListParticipantsV2() returned %d participants, expected 3", len(res))
-		return
-	}
-
-	// Verify order: should be sorted by signed_out_at DESC (nulls first)
-	if *res[0].MembershipID != *entry3.MembershipID {
-		t.Errorf("ListParticipantsV2() result order incorrect, got[0]: %v, wanted: %v", *res[0].MembershipID, *entry3.MembershipID)
-		return
-	}
-
-	if *res[1].MembershipID != *entry2.MembershipID {
-		t.Errorf("ListParticipantsV2() result order incorrect, got[1]: %v, wanted: %v", *res[1].MembershipID, *entry2.MembershipID)
-		return
-	}
-
-	if *res[2].MembershipID != *entry1.MembershipID {
-		t.Errorf("ListParticipantsV2() result order incorrect, got[2]: %v, wanted: %v", *res[2].MembershipID, *entry1.MembershipID)
-		return
-	}
-
-	// Verify nested Membership is loaded
-	for i, participant := range res {
-		if participant.Membership == nil {
-			t.Errorf("ListParticipantsV2() participant[%d] has nil Membership", i)
-			return
-		}
-
-		// Verify Membership ID matches
-		if participant.Membership.ID != *participant.MembershipID {
-			t.Errorf("ListParticipantsV2() participant[%d] membership ID mismatch: got %v, want %v", i, participant.Membership.ID, *participant.MembershipID)
-			return
-		}
-
-		// Verify nested User is loaded
-		if participant.Membership.User == nil {
-			t.Errorf("ListParticipantsV2() participant[%d] has nil User in Membership", i)
-			return
-		}
-
-		// Verify User ID matches
-		if participant.Membership.User.ID != participant.Membership.UserID {
-			t.Errorf("ListParticipantsV2() participant[%d] user ID mismatch: got %v, want %v", i, participant.Membership.User.ID, participant.Membership.UserID)
-			return
-		}
-	}
-}
-
-func TestParticipantsService_UpdateParticipant_SignIn(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
-
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
-
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
-
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	svc := NewParticipantsService(db)
-
-	res, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{
-		MembershipID: *entry1.MembershipID,
-		EventID:      event.ID,
-		SignIn:       true,
-		SignOut:      false,
-	})
-	if err != nil {
-		t.Errorf("UpdateParticipant() error = %v", err)
-		return
-	}
-
-	if res.SignedOutAt != nil {
-		t.Errorf("SignedOutAt = %v, expected = nil", res.SignedOutAt)
-		return
-	}
+	svc := NewParticipantsService(st)
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: uuid.New(), EventID: event.ID})
+	require.Error(t, err)
+	apiErr, ok := err.(errors.APIErrorResponse)
+	require.True(t, ok)
+	require.Equal(t, 403, apiErr.Code)
 }
 
 func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
 
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
+	membershipID := uuid.New()
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membershipID, EventID: event.ID}))
 
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	svc := NewParticipantsService(db)
-
-	res, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{
-		MembershipID: *entry1.MembershipID,
-		EventID:      event.ID,
-		SignIn:       false,
-		SignOut:      true,
-	})
-	if err != nil {
-		t.Errorf("UpdateParticipant() error = %v", err)
-		return
-	}
-
-	if res.SignedOutAt == nil {
-		t.Errorf("SignedOutAt = nil, expected not nil")
-		return
-	}
+	svc := NewParticipantsService(st)
+	participant, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{MembershipID: membershipID, EventID: event.ID, SignOut: true})
+	require.NoError(t, err)
+	require.NotNil(t, participant.SignedOutAt)
 }
 
-func TestParticipantsService_DeleteParticipant(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+func TestParticipantsService_UpdateParticipant_EventEnded(t *testing.T) {
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer database.WipeDB(db)
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
 
-	set, err := testhelpers.SetupSemester(db, "Fall 2022")
-	if err != nil {
-		t.Fatalf("Failed to setup test environment: %v", err)
-	}
-
-	event, err := testhelpers.CreateEvent(db, "Event 1", set.Semester.ID, time.Now().UTC())
-	if err != nil {
-		t.Fatalf("Failed to setup event: %v", err)
-	}
-
-	now := time.Now().UTC()
-	entry1, err := testhelpers.CreateParticipant(db, set.Memberships[0].ID, event.ID, 3, &now)
-	if err != nil {
-		t.Fatalf("Failed to add entry: %v", err)
-	}
-
-	svc := NewParticipantsService(db)
-
-	err = svc.DeleteParticipant(&models.DeleteParticipantRequest{
-		MembershipID: *entry1.MembershipID,
-		EventID:      entry1.EventID,
-	})
-	if err != nil {
-		t.Errorf("DeleteParticipant() error = %v", err)
-		return
-	}
-
-	// Ensure entry was deleted from the db
-	foundEntry := models.Participant{MembershipID: entry1.MembershipID, EventID: entry1.EventID}
-
-	res := db.First(&foundEntry)
-	if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		t.Errorf("DeleteParticipant() failed to delete entry from the db: %v", res.Error)
-		return
-	}
+	svc := NewParticipantsService(st)
+	_, err := svc.UpdateParticipant(&models.UpdateParticipantRequest{MembershipID: uuid.New(), EventID: event.ID, SignOut: true})
+	require.Error(t, err)
+	apiErr, ok := err.(errors.APIErrorResponse)
+	require.True(t, ok)
+	require.Equal(t, 403, apiErr.Code)
 }

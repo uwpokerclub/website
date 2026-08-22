@@ -93,12 +93,12 @@ func TestEventRepository_List(t *testing.T) {
 	require.NoError(t, repo.Create(newTestEvent(semesterID, 1, "Beta Tournament")))
 	require.NoError(t, repo.Create(newTestEvent(uuid.New(), 1, "Other Semester Event")))
 
-	events, total, err := repo.List(&models.ListEventsFilter{SemesterID: semesterID})
+	events, total, err := repo.List(&models.ListEventsFilter{SemesterID: &semesterID})
 	require.NoError(t, err)
 	require.EqualValues(t, 2, total)
 	require.Len(t, events, 2)
 
-	events, total, err = repo.List(&models.ListEventsFilter{SemesterID: semesterID, Search: "alpha"})
+	events, total, err = repo.List(&models.ListEventsFilter{SemesterID: &semesterID, Search: "alpha"})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, total)
 	require.Equal(t, "Alpha Tournament", events[0].Name)
@@ -160,11 +160,31 @@ func TestEventRepository_Clone_Isolation(t *testing.T) {
 	// Creating a new event on the original must not appear in the clone.
 	require.NoError(t, repo.Create(newTestEvent(semesterID, 1, "Second Event")))
 
-	_, cloneTotal, err := clone.List(&models.ListEventsFilter{SemesterID: semesterID})
+	_, cloneTotal, err := clone.List(&models.ListEventsFilter{SemesterID: &semesterID})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, cloneTotal)
 
-	_, originalTotal, err := repo.List(&models.ListEventsFilter{SemesterID: semesterID})
+	_, originalTotal, err := repo.List(&models.ListEventsFilter{SemesterID: &semesterID})
 	require.NoError(t, err)
 	require.EqualValues(t, 2, originalTotal)
+}
+
+func TestEventRepository_List_AllSemesters(t *testing.T) {
+	t.Parallel()
+
+	repo := newEventRepository()
+
+	semesterA, semesterB := uuid.New(), uuid.New()
+	require.NoError(t, repo.Create(&models.Event{Name: "A", SemesterID: semesterA, StartDate: time.Now().UTC()}))
+	require.NoError(t, repo.Create(&models.Event{Name: "B", SemesterID: semesterB, StartDate: time.Now().UTC()}))
+
+	results, total, err := repo.List(&models.ListEventsFilter{})
+	require.NoError(t, err)
+	require.EqualValues(t, 2, total)
+	require.Len(t, results, 2)
+
+	results, total, err = repo.List(&models.ListEventsFilter{SemesterID: &semesterA})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Equal(t, "A", results[0].Name)
 }

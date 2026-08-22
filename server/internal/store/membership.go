@@ -11,17 +11,19 @@ type MembershipRepository interface {
 	// Create creates a new membership in the data store.
 	Create(membership *models.Membership) error
 
-	// FindByID retrieves a membership from the data store by its ID.
+	// FindByID retrieves a membership from the data store by its ID, preloaded with its User
+	// and Semester.
 	FindByID(id uuid.UUID) (models.Membership, error)
 
-	// FindByIDAndSemesterID retrieves a membership from the data store by its ID, scoped to a specific semester.
+	// FindByIDAndSemesterID retrieves a membership from the data store by its ID, scoped to a
+	// specific semester, preloaded with its User and Semester.
 	FindByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error)
 
-	// List retrieves memberships from the data store matching the filter's SemesterID, UserID, Paid, and
-	// Discounted fields, ordered by UserID ascending. Filtering on joined member fields (name, email,
-	// faculty, student ID, search) requires a join against the members table and is not performed at
-	// this layer; callers needing that filtering continue to use the service layer for now.
-	List(filter *models.ListMembershipsFilter) ([]models.Membership, int64, error)
+	// List retrieves memberships matching filter (SemesterID, UserID, Paid, Discounted, and the
+	// joined-user filters Search/Name/Email/Faculty/StudentID), each with its computed
+	// event-attendance count within filter.SemesterID, ordered by first/last name ascending,
+	// along with the total matching count before pagination is applied.
+	List(filter *models.ListMembershipsFilter) ([]models.MembershipWithAttendance, int64, error)
 
 	// Update updates an existing membership's Paid and Discounted fields in the data store.
 	Update(membership *models.Membership) error

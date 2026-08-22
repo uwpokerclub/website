@@ -60,3 +60,18 @@ func (r *postgresSemesterRepository) Update(semester *models.Semester) error {
 	}
 	return r.db.Save(semester).Error
 }
+
+func (r *postgresSemesterRepository) IncrementBudget(id uuid.UUID, amount float32) error {
+	result := r.db.Model(&models.Semester{}).
+		Where("id = ?", id).
+		Update("current_budget", gorm.Expr("current_budget + ?", amount))
+	if err := result.Error; err != nil {
+		return err
+	}
+
+	if result.RowsAffected == 0 {
+		return store.ErrNotFound
+	}
+
+	return nil
+}

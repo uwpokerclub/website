@@ -36,7 +36,7 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 	credentialSvc := authentication.NewCredentialService(s.store)
 	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -49,7 +49,7 @@ func (s *apiServer) SessionLoginHandler(ctx *gin.Context) {
 	sessionManager := authentication.NewSessionManager(s.store)
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -89,7 +89,7 @@ func (s *apiServer) SessionLogoutHandler(ctx *gin.Context) {
 	sessionManger := authentication.NewSessionManager(s.store)
 	err = sessionManger.Invalidate(sessionUUID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

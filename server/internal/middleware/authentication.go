@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"strings"
@@ -42,7 +43,14 @@ func UseAuthentication(st store.Store) func(ctx *gin.Context) {
 		// Authenticate this session ID
 		session, err := sessionManager.Authenticate(sessionID)
 		if err != nil {
-			ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+			switch {
+			case errors.Is(err, authentication.ErrSessionNotFound):
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Authentication required"))
+			case errors.Is(err, authentication.ErrSessionExpired):
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, e.Unauthorized("Session has expired. Please reauthenticate"))
+			default:
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+			}
 			return
 		}
 

@@ -88,7 +88,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 	credentialSvc := authentication.NewCredentialService(controller.store)
 	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -103,7 +103,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 	sessionManager := authentication.NewSessionManager(controller.store)
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 
@@ -160,7 +160,7 @@ func (controller *authenticationController) logout(ctx *gin.Context) {
 	sessionManager := authentication.NewSessionManager(controller.store)
 	err = sessionManager.Invalidate(sessionUUID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}
 

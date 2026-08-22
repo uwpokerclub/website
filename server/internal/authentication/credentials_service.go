@@ -1,9 +1,9 @@
 package authentication
 
 import (
-	e "api/internal/errors"
 	"api/internal/store"
 	"errors"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,7 +28,7 @@ func (svc *credentialsService) Validate(username string, password string) (bool,
 		}
 
 		// Any other error is a server error
-		return false, "", e.InternalServerError(err.Error())
+		return false, "", fmt.Errorf("find login: %w", err)
 	}
 
 	// Compare the hashed password and the plaintext password using bcrypt

@@ -3,6 +3,7 @@ package authentication
 import (
 	"api/internal/database"
 	"api/internal/models"
+	"api/internal/store/postgres"
 	"testing"
 	"time"
 
@@ -51,7 +52,7 @@ func TestSessionManager(t *testing.T) {
 		}
 	}
 
-	sessManager := NewSessionManager(db)
+	sessManager := NewSessionManager(postgres.NewStore(db))
 	t.Run("Create_NoAssociatedLogin", func(t *testing.T) {
 		t.Cleanup(wipeDB)
 

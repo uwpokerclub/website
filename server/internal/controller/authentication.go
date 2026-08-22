@@ -5,6 +5,7 @@ import (
 	"api/internal/authorization"
 	"api/internal/middleware"
 	"api/internal/models"
+	"api/internal/store/postgres"
 	"net/http"
 	"os"
 	"strings"
@@ -85,7 +86,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	credentialSvc := authentication.NewCredentialService(controller.db)
+	credentialSvc := authentication.NewCredentialService(postgres.NewStore(controller.db))
 	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
@@ -100,7 +101,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	sessionManager := authentication.NewSessionManager(controller.db)
+	sessionManager := authentication.NewSessionManager(postgres.NewStore(controller.db))
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
@@ -157,7 +158,7 @@ func (controller *authenticationController) logout(ctx *gin.Context) {
 
 	sessionUUID, _ := uuid.Parse(sessionID)
 
-	sessionManager := authentication.NewSessionManager(controller.db)
+	sessionManager := authentication.NewSessionManager(postgres.NewStore(controller.db))
 	err = sessionManager.Invalidate(sessionUUID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)

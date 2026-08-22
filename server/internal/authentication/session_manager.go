@@ -3,20 +3,20 @@ package authentication
 import (
 	e "api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type sessionManager struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewSessionManager(db *gorm.DB) *sessionManager {
+func NewSessionManager(st store.Store) *sessionManager {
 	return &sessionManager{
-		db: db,
+		store: st,
 	}
 }
 
@@ -28,9 +28,7 @@ func (svc *sessionManager) Create(username string, role string) (uuid.UUID, erro
 
 	// Create the session in the database
 	session := models.Session{StartedAt: now, ExpiresAt: expiry, Username: username, Role: role}
-	res := svc.db.Create(&session)
-
-	if err := res.Error; err != nil {
+	if err := svc.store.Sessions().Create(&session); err != nil {
 		return uuid.UUID{}, e.InternalServerError(err.Error())
 	}
 
@@ -38,10 +36,11 @@ func (svc *sessionManager) Create(username string, role string) (uuid.UUID, erro
 }
 
 func (svc *sessionManager) Invalidate(sessionID uuid.UUID) error {
-	session := models.Session{ID: sessionID}
-
-	res := svc.db.Delete(&session)
-	if err := res.Error; err != nil {
+	// Deleting a session that no longer exists is not an error: the caller's
+	// intent (this session must not be usable) is already satisfied. The
+	// previous GORM implementation reported RowsAffected == 0 as success, and
+	// logout depends on that.
+	if err := svc.store.Sessions().Delete(sessionID); err != nil && !errors.Is(err, store.ErrNotFound) {
 		return e.InternalServerError(err.Error())
 	}
 
@@ -49,23 +48,20 @@ func (svc *sessionManager) Invalidate(sessionID uuid.UUID) error {
 }
 
 func (svc *sessionManager) Authenticate(sessionID uuid.UUID) (*models.Session, error) {
-	session := models.Session{ID: sessionID}
-	res := svc.db.First(&session)
-
-	// Check if session exists
-	err := res.Error
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, e.Unauthorized("Authentication required")
-	}
-
+	session, err := svc.store.Sessions().FindByID(sessionID)
 	if err != nil {
+		// Check if session exists
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, e.Unauthorized("Authentication required")
+		}
+
 		return nil, e.InternalServerError(err.Error())
 	}
 
 	// Check if session has expired, if it is delete it from the table and return 401
 	if time.Now().UTC().After(session.ExpiresAt) {
-		res = svc.db.Delete(&session)
-		if err := res.Error; err != nil {
+		// A concurrent logout may have already removed it; that is not a failure.
+		if err := svc.store.Sessions().Delete(session.ID); err != nil && !errors.Is(err, store.ErrNotFound) {
 			return nil, e.InternalServerError(err.Error())
 		}
 

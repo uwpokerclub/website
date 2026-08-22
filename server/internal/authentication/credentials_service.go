@@ -2,37 +2,32 @@ package authentication
 
 import (
 	e "api/internal/errors"
-	"api/internal/models"
+	"api/internal/store"
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type credentialsService struct {
-	db *gorm.DB
+	store store.Store
 }
 
-func NewCredentialService(db *gorm.DB) *credentialsService {
+func NewCredentialService(st store.Store) *credentialsService {
 	return &credentialsService{
-		db: db,
+		store: st,
 	}
 }
 
 func (svc *credentialsService) Validate(username string, password string) (bool, string, error) {
-	login := models.Login{Username: username}
-
-	// Find first login with the specified username
-	res := svc.db.First(&login)
-	// Check if the login was found
-	err := res.Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, "", nil
-	}
-
-	// If the error is not a not found error,
-	// then return this error as a server error
+	// Find the login with the specified username
+	login, err := svc.store.Logins().FindByUsername(username)
 	if err != nil {
+		// A missing login is not an error to the caller, just a failed validation
+		if errors.Is(err, store.ErrNotFound) {
+			return false, "", nil
+		}
+
+		// Any other error is a server error
 		return false, "", e.InternalServerError(err.Error())
 	}
 

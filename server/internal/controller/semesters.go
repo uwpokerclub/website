@@ -24,7 +24,7 @@ func NewSemestersController(db *gorm.DB, st store.Store) Controller {
 }
 
 func (s *semestersController) LoadRoutes(router *gin.RouterGroup) {
-	group := router.Group("semesters", middleware.UseAuthentication(s.db))
+	group := router.Group("semesters", middleware.UseAuthentication(s.store))
 	group.POST("", middleware.UseAuthorization("semester.create"), s.createSemester)
 	group.GET("", middleware.UseAuthorization("semester.list"), s.listSemesters)
 	group.GET(":semesterId", middleware.UseAuthorization("semester.get"), s.getSemester)

@@ -40,7 +40,7 @@ func getCookieKey() string {
 
 func (controller *authenticationController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("session")
-	group.GET("", middleware.UseAuthentication(controller.db), controller.getSession)
+	group.GET("", middleware.UseAuthentication(controller.store), controller.getSession)
 	group.POST("", controller.login)
 	group.POST("logout", controller.logout)
 }

@@ -24,7 +24,7 @@ func NewStructuresController(db *gorm.DB, store store.Store) Controller {
 }
 
 func (s *structuresController) LoadRoutes(router *gin.RouterGroup) {
-	group := router.Group("structures", middleware.UseAuthentication(s.db))
+	group := router.Group("structures", middleware.UseAuthentication(s.store))
 	group.GET("", middleware.UseAuthorization("structure.list"), s.listStructures)
 	group.POST("", middleware.UseAuthorization("structure.create"), s.createStructure)
 	group.GET(":id", middleware.UseAuthorization("structure.get"), s.getStructure)

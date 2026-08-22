@@ -27,7 +27,7 @@ func NewEventsController(db *gorm.DB, st store.Store) Controller {
 }
 
 func (s *eventsController) LoadRoutes(router *gin.RouterGroup) {
-	group := router.Group("semesters/:semesterId/events", middleware.UseAuthentication(s.db))
+	group := router.Group("semesters/:semesterId/events", middleware.UseAuthentication(s.store))
 	group.POST("", middleware.UseAuthorization("event.create"), s.createEvent)
 	group.GET("", middleware.UseAuthorization("event.list"), s.listEvents)
 	group.GET(":eventId", middleware.UseAuthorization("event.get"), s.getEvent)

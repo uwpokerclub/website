@@ -28,7 +28,7 @@ func NewMembersController(db *gorm.DB, st store.Store) Controller {
 }
 
 func (c *membersController) LoadRoutes(router *gin.RouterGroup) {
-	members := router.Group("members", middleware.UseAuthentication(c.db))
+	members := router.Group("members", middleware.UseAuthentication(c.store))
 	members.POST("", middleware.UseAuthorization("user.create"), c.createMember)
 	members.GET("", middleware.UseAuthorization("user.list"), c.listMembers)
 	members.GET("/:id", middleware.UseAuthorization("user.get"), c.getMember)

@@ -7,14 +7,13 @@ import (
 
 	"api/internal/authentication"
 	e "api/internal/errors"
-	"api/internal/store/postgres"
+	"api/internal/store"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
-func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
+func UseAuthentication(st store.Store) func(ctx *gin.Context) {
 	var cookieKey string
 	if strings.ToLower(os.Getenv("ENVIRONMENT")) == "production" {
 		cookieKey = "uwpsc-session-id"
@@ -22,7 +21,7 @@ func UseAuthentication(db *gorm.DB) func(ctx *gin.Context) {
 		cookieKey = "uwpsc-dev-session-id"
 	}
 
-	sessionManager := authentication.NewSessionManager(postgres.NewStore(db))
+	sessionManager := authentication.NewSessionManager(st)
 
 	return func(ctx *gin.Context) {
 		cookie, err := ctx.Cookie(cookieKey)

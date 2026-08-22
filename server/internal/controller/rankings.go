@@ -28,7 +28,7 @@ func NewRankingsController(db *gorm.DB, st store.Store) Controller {
 }
 
 func (c *rankingsController) LoadRoutes(router *gin.RouterGroup) {
-	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.db))
+	rankings := router.Group("semesters/:semesterId/rankings", middleware.UseAuthentication(c.store))
 	rankings.GET("", middleware.UseAuthorization("semester.rankings.list"), c.listRankings)
 	rankings.GET("export", middleware.UseAuthorization("semester.rankings.export"), c.exportRankings)
 	rankings.GET(":membershipId", middleware.UseAuthorization("semester.rankings.get"), c.getRanking)

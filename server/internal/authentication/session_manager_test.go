@@ -156,4 +156,3 @@ func TestSessionManager(t *testing.T) {
 		assert.ErrorIs(t, err, ErrSessionExpired)
 	})
 }
-

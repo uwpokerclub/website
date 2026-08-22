@@ -147,7 +147,7 @@ func (s *apiServer) SetupV2Routes() {
 	// Load routes from controllers
 	controllers := []controller.Controller{
 		controller.NewHealthController(),
-		controller.NewAuthenticationController(s.db),
+		controller.NewAuthenticationController(s.db, s.store),
 		controller.NewSemestersController(s.db, s.store),
 		controller.NewEventsController(s.db, s.store),
 		controller.NewEntriesController(s.db, s.store),

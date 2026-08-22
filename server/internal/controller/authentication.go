@@ -5,7 +5,7 @@ import (
 	"api/internal/authorization"
 	"api/internal/middleware"
 	"api/internal/models"
-	"api/internal/store/postgres"
+	"api/internal/store"
 	"net/http"
 	"os"
 	"strings"
@@ -19,11 +19,14 @@ import (
 )
 
 type authenticationController struct {
-	db *gorm.DB
+	// db is retained only for middleware.UseAuthentication, which has not been
+	// migrated to store.Store yet.
+	db    *gorm.DB
+	store store.Store
 }
 
-func NewAuthenticationController(db *gorm.DB) Controller {
-	return &authenticationController{db: db}
+func NewAuthenticationController(db *gorm.DB, st store.Store) Controller {
+	return &authenticationController{db: db, store: st}
 }
 
 // getCookieKey returns the key of the session ID cookie for the environment
@@ -86,7 +89,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	credentialSvc := authentication.NewCredentialService(postgres.NewStore(controller.db))
+	credentialSvc := authentication.NewCredentialService(controller.store)
 	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
@@ -101,7 +104,7 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	sessionManager := authentication.NewSessionManager(postgres.NewStore(controller.db))
+	sessionManager := authentication.NewSessionManager(controller.store)
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)
@@ -158,7 +161,7 @@ func (controller *authenticationController) logout(ctx *gin.Context) {
 
 	sessionUUID, _ := uuid.Parse(sessionID)
 
-	sessionManager := authentication.NewSessionManager(postgres.NewStore(controller.db))
+	sessionManager := authentication.NewSessionManager(controller.store)
 	err = sessionManager.Invalidate(sessionUUID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(err.(e.APIErrorResponse).Code, err)

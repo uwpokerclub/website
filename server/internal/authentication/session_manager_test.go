@@ -107,7 +107,7 @@ func TestSessionManager(t *testing.T) {
 		t.Cleanup(wipeDB)
 
 		_, err := sessManager.Authenticate(uuid.New())
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrSessionNotFound)
 	})
 
 	t.Run("Authenticate__SessionExpired", func(t *testing.T) {
@@ -117,7 +117,7 @@ func TestSessionManager(t *testing.T) {
 		assert.NoError(t, err)
 
 		_, err = sessManager.Authenticate(session.ID)
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrSessionExpired)
 
 		// Ensure session was deleted
 		foundSession := models.Session{
@@ -137,22 +137,5 @@ func TestSessionManager(t *testing.T) {
 		foundSession, err := sessManager.Authenticate(session.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, session.Username, foundSession.Username)
-	})
-
-	t.Run("Authenticate__NoSession_ReturnsSentinel", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		_, err := sessManager.Authenticate(uuid.New())
-		assert.ErrorIs(t, err, ErrSessionNotFound)
-	})
-
-	t.Run("Authenticate__SessionExpired_ReturnsSentinel", func(t *testing.T) {
-		t.Cleanup(wipeDB)
-
-		session, err := CreateTestSession(db, "testuser", "password", time.Now().Add(time.Hour*-9))
-		assert.NoError(t, err)
-
-		_, err = sessManager.Authenticate(session.ID)
-		assert.ErrorIs(t, err, ErrSessionExpired)
 	})
 }

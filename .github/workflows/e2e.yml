@@ -91,7 +91,10 @@ jobs:
         run: |
           ready=false
           for i in {1..30}; do
-            if curl -s http://localhost:5000/api/v2/health | grep "ok"; then
+            # -f rejects a non-2xx status and the pattern pins the health body:
+            # a bare `grep "ok"` also matches the SPA fallback, whose title says
+            # "UW Poker Studies Club", so it passed even with no API at all.
+            if curl -sf http://localhost:5000/api/v2/health | grep -q '"status":"ok"'; then
               ready=true
               break
             fi

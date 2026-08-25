@@ -779,7 +779,15 @@ func TestUpdateEvent(t *testing.T) {
 			// Reset database for clean state
 			require.NoError(t, container.ResetDatabase(ctx))
 
-			var eventID string = "2"
+			// Resolve the event ID before building the expectation below, which
+			// reads back the seeded event it describes. Deriving the expectation
+			// from the default while the request used the override would assert
+			// against a different event than the one under test.
+			eventID := "2"
+			if tc.useEventID != "" {
+				eventID = tc.useEventID
+			}
+
 			if tc.setupEvent {
 				// Seed test events
 				testutils.SeedEvents(db, true)
@@ -843,11 +851,6 @@ func TestUpdateEvent(t *testing.T) {
 						}
 					}
 				}
-			}
-
-			// Override eventID if specified in test case
-			if tc.useEventID != "" {
-				eventID = tc.useEventID
 			}
 
 			// Determine which semester ID to use in the URL path

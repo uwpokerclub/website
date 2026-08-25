@@ -91,7 +91,7 @@ jobs:
         run: |
           ready=false
           for i in {1..30}; do
-            if curl -s http://localhost:5000/api/health | grep "ok"; then
+            if curl -s http://localhost:5000/api/v2/health | grep "ok"; then
               ready=true
               break
             fi

@@ -11,31 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSemesterService_UpdateBudget(t *testing.T) {
-	t.Parallel()
-
-	st := inmemory.NewStore()
-	semester := &models.Semester{CurrentBudget: 100}
-	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewSemesterService(st)
-	require.NoError(t, svc.UpdateBudget(semester.ID, 25))
-
-	found, err := st.Semesters().FindByID(semester.ID)
-	require.NoError(t, err)
-	require.InDelta(t, float32(125), found.CurrentBudget, 0.001)
-}
-
-func TestSemesterService_UpdateBudget_NotFound(t *testing.T) {
-	t.Parallel()
-
-	st := inmemory.NewStore()
-	svc := NewSemesterService(st)
-
-	err := svc.UpdateBudget(uuid.New(), 25)
-	require.Error(t, err)
-}
-
 func TestSemesterService_ExportRankings(t *testing.T) {
 	t.Parallel()
 

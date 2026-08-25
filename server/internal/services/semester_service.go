@@ -5,7 +5,6 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,18 +20,6 @@ func NewSemesterService(st store.Store) *semesterService {
 	return &semesterService{
 		store: st,
 	}
-}
-
-func (ss *semesterService) UpdateBudget(id uuid.UUID, amount float32) error {
-	err := ss.store.Semesters().IncrementBudget(id, amount)
-	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return e.NotFound("semester not found")
-		}
-		return e.InternalServerError(err.Error())
-	}
-
-	return nil
 }
 
 func (ss *semesterService) ExportRankings(id uuid.UUID) (string, error) {

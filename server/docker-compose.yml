@@ -4,7 +4,7 @@ services:
       context: .
     command: sh -c 'go build -ldflags="-w -s" -o api . && /usr/server/api start'
     volumes:
-      - ./server:/usr/server
+      - .:/usr/server
     ports:
       - 5000:5000
     depends_on:
@@ -24,7 +24,7 @@ services:
   db:
     image: postgres:17
     volumes:
-      - ./server/scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
+      - ./scripts/create-databases.sh:/docker-entrypoint-initdb.d/create-databases.sh
       - postgres-data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=docker

@@ -2,9 +2,12 @@ package server
 
 import (
 	"api/internal/controller"
+	apierrors "api/internal/errors"
 	"api/internal/middleware"
 	"api/internal/store"
 	"api/internal/store/postgres"
+	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -45,6 +48,17 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 	r.StaticFile("/root.css", "./public/root.css")
 
 	r.NoRoute(func(c *gin.Context) {
+		// An unmatched /api request is a client error, not a page. Falling through
+		// to the SPA would answer it with index.html and a 200, which makes uptime
+		// probes and stale frontend bundles believe the call succeeded.
+		if path := c.Request.URL.Path; path == "/api" || strings.HasPrefix(path, "/api/") {
+			c.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(fmt.Sprintf("Endpoint '%s' does not exist", path)),
+			)
+			return
+		}
+
 		c.File("./public/index.html")
 	})
 

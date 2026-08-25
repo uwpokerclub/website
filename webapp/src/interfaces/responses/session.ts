@@ -44,7 +44,6 @@ export interface PermissionList {
   membership: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete">;
   semester: Pick<Permissions, "create" | "get" | "list" | "edit"> & {
     rankings: Pick<Permissions, "get" | "list" | "export">;
-    transaction: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete">;
   };
   structure: Pick<Permissions, "create" | "get" | "list" | "edit">;
 }
@@ -53,7 +52,7 @@ export type Resources = keyof PermissionList;
 
 export type Actions = keyof Permissions;
 
-export type SubResources = "participant" | "rankings" | "transaction";
+export type SubResources = "participant" | "rankings";
 
 /**
  * @interface UserSession

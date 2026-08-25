@@ -158,3 +158,81 @@ func TestMembershipService_UpdateMembershipV2_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, membership)
 }
+
+func TestMembershipService_CreateMembershipV2_Paid(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	svc := NewMembershipService(st)
+	_, err := svc.CreateMembershipV2(semester.ID, &models.CreateMembershipRequestV2{
+		UserID: 1,
+		Paid:   true,
+	})
+	require.NoError(t, err)
+
+	found, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, float32(110), found.CurrentBudget, 0.001)
+}
+
+func TestMembershipService_CreateMembershipV2_PaidDiscounted(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	svc := NewMembershipService(st)
+	_, err := svc.CreateMembershipV2(semester.ID, &models.CreateMembershipRequestV2{
+		UserID:     1,
+		Paid:       true,
+		Discounted: true,
+	})
+	require.NoError(t, err)
+
+	found, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, float32(105), found.CurrentBudget, 0.001)
+}
+
+func TestMembershipService_CreateMembershipV2_Unpaid(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	svc := NewMembershipService(st)
+	_, err := svc.CreateMembershipV2(semester.ID, &models.CreateMembershipRequestV2{
+		UserID: 1,
+		Paid:   false,
+	})
+	require.NoError(t, err)
+
+	found, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, float32(100), found.CurrentBudget, 0.001)
+}
+
+func TestMembershipService_UpdateMembershipV2_MarkPaid(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewMembershipService(st)
+	paid := true
+	_, err := svc.UpdateMembershipV2(membership.ID, semester.ID, &models.UpdateMembershipRequestV2{Paid: &paid})
+	require.NoError(t, err)
+
+	found, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, float32(110), found.CurrentBudget, 0.001)
+}

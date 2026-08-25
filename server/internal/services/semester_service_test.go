@@ -4,22 +4,12 @@ import (
 	"api/internal/models"
 	"api/internal/store/inmemory"
 	"encoding/csv"
-	"math"
 	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
-
-// almostEqual and float32EqualityThreshold are shared with transaction_service_test.go,
-// which still constructs semesterService against a real *gorm.DB per Task 7's decision
-// record and is otherwise untouched by this plan.
-const float32EqualityThreshold = 1e-9
-
-func almostEqual(a, b float32) bool {
-	return math.Abs(float64(a-b)) <= float32EqualityThreshold
-}
 
 func TestSemesterService_UpdateBudget(t *testing.T) {
 	t.Parallel()

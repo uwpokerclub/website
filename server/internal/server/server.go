@@ -92,13 +92,6 @@ func (s *apiServer) SetupRoutes() {
 		semestersRoute.GET(":semesterId/rankings", middleware.UseAuthorization("semester.rankings.list"), s.GetRankings)
 		semestersRoute.GET(":semesterId/rankings/export", middleware.UseAuthorization("semester.rankings.export"), s.ExportRankings)
 		semestersRoute.GET(":semesterId/rankings/:membershipId", middleware.UseAuthorization("semester.rankings.get"), s.GetRanking)
-
-		// Transaction routes
-		semestersRoute.GET(":semesterId/transactions", middleware.UseAuthorization("semester.transaction.list"), s.ListTransactions)
-		semestersRoute.POST(":semesterId/transactions", middleware.UseAuthorization("semester.transaction.create"), s.CreateTransaction)
-		semestersRoute.GET(":semesterId/transactions/:transactionId", middleware.UseAuthorization("semester.transaction.get"), s.GetTransaction)
-		semestersRoute.PATCH(":semesterId/transactions/:transactionId", middleware.UseAuthorization("semester.transaction.edit"), s.UpdateTransaction)
-		semestersRoute.DELETE(":semesterId/transactions/:transactionId", middleware.UseAuthorization("semester.transaction.delete"), s.DeleteTransaction)
 	}
 
 	eventsRoute := apiRoute.Group("/events", middleware.UseAuthentication(s.store))

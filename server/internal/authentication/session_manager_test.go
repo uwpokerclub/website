@@ -1,14 +1,17 @@
-package authentication
+package authentication_test
 
 import (
-	"api/internal/database"
+	"api/internal/authentication"
 	"api/internal/models"
 	"api/internal/store/postgres"
+	"api/internal/testutils"
+	"context"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -33,34 +36,28 @@ func CreateTestSession(db *gorm.DB, username, password string, start time.Time) 
 }
 
 func TestSessionManager(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer sqlDB.Close()
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
 
-	wipeDB := func() {
-		err := database.WipeDB(db)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
+	db := container.GetDB()
+
+	resetDB := func() {
+		require.NoError(t, container.ResetDatabase(ctx))
 	}
 
-	sessManager := NewSessionManager(postgres.NewStore(db))
+	sessManager := authentication.NewSessionManager(postgres.NewStore(db))
 	t.Run("Create_NoAssociatedLogin", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		_, err := sessManager.Create("testuser", "executive")
 		assert.Error(t, err)
 	})
 	t.Run("Create", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		err := CreateTestLogin(db, "testuser", "password")
 		assert.NoError(t, err)
@@ -78,14 +75,14 @@ func TestSessionManager(t *testing.T) {
 	})
 
 	t.Run("Invalidate__NoAssociatedSession", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		err := sessManager.Invalidate(uuid.New())
 		assert.NoError(t, err)
 	})
 
 	t.Run("Invalidate__ExistingSession", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		// Create test session
 		session, err := CreateTestSession(db, "testuser", "password", time.Now())
@@ -104,20 +101,20 @@ func TestSessionManager(t *testing.T) {
 	})
 
 	t.Run("Authenticate__NoSession", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		_, err := sessManager.Authenticate(uuid.New())
-		assert.ErrorIs(t, err, ErrSessionNotFound)
+		assert.ErrorIs(t, err, authentication.ErrSessionNotFound)
 	})
 
 	t.Run("Authenticate__SessionExpired", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		session, err := CreateTestSession(db, "testuser", "password", time.Now().Add(time.Hour*-9))
 		assert.NoError(t, err)
 
 		_, err = sessManager.Authenticate(session.ID)
-		assert.ErrorIs(t, err, ErrSessionExpired)
+		assert.ErrorIs(t, err, authentication.ErrSessionExpired)
 
 		// Ensure session was deleted
 		foundSession := models.Session{
@@ -129,7 +126,7 @@ func TestSessionManager(t *testing.T) {
 	})
 
 	t.Run("Authenticate__ValidSession", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		session, err := CreateTestSession(db, "testuser", "password", time.Now())
 		assert.NoError(t, err)

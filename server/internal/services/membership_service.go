@@ -18,7 +18,7 @@ func NewMembershipService(st store.Store) *membershipService {
 	}
 }
 
-func (ms *membershipService) CreateMembershipV2(semesterID uuid.UUID, req *models.CreateMembershipRequestV2) (*models.Membership, error) {
+func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.CreateMembershipRequest) (*models.Membership, error) {
 	if !req.Paid && req.Discounted {
 		return nil, errors.New("cannot create membership that is not paid and discounted")
 	}
@@ -62,7 +62,7 @@ func (ms *membershipService) CreateMembershipV2(semesterID uuid.UUID, req *model
 	return &membership, nil
 }
 
-func (ms *membershipService) UpdateMembershipV2(id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequestV2) (*models.Membership, error) {
+func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
 	existingMembership, err := ms.store.Memberships().FindByIDAndSemesterID(id, semesterID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {

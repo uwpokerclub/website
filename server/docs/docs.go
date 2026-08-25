@@ -1031,7 +1031,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/UpdateEventRequestV2"
+                            "$ref": "#/definitions/UpdateEventRequest"
                         }
                     }
                 ],
@@ -3171,7 +3171,7 @@ const docTemplate = `{
                 }
             }
         },
-        "UpdateEventRequestV2": {
+        "UpdateEventRequest": {
             "type": "object",
             "properties": {
                 "format": {

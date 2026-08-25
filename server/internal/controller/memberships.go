@@ -81,13 +81,13 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 		return
 	}
 
-	var req models.CreateMembershipRequestV2
+	var req models.CreateMembershipRequest
 	if !BindJSON(ctx, &req) {
 		return
 	}
 
 	svc := services.NewMembershipService(c.store)
-	membership, err := svc.CreateMembershipV2(semesterID, &req)
+	membership, err := svc.CreateMembership(semesterID, &req)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
@@ -272,13 +272,13 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 		return
 	}
 
-	var req models.UpdateMembershipRequestV2
+	var req models.UpdateMembershipRequest
 	if !BindJSON(ctx, &req) {
 		return
 	}
 
 	svc := services.NewMembershipService(c.store)
-	membership, err := svc.UpdateMembershipV2(membershipID, semesterID, &req)
+	membership, err := svc.UpdateMembership(membershipID, semesterID, &req)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

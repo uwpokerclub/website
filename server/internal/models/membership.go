@@ -69,13 +69,13 @@ type ListMembershipsFilter struct {
 	Discounted *bool
 }
 
-type CreateMembershipRequestV2 struct {
+type CreateMembershipRequest struct {
 	UserID     uint64 `json:"userId"     binding:"required"`
 	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
 	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
 } // @name CreateMembershipRequest
 
-type UpdateMembershipRequestV2 struct {
+type UpdateMembershipRequest struct {
 	Paid       *bool `json:"paid"       binding:"omitempty"`
 	Discounted *bool `json:"discounted" binding:"omitempty"`
 } // @name UpdateMembershipRequest

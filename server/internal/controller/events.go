@@ -296,6 +296,14 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 		return
 	}
 
+	if event.State == models.EventStateEnded {
+		ctx.AbortWithStatusJSON(
+			http.StatusForbidden,
+			apierrors.Forbidden("This event has ended. It cannot be updated."),
+		)
+		return
+	}
+
 	err = s.store.Events().Update(&event, updateMap)
 	if err != nil {
 		ctx.AbortWithStatusJSON(

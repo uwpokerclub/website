@@ -5,7 +5,6 @@ import (
 	"api/internal/middleware"
 	"api/internal/store"
 	"api/internal/store/postgres"
-	"net/http"
 	"os"
 	"strings"
 
@@ -18,7 +17,6 @@ import (
 // apiServer
 type apiServer struct {
 	Router *gin.Engine
-	db     *gorm.DB
 	store  store.Store
 }
 
@@ -50,88 +48,16 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 		c.File("./public/index.html")
 	})
 
-	s := &apiServer{Router: r, db: db, store: postgres.NewStore(db)}
+	s := &apiServer{Router: r, store: postgres.NewStore(db)}
 
-	// Initialize all routes
-	s.SetupRoutes()
-
-	// Setup V2 routes
-	s.SetupV2Routes()
+	// Setup V2 routes. The raw *gorm.DB is threaded through solely for the
+	// e2e-tagged test reset controller; see test_routes.go.
+	s.SetupV2Routes(db)
 
 	return s
 }
 
-func (s *apiServer) SetupRoutes() {
-	apiRoute := s.Router.Group("/api")
-
-	apiRoute.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	sessionRoute := apiRoute.Group("/session")
-	{
-		sessionRoute.POST("", s.SessionLoginHandler)
-		sessionRoute.POST("logout", s.SessionLogoutHandler)
-		sessionRoute.GET("", middleware.UseAuthentication(s.store), s.GetSessionHandler)
-	}
-
-	usersRoute := apiRoute.Group("/users", middleware.UseAuthentication(s.store))
-	{
-		usersRoute.GET("", middleware.UseAuthorization("user.list"), s.ListUsers)
-		usersRoute.POST("", middleware.UseAuthorization("user.create"), s.CreateUser)
-		usersRoute.GET(":id", middleware.UseAuthorization("user.get"), s.GetUser)
-		usersRoute.PATCH(":id", middleware.UseAuthorization("user.edit"), s.UpdateUser)
-		usersRoute.DELETE(":id", middleware.UseAuthorization("user.delete"), s.DeleteUser)
-	}
-
-	semestersRoute := apiRoute.Group("/semesters", middleware.UseAuthentication(s.store))
-	{
-		semestersRoute.GET("", middleware.UseAuthorization("semester.list"), s.ListSemesters)
-		semestersRoute.POST("", middleware.UseAuthorization("semester.create"), s.CreateSemester)
-		semestersRoute.GET(":semesterId", middleware.UseAuthorization("semester.get"), s.GetSemester)
-		semestersRoute.GET(":semesterId/rankings", middleware.UseAuthorization("semester.rankings.list"), s.GetRankings)
-		semestersRoute.GET(":semesterId/rankings/export", middleware.UseAuthorization("semester.rankings.export"), s.ExportRankings)
-		semestersRoute.GET(":semesterId/rankings/:membershipId", middleware.UseAuthorization("semester.rankings.get"), s.GetRanking)
-	}
-
-	eventsRoute := apiRoute.Group("/events", middleware.UseAuthentication(s.store))
-	{
-		eventsRoute.GET("", middleware.UseAuthorization("event.list"), s.ListEvents)
-		eventsRoute.POST("", middleware.UseAuthorization("event.create"), s.CreateEvent)
-		eventsRoute.GET(":eventId", middleware.UseAuthorization("event.get"), s.GetEvent)
-		eventsRoute.PATCH(":eventId", middleware.UseAuthorization("event.edit"), s.UpdateEvent)
-		eventsRoute.POST(":eventId/end", middleware.UseAuthorization("event.end"), s.EndEvent)
-		eventsRoute.POST(":eventId/unend", middleware.UseAuthorization("event.restart"), s.UndoEndEvent)
-		eventsRoute.POST(":eventId/rebuy", middleware.UseAuthorization("event.rebuy"), s.NewRebuy)
-	}
-
-	membershipRoutes := apiRoute.Group("/memberships", middleware.UseAuthentication(s.store))
-	{
-		membershipRoutes.GET("", middleware.UseAuthorization("membership.list"), s.ListMemberships)
-		membershipRoutes.POST("", middleware.UseAuthorization("membership.create"), s.CreateMembership)
-		membershipRoutes.GET(":id", middleware.UseAuthorization("membership.get"), s.GetMembership)
-		membershipRoutes.PATCH(":id", middleware.UseAuthorization("membership.edit"), s.UpdateMembership)
-	}
-
-	participantRoute := apiRoute.Group("/participants", middleware.UseAuthentication(s.store))
-	{
-		participantRoute.GET("", middleware.UseAuthorization("event.participant.list"), s.ListParticipants)
-		participantRoute.POST("", middleware.UseAuthorization("event.participant.create"), s.CreateParticipant)
-		participantRoute.POST("sign-out", middleware.UseAuthorization("event.participant.signout"), s.SignOutParticipant)
-		participantRoute.POST("sign-in", middleware.UseAuthorization("event.participant.signin"), s.SignInParticipant)
-		participantRoute.DELETE("", middleware.UseAuthorization("event.participant.delete"), s.DeleteParticipant)
-	}
-
-	structuresRoute := apiRoute.Group("/structures", middleware.UseAuthentication(s.store))
-	{
-		structuresRoute.POST("", middleware.UseAuthorization("structure.list"), s.CreateStructure)
-		structuresRoute.GET("", middleware.UseAuthorization("structure.create"), s.ListStructures)
-		structuresRoute.GET(":id", middleware.UseAuthorization("structure.get"), s.GetStructure)
-		structuresRoute.PUT(":id", middleware.UseAuthorization("structure.edit"), s.UpdateStructure)
-	}
-}
-
-func (s *apiServer) SetupV2Routes() {
+func (s *apiServer) SetupV2Routes(db *gorm.DB) {
 	apiV2Route := s.Router.Group("/api/v2")
 
 	// Serve Swagger documentation
@@ -151,7 +77,7 @@ func (s *apiServer) SetupV2Routes() {
 		controller.NewLoginsController(s.store),
 	}
 
-	controllers = append(controllers, registerTestControllers(s.db)...)
+	controllers = append(controllers, registerTestControllers(db)...)
 
 	for _, controller := range controllers {
 		controller.LoadRoutes(apiV2Route)

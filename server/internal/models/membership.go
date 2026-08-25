@@ -24,19 +24,6 @@ func (Membership) Preload(tx *gorm.DB) *gorm.DB {
 	return tx.Joins("User").Joins("Semester")
 }
 
-type CreateMembershipRequest struct {
-	UserID     uint64 `json:"userId"     binding:"required"`
-	SemesterID string `json:"semesterId" binding:"required"`
-	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
-	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
-}
-
-type UpdateMembershipRequest struct {
-	ID         uuid.UUID
-	Paid       bool `json:"paid"       binding:"omitempty,required"`
-	Discounted bool `json:"discounted" binding:"omitempty,required"`
-}
-
 type ListMembershipsResult struct {
 	ID         uuid.UUID `json:"id"`
 	UserID     uint64    `json:"userId"`

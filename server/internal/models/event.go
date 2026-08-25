@@ -70,14 +70,6 @@ type CreateEventRequest struct {
 	PointsMultiplier float32   `json:"pointsMultiplier" binding:"required"`
 } //@name CreateEventRequest
 
-type UpdateEventRequest struct {
-	Name             *string    `json:"name"`
-	Format           *string    `json:"format"`
-	Notes            *string    `json:"notes"`
-	StartDate        *time.Time `json:"startDate"`
-	PointsMultiplier *float32   `json:"pointsMultiplier"`
-} //@name UpdateEventRequest
-
 type UpdateEventRequestV2 struct {
 	Name             *string    `json:"name,omitempty"             binding:"omitempty,min=1"                              example:"New Event Name"`
 	Format           *string    `json:"format,omitempty"           binding:"omitempty,min=1"                              example:"No Limit Hold'em"`

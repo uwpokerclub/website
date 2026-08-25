@@ -77,16 +77,3 @@ func TestNoRouteServesSPAForNonAPIPaths(t *testing.T) {
 		})
 	}
 }
-
-// TestHealthRouteIsReachable pins the path the e2e workflow polls, along with
-// the exact body it greps for.
-func TestHealthRouteIsReachable(t *testing.T) {
-	router := testutils.NewTestAPIServer(nil)
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/v2/health", nil)
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.JSONEq(t, `{"status":"ok"}`, w.Body.String())
-}

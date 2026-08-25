@@ -44,7 +44,8 @@ npm test             # Jest tests
 
 ### Database Management (Atlas + PostgreSQL)
 ```bash
-# Apply migrations to dev and test databases
+# Apply migrations to the development database
+# (Go tests provision their own databases with testcontainers)
 make migrate
 # OR: docker compose run --rm atlas-migrate
 

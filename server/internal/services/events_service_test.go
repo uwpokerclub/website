@@ -11,40 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEventService_UpdateEvent_Success(t *testing.T) {
-	t.Parallel()
-
-	st := inmemory.NewStore()
-	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC()}
-	require.NoError(t, st.Events().Create(event))
-
-	svc := NewEventService(st)
-	newName := "Weekly (Rescheduled)"
-	updated, err := svc.UpdateEvent(event.ID, &models.UpdateEventRequest{Name: &newName})
-	require.NoError(t, err)
-	require.Equal(t, newName, updated.Name)
-
-	found, err := st.Events().FindByID(event.ID)
-	require.NoError(t, err)
-	require.Equal(t, newName, found.Name)
-}
-
-func TestEventService_UpdateEvent_EndedForbidden(t *testing.T) {
-	t.Parallel()
-
-	st := inmemory.NewStore()
-	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC()}
-	require.NoError(t, st.Events().Create(event))
-
-	svc := NewEventService(st)
-	newName := "Weekly (Rescheduled)"
-	_, err := svc.UpdateEvent(event.ID, &models.UpdateEventRequest{Name: &newName})
-	require.Error(t, err)
-	apiErr, ok := err.(errors.APIErrorResponse)
-	require.True(t, ok)
-	require.Equal(t, 403, apiErr.Code)
-}
-
 func TestEventService_EndEvent(t *testing.T) {
 	t.Parallel()
 

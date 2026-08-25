@@ -14,7 +14,7 @@ func NewSemesterAuthorizer(resourceAuthorizers ResourceAuthorizerMap) ResourceAu
 	return &semesterAuthorizer{
 		resourceAuthorizers: resourceAuthorizers,
 		actions:             []string{"create", "get", "list"},
-		subResources:        []string{"rankings", "transaction"},
+		subResources:        []string{"rankings"},
 	}
 }
 

@@ -70,21 +70,20 @@ type CreateEventRequest struct {
 	PointsMultiplier float32   `json:"pointsMultiplier" binding:"required"`
 } //@name CreateEventRequest
 
+// UpdateEventRequest is the published shape of a PATCH event body, referenced by
+// the Swagger annotation on eventsController.updateEvent.
+//
+// Nothing binds to it. The handler decodes into a map[string]any so it can tell
+// an explicitly null field from an omitted one, which means the binding tags
+// below document the contract rather than enforce it - the enforcement lives in
+// validateAndCreateEventUpdateMap. Keep the two in step when either changes.
 type UpdateEventRequest struct {
-	Name             *string    `json:"name"`
-	Format           *string    `json:"format"`
-	Notes            *string    `json:"notes"`
-	StartDate        *time.Time `json:"startDate"`
-	PointsMultiplier *float32   `json:"pointsMultiplier"`
-} //@name UpdateEventRequest
-
-type UpdateEventRequestV2 struct {
 	Name             *string    `json:"name,omitempty"             binding:"omitempty,min=1"                              example:"New Event Name"`
 	Format           *string    `json:"format,omitempty"           binding:"omitempty,min=1"                              example:"No Limit Hold'em"`
 	Notes            *string    `json:"notes,omitempty"            binding:"omitempty"                                    example:"Some notes about the event"`
 	StartDate        *time.Time `json:"startDate,omitempty"        binding:"omitempty" example:"2023-10-01T18:00:00Z"`
 	PointsMultiplier *float32   `json:"pointsMultiplier,omitempty" binding:"omitempty,gte=0"                              example:"1.5"`
-} //@name UpdateEventRequestV2
+} //@name UpdateEventRequest
 
 // ListEventsFilter is the set of parameters that will be used to filter the
 // list events query. The zero value for ListEventsFilter is the same as
@@ -99,14 +98,3 @@ type ListEventsFilter struct {
 	// Search filters events by name (case-insensitive substring match).
 	Search string
 }
-
-type ListEventsResponse struct {
-	ID         int32     `json:"id"`
-	Name       string    `json:"name"`
-	Format     string    `json:"format"`
-	Notes      string    `json:"notes"`
-	SemesterID string    `json:"semesterId"`
-	StartDate  time.Time `json:"startDate"`
-	State      uint8     `json:"state"`
-	Count      int32     `json:"count"`
-} //@name ListEventsResponse

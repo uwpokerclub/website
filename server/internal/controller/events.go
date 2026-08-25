@@ -230,7 +230,7 @@ func (s *eventsController) getEvent(ctx *gin.Context) {
 // @Produce json
 // @Param semesterId path string true "Semester ID"
 // @Param eventId path string true "Event ID"
-// @Param event body UpdateEventRequestV2 true "Event data"
+// @Param event body UpdateEventRequest true "Event data"
 // @Success 200 {object} Event
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -292,6 +292,14 @@ func (s *eventsController) updateEvent(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	if event.State == models.EventStateEnded {
+		ctx.AbortWithStatusJSON(
+			http.StatusForbidden,
+			apierrors.Forbidden("This event has ended. It cannot be updated."),
 		)
 		return
 	}

@@ -493,7 +493,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectError:      false,
 			expectedResponse: nil, // Will be set dynamically
 			setupEvent:       true,
-			useEventID:       "1",
+			useEventID:       "2",
 		},
 		{
 			name:     "successful update with partial fields",
@@ -506,7 +506,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectError:      false,
 			expectedResponse: nil, // Will be set dynamically
 			setupEvent:       true,
-			useEventID:       "1",
+			useEventID:       "2",
 		},
 		{
 			name:     "successful update with notes set to null",
@@ -519,7 +519,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectError:      false,
 			expectedResponse: nil, // Will be set dynamically
 			setupEvent:       true,
-			useEventID:       "1",
+			useEventID:       "2",
 		},
 		{
 			name:     "name cannot be null",
@@ -619,7 +619,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			setupEvent:     true,
-			useEventID:     "1",
+			useEventID:     "2",
 		},
 		{
 			name:     "invalid semester ID format",
@@ -670,7 +670,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectError:      false,
 			expectedResponse: nil, // Will be set dynamically
 			setupEvent:       true,
-			useEventID:       "1",
+			useEventID:       "2",
 		},
 		{
 			name:     "successful update with pointsMultiplier zero",
@@ -683,7 +683,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectError:      false,
 			expectedResponse: nil, // Will be set dynamically
 			setupEvent:       true,
-			useEventID:       "1",
+			useEventID:       "2",
 		},
 		{
 			name:     "pointsMultiplier cannot be null",
@@ -724,6 +724,18 @@ func TestUpdateEvent(t *testing.T) {
 			setupEvent:           true,
 			useEventID:           "1",
 		},
+		{
+			name:     "cannot update an ended event",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody: map[string]any{
+				"name": "Attempted Rename",
+			},
+			expectedStatus:       http.StatusForbidden,
+			expectError:          true,
+			expectedErrorMessage: "This event has ended. It cannot be updated.",
+			setupEvent:           true,
+			useEventID:           "1",
+		},
 	}
 
 	// Add tests for every authorized role
@@ -758,7 +770,7 @@ func TestUpdateEvent(t *testing.T) {
 			expectError:      false,
 			expectedResponse: nil, // Will be set dynamically
 			setupEvent:       true,
-			useEventID:       "1",
+			useEventID:       "2",
 		})
 	}
 
@@ -767,7 +779,15 @@ func TestUpdateEvent(t *testing.T) {
 			// Reset database for clean state
 			require.NoError(t, container.ResetDatabase(ctx))
 
-			var eventID string = "1"
+			// Resolve the event ID before building the expectation below, which
+			// reads back the seeded event it describes. Deriving the expectation
+			// from the default while the request used the override would assert
+			// against a different event than the one under test.
+			eventID := "2"
+			if tc.useEventID != "" {
+				eventID = tc.useEventID
+			}
+
 			if tc.setupEvent {
 				// Seed test events
 				testutils.SeedEvents(db, true)
@@ -831,11 +851,6 @@ func TestUpdateEvent(t *testing.T) {
 						}
 					}
 				}
-			}
-
-			// Override eventID if specified in test case
-			if tc.useEventID != "" {
-				eventID = tc.useEventID
 			}
 
 			// Determine which semester ID to use in the URL path

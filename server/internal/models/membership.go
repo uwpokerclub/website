@@ -24,29 +24,6 @@ func (Membership) Preload(tx *gorm.DB) *gorm.DB {
 	return tx.Joins("User").Joins("Semester")
 }
 
-type CreateMembershipRequest struct {
-	UserID     uint64 `json:"userId"     binding:"required"`
-	SemesterID string `json:"semesterId" binding:"required"`
-	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
-	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
-}
-
-type UpdateMembershipRequest struct {
-	ID         uuid.UUID
-	Paid       bool `json:"paid"       binding:"omitempty,required"`
-	Discounted bool `json:"discounted" binding:"omitempty,required"`
-}
-
-type ListMembershipsResult struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uint64    `json:"userId"`
-	FirstName  string    `json:"firstName"`
-	LastName   string    `json:"lastName"`
-	Paid       bool      `json:"paid"`
-	Discounted bool      `json:"discounted"`
-	Attendance int       `json:"attendance"`
-}
-
 // ListMembershipsFilter is the set of parameters that will be used to filter the
 // list memberships query. The zero value for ListMembershipsFilter is the same as
 // not filtering the result.
@@ -82,13 +59,13 @@ type ListMembershipsFilter struct {
 	Discounted *bool
 }
 
-type CreateMembershipRequestV2 struct {
+type CreateMembershipRequest struct {
 	UserID     uint64 `json:"userId"     binding:"required"`
 	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
 	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
 } // @name CreateMembershipRequest
 
-type UpdateMembershipRequestV2 struct {
+type UpdateMembershipRequest struct {
 	Paid       *bool `json:"paid"       binding:"omitempty"`
 	Discounted *bool `json:"discounted" binding:"omitempty"`
 } // @name UpdateMembershipRequest

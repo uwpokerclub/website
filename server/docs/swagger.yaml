@@ -385,7 +385,7 @@ definitions:
       name:
         type: string
     type: object
-  UpdateEventRequestV2:
+  UpdateEventRequest:
     properties:
       format:
         example: No Limit Hold'em
@@ -1162,7 +1162,7 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/UpdateEventRequestV2'
+          $ref: '#/definitions/UpdateEventRequest'
       produces:
       - application/json
       responses:

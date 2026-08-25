@@ -44,7 +44,8 @@ npm test             # Jest tests
 
 ### Database Management (Atlas + PostgreSQL)
 ```bash
-# Apply migrations to dev and test databases
+# Apply migrations to the development database
+# (Go tests provision their own databases with testcontainers)
 make migrate
 # OR: docker compose run --rm atlas-migrate
 
@@ -90,7 +91,6 @@ npm run db:reset        # Reset test database
 - **MVC Pattern**: Controllers handle HTTP requests, Services contain business logic
 - **Layer Structure**:
   - `server/internal/controller/` - HTTP route handlers (new v2 controller pattern)
-  - `server/internal/server/` - Legacy HTTP handlers (v1 API)
   - `server/internal/services/` - Business logic layer
   - `server/internal/models/` - GORM database models
   - `server/internal/authentication/` - Session and credential management
@@ -98,11 +98,8 @@ npm run db:reset        # Reset test database
   - `server/internal/middleware/` - HTTP middleware (auth, CORS, etc.)
 
 ### API Versioning
-The API has two versions:
-- **v1** (`/api/*`): Legacy routes in `server.go` using handler methods
-- **v2** (`/api/v2/*`): New controller-based routes implementing `Controller` interface
 
-When adding new endpoints, prefer the v2 controller pattern in `internal/controller/`.
+All endpoints are v2 (`/api/v2/*`), implemented as controllers in `internal/controller/` that satisfy the `Controller` interface. The v1 API was removed in issue #358.
 
 ### Database Layer
 - **ORM**: GORM with PostgreSQL

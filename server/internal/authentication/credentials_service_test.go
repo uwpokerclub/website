@@ -1,12 +1,15 @@
-package authentication
+package authentication_test
 
 import (
-	"api/internal/database"
+	"api/internal/authentication"
 	"api/internal/models"
 	"api/internal/store/postgres"
+	"api/internal/testutils"
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -28,29 +31,23 @@ func CreateTestLogin(db *gorm.DB, username, password string) error {
 }
 
 func TestCredentialsService(t *testing.T) {
-	t.Setenv("ENVIRONMENT", "TEST")
+	t.Parallel()
 
-	db, err := database.OpenTestConnection()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	sqlDB, err := db.DB()
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer sqlDB.Close()
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
 
-	wipeDB := func() {
-		err := database.WipeDB(db)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
+	db := container.GetDB()
+
+	resetDB := func() {
+		require.NoError(t, container.ResetDatabase(ctx))
 	}
 
-	credSvc := NewCredentialService(postgres.NewStore(db))
+	credSvc := authentication.NewCredentialService(postgres.NewStore(db))
 
 	t.Run("Validate_IncorrectUsername", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		// Create test user
 		err := CreateTestLogin(db, "testuser", "password")
@@ -63,7 +60,7 @@ func TestCredentialsService(t *testing.T) {
 	})
 
 	t.Run("Validate_IncorrectPassword", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		// Create test user
 		err := CreateTestLogin(db, "testuser", "password")
@@ -76,7 +73,7 @@ func TestCredentialsService(t *testing.T) {
 	})
 
 	t.Run("Validate_CorrectCredentials", func(t *testing.T) {
-		t.Cleanup(wipeDB)
+		t.Cleanup(resetDB)
 
 		// Create test user
 		err := CreateTestLogin(db, "testuser", "password")

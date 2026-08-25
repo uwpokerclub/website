@@ -1023,7 +1023,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/UpdateEventRequestV2"
+                            "$ref": "#/definitions/UpdateEventRequest"
                         }
                     }
                 ],
@@ -3163,7 +3163,7 @@
                 }
             }
         },
-        "UpdateEventRequestV2": {
+        "UpdateEventRequest": {
             "type": "object",
             "properties": {
                 "format": {

@@ -19,43 +19,6 @@ func NewEventService(st store.Store) *eventService {
 	}
 }
 
-func (svc *eventService) UpdateEvent(eventID int32, req *models.UpdateEventRequest) (*models.Event, error) {
-	event, err := svc.store.Events().FindByID(eventID)
-	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return nil, e.NotFound(err.Error())
-		}
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	if event.State == models.EventStateEnded {
-		return nil, e.Forbidden("This event has ended. It cannot be updated.")
-	}
-
-	values := map[string]any{}
-	if req.Name != nil {
-		values["name"] = *req.Name
-	}
-	if req.Format != nil {
-		values["format"] = *req.Format
-	}
-	if req.Notes != nil {
-		values["notes"] = *req.Notes
-	}
-	if req.StartDate != nil {
-		values["start_date"] = *req.StartDate
-	}
-	if req.PointsMultiplier != nil {
-		values["points_multiplier"] = *req.PointsMultiplier
-	}
-
-	if err := svc.store.Events().Update(&event, values); err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-
-	return &event, nil
-}
-
 func (svc *eventService) EndEvent(eventId int32) error {
 	event, err := svc.store.Events().FindByID(eventId)
 	if err != nil {

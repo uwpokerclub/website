@@ -49,7 +49,6 @@ flowchart LR
     end
 
     subgraph Handlers
-        V1["v1 Legacy Handlers - /api/*"]
         V2["v2 Controllers - /api/v2/*"]
     end
 
@@ -63,11 +62,8 @@ flowchart LR
     end
 
     Request --> CORS --> Auth --> Authz
-    Authz --> V1
     Authz --> V2
-    V1 --> BizLogic
     V2 --> BizLogic
-    V1 --> GORM
     V2 --> GORM
     BizLogic --> GORM
     GORM --> PG
@@ -77,7 +73,7 @@ flowchart LR
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `server` | `internal/server/` | v1 legacy HTTP handlers and route setup |
+| `server` | `internal/server/` | HTTP server construction and v2 route registration |
 | `controller` | `internal/controller/` | v2 controllers implementing `Controller` interface |
 | `services` | `internal/services/` | Business logic (membership budget, event state) |
 | `models` | `internal/models/` | GORM database models |
@@ -86,10 +82,15 @@ flowchart LR
 | `authorization` | `internal/authorization/` | Role-based permission checking |
 | `errors` | `internal/errors/` | Structured API error responses |
 
-### v1 vs v2 API
+### API versioning
 
-- **v1** (`/api/*`): Handler methods on `apiServer` struct in `internal/server/`. Registered in `SetupRoutes()`.
-- **v2** (`/api/v2/*`): Standalone controllers implementing the `Controller` interface with a `LoadRoutes(router *gin.RouterGroup)` method. Registered in `SetupV2Routes()`. New endpoints should use this pattern.
+All endpoints live under `/api/v2/*`, served by standalone controllers implementing the `Controller` interface with a `LoadRoutes(router *gin.RouterGroup)` method, registered in `SetupV2Routes()`.
+
+The v1 API (`/api/*`) was removed in issue #358 after all clients migrated to v2. Its handler methods on the `apiServer` struct are gone; do not reintroduce that pattern.
+
+### Retained schema-only models
+
+`models.Transaction` has no service, controller, or repository. It is kept **deliberately**: Atlas generates migrations by diffing every GORM model under `internal/models/` against the live schema, so deleting the struct would emit a `DROP TABLE transactions` and destroy rows being preserved for a future money-management feature. Do not delete it without an intentional migration.
 
 ## Authentication and Authorization Flow
 

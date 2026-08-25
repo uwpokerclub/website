@@ -38,7 +38,6 @@ The UWPSC Website is a full-stack application that manages poker tournaments, me
 - **Member Management**: Handle memberships, payments, and club administration
 - **Rankings System**: Track player performance and semester rankings
 - **Authentication**: Role-based access control for different user types
-- **Financial Tracking**: Manage club budget and transaction history
 
 ## Architecture
 
@@ -226,7 +225,6 @@ The API follows RESTful conventions with endpoints for:
 - User and membership management
 - Event and tournament operations
 - Rankings and statistics
-- Financial transactions
 
 ## Frontend Development
 
@@ -309,7 +307,6 @@ The following environment variables are required for backend development:
 ```bash
 # Database Configuration
 DATABASE_URL=postgres://user:password@host:port/database
-TEST_DATABASE_URL=postgres://user:password@host:port/test_database
 
 # Server Configuration
 PORT=5000

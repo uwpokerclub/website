@@ -47,14 +47,6 @@ export interface Membership {
   discounted: boolean;
 }
 
-export interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  createdAt: string;
-  semesterId: string;
-}
-
 export interface Ranking {
   membershipId: string;
   points: number;

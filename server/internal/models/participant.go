@@ -40,11 +40,6 @@ type UpdateParticipantRequest struct {
 	SignOut      bool
 }
 
-type DeleteParticipantRequest struct {
-	MembershipID uuid.UUID `json:"membershipId" binding:"required"`
-	EventID      int32     `json:"eventId" binding:"required"`
-}
-
 // ListParticipantsFilter is the set of parameters that will be used to filter the
 // list entries query. EventID must be set by the caller; the zero value for the
 // embedded Pagination is the same as not paginating the result. Search filters by
@@ -59,15 +54,6 @@ type ListParticipantsFilter struct {
 	// Search filters entries by participant name or student ID (case-insensitive).
 	Search string
 }
-
-type ListParticipantsResult struct {
-	ID           int32      `json:"id"`
-	MembershipId uuid.UUID  `json:"membershipId"`
-	FirstName    string     `json:"firstName"`
-	LastName     string     `json:"lastName"`
-	SignedOutAt  *time.Time `json:"signedOutAt"`
-	Placement    uint16     `json:"placement"`
-} //@name ListParticipantsResult
 
 type CreateEntryResult struct {
 	MembershipID uuid.UUID    `json:"membershipId"`

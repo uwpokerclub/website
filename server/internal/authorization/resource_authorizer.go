@@ -18,8 +18,7 @@ var DefaultAuthorizerMap = ResourceAuthorizerMap{
 	"login": NewLoginAuthorizer(),
 	"user":  NewUserAuthorizer(),
 	"semester": NewSemesterAuthorizer(ResourceAuthorizerMap{
-		"rankings":    NewRankingsAuthorizer(),
-		"transaction": NewTransactionAuthorizer(),
+		"rankings": NewRankingsAuthorizer(),
 	}),
 	"membership": NewMembershipAuthorizer(),
 	"structure":  NewStructureAuthorizer(),

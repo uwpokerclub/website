@@ -55,9 +55,3 @@ type CreateStructureRequest struct {
 	Name   string      `json:"name" binding:"required"`
 	Blinds []BlindJSON `json:"blinds" binding:"required,min=1,dive"`
 }
-
-type UpdateStructureRequest struct {
-	ID     int32
-	Name   string      `json:"name" binding:"required"`
-	Blinds []BlindJSON `json:"blinds" binding:"required,dive"`
-}

@@ -70,6 +70,13 @@ type CreateEventRequest struct {
 	PointsMultiplier float32   `json:"pointsMultiplier" binding:"required"`
 } //@name CreateEventRequest
 
+// UpdateEventRequest is the published shape of a PATCH event body, referenced by
+// the Swagger annotation on eventsController.updateEvent.
+//
+// Nothing binds to it. The handler decodes into a map[string]any so it can tell
+// an explicitly null field from an omitted one, which means the binding tags
+// below document the contract rather than enforce it - the enforcement lives in
+// validateAndCreateEventUpdateMap. Keep the two in step when either changes.
 type UpdateEventRequest struct {
 	Name             *string    `json:"name,omitempty"             binding:"omitempty,min=1"                              example:"New Event Name"`
 	Format           *string    `json:"format,omitempty"           binding:"omitempty,min=1"                              example:"No Limit Hold'em"`
@@ -91,14 +98,3 @@ type ListEventsFilter struct {
 	// Search filters events by name (case-insensitive substring match).
 	Search string
 }
-
-type ListEventsResponse struct {
-	ID         int32     `json:"id"`
-	Name       string    `json:"name"`
-	Format     string    `json:"format"`
-	Notes      string    `json:"notes"`
-	SemesterID string    `json:"semesterId"`
-	StartDate  time.Time `json:"startDate"`
-	State      uint8     `json:"state"`
-	Count      int32     `json:"count"`
-} //@name ListEventsResponse

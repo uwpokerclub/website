@@ -24,16 +24,6 @@ func (Membership) Preload(tx *gorm.DB) *gorm.DB {
 	return tx.Joins("User").Joins("Semester")
 }
 
-type ListMembershipsResult struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uint64    `json:"userId"`
-	FirstName  string    `json:"firstName"`
-	LastName   string    `json:"lastName"`
-	Paid       bool      `json:"paid"`
-	Discounted bool      `json:"discounted"`
-	Attendance int       `json:"attendance"`
-}
-
 // ListMembershipsFilter is the set of parameters that will be used to filter the
 // list memberships query. The zero value for ListMembershipsFilter is the same as
 // not filtering the result.

@@ -168,15 +168,9 @@ func TestSemesterAuthorizer_GetPermissions(t *testing.T) {
 					"get":    true,
 					"list":   true,
 				},
-				"transaction": map[string]any{
-					"create": false,
-					"get":    true,
-					"list":   true,
-				},
 			},
 			resourceAuthorizers: ResourceAuthorizerMap{
-				"rankings":    &MockResourceAuthorizer{},
-				"transaction": &MockResourceAuthorizer{},
+				"rankings": &MockResourceAuthorizer{},
 			},
 			mockResourceAuthorizer: func(m *MockResourceAuthorizer) {
 				m.On("GetPermissions", mock.Anything).Return(map[string]any{
@@ -190,7 +184,6 @@ func TestSemesterAuthorizer_GetPermissions(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			tC.mockResourceAuthorizer(tC.resourceAuthorizers["rankings"].(*MockResourceAuthorizer))
-			tC.mockResourceAuthorizer(tC.resourceAuthorizers["transaction"].(*MockResourceAuthorizer))
 			svc := NewSemesterAuthorizer(tC.resourceAuthorizers)
 			permissions := svc.GetPermissions(tC.role)
 			assert.Equal(t, tC.expected, permissions)

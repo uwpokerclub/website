@@ -22,7 +22,7 @@ jobs:
       matrix: ${{ steps.balance.outputs.matrix }}
     steps:
       - name: Checkout spec files
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             cypress/e2e
@@ -41,7 +41,7 @@ jobs:
       TZ: America/New_York
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:

@@ -59,9 +59,6 @@ func (r *inMemoryMembershipRepository) Create(membership *models.Membership) err
 		}
 	}
 
-	// Mirror the Postgres column default: GORM only applies `default:true` when the field is at
-	// its Go zero value, so a fresh membership that didn't explicitly request no free trial
-	// starts with one available.
 	if !membership.FreeTrialAvailable {
 		membership.FreeTrialAvailable = true
 	}

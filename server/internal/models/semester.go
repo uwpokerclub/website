@@ -17,10 +17,7 @@ type Semester struct {
 	MembershipFee         uint8     `json:"membershipFee" gorm:"not null;default:0" example:"10"`
 	MembershipDiscountFee uint8     `json:"membershipDiscountFee" gorm:"not null;default:0" example:"5"`
 	RebuyFee              uint8     `json:"rebuyFee" gorm:"not null;default:0" example:"2"`
-	// FreeTrialLimit is the number of events an unpaid membership may attend for free before
-	// participantsService.CreateParticipant starts rejecting further entries with 403. A value
-	// of 0 means the free-trial check is disabled entirely for this semester.
-	FreeTrialLimit uint8 `json:"freeTrialLimit" gorm:"not null;default:0" example:"4"`
+	FreeTrialLimit        uint8     `json:"freeTrialLimit" gorm:"not null;default:0" example:"4"`
 } //@name Semester
 
 type CreateSemesterRequest struct {

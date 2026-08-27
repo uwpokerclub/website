@@ -6,19 +6,15 @@ import (
 )
 
 type Membership struct {
-	ID         uuid.UUID `json:"id"         gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	UserID     uint64    `json:"userId"     gorm:"uniqueIndex:user_semester_unique"`
-	User       *User     `json:"user" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
-	SemesterID uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique;index:idx_memberships_semester_id"`
-	Semester   *Semester `json:"semester"`
-	Paid       bool      `json:"paid"       gorm:"not null;default:false"`
-	Discounted bool      `json:"discounted" gorm:"not null;default:false"`
-	// FreeTrialAvailable indicates whether this membership still has a free trial event
-	// available. Defaults to true. Written only by MembershipRepository.SetFreeTrialAvailable,
-	// as a cache for display purposes (issue #54) — participantsService.CreateParticipant never
-	// trusts this field to make its block decision; it always recomputes live from attendance.
-	FreeTrialAvailable bool     `json:"freeTrialAvailable" gorm:"not null;default:true"`
-	Ranking            *Ranking `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	ID                 uuid.UUID `json:"id"         gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID             uint64    `json:"userId"     gorm:"uniqueIndex:user_semester_unique"`
+	User               *User     `json:"user" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	SemesterID         uuid.UUID `json:"semesterId" gorm:"type:uuid;uniqueIndex:user_semester_unique;index:idx_memberships_semester_id"`
+	Semester           *Semester `json:"semester"`
+	Paid               bool      `json:"paid"       gorm:"not null;default:false"`
+	Discounted         bool      `json:"discounted" gorm:"not null;default:false"`
+	FreeTrialAvailable bool      `json:"freeTrialAvailable" gorm:"not null;default:true"`
+	Ranking            *Ranking  `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 } //@name Membership
 
 func (Membership) TableName() string {

@@ -11,6 +11,7 @@ import { EditMemberModal } from "./EditMemberModal";
 import { DeleteMembershipModal } from "./DeleteMembershipModal";
 import { MemberFilters, type MemberFilterValues } from "./MemberFilters";
 import { useMemberships } from "../hooks/useMemberQueries";
+import hasExhaustedFreeTrial from "@/utils/hasExhaustedFreeTrial";
 import styles from "./MembersList.module.css";
 
 const ITEMS_PER_PAGE = 25;
@@ -223,6 +224,12 @@ export function MembersList() {
       header: "Name",
       accessor: (row) => `${row.user.firstName} ${row.user.lastName}`,
       sortable: true,
+      render: (_value, row) => (
+        <>
+          {row.user.firstName} {row.user.lastName}
+          {hasExhaustedFreeTrial(row) && <span className={styles.srOnly}>Free trial used up</span>}
+        </>
+      ),
       headerProps: { "data-qa": "sort-name-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
       cellProps: (row) => ({ "data-qa": `member-name-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
@@ -354,7 +361,14 @@ export function MembersList() {
             sortKey={sortKey}
             sortDirection={sortDirection}
             onSort={handleSort}
-            rowProps={(row) => ({ "data-qa": `member-row-${row.id}` }) as React.HTMLAttributes<HTMLTableRowElement>}
+            rowProps={(row) => {
+              const isTrialExhausted = hasExhaustedFreeTrial(row);
+              return {
+                "data-qa": `member-row-${row.id}`,
+                className: isTrialExhausted ? styles.rowTrialExhausted : undefined,
+                title: isTrialExhausted ? "Free trial used up" : undefined,
+              } as React.HTMLAttributes<HTMLTableRowElement>;
+            }}
             emptyState={
               <div className={styles.emptyState}>
                 <div className={styles.emptyIllustration}>

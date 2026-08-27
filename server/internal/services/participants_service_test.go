@@ -18,11 +18,16 @@ func TestParticipantsService_CreateParticipant(t *testing.T) {
 	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC()}
 	require.NoError(t, st.Events().Create(event))
 
+	semester := &models.Semester{Name: "Fall 2026"}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
 	svc := NewParticipantsService(st)
-	membershipID := uuid.New()
-	participant, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membershipID, EventID: event.ID})
+	participant, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event.ID})
 	require.NoError(t, err)
-	require.Equal(t, membershipID, *participant.MembershipID)
+	require.Equal(t, membership.ID, *participant.MembershipID)
 }
 
 func TestParticipantsService_CreateParticipant_EventEnded(t *testing.T) {
@@ -38,6 +43,166 @@ func TestParticipantsService_CreateParticipant_EventEnded(t *testing.T) {
 	apiErr, ok := err.(errors.APIErrorResponse)
 	require.True(t, ok)
 	require.Equal(t, 403, apiErr.Code)
+}
+
+func TestParticipantsService_CreateParticipant_UnpaidNoFreeTrialsLeft(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event1 := &models.Event{Name: "Weekly 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event1))
+	event2 := &models.Event{Name: "Weekly 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event2))
+	event3 := &models.Event{Name: "Weekly 3", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event3))
+
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 2}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	// Attendance already at the limit before this call — the two prior entries are created
+	// directly against the store, bypassing the service, to set up real attendance rather than
+	// trusting a manually-set flag (the gate recomputes from attendance, not the flag).
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event1.ID}))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event2.ID}))
+
+	svc := NewParticipantsService(st)
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event3.ID})
+	require.Error(t, err)
+	apiErr, ok := err.(errors.APIErrorResponse)
+	require.True(t, ok)
+	require.Equal(t, 403, apiErr.Code)
+}
+
+func TestParticipantsService_CreateParticipant_UnpaidExhaustsFreeTrial(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event1 := &models.Event{Name: "Weekly 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event1))
+	event2 := &models.Event{Name: "Weekly 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event2))
+
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 2}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewParticipantsService(st)
+
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event1.ID})
+	require.NoError(t, err)
+
+	updated, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, updated.FreeTrialAvailable, "should still have a free trial after 1 of 2 events")
+
+	_, err = svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event2.ID})
+	require.NoError(t, err)
+
+	updated, err = st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, updated.FreeTrialAvailable, "free trial should be exhausted after the 2nd of 2 events")
+}
+
+func TestParticipantsService_CreateParticipant_PaidBypassesFreeTrialCheck(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event1 := &models.Event{Name: "Weekly 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event1))
+	event2 := &models.Event{Name: "Weekly 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event2))
+
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 1}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: true}
+	require.NoError(t, st.Memberships().Create(membership))
+	// Attendance already at (in fact over) the limit, and the cached flag already says
+	// exhausted — a paid membership must bypass both.
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event1.ID}))
+	require.NoError(t, st.Memberships().SetFreeTrialAvailable(membership.ID, false))
+
+	svc := NewParticipantsService(st)
+	participant, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event2.ID})
+	require.NoError(t, err)
+	require.Equal(t, membership.ID, *participant.MembershipID)
+}
+
+func TestParticipantsService_CreateParticipant_UnpaidNoLimitConfigured(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event1 := &models.Event{Name: "Weekly 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event1))
+	event2 := &models.Event{Name: "Weekly 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event2))
+
+	// FreeTrialLimit left at its zero value: the free-trial check must be a no-op, not "zero
+	// free events allowed."
+	semester := &models.Semester{Name: "Fall 2026"}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewParticipantsService(st)
+
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event1.ID})
+	require.NoError(t, err)
+	_, err = svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event2.ID})
+	require.NoError(t, err)
+
+	updated, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, updated.FreeTrialAvailable, "flag should be untouched when no limit is configured")
+}
+
+func TestParticipantsService_CreateParticipant_MidTermLimitIncreaseSelfHeals(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event1 := &models.Event{Name: "Weekly 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event1))
+	event2 := &models.Event{Name: "Weekly 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event2))
+
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 1}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewParticipantsService(st)
+
+	// First event exhausts the limit-of-1 and flips the flag false.
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event1.ID})
+	require.NoError(t, err)
+
+	blocked, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, blocked.FreeTrialAvailable)
+
+	// Still blocked under the old limit.
+	_, err = svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event2.ID})
+	require.Error(t, err)
+
+	// The exec raises the limit mid-term (1 -> 3), matching the issue's own motivation.
+	semester.FreeTrialLimit = 3
+	require.NoError(t, st.Semesters().Update(semester))
+
+	// Now succeeds, and the previously-stale flag self-heals back to true, because the block
+	// (and the sync) both recompute live rather than trusting the cached value.
+	_, err = svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event2.ID})
+	require.NoError(t, err)
+
+	healed, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, healed.FreeTrialAvailable, "raising the limit mid-term should un-block and re-flip the cached flag")
 }
 
 func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {

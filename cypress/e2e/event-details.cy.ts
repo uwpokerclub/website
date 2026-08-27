@@ -128,6 +128,43 @@ describe("EventDetails", () => {
           cy.contains("Active").should("exist");
         });
       });
+
+      context("delete event flow", () => {
+        it("opens delete confirmation modal from actions menu", () => {
+          cy.getByData("actions-menu-btn").click();
+          cy.getByData("delete-event-btn").click();
+
+          cy.getByData("delete-event-modal").should("exist");
+          cy.getByData("delete-event-modal").within(() => {
+            cy.contains(EVENT.name).should("exist");
+          });
+        });
+
+        it("keeps the delete button disabled until the event name is typed exactly", () => {
+          cy.getByData("actions-menu-btn").click();
+          cy.getByData("delete-event-btn").click();
+
+          cy.getByData("delete-event-confirm-btn").should("be.disabled");
+
+          cy.getByData("input-delete-confirm-name").type("wrong name");
+          cy.getByData("delete-event-confirm-btn").should("be.disabled");
+
+          cy.getByData("input-delete-confirm-name").clear().type(EVENT.name);
+          cy.getByData("delete-event-confirm-btn").should("not.be.disabled");
+        });
+
+        it("cancels the delete without calling the API", () => {
+          cy.getByData("actions-menu-btn").click();
+          cy.getByData("delete-event-btn").click();
+
+          cy.getByData("input-delete-confirm-name").type(EVENT.name);
+          cy.getByData("delete-event-cancel-btn").click();
+
+          cy.getByData("delete-event-modal").should("not.exist");
+          // Use exist instead of visible due to CSS overflow clipping
+          cy.contains("h1", EVENT.name).should("exist");
+        });
+      });
     });
 
     context("ended event", () => {
@@ -243,6 +280,33 @@ describe("EventDetails", () => {
         // Modal should still be open
         cy.getByData("end-event-modal").should("exist");
       });
+
+      it("handles delete event API failure gracefully", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events\/1$/, { fixture: "event-details.json" }).as("getEvent");
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events\/1\/entries/, { fixture: "event-entries.json" }).as("getEntries");
+        cy.intercept("DELETE", /\/api\/v2\/semesters\/.*\/events\/\d+$/, {
+          statusCode: 500,
+          body: { message: "Failed to delete event" },
+        }).as("deleteEventError");
+
+        visitEventDetails(EVENT.id);
+        cy.contains("h1", EVENT.name).should("be.visible");
+
+        cy.getByData("actions-menu-btn").click();
+        cy.getByData("delete-event-btn").click();
+        cy.getByData("input-delete-confirm-name").type(EVENT.name);
+        cy.getByData("delete-event-confirm-btn").click();
+        cy.wait("@deleteEventError");
+
+        // Modal closes and a banner appears at the top of the page
+        // Use exist instead of visible due to CSS overflow clipping
+        cy.getByData("delete-event-modal").should("not.exist");
+        cy.getByData("delete-event-error-banner").should("exist");
+        cy.contains("Failed to delete event").should("exist");
+
+        // Still on the event details page (use exist due to CSS overflow clipping)
+        cy.contains("h1", EVENT.name).should("exist");
+      });
     });
   });
 
@@ -261,6 +325,7 @@ describe("EventDetails", () => {
       cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/\d+\/entries\/.*\/sign-out/).as("signOut");
       cy.intercept("POST", /\/api\/v2\/semesters\/.*\/events\/\d+\/entries\/.*\/sign-in/).as("signIn");
       cy.intercept("DELETE", /\/api\/v2\/semesters\/.*\/events\/\d+\/entries\/.*/).as("removeEntry");
+      cy.intercept("DELETE", /\/api\/v2\/semesters\/.*\/events\/\d+$/).as("deleteEvent");
     });
 
     it("should search entries and show no results for unmatched search", () => {
@@ -326,6 +391,25 @@ describe("EventDetails", () => {
       cy.contains("Active").should("exist");
       cy.getByData("restart-event-btn").should("not.exist");
       cy.getByData("end-event-btn").should("exist");
+    });
+
+    it("should delete the event and redirect to the events list", () => {
+      visitEventDetails(EVENT.id);
+      cy.contains("h1", EVENT.name).should("be.visible");
+
+      cy.getByData("actions-menu-btn").click();
+      cy.getByData("delete-event-btn").click();
+      cy.getByData("delete-event-modal").should("exist");
+
+      cy.getByData("input-delete-confirm-name").type(EVENT.name);
+      cy.getByData("delete-event-confirm-btn").click();
+
+      cy.wait("@deleteEvent").then((interception) => {
+        expect(interception.response?.statusCode).to.eq(204);
+      });
+
+      cy.url().should("eq", `${Cypress.config().baseUrl}/admin/events`);
+      cy.contains(EVENT.name).should("not.exist");
     });
   });
 });

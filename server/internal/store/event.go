@@ -29,4 +29,9 @@ type EventRepository interface {
 	// Update applies a partial update to an event using the given column/value
 	// map, and writes the applied values back onto event.
 	Update(event *models.Event, values map[string]any) error
+
+	// Delete removes an event from the data store by its ID. The event's entries are removed
+	// with it by the participants.event_id foreign key (ON DELETE CASCADE). It returns
+	// store.ErrNotFound if no event with the given ID exists.
+	Delete(id int32) error
 }

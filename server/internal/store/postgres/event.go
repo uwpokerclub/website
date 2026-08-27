@@ -105,3 +105,16 @@ func (r *postgresEventRepository) List(filter *models.ListEventsFilter) ([]model
 func (r *postgresEventRepository) Update(event *models.Event, values map[string]any) error {
 	return r.db.Omit(clause.Associations).Model(event).Updates(values).Error
 }
+
+func (r *postgresEventRepository) Delete(id int32) error {
+	result := r.db.Delete(&models.Event{}, "id = ?", id)
+	if err := result.Error; err != nil {
+		return err
+	}
+
+	if result.RowsAffected == 0 {
+		return store.ErrNotFound
+	}
+
+	return nil
+}

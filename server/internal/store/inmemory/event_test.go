@@ -188,3 +188,26 @@ func TestEventRepository_List_AllSemesters(t *testing.T) {
 	require.EqualValues(t, 1, total)
 	require.Equal(t, "A", results[0].Name)
 }
+
+func TestEventRepository_Delete(t *testing.T) {
+	t.Parallel()
+
+	repo := newEventRepository()
+	semesterID := uuid.New()
+
+	event := newTestEvent(semesterID, 1, "Doomed Event")
+	require.NoError(t, repo.Create(event))
+
+	require.NoError(t, repo.Delete(event.ID))
+
+	_, err := repo.FindByID(event.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestEventRepository_Delete_NotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := newEventRepository()
+
+	require.ErrorIs(t, repo.Delete(99999), store.ErrNotFound)
+}

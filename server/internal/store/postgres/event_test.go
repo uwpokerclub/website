@@ -249,3 +249,46 @@ func TestEventsEntries_CascadeOnEventDelete(t *testing.T) {
 	require.NoError(t, db.Model(&models.Participant{}).Where("event_id = ?", 1).Count(&untouched).Error)
 	require.EqualValues(t, 2, untouched)
 }
+
+func TestEventRepository_Delete(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+
+	repo := postgres.NewEventRepository(db)
+
+	require.NoError(t, repo.Delete(2))
+
+	_, err = repo.FindByID(2)
+	require.ErrorIs(t, err, store.ErrNotFound)
+
+	// The event's entries went with it, and other events are untouched.
+	var entries int64
+	require.NoError(t, db.Model(&models.Participant{}).Where("event_id = ?", 2).Count(&entries).Error)
+	require.EqualValues(t, 0, entries)
+
+	_, err = repo.FindByID(1)
+	require.NoError(t, err)
+}
+
+func TestEventRepository_Delete_NotFound(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+
+	repo := postgres.NewEventRepository(db)
+
+	require.ErrorIs(t, repo.Delete(99999), store.ErrNotFound)
+}

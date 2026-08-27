@@ -163,3 +163,16 @@ func (r *inMemoryEventRepository) Update(event *models.Event, values map[string]
 
 	return nil
 }
+
+func (r *inMemoryEventRepository) Delete(id int32) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.events[id]; !exists {
+		return store.ErrNotFound
+	}
+
+	delete(r.events, id)
+
+	return nil
+}

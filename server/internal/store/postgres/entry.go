@@ -147,3 +147,11 @@ func (r *postgresEntryRepository) BatchUpdatePlacements(placements map[int32]uin
 
 	return r.db.Exec(query, args...).Error
 }
+
+func (r *postgresEntryRepository) CountByMembershipID(membershipID uuid.UUID) (int64, error) {
+	var count int64
+	if err := r.db.Model(&models.Participant{}).Where("membership_id = ?", membershipID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}

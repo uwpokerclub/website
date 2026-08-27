@@ -43,4 +43,8 @@ type EntryRepository interface {
 	// BatchUpdatePlacements sets the placement for each entry ID in placements, in a single
 	// operation.
 	BatchUpdatePlacements(placements map[int32]uint16) error
+
+	// CountByMembershipID returns the total number of entries recorded for the given membership
+	// across all events. Used to determine free-trial event usage.
+	CountByMembershipID(membershipID uuid.UUID) (int64, error)
 }

@@ -256,3 +256,23 @@ func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 3, found.Placement)
 }
+
+func TestEntryRepository_CountByMembershipID(t *testing.T) {
+	t.Parallel()
+
+	repo := newEntryRepository()
+	membershipID := uuid.New()
+	otherMembershipID := uuid.New()
+
+	require.NoError(t, repo.Create(newTestParticipant(membershipID, 1)))
+	require.NoError(t, repo.Create(newTestParticipant(membershipID, 2)))
+	require.NoError(t, repo.Create(newTestParticipant(otherMembershipID, 1)))
+
+	count, err := repo.CountByMembershipID(membershipID)
+	require.NoError(t, err)
+	require.Equal(t, int64(2), count)
+
+	count, err = repo.CountByMembershipID(uuid.New())
+	require.NoError(t, err)
+	require.Equal(t, int64(0), count)
+}

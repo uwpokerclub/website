@@ -417,3 +417,44 @@ func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 3, found.Placement)
 }
+
+func TestEntryRepository_CountByMembershipID(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedSemesters(db))
+	require.NoError(t, testutils.SeedStructures(db))
+	require.NoError(t, testutils.SeedUsers(db))
+
+	membership, err := testutils.CreateTestMembership(db, testutils.TEST_USERS[0].ID, testutils.TEST_SEMESTERS[0].ID)
+	require.NoError(t, err)
+	otherMembership, err := testutils.CreateTestMembership(db, testutils.TEST_USERS[1].ID, testutils.TEST_SEMESTERS[0].ID)
+	require.NoError(t, err)
+
+	event1, err := testutils.CreateTestEvent(db, testutils.TEST_SEMESTERS[0].ID, testutils.TEST_STRUCTURES[0].ID, "Event 1")
+	require.NoError(t, err)
+	event2, err := testutils.CreateTestEvent(db, testutils.TEST_SEMESTERS[0].ID, testutils.TEST_STRUCTURES[0].ID, "Event 2")
+	require.NoError(t, err)
+
+	repo := postgres.NewEntryRepository(db)
+
+	_, err = testutils.CreateTestParticipant(db, membership.ID, event1.ID)
+	require.NoError(t, err)
+	_, err = testutils.CreateTestParticipant(db, membership.ID, event2.ID)
+	require.NoError(t, err)
+	_, err = testutils.CreateTestParticipant(db, otherMembership.ID, event1.ID)
+	require.NoError(t, err)
+
+	count, err := repo.CountByMembershipID(membership.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(2), count)
+
+	count, err = repo.CountByMembershipID(uuid.New())
+	require.NoError(t, err)
+	require.Equal(t, int64(0), count)
+}

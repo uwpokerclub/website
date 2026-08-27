@@ -1,5 +1,11 @@
 import { MEMBERS, SEMESTER, USERS } from "../seed";
-import { getUserForMember, getMemberFullName } from "../support/helpers";
+import {
+  getUserForMember,
+  getMemberFullName,
+  TRIAL_EXHAUSTED_UNREGISTERED_MEMBER,
+  TRIAL_AVAILABLE_UNPAID_MEMBER,
+  TRIAL_EXHAUSTED_PAID_MEMBER,
+} from "../support/helpers";
 
 describe("MembersList", () => {
   before(() => {
@@ -80,6 +86,35 @@ describe("MembersList", () => {
         cy.getByData(`member-status-${discountedMember.id}`).should(
           "contain",
           "Discounted"
+        );
+      });
+    });
+
+    context("free trial status", () => {
+      const SHADE = "rgb(254, 226, 226)";
+
+      it("shades an unpaid member whose free trial is used up", () => {
+        cy.getByData(`member-row-${TRIAL_EXHAUSTED_UNREGISTERED_MEMBER.id}`)
+          .should("have.css", "background-color", SHADE)
+          .and("have.attr", "title", "Free trial used up");
+      });
+
+      it("does not shade an unpaid member whose free trial is still available", () => {
+        cy.getByData(`member-row-${TRIAL_AVAILABLE_UNPAID_MEMBER.id}`)
+          .should("not.have.css", "background-color", SHADE)
+          .and("not.have.attr", "title");
+      });
+
+      it("does not shade a paid member carrying a stale exhausted flag", () => {
+        cy.getByData(`member-row-${TRIAL_EXHAUSTED_PAID_MEMBER.id}`)
+          .should("not.have.css", "background-color", SHADE)
+          .and("not.have.attr", "title");
+      });
+
+      it("exposes the trial status as text for screen readers", () => {
+        cy.getByData(`member-name-${TRIAL_EXHAUSTED_UNREGISTERED_MEMBER.id}`).should(
+          "contain",
+          "Free trial used up",
         );
       });
     });

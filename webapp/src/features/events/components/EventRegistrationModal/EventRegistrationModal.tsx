@@ -7,6 +7,7 @@ import { fetchMemberships } from "@/features/members/api/memberRegistrationApi";
 import { fetchEntries, registerEntries, unregisterEntry, ParticipantResponse } from "@/features/entries/api/entriesApi";
 import { entryKeys } from "@/features/entries/hooks/useEntryQueries";
 import { Membership } from "@/types";
+import hasExhaustedFreeTrial from "@/utils/hasExhaustedFreeTrial";
 import styles from "./EventRegistrationModal.module.css";
 
 const PAGE_SIZE = 100;
@@ -322,11 +323,6 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     onClose();
   }, [onClose, queryClient, semesterId, eventId]);
 
-  // Check if member should be highlighted as danger (unpaid with 3+ attendance)
-  const isDangerMember = useCallback((member: Membership): boolean => {
-    return member.attendance >= 3 && !member.paid;
-  }, []);
-
   // Register a member
   const handleRegister = useCallback(
     async (membershipId: string) => {
@@ -480,12 +476,13 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
   // Render a member row for the available panel
   const renderAvailableMemberRow = (member: Membership) => {
     const isLoading = loadingMemberIds.has(member.id);
-    const isDanger = isDangerMember(member);
+    const isTrialExhausted = hasExhaustedFreeTrial(member);
 
     return (
       <div
         key={member.id}
-        className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}
+        className={`${styles.memberRow} ${isTrialExhausted ? styles.memberRowTrialExhausted : ""}`}
+        title={isTrialExhausted ? "Free trial used up" : undefined}
         data-qa={`member-row-${member.id}`}
       >
         <div className={styles.memberInfo}>
@@ -495,6 +492,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
           <span className={styles.memberStudentId} data-qa={`member-studentId-${member.id}`}>
             {member.userId}
           </span>
+          {isTrialExhausted && <span className={styles.srOnly}>Free trial used up</span>}
         </div>
         <button
           type="button"
@@ -516,13 +514,15 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     const isLoading = loadingMemberIds.has(membershipId);
     const firstName = membership?.user.firstName ?? entry.membership?.user?.firstName ?? "";
     const lastName = membership?.user.lastName ?? entry.membership?.user?.lastName ?? "";
-    // Danger highlighting is best-effort: only applies when full membership data is locally loaded
-    const isDanger = membership ? isDangerMember(membership) : false;
+    // Unlike the old attendance-based check, this no longer needs the membership to be
+    // locally loaded: the entries endpoint nests freeTrialAvailable on the membership.
+    const isTrialExhausted = hasExhaustedFreeTrial(membership ?? entry.membership);
 
     return (
       <div
         key={membershipId}
-        className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}
+        className={`${styles.memberRow} ${isTrialExhausted ? styles.memberRowTrialExhausted : ""}`}
+        title={isTrialExhausted ? "Free trial used up" : undefined}
         data-qa={`member-row-${membershipId}`}
       >
         <div className={styles.memberInfo}>
@@ -534,6 +534,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
               {membership.userId}
             </span>
           )}
+          {isTrialExhausted && <span className={styles.srOnly}>Free trial used up</span>}
         </div>
         <button
           type="button"

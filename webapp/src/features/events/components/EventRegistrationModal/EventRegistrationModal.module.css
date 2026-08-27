@@ -215,12 +215,14 @@
   background: var(--event-gold-light);
 }
 
-/* Danger state for unpaid members with 3+ attendance */
-.memberRowDanger {
+/* Trial-exhausted state: unpaid member with no free trial events left.
+   !important is required because .memberRow:nth-child(even) above sets a
+   background at equal specificity and later in the file. */
+.memberRowTrialExhausted {
   background: var(--event-danger-light) !important;
 }
 
-.memberRowDanger:hover {
+.memberRowTrialExhausted:hover {
   background: #fecaca !important;
 }
 
@@ -438,4 +440,17 @@
     width: 28px;
     height: 28px;
   }
+}
+
+/* Screen Reader Only - conveys the trial-exhausted state without relying on colour */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

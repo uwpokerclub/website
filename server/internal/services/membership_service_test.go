@@ -207,6 +207,58 @@ func TestMembershipService_UpdateMembership_InvalidState(t *testing.T) {
 	}
 }
 
+func TestMembershipService_UpdateMembership_MarkPaid_ResetsStaleFreeTrialFlag(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	semester.FreeTrialLimit = 1
+	require.NoError(t, st.Semesters().Create(semester))
+
+	// Simulate a membership that already exhausted its free trial while unpaid.
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+	require.NoError(t, st.Memberships().SetFreeTrialAvailable(membership.ID, false))
+
+	svc := NewMembershipService(st)
+	paid := true
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	require.NoError(t, err)
+	require.True(t, updated.FreeTrialAvailable, "marking a membership paid should reset a stale exhausted-trial flag")
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, stored.FreeTrialAvailable)
+}
+
+func TestMembershipService_UpdateMembership_UnmarkPaid_RecomputesFreeTrialFlag(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	semester.FreeTrialLimit = 1
+	require.NoError(t, st.Semesters().Create(semester))
+
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted}
+	require.NoError(t, st.Events().Create(event))
+
+	// Membership is currently paid, with attendance already at the limit-of-1 (irrelevant
+	// while paid), and a stale "available" flag left over from before it was marked paid.
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: true}
+	require.NoError(t, st.Memberships().Create(membership))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+
+	svc := NewMembershipService(st)
+	paid := false
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	require.NoError(t, err)
+	require.False(t, updated.FreeTrialAvailable, "unpaying a membership already at its attendance limit should recompute the flag as exhausted")
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.False(t, stored.FreeTrialAvailable)
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }

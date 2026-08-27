@@ -2844,6 +2844,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-12-31T23:59:59Z"
                 },
+                "freeTrialLimit": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 4
+                },
                 "membershipDiscountFee": {
                     "type": "integer",
                     "minimum": 0,
@@ -3044,6 +3049,10 @@ const docTemplate = `{
                 "discounted": {
                     "type": "boolean"
                 },
+                "freeTrialAvailable": {
+                    "description": "FreeTrialAvailable indicates whether this membership still has a free trial event\navailable. Defaults to true. Written only by MembershipRepository.SetFreeTrialAvailable,\nas a cache for display purposes (issue #54) — participantsService.CreateParticipant never\ntrusts this field to make its block decision; it always recomputes live from attendance.",
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -3074,6 +3083,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "discounted": {
+                    "type": "boolean"
+                },
+                "freeTrialAvailable": {
+                    "description": "FreeTrialAvailable indicates whether this membership still has a free trial event\navailable. Defaults to true. Written only by MembershipRepository.SetFreeTrialAvailable,\nas a cache for display purposes (issue #54) — participantsService.CreateParticipant never\ntrusts this field to make its block decision; it always recomputes live from attendance.",
                     "type": "boolean"
                 },
                 "id": {
@@ -3184,6 +3197,11 @@ const docTemplate = `{
                 "endDate": {
                     "type": "string",
                     "example": "2023-12-31T23:59:59Z"
+                },
+                "freeTrialLimit": {
+                    "description": "FreeTrialLimit is the number of events an unpaid membership may attend for free before\nparticipantsService.CreateParticipant starts rejecting further entries with 403. A value\nof 0 means the free-trial check is disabled entirely for this semester.",
+                    "type": "integer",
+                    "example": 4
                 },
                 "id": {
                     "type": "string",

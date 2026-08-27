@@ -112,6 +112,10 @@ definitions:
       endDate:
         example: "2023-12-31T23:59:59Z"
         type: string
+      freeTrialLimit:
+        example: 4
+        minimum: 0
+        type: integer
       membershipDiscountFee:
         example: 5
         minimum: 0
@@ -257,6 +261,13 @@ definitions:
     properties:
       discounted:
         type: boolean
+      freeTrialAvailable:
+        description: |-
+          FreeTrialAvailable indicates whether this membership still has a free trial event
+          available. Defaults to true. Written only by MembershipRepository.SetFreeTrialAvailable,
+          as a cache for display purposes (issue #54) — participantsService.CreateParticipant never
+          trusts this field to make its block decision; it always recomputes live from attendance.
+        type: boolean
       id:
         type: string
       paid:
@@ -277,6 +288,13 @@ definitions:
       attendance:
         type: integer
       discounted:
+        type: boolean
+      freeTrialAvailable:
+        description: |-
+          FreeTrialAvailable indicates whether this membership still has a free trial event
+          available. Defaults to true. Written only by MembershipRepository.SetFreeTrialAvailable,
+          as a cache for display purposes (issue #54) — participantsService.CreateParticipant never
+          trusts this field to make its block decision; it always recomputes live from attendance.
         type: boolean
       id:
         type: string
@@ -350,6 +368,13 @@ definitions:
       endDate:
         example: "2023-12-31T23:59:59Z"
         type: string
+      freeTrialLimit:
+        description: |-
+          FreeTrialLimit is the number of events an unpaid membership may attend for free before
+          participantsService.CreateParticipant starts rejecting further entries with 403. A value
+          of 0 means the free-trial check is disabled entirely for this semester.
+        example: 4
+        type: integer
       id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string

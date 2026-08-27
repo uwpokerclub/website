@@ -59,6 +59,7 @@ func (s *semestersController) createSemester(ctx *gin.Context) {
 		MembershipFee:         req.MembershipFee,
 		MembershipDiscountFee: req.MembershipDiscountFee,
 		RebuyFee:              req.RebuyFee,
+		FreeTrialLimit:        req.FreeTrialLimit,
 	}
 
 	if err := s.store.Semesters().Create(&semester); err != nil {

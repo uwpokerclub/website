@@ -17,6 +17,7 @@ type Semester struct {
 	MembershipFee         uint8     `json:"membershipFee" gorm:"not null;default:0" example:"10"`
 	MembershipDiscountFee uint8     `json:"membershipDiscountFee" gorm:"not null;default:0" example:"5"`
 	RebuyFee              uint8     `json:"rebuyFee" gorm:"not null;default:0" example:"2"`
+	FreeTrialLimit        uint8     `json:"freeTrialLimit" gorm:"not null;default:0" example:"4"`
 } //@name Semester
 
 type CreateSemesterRequest struct {
@@ -28,6 +29,7 @@ type CreateSemesterRequest struct {
 	MembershipFee         uint8     `json:"membershipFee" binding:"required,gte=0" example:"10"`
 	MembershipDiscountFee uint8     `json:"membershipDiscountFee" binding:"required,gte=0" example:"5"`
 	RebuyFee              uint8     `json:"rebuyFee" binding:"required,gte=0" example:"2"`
+	FreeTrialLimit        uint8     `json:"freeTrialLimit" binding:"omitempty,gte=0" example:"4"`
 } //@name CreateSemesterRequest
 
 func (s Semester) TableName() string {

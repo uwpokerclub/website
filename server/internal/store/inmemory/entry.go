@@ -214,6 +214,19 @@ func (r *inMemoryEntryRepository) BatchUpdatePlacements(placements map[int32]uin
 	return nil
 }
 
+func (r *inMemoryEntryRepository) CountByMembershipID(membershipID uuid.UUID) (int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var count int64
+	for _, p := range r.participants {
+		if p.MembershipID != nil && *p.MembershipID == membershipID {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (r *inMemoryEntryRepository) Delete(membershipID uuid.UUID, eventID int32) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

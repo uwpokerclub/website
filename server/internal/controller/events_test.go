@@ -1599,3 +1599,168 @@ func TestListEventsSearch(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteEvent(t *testing.T) {
+	t.Parallel()
+
+	// Setup test database and API server once
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	// Run default tests for authentication and authorization
+	unauthorizedRoles := []string{"bot", "executive"}
+	testutils.TestInvalidAuthForEndpoint(
+		t,
+		container,
+		apiServer,
+		"DELETE",
+		fmt.Sprintf("/api/v2/semesters/%s/events/2", testutils.TEST_SEMESTERS[0].ID),
+		unauthorizedRoles,
+	)
+
+	type deleteEventTestCase struct {
+		name             string
+		userRole         string
+		semesterID       string
+		eventID          string
+		expectedStatus   int
+		expectError      bool
+		expectedErrorMsg string
+	}
+
+	testCases := []deleteEventTestCase{
+		{
+			// Event 2 is started and belongs to TEST_SEMESTERS[0]. It has two entries,
+			// which the participants.event_id cascade removes along with it.
+			name:           "successful delete",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			eventID:        "2",
+			expectedStatus: http.StatusNoContent,
+			expectError:    false,
+		},
+		{
+			name:             "invalid semester ID format",
+			userRole:         authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:       "invalid-uuid",
+			eventID:          "2",
+			expectedStatus:   http.StatusBadRequest,
+			expectError:      true,
+			expectedErrorMsg: "Semester ID 'invalid-uuid' is not a valid UUID",
+		},
+		{
+			name:             "invalid event ID format",
+			userRole:         authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:       testutils.TEST_SEMESTERS[0].ID.String(),
+			eventID:          "invalid-id",
+			expectedStatus:   http.StatusBadRequest,
+			expectError:      true,
+			expectedErrorMsg: "Event ID 'invalid-id' is not a valid integer",
+		},
+		{
+			name:             "event does not exist",
+			userRole:         authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:       testutils.TEST_SEMESTERS[0].ID.String(),
+			eventID:          "99999",
+			expectedStatus:   http.StatusNotFound,
+			expectError:      true,
+			expectedErrorMsg: fmt.Sprintf("Event '99999' not found for semester '%s'", testutils.TEST_SEMESTERS[0].ID),
+		},
+		{
+			// Event 3 exists but belongs to TEST_SEMESTERS[1].
+			name:             "event belongs to a different semester",
+			userRole:         authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:       testutils.TEST_SEMESTERS[0].ID.String(),
+			eventID:          "3",
+			expectedStatus:   http.StatusNotFound,
+			expectError:      true,
+			expectedErrorMsg: fmt.Sprintf("Event '3' not found for semester '%s'", testutils.TEST_SEMESTERS[0].ID),
+		},
+		{
+			// Event 1 is ended.
+			name:             "ended event cannot be deleted",
+			userRole:         authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:       testutils.TEST_SEMESTERS[0].ID.String(),
+			eventID:          "1",
+			expectedStatus:   http.StatusForbidden,
+			expectError:      true,
+			expectedErrorMsg: "This event has ended. It cannot be deleted.",
+		},
+	}
+
+	// Add tests for every authorized role
+	authorizedRoles := []string{
+		authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+		authorization.ROLE_SECRETARY.ToString(),
+		authorization.ROLE_TREASURER.ToString(),
+		authorization.ROLE_VICE_PRESIDENT.ToString(),
+		authorization.ROLE_PRESIDENT.ToString(),
+		authorization.ROLE_WEBMASTER.ToString(),
+	}
+	for _, role := range authorizedRoles {
+		testCases = append(testCases, deleteEventTestCase{
+			name:           fmt.Sprintf("successful delete with role %s", role),
+			userRole:       role,
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			eventID:        "2",
+			expectedStatus: http.StatusNoContent,
+			expectError:    false,
+		})
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset database for clean state
+			require.NoError(t, container.ResetDatabase(ctx))
+
+			// Seed test data
+			require.NoError(t, testutils.SeedAll(db))
+
+			// Setup authentication
+			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
+			require.NoError(t, err)
+
+			// Create request
+			req, err := testutils.MakeJSONRequest(
+				"DELETE",
+				fmt.Sprintf("/api/v2/semesters/%s/events/%s", tc.semesterID, tc.eventID),
+				nil,
+			)
+			require.NoError(t, err)
+
+			testutils.SetAuthCookie(req, sessionID)
+
+			// Execute request
+			w := httptest.NewRecorder()
+			apiServer.ServeHTTP(w, req)
+
+			// Assert response
+			if tc.expectError {
+				testutils.AssertErrorResponse(t, w, tc.expectedStatus, tc.expectedErrorMsg)
+
+				if id, convErr := strconv.Atoi(tc.eventID); convErr == nil && (id == 1 || id == 3) {
+					var remaining int64
+					require.NoError(t, db.Model(&models.Event{}).Where("id = ?", id).Count(&remaining).Error)
+					require.EqualValues(t, 1, remaining)
+				}
+			} else {
+				require.Equal(t, tc.expectedStatus, w.Code)
+				require.Empty(t, w.Body.String())
+
+				// The event and its entries are gone.
+				var events int64
+				require.NoError(t, db.Model(&models.Event{}).Where("id = ?", 2).Count(&events).Error)
+				require.EqualValues(t, 0, events)
+
+				var entries int64
+				require.NoError(t, db.Model(&models.Participant{}).Where("event_id = ?", 2).Count(&entries).Error)
+				require.EqualValues(t, 0, entries)
+			}
+		})
+	}
+}

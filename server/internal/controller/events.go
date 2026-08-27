@@ -30,6 +30,7 @@ func (s *eventsController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("", middleware.UseAuthorization("event.list"), s.listEvents)
 	group.GET(":eventId", middleware.UseAuthorization("event.get"), s.getEvent)
 	group.PATCH(":eventId", middleware.UseAuthorization("event.edit"), s.updateEvent)
+	group.DELETE(":eventId", middleware.UseAuthorization("event.delete"), s.deleteEvent)
 	group.POST(":eventId/end", middleware.UseAuthorization("event.end"), s.endEvent)
 	group.POST(
 		":eventId/restart",
@@ -549,6 +550,97 @@ func (s *eventsController) rebuyEvent(ctx *gin.Context) {
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+			return
+		}
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+// deleteEvent handles the deletion of an event.
+// It expects the semester ID in the URL path and the event ID as a URL parameter.
+// Events that have ended cannot be deleted. The event's entries are removed along
+// with it by the participants.event_id foreign key (ON DELETE CASCADE).
+//
+// @Summary Delete Event
+// @Description Delete an existing event that has not ended
+// @Tags Events
+// @Accept json
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Param eventId path string true "Event ID"
+// @Success 204
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/events/{eventId} [delete]
+func (s *eventsController) deleteEvent(ctx *gin.Context) {
+	semesterID, err := uuid.Parse(ctx.Param("semesterId"))
+	if err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			apierrors.InvalidRequest(
+				fmt.Sprintf("Semester ID '%s' is not a valid UUID", ctx.Param("semesterId")),
+			),
+		)
+		return
+	}
+
+	eventID, err := strconv.ParseInt(ctx.Param("eventId"), 10, 32)
+	if err != nil {
+		ctx.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			apierrors.InvalidRequest(
+				fmt.Sprintf("Event ID '%s' is not a valid integer", ctx.Param("eventId")),
+			),
+		)
+		return
+	}
+
+	event, err := s.store.Events().FindBySemesterAndID(semesterID, int32(eventID))
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(
+					fmt.Sprintf("Event '%d' not found for semester '%s'", eventID, semesterID),
+				),
+			)
+			return
+		}
+		ctx.AbortWithStatusJSON(
+			http.StatusInternalServerError,
+			apierrors.InternalServerError(err.Error()),
+		)
+		return
+	}
+
+	// Ending an event awards ranking points (see services.eventService.EndEvent). Deleting
+	// an ended event would strand those points, so only events that are still running may
+	// be deleted.
+	if event.State == models.EventStateEnded {
+		ctx.AbortWithStatusJSON(
+			http.StatusForbidden,
+			apierrors.Forbidden("This event has ended. It cannot be deleted."),
+		)
+		return
+	}
+
+	if err := s.store.Events().Delete(event.ID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(
+				http.StatusNotFound,
+				apierrors.NotFound(
+					fmt.Sprintf("Event '%d' not found for semester '%s'", eventID, semesterID),
+				),
+			)
 			return
 		}
 		ctx.AbortWithStatusJSON(

@@ -125,6 +125,31 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 		}
 	}
 
+	if originalPaid != finalPaid {
+		if finalPaid {
+			// A paid membership is never subject to the free-trial restriction, so a cached
+			// false from before this transition is stale the moment it happens.
+			if !existingMembership.FreeTrialAvailable {
+				if err := tx.Memberships().SetFreeTrialAvailable(existingMembership.ID, true); err != nil {
+					return nil, err
+				}
+				existingMembership.FreeTrialAvailable = true
+			}
+		} else if semester.FreeTrialLimit > 0 {
+			attendance, err := tx.Entries().CountByMembershipID(existingMembership.ID)
+			if err != nil {
+				return nil, err
+			}
+			stillAvailable := attendance < int64(semester.FreeTrialLimit)
+			if stillAvailable != existingMembership.FreeTrialAvailable {
+				if err := tx.Memberships().SetFreeTrialAvailable(existingMembership.ID, stillAvailable); err != nil {
+					return nil, err
+				}
+				existingMembership.FreeTrialAvailable = stillAvailable
+			}
+		}
+	}
+
 	existingMembership.Paid = finalPaid
 	existingMembership.Discounted = finalDiscounted
 	if err := tx.Memberships().Update(&existingMembership); err != nil {

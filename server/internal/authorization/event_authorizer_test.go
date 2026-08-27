@@ -106,6 +106,22 @@ func TestEventAuthorizer(t *testing.T) {
 			},
 			action: "edit"},
 		{
+			name: "Delete Authorized",
+			roles: []struct {
+				role     string
+				expected bool
+			}{
+				{role: ROLE_BOT.ToString(), expected: false},
+				{role: ROLE_EXECUTIVE.ToString(), expected: false},
+				{role: ROLE_TOURNAMENT_DIRECTOR.ToString(), expected: true},
+				{role: ROLE_SECRETARY.ToString(), expected: true},
+				{role: ROLE_TREASURER.ToString(), expected: true},
+				{role: ROLE_VICE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_PRESIDENT.ToString(), expected: true},
+				{role: ROLE_WEBMASTER.ToString(), expected: true},
+			},
+			action: "delete"},
+		{
 			name: "End Authorized",
 			roles: []struct {
 				role     string
@@ -230,6 +246,7 @@ func TestEventAuthorizer_GetPermissions(t *testing.T) {
 				"get":     true,
 				"list":    true,
 				"edit":    true,
+				"delete":  true,
 				"end":     false,
 				"restart": false,
 				"rebuy":   true,

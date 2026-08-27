@@ -393,9 +393,9 @@ func TestListEntries(t *testing.T) {
 							"signedOutAt":  nil,
 							// Nested membership with nested user
 							"membership": map[string]any{
-								"id":         testutils.TEST_MEMBERSHIPS[2].ID.String(),
-								"userId":     float64(testutils.TEST_USERS[2].ID),
-								"semesterId": testutils.TEST_SEMESTERS[0].ID.String(),
+								"id":                 testutils.TEST_MEMBERSHIPS[2].ID.String(),
+								"userId":             float64(testutils.TEST_USERS[2].ID),
+								"semesterId":         testutils.TEST_SEMESTERS[0].ID.String(),
 								"paid":               testutils.TEST_MEMBERSHIPS[2].Paid,
 								"discounted":         testutils.TEST_MEMBERSHIPS[2].Discounted,
 								"freeTrialAvailable": true,
@@ -437,9 +437,9 @@ func TestListEntries(t *testing.T) {
 							"signedOutAt":  "2023-10-20T20:00:00-04:00",
 							// Nested membership with nested user
 							"membership": map[string]any{
-								"id":         testutils.TEST_MEMBERSHIPS[0].ID.String(),
-								"userId":     float64(testutils.TEST_USERS[0].ID),
-								"semesterId": testutils.TEST_SEMESTERS[0].ID.String(),
+								"id":                 testutils.TEST_MEMBERSHIPS[0].ID.String(),
+								"userId":             float64(testutils.TEST_USERS[0].ID),
+								"semesterId":         testutils.TEST_SEMESTERS[0].ID.String(),
 								"paid":               testutils.TEST_MEMBERSHIPS[0].Paid,
 								"discounted":         testutils.TEST_MEMBERSHIPS[0].Discounted,
 								"freeTrialAvailable": true,
@@ -1151,4 +1151,62 @@ func TestListEntriesSearch(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateEntry_FreeTrialExhausted(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	require.NoError(t, testutils.SeedStructures(db))
+
+	semester, err := testutils.CreateTestSemester(db, "Free Trial Semester")
+	require.NoError(t, err)
+	require.NoError(t, db.Model(&models.Semester{}).Where("id = ?", semester.ID).Update("free_trial_limit", 1).Error)
+
+	user, err := testutils.CreateTestUser(db, 20000099, "Trial", "User", "trial@example.com", "Math", "tu")
+	require.NoError(t, err)
+
+	membership, err := testutils.CreateTestMembership(db, user.ID, semester.ID)
+	require.NoError(t, err)
+	require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", membership.ID).Update("paid", false).Error)
+
+	// Real attendance already at the limit-of-1, since the gate recomputes from attendance
+	// rather than trusting the (still-default-true) cached flag.
+	usedEvent, err := testutils.CreateTestEvent(db, semester.ID, testutils.TEST_STRUCTURES[0].ID, "Already Attended")
+	require.NoError(t, err)
+	_, err = testutils.CreateTestParticipant(db, membership.ID, usedEvent.ID)
+	require.NoError(t, err)
+
+	event, err := testutils.CreateTestEvent(db, semester.ID, testutils.TEST_STRUCTURES[0].ID, "Trial Event")
+	require.NoError(t, err)
+
+	sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+	require.NoError(t, err)
+
+	req, err := testutils.MakeJSONRequest(
+		"POST",
+		fmt.Sprintf("/api/v2/semesters/%s/events/%d/entries", semester.ID, event.ID),
+		[]string{membership.ID.String()},
+	)
+	require.NoError(t, err)
+	testutils.SetAuthCookie(req, sessionID)
+
+	w := httptest.NewRecorder()
+	apiServer.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusMultiStatus, w.Code)
+
+	var actualResponse []map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &actualResponse))
+	require.Len(t, actualResponse, 1)
+	require.Equal(t, membership.ID.String(), actualResponse[0]["membershipId"])
+	require.Equal(t, "error", actualResponse[0]["status"])
+	require.Contains(t, actualResponse[0]["error"], "no free trial events remaining")
 }

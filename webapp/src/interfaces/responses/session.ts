@@ -37,7 +37,7 @@ export interface PermissionList {
         };
   };
   user: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete">;
-  event: Pick<Permissions, "create" | "get" | "list" | "edit" | "end" | "restart" | "rebuy"> & {
+  event: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete" | "end" | "restart" | "rebuy"> & {
     participant: Pick<Permissions, "create" | "get" | "list" | "signin" | "signout" | "delete">;
   };
   login: Pick<Permissions, "create" | "list" | "get" | "edit" | "delete">;

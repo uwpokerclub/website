@@ -14,7 +14,7 @@ type eventAuthorizer struct {
 func NewEventAuthorizer(resourceAuthorizers ResourceAuthorizerMap) ResourceAuthorizer {
 	return &eventAuthorizer{
 		resourceAuthorizers: resourceAuthorizers,
-		actions:             []string{"create", "get", "list", "edit", "end", "restart", "rebuy"},
+		actions:             []string{"create", "get", "list", "edit", "delete", "end", "restart", "rebuy"},
 		subResources:        []string{"participant"},
 	}
 }
@@ -52,6 +52,8 @@ func (svc *eventAuthorizer) IsAuthorized(role string, action string) bool {
 	case "list":
 		return HasAtleastRole(ROLE_EXECUTIVE, role)
 	case "edit":
+		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
+	case "delete":
 		return HasAtleastRole(ROLE_TOURNAMENT_DIRECTOR, role)
 	case "end":
 		return HasAtleastRole(ROLE_SECRETARY, role)

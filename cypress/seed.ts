@@ -51,6 +51,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    freeTrialAvailable: true,
   },
   {
     id: "c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d",
@@ -58,6 +59,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    freeTrialAvailable: false,
   },
   {
     id: "b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e",
@@ -65,6 +67,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    freeTrialAvailable: true,
   },
   {
     id: "d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8",
@@ -72,6 +75,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    freeTrialAvailable: false,
   },
   {
     id: "65f65311-cc74-4c76-9cdf-29c5d674d40a",
@@ -79,6 +83,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: true,
+    freeTrialAvailable: true,
   },
   {
     id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
@@ -86,6 +91,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    freeTrialAvailable: true,
   },
   {
     id: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
@@ -93,6 +99,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    freeTrialAvailable: true,
   },
   {
     id: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
@@ -100,6 +107,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: true,
+    freeTrialAvailable: true,
   },
   {
     id: "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
@@ -107,6 +115,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    freeTrialAvailable: false,
   },
   {
     id: "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
@@ -114,6 +123,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    freeTrialAvailable: true,
   },
 ];
 

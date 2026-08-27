@@ -54,17 +54,17 @@ INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_
   (22222222, 'Another', 'Unregistered', 'another.unreg@test.com', 'Science', 'unreg2', '2025-01-01');
 
 -- Seed members into the seed semester
-INSERT INTO memberships (id, user_id, semester_id, paid, discounted) VALUES
-  ('5d312426-ad56-4231-bb12-241acbfb91e2', 62958169, '84f026be-53e0-4759-ab89-131c4a66d649', false, false),
-  ('c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d', 20141158, '84f026be-53e0-4759-ab89-131c4a66d649', false, false),
-  ('b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e', 85018940, '84f026be-53e0-4759-ab89-131c4a66d649', false, false),
-  ('d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8', 77679767, '84f026be-53e0-4759-ab89-131c4a66d649', true, false),
-  ('65f65311-cc74-4c76-9cdf-29c5d674d40a', 70492884, '84f026be-53e0-4759-ab89-131c4a66d649', true, true),
-  ('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 39166759, '84f026be-53e0-4759-ab89-131c4a66d649', true, false),
-  ('b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 55686346, '84f026be-53e0-4759-ab89-131c4a66d649', true, false),
-  ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 81085720, '84f026be-53e0-4759-ab89-131c4a66d649', true, true),
-  ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 52873146, '84f026be-53e0-4759-ab89-131c4a66d649', false, false),
-  ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 75969632, '84f026be-53e0-4759-ab89-131c4a66d649', true, false);
+INSERT INTO memberships (id, user_id, semester_id, paid, discounted, free_trial_available) VALUES
+  ('5d312426-ad56-4231-bb12-241acbfb91e2', 62958169, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true),
+  ('c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d', 20141158, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false),
+  ('b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e', 85018940, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true),
+  ('d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8', 77679767, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, false),
+  ('65f65311-cc74-4c76-9cdf-29c5d674d40a', 70492884, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true),
+  ('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 39166759, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true),
+  ('b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 55686346, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true),
+  ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 81085720, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true),
+  ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 52873146, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false),
+  ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 75969632, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true);
 
 -- Seed participants into the started event (Event #1)
 INSERT INTO participants (id, membership_id, event_id) VALUES

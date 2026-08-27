@@ -45,6 +45,7 @@ export interface Membership {
   semesterId: string;
   paid: boolean;
   discounted: boolean;
+  freeTrialAvailable: boolean;
 }
 
 export interface Ranking {

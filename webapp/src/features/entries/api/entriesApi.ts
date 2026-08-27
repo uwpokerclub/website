@@ -9,6 +9,11 @@ export interface ParticipantResponse {
   membershipId: string;
   membership?: {
     id: string;
+    // Present because the entries endpoint preloads the full models.Membership
+    // (see models/participant.go). Optional here because this interface is a
+    // hand-written mirror and older responses may not carry them.
+    paid?: boolean;
+    freeTrialAvailable?: boolean;
     user?: {
       id?: string;
       firstName?: string;

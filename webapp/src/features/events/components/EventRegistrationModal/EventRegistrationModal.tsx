@@ -455,6 +455,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         paid: false,
         discounted: false,
         attendance: 0,
+        // A brand-new membership always starts with its free trial intact.
+        freeTrialAvailable: true,
       };
       setMemberships((prev) => [...prev, newMember]);
       setMembershipsTotal((prev) => prev + 1);

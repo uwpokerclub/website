@@ -13,7 +13,12 @@ type Membership struct {
 	Semester   *Semester `json:"semester"`
 	Paid       bool      `json:"paid"       gorm:"not null;default:false"`
 	Discounted bool      `json:"discounted" gorm:"not null;default:false"`
-	Ranking    *Ranking  `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	// FreeTrialAvailable indicates whether this membership still has a free trial event
+	// available. Defaults to true. Written only by MembershipRepository.SetFreeTrialAvailable,
+	// as a cache for display purposes (issue #54) — participantsService.CreateParticipant never
+	// trusts this field to make its block decision; it always recomputes live from attendance.
+	FreeTrialAvailable bool     `json:"freeTrialAvailable" gorm:"not null;default:true"`
+	Ranking            *Ranking `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 } //@name Membership
 
 func (Membership) TableName() string {

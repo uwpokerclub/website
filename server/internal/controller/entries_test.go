@@ -396,8 +396,9 @@ func TestListEntries(t *testing.T) {
 								"id":         testutils.TEST_MEMBERSHIPS[2].ID.String(),
 								"userId":     float64(testutils.TEST_USERS[2].ID),
 								"semesterId": testutils.TEST_SEMESTERS[0].ID.String(),
-								"paid":       testutils.TEST_MEMBERSHIPS[2].Paid,
-								"discounted": testutils.TEST_MEMBERSHIPS[2].Discounted,
+								"paid":               testutils.TEST_MEMBERSHIPS[2].Paid,
+								"discounted":         testutils.TEST_MEMBERSHIPS[2].Discounted,
+								"freeTrialAvailable": true,
 								"user": map[string]any{
 									"id":        float64(user2.ID),
 									"firstName": user2.FirstName,
@@ -418,6 +419,7 @@ func TestListEntries(t *testing.T) {
 									"membershipFee":         float64(testutils.TEST_SEMESTERS[0].MembershipFee),
 									"membershipDiscountFee": float64(testutils.TEST_SEMESTERS[0].MembershipDiscountFee),
 									"rebuyFee":              float64(testutils.TEST_SEMESTERS[0].RebuyFee),
+									"freeTrialLimit":        float64(0),
 								},
 								"ranking": map[string]any{
 									"id":           float64(3),
@@ -438,8 +440,9 @@ func TestListEntries(t *testing.T) {
 								"id":         testutils.TEST_MEMBERSHIPS[0].ID.String(),
 								"userId":     float64(testutils.TEST_USERS[0].ID),
 								"semesterId": testutils.TEST_SEMESTERS[0].ID.String(),
-								"paid":       testutils.TEST_MEMBERSHIPS[0].Paid,
-								"discounted": testutils.TEST_MEMBERSHIPS[0].Discounted,
+								"paid":               testutils.TEST_MEMBERSHIPS[0].Paid,
+								"discounted":         testutils.TEST_MEMBERSHIPS[0].Discounted,
+								"freeTrialAvailable": true,
 								"user": map[string]any{
 									"id":        float64(user0.ID),
 									"firstName": user0.FirstName,
@@ -460,6 +463,7 @@ func TestListEntries(t *testing.T) {
 									"membershipFee":         float64(testutils.TEST_SEMESTERS[0].MembershipFee),
 									"membershipDiscountFee": float64(testutils.TEST_SEMESTERS[0].MembershipDiscountFee),
 									"rebuyFee":              float64(testutils.TEST_SEMESTERS[0].RebuyFee),
+									"freeTrialLimit":        float64(0),
 								},
 								"ranking": map[string]any{
 									"id":           float64(1),

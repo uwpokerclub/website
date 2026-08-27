@@ -51,6 +51,7 @@ func TestCreateSemester(t *testing.T) {
 				"membershipFee":         10,
 				"membershipDiscountFee": 5,
 				"rebuyFee":              2,
+				"freeTrialLimit":        4,
 			},
 			expectedStatus: http.StatusCreated,
 			expectError:    false,
@@ -64,6 +65,7 @@ func TestCreateSemester(t *testing.T) {
 				"membershipFee":         float64(10),
 				"membershipDiscountFee": float64(5),
 				"rebuyFee":              float64(2),
+				"freeTrialLimit":        float64(4),
 				"id":                    nil, // Just check that ID exists
 			},
 		},
@@ -90,6 +92,7 @@ func TestCreateSemester(t *testing.T) {
 				"membershipFee":         float64(15),
 				"membershipDiscountFee": float64(10),
 				"rebuyFee":              float64(3),
+				"freeTrialLimit":        float64(0),
 				"id":                    nil, // Just check that ID exists
 			},
 		},
@@ -440,6 +443,7 @@ func TestGetSemester(t *testing.T) {
 						"membershipFee":         semester.MembershipFee,
 						"membershipDiscountFee": semester.MembershipDiscountFee,
 						"rebuyFee":              semester.RebuyFee,
+						"freeTrialLimit":        semester.FreeTrialLimit,
 					}
 				}
 			}

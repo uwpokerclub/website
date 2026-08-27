@@ -221,3 +221,31 @@ func TestEventRepository_List_AllSemesters(t *testing.T) {
 	require.Len(t, results, 1)
 	require.Equal(t, "A", results[0].Name)
 }
+
+func TestEventsEntries_CascadeOnEventDelete(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+
+	// TEST_EVENTS id 2 has two seeded participants (TEST_PARTICIPANTS[2] and [3]).
+	var before int64
+	require.NoError(t, db.Model(&models.Participant{}).Where("event_id = ?", 2).Count(&before).Error)
+	require.EqualValues(t, 2, before)
+
+	require.NoError(t, db.Delete(&models.Event{}, "id = ?", 2).Error)
+
+	var after int64
+	require.NoError(t, db.Model(&models.Participant{}).Where("event_id = ?", 2).Count(&after).Error)
+	require.EqualValues(t, 0, after)
+
+	// Participants belonging to other events must survive.
+	var untouched int64
+	require.NoError(t, db.Model(&models.Participant{}).Where("event_id = ?", 1).Count(&untouched).Error)
+	require.EqualValues(t, 2, untouched)
+}

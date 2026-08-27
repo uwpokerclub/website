@@ -202,13 +202,13 @@ Links a user to a semester, representing their club membership for that term.
 
 ### participants
 
-Records a member's participation in a specific event. `membership_id` is nullable to preserve participation history if the membership is deleted (ON DELETE SET NULL).
+Records a member's participation in a specific event. `membership_id` is nullable to preserve participation history if the membership is deleted (ON DELETE SET NULL). Deleting an event, by contrast, deletes its participation rows (ON DELETE CASCADE) — a deleted event has no history worth preserving.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | serial | PK | Auto-incrementing identifier |
 | membership_id | uuid | nullable, FK -> memberships(id) SET NULL | Participating membership |
-| event_id | integer | NOT NULL, FK -> events(id) | Event participated in |
+| event_id | integer | NOT NULL, FK -> events(id) CASCADE | Event participated in |
 | placement | integer | | Final placement/position |
 | signed_out_at | timestamptz | nullable | When the participant was eliminated |
 

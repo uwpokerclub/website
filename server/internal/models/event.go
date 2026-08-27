@@ -25,7 +25,7 @@ type Event struct {
 	Structure        *Structure    `json:"structure,omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Rebuys           uint8         `json:"rebuys"              gorm:"not null;default:0"`
 	PointsMultiplier float32       `json:"pointsMultiplier"    gorm:"not null;default:1"`
-	Entries          []Participant `json:"entries,omitempty"   gorm:"foreignKey:EventID"`
+	Entries          []Participant `json:"entries,omitempty"   gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 } //@name Event
 
 func (Event) TableName() string {

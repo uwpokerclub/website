@@ -9,6 +9,7 @@ export interface DropdownMenuItem {
   icon?: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  "data-qa"?: string;
 }
 
 interface DropdownMenuProps {
@@ -47,6 +48,7 @@ export function DropdownMenu({ items, isLoading = false }: DropdownMenuProps) {
         aria-expanded={isOpen}
         aria-haspopup="menu"
         disabled={isLoading}
+        data-qa="actions-menu-btn"
       >
         {isLoading ? <Spinner size="sm" /> : <FaEllipsisV />}
       </button>
@@ -73,6 +75,7 @@ export function DropdownMenu({ items, isLoading = false }: DropdownMenuProps) {
                   item.onClick();
                 }}
                 role="menuitem"
+                data-qa={item["data-qa"]}
               >
                 {item.icon} {item.label}
               </button>

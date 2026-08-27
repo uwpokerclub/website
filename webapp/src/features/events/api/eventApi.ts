@@ -62,6 +62,10 @@ export async function restartEvent(semesterId: string, eventId: number): Promise
   return apiClient<void>(`v2/semesters/${semesterId}/events/${eventId}/restart`, { method: "POST" });
 }
 
+export async function deleteEvent(semesterId: string, eventId: number): Promise<void> {
+  return apiClient<void>(`v2/semesters/${semesterId}/events/${eventId}`, { method: "DELETE" });
+}
+
 export async function rebuyEvent(semesterId: string, eventId: number): Promise<void> {
   return apiClient<void>(`v2/semesters/${semesterId}/events/${eventId}/rebuy`, { method: "POST" });
 }

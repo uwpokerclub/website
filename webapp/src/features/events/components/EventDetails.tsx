@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth, useCurrentSemester } from "@/hooks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EntriesTable } from "./EntriesTable";
@@ -23,6 +23,7 @@ import styles from "./EventDetails.module.css";
 import { TournamentClock } from "../../tournament-clock";
 import { EndEventModal } from "./EndEventModal";
 import { EditEventModal, type EventData } from "./EditEventModal";
+import { DeleteEventModal } from "./DeleteEventModal";
 import { EventRegistrationModal } from "./EventRegistrationModal";
 import { DropdownMenu, type DropdownMenuItem } from "./DropdownMenu";
 import { useEvent, useRebuyEvent, useRestartEvent } from "../hooks/useEventQueries";
@@ -39,6 +40,7 @@ export function EventDetails() {
   const { currentSemester } = useCurrentSemester();
   const { hasPermission } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [entriesPage, setEntriesPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +53,8 @@ export function EventDetails() {
   const [activeSubTab, setActiveSubTab] = useState<"entries" | "structure">("entries");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const endEventBtnRef = useRef<HTMLButtonElement | null>(null);
   const restartEventBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -172,6 +176,25 @@ export function EventDetails() {
     setIsEditModalOpen(false);
   }, []);
 
+  // Delete modal handlers
+  const handleDeleteClick = useCallback(() => {
+    setDeleteError(null);
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  const handleDeleteModalClose = useCallback(() => {
+    setIsDeleteModalOpen(false);
+  }, []);
+
+  const handleDeleted = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    navigate("/admin/events");
+  }, [navigate]);
+
+  const handleDeleteError = useCallback((message: string) => {
+    setDeleteError(message);
+  }, []);
+
   // Build overflow menu items
   const menuItems: DropdownMenuItem[] = useMemo(() => {
     const items: DropdownMenuItem[] = [];
@@ -183,6 +206,7 @@ export function EventDetails() {
         icon: <FaPencilAlt />,
         onClick: handleEditClick,
         disabled: event?.state === EventState.Ended,
+        "data-qa": "edit-event-btn",
       });
     }
 
@@ -191,15 +215,14 @@ export function EventDetails() {
         key: "delete",
         label: "Delete Event",
         icon: <FaTrash />,
-        onClick: () => {
-          /* Placeholder - UWPSC-26 */
-        },
-        disabled: true,
+        onClick: handleDeleteClick,
+        disabled: event?.state === EventState.Ended,
+        "data-qa": "delete-event-btn",
       });
     }
 
     return items;
-  }, [hasPermission, event?.state, handleEditClick]);
+  }, [hasPermission, event?.state, handleEditClick, handleDeleteClick]);
 
   // Prepare event data for EditEventModal
   const editEventData: EventData | null = useMemo(() => {
@@ -281,6 +304,12 @@ export function EventDetails() {
   return (
     <>
       <div className={styles.container}>
+        {deleteError && (
+          <div className={styles.deleteErrorBanner} role="alert" data-qa="delete-event-error-banner">
+            {deleteError}
+          </div>
+        )}
+
         {/* Page Header */}
         <header className={styles.pageHeader}>
           <div className={styles.headerContent}>
@@ -512,6 +541,15 @@ export function EventDetails() {
       />
 
       <EditEventModal isOpen={isEditModalOpen} event={editEventData} onClose={handleEditModalClose} />
+
+      <DeleteEventModal
+        show={isDeleteModalOpen}
+        semesterId={currentSemester.id}
+        event={{ id: event.id, name: event.name }}
+        onClose={handleDeleteModalClose}
+        onDeleted={handleDeleted}
+        onError={handleDeleteError}
+      />
 
       <EventRegistrationModal
         isOpen={isRegistrationModalOpen}

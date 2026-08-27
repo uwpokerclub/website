@@ -26,8 +26,6 @@
   --event-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 
   padding: 0;
-  max-width: 1200px;
-  margin: 0 auto;
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -490,6 +488,15 @@
 .loadingText {
   color: var(--event-text-muted);
   font-size: 0.9rem;
+}
+
+.deleteErrorBanner {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--event-radius);
+  background: var(--event-danger-light);
+  color: var(--event-danger);
+  font-weight: 500;
 }
 
 .errorContainer {

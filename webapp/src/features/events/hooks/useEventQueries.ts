@@ -7,6 +7,7 @@ import {
   endEvent,
   restartEvent,
   rebuyEvent,
+  deleteEvent,
   CreateEventRequest,
   UpdateEventRequest,
 } from "../api/eventApi";
@@ -87,6 +88,18 @@ export function useRestartEvent() {
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
       // Restarting an event clears placements; refresh the entries list
       queryClient.invalidateQueries({ queryKey: entryKeys.byEvent(semesterId, eventId) });
+    },
+  });
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ semesterId, eventId }: { semesterId: string; eventId: number }) => deleteEvent(semesterId, eventId),
+    onSuccess: (_data, { semesterId, eventId }) => {
+      queryClient.removeQueries({ queryKey: eventKeys.detail(semesterId, eventId) });
+      queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
     },
   });
 }

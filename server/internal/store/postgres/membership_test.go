@@ -284,3 +284,47 @@ func TestMembershipRepository_Delete(t *testing.T) {
 	err = repo.Delete(membership.ID, semesterA.ID)
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestMembershipRepository_SetFreeTrialAvailable(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	repo := postgres.NewMembershipRepository(db)
+
+	user, err := testutils.CreateTestUser(db, 20000021, "Sam", "S", "sam@example.com", "Math", "ss")
+	require.NoError(t, err)
+
+	semester, err := testutils.CreateTestSemester(db, "Fall 2026")
+	require.NoError(t, err)
+
+	membership, err := testutils.CreateTestMembership(db, user.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, membership.FreeTrialAvailable, "Postgres column default should apply on create")
+
+	require.NoError(t, repo.SetFreeTrialAvailable(membership.ID, false))
+
+	found, err := repo.FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, found.FreeTrialAvailable)
+	require.True(t, found.Paid, "SetFreeTrialAvailable must not clobber Paid")
+	require.False(t, found.Discounted, "SetFreeTrialAvailable must not clobber Discounted")
+}
+
+func TestMembershipRepository_SetFreeTrialAvailable_NotFound(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	repo := postgres.NewMembershipRepository(container.GetDB())
+
+	err = repo.SetFreeTrialAvailable(uuid.New(), false)
+	require.ErrorIs(t, err, store.ErrNotFound)
+}

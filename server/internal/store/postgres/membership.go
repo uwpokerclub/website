@@ -154,6 +154,21 @@ func (r *postgresMembershipRepository) Update(membership *models.Membership) err
 	return nil
 }
 
+func (r *postgresMembershipRepository) SetFreeTrialAvailable(id uuid.UUID, available bool) error {
+	result := r.db.Model(&models.Membership{}).
+		Where("id = ?", id).
+		Update("free_trial_available", available)
+	if err := result.Error; err != nil {
+		return err
+	}
+
+	if result.RowsAffected == 0 {
+		return store.ErrNotFound
+	}
+
+	return nil
+}
+
 func (r *postgresMembershipRepository) Delete(id uuid.UUID, semesterID uuid.UUID) error {
 	result := r.db.Where("semester_id = ?", semesterID).Delete(&models.Membership{}, "id = ?", id)
 	if err := result.Error; err != nil {

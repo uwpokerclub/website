@@ -213,3 +213,39 @@ func TestMembershipRepository_Clone_Isolation(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 2, originalTotal)
 }
+
+func TestMembershipRepository_Create_DefaultsFreeTrialAvailable(t *testing.T) {
+	t.Parallel()
+
+	repo := newMembershipRepository()
+
+	membership := &models.Membership{UserID: 1, SemesterID: uuid.New(), Paid: true}
+	require.NoError(t, repo.Create(membership))
+	require.True(t, membership.FreeTrialAvailable, "Create should default FreeTrialAvailable to true")
+}
+
+func TestMembershipRepository_SetFreeTrialAvailable(t *testing.T) {
+	t.Parallel()
+
+	repo := newMembershipRepository()
+
+	membership := &models.Membership{UserID: 1, SemesterID: uuid.New(), Paid: true, Discounted: true}
+	require.NoError(t, repo.Create(membership))
+
+	require.NoError(t, repo.SetFreeTrialAvailable(membership.ID, false))
+
+	found, err := repo.FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, found.FreeTrialAvailable)
+	require.True(t, found.Paid, "SetFreeTrialAvailable must not clobber Paid")
+	require.True(t, found.Discounted, "SetFreeTrialAvailable must not clobber Discounted")
+}
+
+func TestMembershipRepository_SetFreeTrialAvailable_NotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := newMembershipRepository()
+
+	err := repo.SetFreeTrialAvailable(uuid.New(), false)
+	require.ErrorIs(t, err, store.ErrNotFound)
+}

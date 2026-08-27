@@ -31,4 +31,10 @@ type MembershipRepository interface {
 	// Delete deletes a membership from the data store by its ID, scoped to a specific semester. Returns
 	// ErrNotFound if no matching record exists.
 	Delete(id uuid.UUID, semesterID uuid.UUID) error
+
+	// SetFreeTrialAvailable atomically sets a membership's free trial availability flag via a
+	// single UPDATE, not a read-modify-write, so it cannot clobber a concurrent change to
+	// Paid/Discounted (mirrors SemesterRepository.IncrementBudget). Returns store.ErrNotFound if
+	// no membership exists for the given ID.
+	SetFreeTrialAvailable(id uuid.UUID, available bool) error
 }

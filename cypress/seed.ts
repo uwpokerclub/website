@@ -15,6 +15,8 @@ export const SEMESTER = {
   membershipFee: 10,
   membershipDiscountFee: 7,
   rebuyFee: 2,
+  // seed.sql does not set free_trial_limit, so it takes the column default.
+  freeTrialLimit: 0,
   meta: "Seed semester",
 };
 

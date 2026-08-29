@@ -7,7 +7,7 @@ import styles from "./SemesterDetailsForm.module.css";
  * SemesterDetailsForm - Form fields for semester details
  *
  * Fields: Name, Start Date, End Date, Starting Budget, Membership Fee,
- * Discounted Membership Fee, Rebuy Fee, Additional Details
+ * Discounted Membership Fee, Rebuy Fee, Free Trial Events, Additional Details
  * Uses react-hook-form context. Must be wrapped in a FormProvider.
  */
 export function SemesterDetailsForm() {
@@ -122,6 +122,29 @@ export function SemesterDetailsForm() {
             error={!!errors.rebuyFee}
             fullWidth
             data-qa="input-semester-rebuyFee"
+          />
+        )}
+      </FormField>
+
+      <FormField
+        label="Free Trial Events"
+        htmlFor="freeTrialLimit"
+        required
+        error={errors.freeTrialLimit?.message}
+        hint="Events an unpaid member may attend before their free trial runs out. 0 disables the free trial."
+      >
+        {(props) => (
+          <Input
+            {...props}
+            {...register("freeTrialLimit", { valueAsNumber: true })}
+            type="number"
+            min={0}
+            max={255}
+            step={1}
+            placeholder="4"
+            error={!!errors.freeTrialLimit}
+            fullWidth
+            data-qa="input-semester-freeTrialLimit"
           />
         )}
       </FormField>

@@ -120,6 +120,7 @@ describe("CreateSemesterModal", () => {
         cy.getByData("input-semester-membershipFee").clear().type("15");
         cy.getByData("input-semester-membershipDiscountFee").clear().type("10");
         cy.getByData("input-semester-rebuyFee").clear().type("5");
+        cy.getByData("input-semester-freeTrialLimit").clear().type("4");
         cy.getByData("input-semester-meta").type("Winter semester notes");
 
         // Verify values
@@ -139,10 +140,29 @@ describe("CreateSemesterModal", () => {
           "10",
         );
         cy.getByData("input-semester-rebuyFee").should("have.value", "5");
+        cy.getByData("input-semester-freeTrialLimit").should("have.value", "4");
         cy.getByData("input-semester-meta").should(
           "have.value",
           "Winter semester notes",
         );
+      });
+
+      it("should default the free trial limit to 0", () => {
+        cy.getByData("input-semester-freeTrialLimit").should("have.value", "0");
+      });
+
+      it("should show validation error for a fractional free trial limit", () => {
+        cy.getByData("input-semester-name").type("Test Semester");
+        cy.getByData("input-semester-startDate").type("2025-09-01");
+        cy.getByData("input-semester-endDate").type("2025-12-31");
+        cy.getByData("input-semester-freeTrialLimit").clear().type("2.5");
+
+        // Submit
+        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
+
+        // Verify validation error
+        cy.contains("Free trial limit must be a whole number").should("exist");
+        cy.getByData("create-semester-modal").should("exist");
       });
     });
 
@@ -231,6 +251,7 @@ describe("CreateSemesterModal", () => {
       cy.getByData("input-semester-membershipFee").clear().type("15");
       cy.getByData("input-semester-membershipDiscountFee").clear().type("10");
       cy.getByData("input-semester-rebuyFee").clear().type("5");
+      cy.getByData("input-semester-freeTrialLimit").clear().type("4");
       cy.getByData("input-semester-meta").type("Winter semester notes");
 
       // Submit
@@ -243,8 +264,11 @@ describe("CreateSemesterModal", () => {
           membershipFee: 15,
           membershipDiscountFee: 10,
           rebuyFee: 5,
+          freeTrialLimit: 4,
         });
         expect(interception.response?.statusCode).to.eq(201);
+        // The server must persist and echo it back, not just accept it.
+        expect(interception.response?.body).to.include({ freeTrialLimit: 4 });
       });
 
       // Verify modal closes

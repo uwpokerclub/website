@@ -18,6 +18,7 @@ export interface CreateSemesterRequest {
   membershipFee: number;
   membershipDiscountFee: number;
   rebuyFee: number;
+  freeTrialLimit: number;
 }
 
 export async function createSemester(data: CreateSemesterRequest): Promise<Semester> {

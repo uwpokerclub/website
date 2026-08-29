@@ -9,7 +9,6 @@ export const createSemesterSchema = z
     membershipFee: z.number().min(0, "Membership fee must be >= 0"),
     membershipDiscountFee: z.number().min(0, "Discounted membership fee must be >= 0"),
     rebuyFee: z.number().min(0, "Rebuy fee must be >= 0"),
-    // The API stores this as a uint8, hence the 255 ceiling.
     freeTrialLimit: z
       .number()
       .int("Free trial limit must be a whole number")

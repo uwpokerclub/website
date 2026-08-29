@@ -450,7 +450,6 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         semesterId,
         paid: false,
         discounted: false,
-        attendance: 0,
         // A brand-new membership always starts with its free trial intact.
         freeTrialAvailable: true,
       };
@@ -514,8 +513,6 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     const isLoading = loadingMemberIds.has(membershipId);
     const firstName = membership?.user.firstName ?? entry.membership?.user?.firstName ?? "";
     const lastName = membership?.user.lastName ?? entry.membership?.user?.lastName ?? "";
-    // Unlike the old attendance-based check, this no longer needs the membership to be
-    // locally loaded: the entries endpoint nests freeTrialAvailable on the membership.
     const isTrialExhausted = hasExhaustedFreeTrial(membership ?? entry.membership);
 
     return (

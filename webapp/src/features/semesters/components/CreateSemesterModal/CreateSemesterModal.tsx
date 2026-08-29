@@ -36,7 +36,6 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
       membershipFee: 10,
       membershipDiscountFee: 5,
       rebuyFee: 2,
-      // Matches the column default: the free trial is off unless it is set here.
       freeTrialLimit: 0,
       meta: "",
     },

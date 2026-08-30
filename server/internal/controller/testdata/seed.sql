@@ -11,8 +11,8 @@ ON CONFLICT (username) DO NOTHING;
 
 -- Seed a testing semester
 INSERT INTO semesters 
-  (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta) 
-  VALUES ('84f026be-53e0-4759-ab89-131c4a66d649', 'Winter 2025', '2025-01-01', '2024-04-30', 100, 100, 10, 7, 2, 'Seed Semester');
+  (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta, free_trial_limit) 
+  VALUES ('84f026be-53e0-4759-ab89-131c4a66d649', 'Winter 2025', '2025-01-01', '2024-04-30', 100, 100, 10, 7, 2, 'Seed Semester', 4);
 
 -- Seed a initial event structure
 INSERT INTO structures (id, name) VALUES (1, 'Structure A');

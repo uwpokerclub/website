@@ -122,6 +122,10 @@ export async function updateMembership(
   });
 }
 
+export async function fetchMembership(semesterId: string, membershipId: string): Promise<Membership> {
+  return apiClient<Membership>(`v2/semesters/${semesterId}/memberships/${membershipId}`);
+}
+
 export async function deleteMembership(semesterId: string, membershipId: string): Promise<void> {
   return apiClient<void>(`v2/semesters/${semesterId}/memberships/${membershipId}`, { method: "DELETE" });
 }

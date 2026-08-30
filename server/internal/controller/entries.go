@@ -402,10 +402,14 @@ func (c *entriesController) deleteEntry(ctx *gin.Context) {
 	}
 
 	// Delete participant
-	err = c.store.Entries().Delete(membershipID, eventID)
-	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
+	svc := services.NewParticipantsService(c.store)
+	if err := svc.DeleteParticipant(membershipID, eventID); err != nil {
+		if errors.Is(err, services.ErrEntryNotFound) {
 			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("Entry not found"))
+			return
+		}
+		if errors.Is(err, services.ErrMembershipNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound("Membership not found"))
 			return
 		}
 		ctx.AbortWithStatusJSON(

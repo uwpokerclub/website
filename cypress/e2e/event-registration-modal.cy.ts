@@ -70,3 +70,42 @@ describe("EventRegistrationModal", () => {
     });
   });
 });
+
+describe("EventRegistrationModal without local membership data", () => {
+  before(() => {
+    cy.resetDatabase();
+  });
+
+  beforeEach(() => {
+    cy.login();
+    cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+    cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events\/1$/, { fixture: "event-details.json" }).as("getEvent");
+    cy.intercept("GET", /\/api\/v2\/semesters\/.*\/events\/1\/entries/, { fixture: "event-entries.json" }).as(
+      "getEntries",
+    );
+    // No memberships at all, so membershipsMap is empty and the Registered rows have to read
+    // the free-trial fields nested in the entries payload. The old attendance-based check
+    // could not take this path, because attendance is not on the entries response.
+    cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { data: [], total: 0 }).as("getMemberships");
+
+    cy.visit(`/admin/events/${EVENT.id}`);
+    cy.getByData("register-members-btn").click();
+    cy.getByData("panel-registered").should("be.visible");
+  });
+
+  it("shades a registered member from the entries payload alone", () => {
+    cy.getByData("panel-registered").within(() => {
+      cy.getByData(`member-row-${TRIAL_EXHAUSTED_REGISTERED_MEMBER.id}`)
+        .should("have.css", "background-color", SHADE)
+        .and("have.attr", "title", "Free trial used up");
+    });
+  });
+
+  it("does not shade a registered member whose trial is intact", () => {
+    cy.getByData("panel-registered").within(() => {
+      cy.getByData(`member-row-${TRIAL_AVAILABLE_UNPAID_MEMBER.id}`)
+        .should("not.have.css", "background-color", SHADE)
+        .and("not.have.attr", "title");
+    });
+  });
+});

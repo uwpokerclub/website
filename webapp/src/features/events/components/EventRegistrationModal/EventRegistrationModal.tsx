@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Modal, Spinner, useToast } from "@uwpokerclub/components";
 import { FaSearch, FaChevronRight, FaChevronLeft, FaUsers, FaUserCheck, FaUserPlus, FaPlus } from "react-icons/fa";
 import { RegisterMemberModal, type RegistrationSuccessData } from "@/features/members/components/RegisterMemberModal";
-import { fetchMemberships } from "@/features/members/api/memberRegistrationApi";
+import { fetchMembership, fetchMemberships } from "@/features/members/api/memberRegistrationApi";
 import { fetchEntries, registerEntries, unregisterEntry, ParticipantResponse } from "@/features/entries/api/entriesApi";
 import { entryKeys } from "@/features/entries/hooks/useEntryQueries";
 import { Membership } from "@/types";
@@ -323,6 +323,35 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     onClose();
   }, [onClose, queryClient, semesterId, eventId]);
 
+  // Registering or unregistering can flip the membership's cached free-trial flag server
+  // side, so the copy held in local state (and nested in the entry) goes stale immediately.
+  // Refetch just that membership so the row's shading updates without reopening the modal.
+  const refreshMembership = useCallback(
+    async (membershipId: string) => {
+      try {
+        const updated = await fetchMembership(semesterId, membershipId);
+        setMemberships((prev) => prev.map((m) => (m.id === membershipId ? { ...m, ...updated } : m)));
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.membershipId === membershipId && e.membership
+              ? {
+                  ...e,
+                  membership: {
+                    ...e.membership,
+                    paid: updated.paid,
+                    freeTrialAvailable: updated.freeTrialAvailable,
+                  },
+                }
+              : e,
+          ),
+        );
+      } catch {
+        // A failed refresh only leaves the shading stale until the modal is reopened.
+      }
+    },
+    [semesterId],
+  );
+
   // Register a member
   const handleRegister = useCallback(
     async (membershipId: string) => {
@@ -345,6 +374,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
               membership: membership
                 ? {
                     id: membership.id,
+                    paid: membership.paid,
+                    freeTrialAvailable: membership.freeTrialAvailable,
                     user: {
                       id: membership.user.id,
                       firstName: membership.user.firstName,
@@ -362,6 +393,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
             entriesOffsetRef.current = newOffset;
             return newOffset;
           });
+
+          await refreshMembership(membershipId);
         } else {
           showToast({
             message: result?.error || "Failed to register member",
@@ -383,7 +416,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         });
       }
     },
-    [semesterId, eventId, membershipsMap, showToast],
+    [semesterId, eventId, membershipsMap, showToast, refreshMembership],
   );
 
   // Unregister a member
@@ -408,6 +441,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
           entriesOffsetRef.current = newOffset;
           return newOffset;
         });
+
+        await refreshMembership(membershipId);
       } catch (err) {
         showToast({
           message: err instanceof Error ? err.message : "Failed to unregister member",
@@ -422,7 +457,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         });
       }
     },
-    [semesterId, eventId, showToast],
+    [semesterId, eventId, showToast, refreshMembership],
   );
 
   // Handle new member creation - auto-register them for the event

@@ -3,10 +3,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Modal, Spinner, useToast } from "@uwpokerclub/components";
 import { FaSearch, FaChevronRight, FaChevronLeft, FaUsers, FaUserCheck, FaUserPlus, FaPlus } from "react-icons/fa";
 import { RegisterMemberModal, type RegistrationSuccessData } from "@/features/members/components/RegisterMemberModal";
-import { fetchMemberships } from "@/features/members/api/memberRegistrationApi";
+import { fetchMembership, fetchMemberships } from "@/features/members/api/memberRegistrationApi";
 import { fetchEntries, registerEntries, unregisterEntry, ParticipantResponse } from "@/features/entries/api/entriesApi";
 import { entryKeys } from "@/features/entries/hooks/useEntryQueries";
 import { Membership } from "@/types";
+import hasExhaustedFreeTrial from "@/utils/hasExhaustedFreeTrial";
 import styles from "./EventRegistrationModal.module.css";
 
 const PAGE_SIZE = 100;
@@ -322,10 +323,34 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     onClose();
   }, [onClose, queryClient, semesterId, eventId]);
 
-  // Check if member should be highlighted as danger (unpaid with 3+ attendance)
-  const isDangerMember = useCallback((member: Membership): boolean => {
-    return member.attendance >= 3 && !member.paid;
-  }, []);
+  // Registering or unregistering can flip the membership's cached free-trial flag server
+  // side, so the copy held in local state (and nested in the entry) goes stale immediately.
+  // Refetch just that membership so the row's shading updates without reopening the modal.
+  const refreshMembership = useCallback(
+    async (membershipId: string) => {
+      try {
+        const updated = await fetchMembership(semesterId, membershipId);
+        setMemberships((prev) => prev.map((m) => (m.id === membershipId ? { ...m, ...updated } : m)));
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.membershipId === membershipId && e.membership
+              ? {
+                  ...e,
+                  membership: {
+                    ...e.membership,
+                    paid: updated.paid,
+                    freeTrialAvailable: updated.freeTrialAvailable,
+                  },
+                }
+              : e,
+          ),
+        );
+      } catch {
+        // A failed refresh only leaves the shading stale until the modal is reopened.
+      }
+    },
+    [semesterId],
+  );
 
   // Register a member
   const handleRegister = useCallback(
@@ -349,6 +374,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
               membership: membership
                 ? {
                     id: membership.id,
+                    paid: membership.paid,
+                    freeTrialAvailable: membership.freeTrialAvailable,
                     user: {
                       id: membership.user.id,
                       firstName: membership.user.firstName,
@@ -366,6 +393,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
             entriesOffsetRef.current = newOffset;
             return newOffset;
           });
+
+          await refreshMembership(membershipId);
         } else {
           showToast({
             message: result?.error || "Failed to register member",
@@ -387,7 +416,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         });
       }
     },
-    [semesterId, eventId, membershipsMap, showToast],
+    [semesterId, eventId, membershipsMap, showToast, refreshMembership],
   );
 
   // Unregister a member
@@ -412,6 +441,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
           entriesOffsetRef.current = newOffset;
           return newOffset;
         });
+
+        await refreshMembership(membershipId);
       } catch (err) {
         showToast({
           message: err instanceof Error ? err.message : "Failed to unregister member",
@@ -426,7 +457,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         });
       }
     },
-    [semesterId, eventId, showToast],
+    [semesterId, eventId, showToast, refreshMembership],
   );
 
   // Handle new member creation - auto-register them for the event
@@ -454,7 +485,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         semesterId,
         paid: false,
         discounted: false,
-        attendance: 0,
+        // A brand-new membership always starts with its free trial intact.
+        freeTrialAvailable: true,
       };
       setMemberships((prev) => [...prev, newMember]);
       setMembershipsTotal((prev) => prev + 1);
@@ -478,12 +510,13 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
   // Render a member row for the available panel
   const renderAvailableMemberRow = (member: Membership) => {
     const isLoading = loadingMemberIds.has(member.id);
-    const isDanger = isDangerMember(member);
+    const isTrialExhausted = hasExhaustedFreeTrial(member);
 
     return (
       <div
         key={member.id}
-        className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}
+        className={`${styles.memberRow} ${isTrialExhausted ? styles.memberRowTrialExhausted : ""}`}
+        title={isTrialExhausted ? "Free trial used up" : undefined}
         data-qa={`member-row-${member.id}`}
       >
         <div className={styles.memberInfo}>
@@ -493,6 +526,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
           <span className={styles.memberStudentId} data-qa={`member-studentId-${member.id}`}>
             {member.userId}
           </span>
+          {isTrialExhausted && <span className={styles.srOnly}>Free trial used up</span>}
         </div>
         <button
           type="button"
@@ -514,13 +548,13 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
     const isLoading = loadingMemberIds.has(membershipId);
     const firstName = membership?.user.firstName ?? entry.membership?.user?.firstName ?? "";
     const lastName = membership?.user.lastName ?? entry.membership?.user?.lastName ?? "";
-    // Danger highlighting is best-effort: only applies when full membership data is locally loaded
-    const isDanger = membership ? isDangerMember(membership) : false;
+    const isTrialExhausted = hasExhaustedFreeTrial(membership ?? entry.membership);
 
     return (
       <div
         key={membershipId}
-        className={`${styles.memberRow} ${isDanger ? styles.memberRowDanger : ""}`}
+        className={`${styles.memberRow} ${isTrialExhausted ? styles.memberRowTrialExhausted : ""}`}
+        title={isTrialExhausted ? "Free trial used up" : undefined}
         data-qa={`member-row-${membershipId}`}
       >
         <div className={styles.memberInfo}>
@@ -532,6 +566,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
               {membership.userId}
             </span>
           )}
+          {isTrialExhausted && <span className={styles.srOnly}>Free trial used up</span>}
         </div>
         <button
           type="button"

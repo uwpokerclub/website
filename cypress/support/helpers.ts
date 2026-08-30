@@ -49,6 +49,19 @@ export const PAID_MEMBER = MEMBERS[3]; // Khalil Duckham - paid: true, discounte
 export const DISCOUNTED_MEMBER = MEMBERS[4]; // Amandie Libbis - paid: true, discounted: true
 
 /**
+ * Free-trial states. Note MEMBERS[3] and MEMBERS[8] have UUIDs that differ only
+ * in their fourth group — always go through these aliases, never the raw UUID.
+ */
+// Doretta Housegoe - unpaid, trial exhausted, registered for Event #1
+export const TRIAL_EXHAUSTED_REGISTERED_MEMBER = MEMBERS[1];
+// Kristel Callan - unpaid, trial exhausted, NOT registered for Event #1
+export const TRIAL_EXHAUSTED_UNREGISTERED_MEMBER = MEMBERS[8];
+// Heinrik Drust - unpaid with trial intact; the negative control
+export const TRIAL_AVAILABLE_UNPAID_MEMBER = MEMBERS[0];
+// Khalil Duckham - paid but carrying a stale exhausted flag; must never be shaded
+export const TRIAL_EXHAUSTED_PAID_MEMBER = MEMBERS[3];
+
+/**
  * Default blind level values used in structure creation
  */
 export const DEFAULT_BLIND_LEVEL = {

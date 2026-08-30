@@ -1,4 +1,6 @@
 .container {
+  --members-danger-light: #fee2e2;
+  --members-danger-hover: #fecaca;
   padding: 1.5rem 2rem;
 }
 
@@ -210,4 +212,31 @@
     padding: 0 1rem;
     margin-bottom: 1rem;
   }
+}
+
+/* Trial-exhausted row: unpaid member with no free trial events left.
+   !important is required because the Table organism's striped variant sets
+   `.striped .tbody tr:nth-child(even)` — three class-level selectors, which
+   outweighs a single class on the row. The hover rule also resets `filter`,
+   because the striped hover rule dims even rows with brightness(0.97). */
+.rowTrialExhausted {
+  background-color: var(--members-danger-light) !important;
+}
+
+.rowTrialExhausted:hover {
+  background-color: var(--members-danger-hover) !important;
+  filter: none !important;
+}
+
+/* Screen Reader Only - conveys the trial-exhausted state without relying on colour */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

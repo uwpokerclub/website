@@ -9,6 +9,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": false,
         "discounted": false,
+        "freeTrialAvailable": true,
         "user": {
           "id": 62958169,
           "firstName": "Heinrik",
@@ -32,6 +33,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": false,
         "discounted": false,
+        "freeTrialAvailable": false,
         "user": {
           "id": 20141158,
           "firstName": "Doretta",
@@ -55,6 +57,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": false,
         "discounted": false,
+        "freeTrialAvailable": true,
         "user": {
           "id": 85018940,
           "firstName": "Elita",

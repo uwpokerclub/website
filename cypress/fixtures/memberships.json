@@ -7,6 +7,7 @@
       "paid": false,
       "discounted": false,
       "attendance": 0,
+      "freeTrialAvailable": true,
       "user": {
         "id": 62958169,
         "firstName": "Heinrik",
@@ -24,6 +25,7 @@
       "paid": false,
       "discounted": false,
       "attendance": 0,
+      "freeTrialAvailable": false,
       "user": {
         "id": 20141158,
         "firstName": "Doretta",
@@ -41,6 +43,7 @@
       "paid": false,
       "discounted": false,
       "attendance": 0,
+      "freeTrialAvailable": true,
       "user": {
         "id": 85018940,
         "firstName": "Elita",
@@ -58,6 +61,7 @@
       "paid": true,
       "discounted": false,
       "attendance": 0,
+      "freeTrialAvailable": false,
       "user": {
         "id": 77679767,
         "firstName": "Khalil",
@@ -75,6 +79,7 @@
       "paid": true,
       "discounted": true,
       "attendance": 0,
+      "freeTrialAvailable": true,
       "user": {
         "id": 70492884,
         "firstName": "Amandie",
@@ -92,6 +97,7 @@
       "paid": true,
       "discounted": false,
       "attendance": 1,
+      "freeTrialAvailable": true,
       "user": {
         "id": 39166759,
         "firstName": "Wald",
@@ -109,6 +115,7 @@
       "paid": true,
       "discounted": false,
       "attendance": 1,
+      "freeTrialAvailable": true,
       "user": {
         "id": 55686346,
         "firstName": "Germayne",
@@ -126,6 +133,7 @@
       "paid": true,
       "discounted": true,
       "attendance": 1,
+      "freeTrialAvailable": true,
       "user": {
         "id": 81085720,
         "firstName": "Oralie",
@@ -143,6 +151,7 @@
       "paid": false,
       "discounted": false,
       "attendance": 1,
+      "freeTrialAvailable": false,
       "user": {
         "id": 52873146,
         "firstName": "Kristel",
@@ -160,6 +169,7 @@
       "paid": true,
       "discounted": false,
       "attendance": 1,
+      "freeTrialAvailable": true,
       "user": {
         "id": 75969632,
         "firstName": "Winslow",

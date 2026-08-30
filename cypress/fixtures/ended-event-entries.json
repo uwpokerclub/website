@@ -9,6 +9,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": true,
         "discounted": false,
+        "freeTrialAvailable": true,
         "user": {
           "id": 39166759,
           "firstName": "Wald",
@@ -32,6 +33,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": true,
         "discounted": false,
+        "freeTrialAvailable": true,
         "user": {
           "id": 55686346,
           "firstName": "Germayne",
@@ -55,6 +57,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": true,
         "discounted": true,
+        "freeTrialAvailable": true,
         "user": {
           "id": 81085720,
           "firstName": "Oralie",
@@ -78,6 +81,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": false,
         "discounted": false,
+        "freeTrialAvailable": false,
         "user": {
           "id": 52873146,
           "firstName": "Kristel",
@@ -101,6 +105,7 @@
         "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
         "paid": true,
         "discounted": false,
+        "freeTrialAvailable": true,
         "user": {
           "id": 75969632,
           "firstName": "Winslow",

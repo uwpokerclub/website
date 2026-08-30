@@ -9,6 +9,8 @@ export interface ParticipantResponse {
   membershipId: string;
   membership?: {
     id: string;
+    paid: boolean;
+    freeTrialAvailable: boolean;
     user?: {
       id?: string;
       firstName?: string;

@@ -9,4 +9,5 @@ export type Semester = {
   membershipFee: number;
   membershipDiscountFee: number;
   rebuyFee: number;
+  freeTrialLimit: number;
 };

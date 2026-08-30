@@ -235,3 +235,105 @@ func TestParticipantsService_UpdateParticipant_EventEnded(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, 403, apiErr.Code)
 }
+
+func TestParticipantsService_DeleteParticipant_RestoresFreeTrial(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 2}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	first := &models.Event{Name: "Week 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(first))
+	second := &models.Event{Name: "Week 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(second))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewParticipantsService(st)
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: first.ID})
+	require.NoError(t, err)
+	_, err = svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: second.ID})
+	require.NoError(t, err)
+
+	exhausted, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, exhausted.FreeTrialAvailable, "two entries against a limit of two exhausts the trial")
+
+	require.NoError(t, svc.DeleteParticipant(membership.ID, second.ID))
+
+	restored, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, restored.FreeTrialAvailable, "deleting an entry drops attendance below the limit, so the trial is available again")
+}
+
+func TestParticipantsService_DeleteParticipant_StaysExhaustedAboveLimit(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 1}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	first := &models.Event{Name: "Week 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(first))
+	second := &models.Event{Name: "Week 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(second))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	// Two entries against a limit of one; the second bypasses the service to model entries
+	// that predate the limit being lowered.
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: first.ID}))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: second.ID}))
+	require.NoError(t, st.Memberships().SetFreeTrialAvailable(membership.ID, false))
+
+	svc := NewParticipantsService(st)
+	require.NoError(t, svc.DeleteParticipant(membership.ID, second.ID))
+
+	stored, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, stored.FreeTrialAvailable, "one remaining entry still meets the limit of one")
+}
+
+func TestParticipantsService_DeleteParticipant_PaidMembershipUntouched(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 1}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	event := &models.Event{Name: "Week 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: true}
+	require.NoError(t, st.Memberships().Create(membership))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+	require.NoError(t, st.Memberships().SetFreeTrialAvailable(membership.ID, false))
+
+	svc := NewParticipantsService(st)
+	require.NoError(t, svc.DeleteParticipant(membership.ID, event.ID))
+
+	stored, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, stored.FreeTrialAvailable, "a paid membership's flag is never recomputed")
+}
+
+func TestParticipantsService_DeleteParticipant_NotFound(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := &models.Semester{Name: "Fall 2026"}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	event := &models.Event{Name: "Week 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewParticipantsService(st)
+	require.ErrorIs(t, svc.DeleteParticipant(membership.ID, event.ID), ErrEntryNotFound)
+	require.ErrorIs(t, svc.DeleteParticipant(uuid.New(), event.ID), ErrMembershipNotFound)
+}

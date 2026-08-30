@@ -36,6 +36,7 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
       membershipFee: 10,
       membershipDiscountFee: 5,
       rebuyFee: 2,
+      freeTrialLimit: 0,
       meta: "",
     },
   });
@@ -61,6 +62,7 @@ export function CreateSemesterModal({ isOpen, onClose, onSuccess }: CreateSemest
         membershipFee: data.membershipFee,
         membershipDiscountFee: data.membershipDiscountFee,
         rebuyFee: data.rebuyFee,
+        freeTrialLimit: data.freeTrialLimit,
       },
       {
         onSuccess: (semester) => {

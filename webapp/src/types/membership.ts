@@ -7,5 +7,5 @@ export type Membership = {
   semesterId: string;
   paid: boolean;
   discounted: boolean;
-  attendance: number;
+  freeTrialAvailable: boolean;
 };

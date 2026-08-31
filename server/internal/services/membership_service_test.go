@@ -448,3 +448,33 @@ func TestMembershipService_UpdateMembership_ExecutiveAndPaidInSameRequest_Reject
 	require.False(t, stored.Executive)
 	require.False(t, stored.Paid)
 }
+
+func TestMembershipService_UpdateMembership_PaidOnAlreadyExecutive_Rejected(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Executive: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	before, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{
+		Paid: boolPtr(true),
+	})
+	require.Nil(t, updated)
+	require.ErrorIs(t, err, ErrExecutiveCannotBePaid, "setting paid:true on an already-executive membership must surface, not be silently discarded")
+
+	after, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, before.CurrentBudget, after.CurrentBudget, 0.001, "a rejected update must not touch the budget")
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, stored.Executive)
+	require.False(t, stored.Paid)
+}

@@ -83,10 +83,8 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 		finalExecutive = *req.Executive
 	}
 
-	if req.Executive != nil && *req.Executive {
-		if (req.Paid != nil && *req.Paid) || (req.Discounted != nil && *req.Discounted) {
-			return nil, ErrExecutiveCannotBePaid
-		}
+	if finalExecutive && ((req.Paid != nil && *req.Paid) || (req.Discounted != nil && *req.Discounted)) {
+		return nil, ErrExecutiveCannotBePaid
 	}
 
 	finalPaid := existingMembership.Paid

@@ -125,6 +125,9 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 		}
 	}
 
+	existingMembership.Paid = finalPaid
+	existingMembership.Discounted = finalDiscounted
+
 	if originalPaid != finalPaid {
 		if finalPaid {
 			// A paid membership is never subject to the free-trial restriction, so a cached
@@ -135,7 +138,7 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 				}
 				existingMembership.FreeTrialAvailable = true
 			}
-		} else if semester.FreeTrialLimit > 0 {
+		} else if existingMembership.EligibleForFreeTrial() && semester.FreeTrialLimit > 0 {
 			attendance, err := tx.Entries().CountByMembershipID(existingMembership.ID)
 			if err != nil {
 				return nil, err
@@ -150,8 +153,6 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 		}
 	}
 
-	existingMembership.Paid = finalPaid
-	existingMembership.Discounted = finalDiscounted
 	if err := tx.Memberships().Update(&existingMembership); err != nil {
 		return nil, err
 	}

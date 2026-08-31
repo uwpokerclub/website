@@ -259,6 +259,34 @@ func TestMembershipService_UpdateMembership_UnmarkPaid_RecomputesFreeTrialFlag(t
 	require.False(t, stored.FreeTrialAvailable)
 }
 
+func TestMembershipService_UpdateMembership_UnmarkPaid_ExecutiveFreeTrialFlagUntouched(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	semester.FreeTrialLimit = 1
+	require.NoError(t, st.Semesters().Create(semester))
+
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted}
+	require.NoError(t, st.Events().Create(event))
+
+	// Executive membership, currently paid, with attendance already at the limit-of-1. Unpaying
+	// it must not trigger a free-trial recompute since executives are never subject to it.
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: true, Executive: true}
+	require.NoError(t, st.Memberships().Create(membership))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+
+	svc := NewMembershipService(st)
+	paid := false
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	require.NoError(t, err)
+	require.True(t, updated.FreeTrialAvailable, "unpaying an executive membership must not recompute the free-trial flag")
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, stored.FreeTrialAvailable)
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }

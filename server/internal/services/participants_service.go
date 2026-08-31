@@ -27,12 +27,14 @@ var (
 )
 
 // syncFreeTrialAvailable recomputes a membership's cached free-trial flag from its current
-// attendance and writes it back only when it has actually changed. It is a no-op for paid
-// memberships and for semesters with the check disabled, which are the two cases where the
-// flag carries no meaning. Must be called with a transaction so the count and the write see
-// the same snapshot as the entry change that prompted it.
+// attendance and writes it back only when it has actually changed. It is a no-op for
+// memberships not eligible for the free trial (paid or executive) and for semesters with the
+// check disabled, which are the cases where the flag carries no meaning. For an executive, this
+// means the stored flag is left exactly as it was, so it must never be trusted on its own; see
+// the caveat on Membership.FreeTrialAvailable. Must be called with a transaction so the count
+// and the write see the same snapshot as the entry change that prompted it.
 func syncFreeTrialAvailable(tx store.Store, membership models.Membership, limit uint8) error {
-	if membership.Paid || limit == 0 {
+	if !membership.EligibleForFreeTrial() || limit == 0 {
 		return nil
 	}
 
@@ -71,9 +73,9 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 	}
 
 	// FreeTrialLimit == 0 means the free-trial check is disabled for this semester. limit stays
-	// unused (and irrelevant) when the membership is paid.
+	// unused (and irrelevant) when the membership is paid or executive.
 	var limit uint8
-	if !membership.Paid {
+	if membership.EligibleForFreeTrial() {
 		semester, err := svc.store.Semesters().FindByID(membership.SemesterID)
 		if err != nil {
 			return nil, e.InternalServerError(err.Error())

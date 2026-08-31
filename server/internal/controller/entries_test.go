@@ -398,6 +398,7 @@ func TestListEntries(t *testing.T) {
 								"semesterId":         testutils.TEST_SEMESTERS[0].ID.String(),
 								"paid":               testutils.TEST_MEMBERSHIPS[2].Paid,
 								"discounted":         testutils.TEST_MEMBERSHIPS[2].Discounted,
+								"executive":          testutils.TEST_MEMBERSHIPS[2].Executive,
 								"freeTrialAvailable": true,
 								"user": map[string]any{
 									"id":        float64(user2.ID),
@@ -442,6 +443,7 @@ func TestListEntries(t *testing.T) {
 								"semesterId":         testutils.TEST_SEMESTERS[0].ID.String(),
 								"paid":               testutils.TEST_MEMBERSHIPS[0].Paid,
 								"discounted":         testutils.TEST_MEMBERSHIPS[0].Discounted,
+								"executive":          testutils.TEST_MEMBERSHIPS[0].Executive,
 								"freeTrialAvailable": true,
 								"user": map[string]any{
 									"id":        float64(user0.ID),

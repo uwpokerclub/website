@@ -3049,7 +3049,11 @@ const docTemplate = `{
                 "discounted": {
                     "type": "boolean"
                 },
+                "executive": {
+                    "type": "boolean"
+                },
                 "freeTrialAvailable": {
+                    "description": "FreeTrialAvailable is only kept in sync for memberships eligible for the free trial in the\nfirst place (see EligibleForFreeTrial). For an executive, this column keeps whatever value\nit last held and must not be read on its own — always gate reads behind EligibleForFreeTrial.",
                     "type": "boolean"
                 },
                 "id": {
@@ -3084,7 +3088,11 @@ const docTemplate = `{
                 "discounted": {
                     "type": "boolean"
                 },
+                "executive": {
+                    "type": "boolean"
+                },
                 "freeTrialAvailable": {
+                    "description": "FreeTrialAvailable is only kept in sync for memberships eligible for the free trial in the\nfirst place (see EligibleForFreeTrial). For an executive, this column keeps whatever value\nit last held and must not be read on its own — always gate reads behind EligibleForFreeTrial.",
                     "type": "boolean"
                 },
                 "id": {

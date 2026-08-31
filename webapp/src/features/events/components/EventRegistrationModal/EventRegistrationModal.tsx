@@ -375,6 +375,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
                 ? {
                     id: membership.id,
                     paid: membership.paid,
+                    executive: membership.executive,
                     freeTrialAvailable: membership.freeTrialAvailable,
                     user: {
                       id: membership.user.id,

@@ -10,6 +10,7 @@ export interface ParticipantResponse {
   membership?: {
     id: string;
     paid: boolean;
+    executive: boolean;
     freeTrialAvailable: boolean;
     user?: {
       id?: string;

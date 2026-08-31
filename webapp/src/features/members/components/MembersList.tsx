@@ -17,7 +17,15 @@ import styles from "./MembersList.module.css";
 const ITEMS_PER_PAGE = 25;
 const DEBOUNCE_MS = 300;
 
-const EMPTY_FILTERS: MemberFilterValues = { studentId: "", name: "", email: "", faculty: "", paid: "", discounted: "" };
+const EMPTY_FILTERS: MemberFilterValues = {
+  studentId: "",
+  name: "",
+  email: "",
+  faculty: "",
+  paid: "",
+  discounted: "",
+  executive: "",
+};
 const FILTER_KEYS = Object.keys(EMPTY_FILTERS) as (keyof MemberFilterValues)[];
 
 function filtersFromParams(params: URLSearchParams): MemberFilterValues {
@@ -28,6 +36,7 @@ function filtersFromParams(params: URLSearchParams): MemberFilterValues {
     faculty: params.get("faculty") ?? "",
     paid: params.get("paid") ?? "",
     discounted: params.get("discounted") ?? "",
+    executive: params.get("executive") ?? "",
   };
 }
 
@@ -57,7 +66,7 @@ export function MembersList() {
   const handleFilterChange = useCallback((key: keyof MemberFilterValues, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
 
-    if (key === "faculty" || key === "paid" || key === "discounted") {
+    if (key === "faculty" || key === "paid" || key === "discounted" || key === "executive") {
       // Dropdown: apply immediately
       setDebouncedFilters((prev) => ({ ...prev, [key]: value }));
       setCurrentPage(1);
@@ -130,6 +139,7 @@ export function MembersList() {
       ...(debouncedFilters.studentId && { studentId: debouncedFilters.studentId }),
       ...(debouncedFilters.paid && { paid: debouncedFilters.paid }),
       ...(debouncedFilters.discounted && { discounted: debouncedFilters.discounted }),
+      ...(debouncedFilters.executive && { executive: debouncedFilters.executive }),
     }),
     [currentPage, debouncedFilters],
   );
@@ -163,8 +173,8 @@ export function MembersList() {
           bValue = b.user.email.toLowerCase();
           break;
         case "status":
-          aValue = a.paid ? (a.discounted ? "Discounted" : "Paid") : "Unpaid";
-          bValue = b.paid ? (b.discounted ? "Discounted" : "Paid") : "Unpaid";
+          aValue = a.executive ? "Executive" : a.paid ? (a.discounted ? "Discounted" : "Paid") : "Unpaid";
+          bValue = b.executive ? "Executive" : b.paid ? (b.discounted ? "Discounted" : "Paid") : "Unpaid";
           break;
         default:
           return 0;
@@ -245,12 +255,17 @@ export function MembersList() {
       key: "status",
       header: "Membership Status",
       accessor: (row) => {
+        if (row.executive) {
+          return "Executive";
+        }
         if (row.paid) {
           return row.discounted ? "Paid (Discounted)" : "Paid";
         }
         return "Unpaid";
       },
       sortable: true,
+      render: (_value, row) =>
+        row.executive ? <span className={styles.executiveBadge}>Executive</span> : (_value as string),
       headerProps: { "data-qa": "sort-status-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
       cellProps: (row) => ({ "data-qa": `member-status-${row.id}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },

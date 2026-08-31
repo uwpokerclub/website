@@ -367,6 +367,10 @@ func TestMembershipService_UpdateMembership_PaidToExecutive_ReversesFullFee(t *t
 	after, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
 	require.InDelta(t, before.CurrentBudget-float32(semester.MembershipFee), after.CurrentBudget, 0.001)
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, stored.Executive, "the write must actually persist, not just appear on the returned struct")
 }
 
 func TestMembershipService_UpdateMembership_DiscountedToExecutive_ReversesDiscountedFee(t *testing.T) {
@@ -392,6 +396,10 @@ func TestMembershipService_UpdateMembership_DiscountedToExecutive_ReversesDiscou
 	after, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
 	require.InDelta(t, before.CurrentBudget-float32(semester.MembershipDiscountFee), after.CurrentBudget, 0.001)
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, stored.Executive, "the write must actually persist, not just appear on the returned struct")
 }
 
 func TestMembershipService_UpdateMembership_ExecutiveToNotExecutive_LeavesUnpaidNoBudgetCredit(t *testing.T) {
@@ -416,6 +424,10 @@ func TestMembershipService_UpdateMembership_ExecutiveToNotExecutive_LeavesUnpaid
 	after, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
 	require.InDelta(t, before.CurrentBudget, after.CurrentBudget, 0.001)
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.False(t, stored.Executive, "the write must actually persist, not just appear on the returned struct")
 }
 
 func TestMembershipService_UpdateMembership_ExecutiveAndPaidInSameRequest_Rejected(t *testing.T) {

@@ -162,6 +162,22 @@ func TestMembershipRepository_Update(t *testing.T) {
 	require.False(t, found.Discounted)
 }
 
+func TestMembershipRepository_Update_Executive(t *testing.T) {
+	t.Parallel()
+
+	repo := newMembershipRepository()
+
+	membership := &models.Membership{UserID: 1, SemesterID: uuid.New()}
+	require.NoError(t, repo.Create(membership))
+
+	update := &models.Membership{ID: membership.ID, Executive: true}
+	require.NoError(t, repo.Update(update))
+
+	found, err := repo.FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, found.Executive)
+}
+
 func TestMembershipRepository_Update_NotFound(t *testing.T) {
 	t.Parallel()
 

@@ -36,10 +36,15 @@ export const membershipSchema = z
   .object({
     paid: z.boolean(),
     discounted: z.boolean(),
+    executive: z.boolean(),
   })
   .refine((data) => !(data.discounted && !data.paid), {
     message: "A membership cannot be discounted if it is not paid",
     path: ["discounted"],
+  })
+  .refine((data) => !(data.executive && (data.paid || data.discounted)), {
+    message: "An executive membership cannot be paid or discounted",
+    path: ["executive"],
   });
 
 export type MembershipFormData = z.infer<typeof membershipSchema>;

@@ -202,6 +202,7 @@ func (r *inMemoryMembershipRepository) Update(membership *models.Membership) err
 
 	existing.Paid = membership.Paid
 	existing.Discounted = membership.Discounted
+	existing.Executive = membership.Executive
 
 	return nil
 }

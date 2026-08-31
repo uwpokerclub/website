@@ -252,6 +252,34 @@ func TestMembershipRepository_Update(t *testing.T) {
 	require.False(t, found.Discounted)
 }
 
+func TestMembershipRepository_Update_Executive(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	repo := postgres.NewMembershipRepository(db)
+
+	user, err := testutils.CreateTestUser(db, 20000021, "Ezra", "E", "ezra@example.com", "Math", "ez")
+	require.NoError(t, err)
+
+	semester, err := testutils.CreateTestSemester(db, "Fall 2026")
+	require.NoError(t, err)
+
+	membership, err := testutils.CreateTestMembership(db, user.ID, semester.ID)
+	require.NoError(t, err)
+
+	membership.Executive = true
+	require.NoError(t, repo.Update(membership))
+
+	found, err := repo.FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, found.Executive)
+}
+
 func TestMembershipRepository_Update_NotFound(t *testing.T) {
 	t.Parallel()
 

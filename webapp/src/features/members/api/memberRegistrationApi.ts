@@ -51,6 +51,7 @@ export async function createMembership(
   memberId: string,
   paid: boolean,
   discounted: boolean,
+  executive: boolean = false,
 ): Promise<Membership> {
   // Validate business rule: cannot be discounted if not paid
   if (discounted && !paid) {
@@ -61,6 +62,7 @@ export async function createMembership(
     userId: parseInt(memberId, 10),
     paid,
     discounted,
+    executive,
   };
 
   return apiClient<Membership>(`v2/semesters/${semesterId}/memberships`, {
@@ -74,9 +76,10 @@ export async function registerNewMemberWithMembership(
   semesterId: string,
   paid: boolean,
   discounted: boolean,
+  executive: boolean = false,
 ): Promise<{ member: User; membership: Membership }> {
   const member = await createMember(memberData);
-  const membership = await createMembership(semesterId, member.id, paid, discounted);
+  const membership = await createMembership(semesterId, member.id, paid, discounted, executive);
 
   return { member, membership };
 }
@@ -102,6 +105,7 @@ export interface UpdateMemberRequest {
 export interface UpdateMembershipRequest {
   paid?: boolean;
   discounted?: boolean;
+  executive?: boolean;
 }
 
 export async function updateMember(memberId: string, data: UpdateMemberRequest): Promise<User> {

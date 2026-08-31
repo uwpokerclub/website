@@ -64,6 +64,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
       membership: {
         paid: false,
         discounted: false,
+        executive: false,
       },
     },
   });
@@ -83,6 +84,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
       membership: {
         paid: false,
         discounted: false,
+        executive: false,
       },
     },
   });
@@ -150,6 +152,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         memberId: data.selectedMemberId,
         paid: data.membership.paid,
         discounted: data.membership.discounted,
+        executive: data.membership.executive,
       });
 
       showToast({
@@ -186,6 +189,7 @@ export function RegisterMemberModal({ isOpen, onClose, onSuccess }: RegisterMemb
         semesterId: semesterContext.currentSemester.id,
         paid: data.membership.paid,
         discounted: data.membership.discounted,
+        executive: data.membership.executive,
       });
 
       showToast({

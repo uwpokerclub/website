@@ -1,4 +1,4 @@
-import { MEMBERS } from "../seed";
+import { MEMBERS, SEMESTER } from "../seed";
 import {
   getUserForMember,
   UNPAID_MEMBER,
@@ -291,6 +291,78 @@ describe("EditMemberModal", () => {
 
       // Verify status cell shows "Paid"
       cy.getByData(`member-status-${member.id}`).should("contain", "Paid");
+    });
+
+    it("should change paid to executive and persist the change", () => {
+      const member = PAID_MEMBER;
+
+      openEditModal(member.id);
+
+      cy.getByData("checkbox-paid").scrollIntoView().should("be.checked");
+
+      // Checking executive should clear and hide paid/discounted
+      cy.getByData("checkbox-executive").scrollIntoView().click();
+      cy.getByData("checkbox-executive").should("be.checked");
+      cy.getByData("checkbox-paid").should("not.exist");
+      cy.getByData("checkbox-discounted").should("not.exist");
+
+      cy.getByData("edit-submit-btn").scrollIntoView().click();
+
+      cy.wait("@updateMember");
+      cy.wait("@updateMembership").then((interception) => {
+        expect(interception.request.body).to.deep.include({
+          paid: false,
+          discounted: false,
+          executive: true,
+        });
+        expect(interception.response?.statusCode).to.eq(200);
+      });
+
+      cy.contains("updated successfully").should("be.visible");
+      cy.getByData("edit-member-modal").should("not.exist");
+
+      // Regression check: reopen and confirm the change actually persisted
+      // server-side, not just that the PATCH response echoed it back.
+      openEditModal(member.id);
+      cy.getByData("checkbox-executive").scrollIntoView().should("be.checked");
+      cy.getByData("checkbox-paid").should("not.exist");
+      cy.getByData("checkbox-discounted").should("not.exist");
+    });
+
+    it("should reflect executive status when editing an executive membership", () => {
+      const execUser = {
+        id: 90000001,
+        firstName: "Exec",
+        lastName: "Officer",
+        email: "exec.officer@test.com",
+        faculty: "Math",
+        questId: "exec1",
+      };
+
+      // Arrange an executive membership directly via the API - this test is
+      // about the edit modal reflecting stored state, not about registration.
+      cy.request("POST", "/api/v2/members", execUser)
+        .its("status")
+        .should("eq", 201);
+
+      cy.request("POST", `/api/v2/semesters/${SEMESTER.id}/memberships`, {
+        userId: execUser.id,
+        paid: false,
+        discounted: false,
+        executive: true,
+      }).then((response) => {
+        expect(response.status).to.eq(201);
+        const membershipId = response.body.id;
+
+        cy.visit("/admin/members");
+        cy.getByData("members-table").should("exist");
+
+        openEditModal(membershipId);
+
+        cy.getByData("checkbox-executive").scrollIntoView().should("be.checked");
+        cy.getByData("checkbox-paid").should("not.exist");
+        cy.getByData("checkbox-discounted").should("not.exist");
+      });
     });
   });
 });

@@ -45,12 +45,14 @@ export function useCreateMembership() {
       memberId,
       paid,
       discounted,
+      executive,
     }: {
       semesterId: string;
       memberId: string;
       paid: boolean;
       discounted: boolean;
-    }) => createMembership(semesterId, memberId, paid, discounted),
+      executive: boolean;
+    }) => createMembership(semesterId, memberId, paid, discounted, executive),
     onSuccess: (_data, { semesterId }) => {
       queryClient.invalidateQueries({ queryKey: memberKeys.bySemester(semesterId) });
     },
@@ -65,12 +67,14 @@ export function useRegisterNewMemberWithMembership() {
       semesterId,
       paid,
       discounted,
+      executive,
     }: {
       memberData: CreateMemberFormData;
       semesterId: string;
       paid: boolean;
       discounted: boolean;
-    }) => registerNewMemberWithMembership(memberData, semesterId, paid, discounted),
+      executive: boolean;
+    }) => registerNewMemberWithMembership(memberData, semesterId, paid, discounted, executive),
     onSuccess: (_data, { semesterId }) => {
       queryClient.invalidateQueries({ queryKey: memberKeys.bySemester(semesterId) });
     },

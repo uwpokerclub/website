@@ -5,6 +5,7 @@ import {
   TRIAL_EXHAUSTED_UNREGISTERED_MEMBER,
   TRIAL_AVAILABLE_UNPAID_MEMBER,
   TRIAL_EXHAUSTED_PAID_MEMBER,
+  EXECUTIVE_MEMBER,
 } from "../support/helpers";
 
 describe("MembersList", () => {
@@ -88,6 +89,14 @@ describe("MembersList", () => {
           "Discounted"
         );
       });
+
+      it("should display an Executive badge with distinct, non-colour-only styling", () => {
+        cy.getByData(`member-status-${EXECUTIVE_MEMBER.id}`)
+          .should("contain", "Executive")
+          .find("span")
+          .should("have.css", "background-color", "rgb(232, 244, 253)")
+          .and("have.css", "color", "rgb(12, 92, 141)");
+      });
     });
 
     context("free trial status", () => {
@@ -116,6 +125,12 @@ describe("MembersList", () => {
           "contain",
           "Free trial used up",
         );
+      });
+
+      it("does not shade an executive member despite an unpaid, exhausted trial", () => {
+        cy.getByData(`member-row-${EXECUTIVE_MEMBER.id}`)
+          .should("not.have.css", "background-color", SHADE)
+          .and("not.have.attr", "title");
       });
     });
 
@@ -149,6 +164,35 @@ describe("MembersList", () => {
             cy.getByData(`member-email-${member.id}`).should("exist");
             cy.getByData(`member-status-${member.id}`).should("exist");
           });
+        });
+      });
+
+      it("should sort Executive rows consistently relative to Paid and Unpaid", () => {
+        const rowOrder = () =>
+          cy
+            .get("[data-qa^='member-row-']")
+            .then(($rows) => $rows.toArray().map((row) => row.getAttribute("data-qa")));
+
+        cy.getByData("sort-status-header").click();
+        cy.getByData("sort-status-header").should("have.attr", "aria-sort", "ascending");
+
+        rowOrder().then((ascOrder) => {
+          const executiveIndex = ascOrder.indexOf(`member-row-${EXECUTIVE_MEMBER.id}`);
+          const paidIndex = ascOrder.indexOf(`member-row-${TRIAL_EXHAUSTED_PAID_MEMBER.id}`);
+          const unpaidIndex = ascOrder.indexOf(`member-row-${TRIAL_AVAILABLE_UNPAID_MEMBER.id}`);
+          expect(executiveIndex).to.be.lessThan(paidIndex);
+          expect(executiveIndex).to.be.lessThan(unpaidIndex);
+        });
+
+        cy.getByData("sort-status-header").click();
+        cy.getByData("sort-status-header").should("have.attr", "aria-sort", "descending");
+
+        rowOrder().then((descOrder) => {
+          const executiveIndex = descOrder.indexOf(`member-row-${EXECUTIVE_MEMBER.id}`);
+          const paidIndex = descOrder.indexOf(`member-row-${TRIAL_EXHAUSTED_PAID_MEMBER.id}`);
+          const unpaidIndex = descOrder.indexOf(`member-row-${TRIAL_AVAILABLE_UNPAID_MEMBER.id}`);
+          expect(executiveIndex).to.be.greaterThan(paidIndex);
+          expect(executiveIndex).to.be.greaterThan(unpaidIndex);
         });
       });
     });
@@ -198,6 +242,7 @@ describe("MembersList", () => {
         cy.getByData("filter-name").should("exist");
         cy.getByData("filter-email").should("exist");
         cy.getByData("filter-faculty").should("exist");
+        cy.getByData("filter-executive").should("exist");
         cy.getByData("filter-paid").should("exist");
         cy.getByData("filter-discounted").should("exist");
 
@@ -246,6 +291,27 @@ describe("MembersList", () => {
         cy.getByData("filter-toggle-btn").click();
         cy.getByData("filter-discounted").select("Yes");
         cy.wait("@getFiltered").its("request.url").should("include", "discounted=true");
+      });
+
+      it("should send executive filter to API", () => {
+        cy.intercept("GET", /\/api\/v2\/semesters\/.*\/memberships/, { fixture: "memberships.json" }).as("getFiltered");
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-executive").select("Yes");
+        cy.wait("@getFiltered").its("request.url").should("include", "executive=true");
+      });
+
+      it("should disable the Paid and Discounted filters while Executive is active", () => {
+        cy.getByData("filter-toggle-btn").click();
+        cy.getByData("filter-paid").should("not.be.disabled");
+        cy.getByData("filter-discounted").should("not.be.disabled");
+
+        cy.getByData("filter-executive").select("Yes");
+        cy.getByData("filter-paid").should("be.disabled");
+        cy.getByData("filter-discounted").should("be.disabled");
+
+        cy.getByData("filter-executive").select("");
+        cy.getByData("filter-paid").should("not.be.disabled");
+        cy.getByData("filter-discounted").should("not.be.disabled");
       });
 
       it("should show active filter count", () => {
@@ -425,6 +491,17 @@ describe("MembersList", () => {
       cy.getByData("filter-discounted").select("Yes");
 
       cy.get("[data-qa^='member-row-']").should("have.length", discountedCount);
+    });
+
+    it("should filter members by executive status, returning only executives", () => {
+      // 1 executive member in seed data
+      const executiveCount = MEMBERS.filter((m) => m.executive).length;
+
+      cy.getByData("filter-toggle-btn").click();
+      cy.getByData("filter-executive").select("Yes");
+
+      cy.get("[data-qa^='member-row-']").should("have.length", executiveCount);
+      cy.getByData(`member-row-${EXECUTIVE_MEMBER.id}`).should("exist");
     });
 
     it("should show empty state when filters match nothing", () => {

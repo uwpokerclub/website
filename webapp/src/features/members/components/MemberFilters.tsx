@@ -11,6 +11,7 @@ export interface MemberFilterValues {
   faculty: string;
   paid: string;
   discounted: string;
+  executive: string;
 }
 
 interface MemberFiltersProps {
@@ -123,6 +124,20 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
         </div>
 
         <div className={styles.field}>
+          <label className={styles.label} htmlFor="filter-executive">
+            Executive
+          </label>
+          <Select
+            id="filter-executive"
+            data-qa="filter-executive"
+            options={BOOL_OPTIONS}
+            value={filters.executive}
+            onChange={(e) => onFilterChange("executive", e.target.value)}
+            fullWidth
+          />
+        </div>
+
+        <div className={styles.field}>
           <label className={styles.label} htmlFor="filter-paid">
             Paid
           </label>
@@ -132,6 +147,7 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
             options={BOOL_OPTIONS}
             value={filters.paid}
             onChange={(e) => onFilterChange("paid", e.target.value)}
+            disabled={filters.executive === "true"}
             fullWidth
           />
         </div>
@@ -146,6 +162,7 @@ export function MemberFilters({ isOpen, onClose, filters, onFilterChange, onClea
             options={BOOL_OPTIONS}
             value={filters.discounted}
             onChange={(e) => onFilterChange("discounted", e.target.value)}
+            disabled={filters.executive === "true"}
             fullWidth
           />
         </div>

@@ -144,6 +144,7 @@ export interface FetchMembershipsParams {
   faculty?: string;
   paid?: string;
   discounted?: string;
+  executive?: string;
 }
 
 export async function fetchMemberships(
@@ -161,6 +162,7 @@ export async function fetchMemberships(
   if (params.faculty) query.set("faculty", params.faculty);
   if (params.paid) query.set("paid", params.paid);
   if (params.discounted) query.set("discounted", params.discounted);
+  if (params.executive) query.set("executive", params.executive);
 
   const response = await apiClient<{ data: Membership[]; total: number }>(
     `v2/semesters/${semesterId}/memberships?${query.toString()}`,

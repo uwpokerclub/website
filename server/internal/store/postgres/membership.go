@@ -148,7 +148,7 @@ func (r *postgresMembershipRepository) List(filter *models.ListMembershipsFilter
 }
 
 func (r *postgresMembershipRepository) Update(membership *models.Membership) error {
-	result := r.db.Model(membership).Select("paid", "discounted").Updates(membership)
+	result := r.db.Model(membership).Select("paid", "discounted", "executive").Updates(membership)
 	if err := result.Error; err != nil {
 		return err
 	}

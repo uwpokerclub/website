@@ -94,6 +94,11 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, services.ErrExecutiveCannotBePaid) {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+			return
+		}
+
 		// Check for validation errors
 		errMsg := err.Error()
 		if errMsg == "cannot create membership that is not paid and discounted" {
@@ -282,6 +287,11 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)
+			return
+		}
+
+		if errors.Is(err, services.ErrExecutiveCannotBePaid) {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
 			return
 		}
 

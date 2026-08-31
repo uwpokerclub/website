@@ -290,3 +290,191 @@ func TestMembershipService_UpdateMembership_UnmarkPaid_ExecutiveFreeTrialFlagUnt
 func boolPtr(b bool) *bool {
 	return &b
 }
+
+func TestMembershipService_CreateMembership_Executive(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	svc := NewMembershipService(st)
+	membership, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+		UserID:    1,
+		Executive: true,
+	})
+	require.NoError(t, err)
+	require.True(t, membership.Executive)
+
+	found, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, float32(100), found.CurrentBudget, 0.001, "an executive membership must not increment the budget")
+}
+
+func TestMembershipService_CreateMembership_ExecutiveCannotBePaid(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		req  *models.CreateMembershipRequest
+	}{
+		{
+			name: "executive and paid",
+			req:  &models.CreateMembershipRequest{UserID: 1, Executive: true, Paid: true},
+		},
+		{
+			name: "executive and discounted",
+			req:  &models.CreateMembershipRequest{UserID: 1, Executive: true, Paid: true, Discounted: true},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			st := inmemory.NewStore()
+			semester := newTestSemesterForMembership()
+			require.NoError(t, st.Semesters().Create(semester))
+
+			svc := NewMembershipService(st)
+			membership, err := svc.CreateMembership(semester.ID, tc.req)
+			require.Nil(t, membership)
+			require.ErrorIs(t, err, ErrExecutiveCannotBePaid)
+		})
+	}
+}
+
+func TestMembershipService_UpdateMembership_PaidToExecutive_ReversesFullFee(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	before, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
+	require.NoError(t, err)
+	require.True(t, updated.Executive)
+	require.False(t, updated.Paid)
+	require.False(t, updated.Discounted)
+
+	after, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, before.CurrentBudget-float32(semester.MembershipFee), after.CurrentBudget, 0.001)
+}
+
+func TestMembershipService_UpdateMembership_DiscountedToExecutive_ReversesDiscountedFee(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: true, Discounted: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	before, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
+	require.NoError(t, err)
+	require.True(t, updated.Executive)
+	require.False(t, updated.Paid)
+	require.False(t, updated.Discounted)
+
+	after, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, before.CurrentBudget-float32(semester.MembershipDiscountFee), after.CurrentBudget, 0.001)
+}
+
+func TestMembershipService_UpdateMembership_ExecutiveToNotExecutive_LeavesUnpaidNoBudgetCredit(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Executive: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	before, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
+	require.NoError(t, err)
+	require.False(t, updated.Executive)
+	require.False(t, updated.Paid)
+
+	after, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, before.CurrentBudget, after.CurrentBudget, 0.001)
+}
+
+func TestMembershipService_UpdateMembership_ExecutiveAndPaidInSameRequest_Rejected(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	before, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{
+		Executive: boolPtr(true),
+		Paid:      boolPtr(true),
+	})
+	require.Nil(t, updated)
+	require.ErrorIs(t, err, ErrExecutiveCannotBePaid)
+
+	after, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, before.CurrentBudget, after.CurrentBudget, 0.001, "a rejected update must not touch the budget")
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.False(t, stored.Executive)
+	require.False(t, stored.Paid)
+}
+
+func TestMembershipService_UpdateMembership_PaidOnAlreadyExecutive_Rejected(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Executive: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	before, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{
+		Paid: boolPtr(true),
+	})
+	require.Nil(t, updated)
+	require.ErrorIs(t, err, ErrExecutiveCannotBePaid, "setting paid:true on an already-executive membership must surface, not be silently discarded")
+
+	after, err := st.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.InDelta(t, before.CurrentBudget, after.CurrentBudget, 0.001, "a rejected update must not touch the budget")
+
+	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.True(t, stored.Executive)
+	require.False(t, stored.Paid)
+}

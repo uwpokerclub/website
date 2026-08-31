@@ -205,6 +205,52 @@ func TestParticipantsService_CreateParticipant_MidTermLimitIncreaseSelfHeals(t *
 	require.True(t, healed.FreeTrialAvailable, "raising the limit mid-term should un-block and re-flip the cached flag")
 }
 
+func TestParticipantsService_CreateParticipant_ExecutiveBypassesFreeTrialCheck(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event1 := &models.Event{Name: "Weekly 1", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event1))
+	event2 := &models.Event{Name: "Weekly 2", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event2))
+
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 1}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	// Unpaid executive, attendance already at (in fact over) the limit — the headline bug this
+	// issue fixes: an executive left at Paid=false must not be blocked like a real free-trial member.
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false, Executive: true}
+	require.NoError(t, st.Memberships().Create(membership))
+	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event1.ID}))
+
+	svc := NewParticipantsService(st)
+	participant, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event2.ID})
+	require.NoError(t, err)
+	require.Equal(t, membership.ID, *participant.MembershipID)
+}
+
+func TestParticipantsService_CreateParticipant_ExecutiveFreeTrialFlagUntouched(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC()}
+	require.NoError(t, st.Events().Create(event))
+
+	semester := &models.Semester{Name: "Fall 2026", FreeTrialLimit: 1}
+	require.NoError(t, st.Semesters().Create(semester))
+
+	membership := &models.Membership{SemesterID: semester.ID, UserID: 1, Paid: false, Executive: true}
+	require.NoError(t, st.Memberships().Create(membership))
+
+	svc := NewParticipantsService(st)
+	_, err := svc.CreateParticipant(&models.CreateParticipantRequest{MembershipID: membership.ID, EventID: event.ID})
+	require.NoError(t, err)
+
+	stored, err := st.Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.True(t, stored.FreeTrialAvailable, "syncFreeTrialAvailable must be a no-op for an executive membership")
+}
+
 func TestParticipantsService_UpdateParticipant_SignOut(t *testing.T) {
 	t.Parallel()
 

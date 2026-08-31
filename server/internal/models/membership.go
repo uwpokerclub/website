@@ -13,9 +13,20 @@ type Membership struct {
 	Semester           *Semester `json:"semester"`
 	Paid               bool      `json:"paid"       gorm:"not null;default:false"`
 	Discounted         bool      `json:"discounted" gorm:"not null;default:false"`
-	FreeTrialAvailable bool      `json:"freeTrialAvailable" gorm:"not null;default:true"`
-	Ranking            *Ranking  `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	Executive          bool      `json:"executive"  gorm:"not null;default:false"`
+	// FreeTrialAvailable is only kept in sync for memberships eligible for the free trial in the
+	// first place (see EligibleForFreeTrial). For an executive, this column keeps whatever value
+	// it last held and must not be read on its own; always gate reads behind EligibleForFreeTrial.
+	FreeTrialAvailable bool     `json:"freeTrialAvailable" gorm:"not null;default:true"`
+	Ranking            *Ranking `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 } //@name Membership
+
+// EligibleForFreeTrial reports whether the free-trial limit applies to this
+// membership at all. Paid members have bought unlimited entry; executives are
+// comped and were never on a trial to begin with.
+func (m Membership) EligibleForFreeTrial() bool {
+	return !m.Paid && !m.Executive
+}
 
 func (Membership) TableName() string {
 	return "memberships"

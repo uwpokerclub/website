@@ -75,11 +75,13 @@ type CreateMembershipRequest struct {
 	UserID     uint64 `json:"userId"     binding:"required"`
 	Paid       bool   `json:"paid"       binding:"omitempty,required_with=Discounted"`
 	Discounted bool   `json:"discounted" binding:"omitempty,required_with=Paid"`
+	Executive  bool   `json:"executive"  binding:"omitempty"`
 } // @name CreateMembershipRequest
 
 type UpdateMembershipRequest struct {
 	Paid       *bool `json:"paid"       binding:"omitempty"`
 	Discounted *bool `json:"discounted" binding:"omitempty"`
+	Executive  *bool `json:"executive"  binding:"omitempty"`
 } // @name UpdateMembershipRequest
 
 // MembershipWithAttendance embeds Membership with computed attendance count

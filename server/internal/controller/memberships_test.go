@@ -90,6 +90,32 @@ func TestCreateMembership(t *testing.T) {
 			expectedErrorMessage: "cannot create membership that is not paid and discounted",
 		},
 		{
+			name:       "successful creation - executive",
+			userRole:   authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID: testutils.TEST_SEMESTERS[0].ID.String(),
+			requestBody: map[string]any{
+				"userId":     testutils.TEST_USERS[3].ID,
+				"paid":       false,
+				"discounted": false,
+				"executive":  true,
+			},
+			expectedStatus: http.StatusCreated,
+			expectError:    false,
+		},
+		{
+			name:       "invalid state - executive and paid",
+			userRole:   authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID: testutils.TEST_SEMESTERS[0].ID.String(),
+			requestBody: map[string]any{
+				"userId":    testutils.TEST_USERS[3].ID,
+				"executive": true,
+				"paid":      true,
+			},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "cannot be paid or discounted",
+		},
+		{
 			name:       "missing required field - userId",
 			userRole:   authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
 			semesterID: testutils.TEST_SEMESTERS[0].ID.String(),
@@ -170,6 +196,7 @@ func TestCreateMembership(t *testing.T) {
 				require.Equal(t, tc.requestBody["userId"], membership.UserID)
 				require.Equal(t, tc.requestBody["paid"], membership.Paid)
 				require.Equal(t, tc.requestBody["discounted"], membership.Discounted)
+				require.Equal(t, tc.requestBody["executive"] == true, membership.Executive)
 			}
 		})
 	}
@@ -601,6 +628,44 @@ func TestUpdateMembership(t *testing.T) {
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
 			expectedErrorMessage: "cannot set membership to not paid and discounted",
+		},
+		{
+			name:           "successful update - mark as executive from paid",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			requestBody:    map[string]any{"executive": true},
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+			validateResponse: func(t *testing.T, m *models.Membership) {
+				require.True(t, m.Executive)
+				require.False(t, m.Paid)
+				require.False(t, m.Discounted)
+			},
+		},
+		{
+			name:           "successful update - mark as executive from discounted",
+			userRole:       authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:   testutils.TEST_MEMBERSHIPS[1].ID.String(),
+			requestBody:    map[string]any{"executive": true},
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+			validateResponse: func(t *testing.T, m *models.Membership) {
+				require.True(t, m.Executive)
+				require.False(t, m.Paid)
+				require.False(t, m.Discounted)
+			},
+		},
+		{
+			name:                 "invalid state - executive and paid in same request",
+			userRole:             authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			semesterID:           testutils.TEST_SEMESTERS[0].ID.String(),
+			membershipID:         testutils.TEST_MEMBERSHIPS[0].ID.String(),
+			requestBody:          map[string]any{"executive": true, "paid": true},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "an executive membership cannot be paid or discounted",
 		},
 		{
 			name:           "membership not found - wrong semester",

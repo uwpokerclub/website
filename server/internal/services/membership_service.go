@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var ErrExecutiveCannotBePaid = errors.New("an executive membership cannot be paid or discounted")
+
 type membershipService struct {
 	store store.Store
 }
@@ -23,6 +25,10 @@ func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.
 		return nil, errors.New("cannot create membership that is not paid and discounted")
 	}
 
+	if req.Executive && (req.Paid || req.Discounted) {
+		return nil, ErrExecutiveCannotBePaid
+	}
+
 	tx, err := ms.store.BeginTx()
 	if err != nil {
 		return nil, err
@@ -34,6 +40,7 @@ func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.
 		SemesterID: semesterID,
 		Paid:       req.Paid,
 		Discounted: req.Discounted,
+		Executive:  req.Executive,
 	}
 
 	if err := tx.Memberships().Create(&membership); err != nil {
@@ -71,6 +78,17 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 		return nil, err
 	}
 
+	finalExecutive := existingMembership.Executive
+	if req.Executive != nil {
+		finalExecutive = *req.Executive
+	}
+
+	if req.Executive != nil && *req.Executive {
+		if (req.Paid != nil && *req.Paid) || (req.Discounted != nil && *req.Discounted) {
+			return nil, ErrExecutiveCannotBePaid
+		}
+	}
+
 	finalPaid := existingMembership.Paid
 	finalDiscounted := existingMembership.Discounted
 	if req.Paid != nil {
@@ -78,6 +96,11 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 	}
 	if req.Discounted != nil {
 		finalDiscounted = *req.Discounted
+	}
+
+	if finalExecutive {
+		finalPaid = false
+		finalDiscounted = false
 	}
 
 	if !finalPaid && finalDiscounted {
@@ -127,6 +150,7 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 
 	existingMembership.Paid = finalPaid
 	existingMembership.Discounted = finalDiscounted
+	existingMembership.Executive = finalExecutive
 
 	if originalPaid != finalPaid {
 		if finalPaid {

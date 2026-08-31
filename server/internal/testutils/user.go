@@ -41,6 +41,14 @@ var TEST_USERS = []models.User{
 		Faculty:   models.FacultyArts,
 		QuestID:   "awilliams",
 	},
+	{
+		ID:        20780652,
+		FirstName: "Charlie",
+		LastName:  "Brown",
+		Email:     "charle.brown@example.com",
+		Faculty:   models.FacultyAHS,
+		QuestID:   "cbrown",
+	},
 }
 
 func SeedUsers(db *gorm.DB) error {

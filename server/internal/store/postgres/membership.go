@@ -93,6 +93,9 @@ func (r *postgresMembershipRepository) List(filter *models.ListMembershipsFilter
 	if filter.Discounted != nil {
 		countQuery = countQuery.Where("memberships.discounted = ?", *filter.Discounted)
 	}
+	if filter.Executive != nil {
+		countQuery = countQuery.Where("memberships.executive = ?", *filter.Executive)
+	}
 	if needsUserJoin {
 		countQuery = countQuery.Joins("User")
 	}
@@ -129,6 +132,9 @@ func (r *postgresMembershipRepository) List(filter *models.ListMembershipsFilter
 	}
 	if filter.Discounted != nil {
 		query = query.Where("memberships.discounted = ?", *filter.Discounted)
+	}
+	if filter.Executive != nil {
+		query = query.Where("memberships.executive = ?", *filter.Executive)
 	}
 	query = r.applyJoinedFilterClauses(query, filter)
 	query = filter.Pagination.Apply(query)

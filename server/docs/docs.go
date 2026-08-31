@@ -1792,6 +1792,12 @@ const docTemplate = `{
                         "description": "Filter by discounted status",
                         "name": "discounted",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by executive status",
+                        "name": "executive",
+                        "in": "query"
                     }
                 ],
                 "responses": {

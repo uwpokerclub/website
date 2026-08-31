@@ -1702,6 +1702,10 @@ paths:
         in: query
         name: discounted
         type: boolean
+      - description: Filter by executive status
+        in: query
+        name: executive
+        type: boolean
       produces:
       - application/json
       responses:

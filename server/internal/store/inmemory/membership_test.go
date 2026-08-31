@@ -133,6 +133,16 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 0, total)
 	require.Empty(t, results)
+
+	// Test filter for executive memberships
+	m4 := &models.Membership{UserID: 4, SemesterID: semesterA, Paid: true, Executive: true, User: &models.User{ID: 4, FirstName: "David", LastName: "D", Email: "dave@example.com"}}
+	require.NoError(t, repo.Create(m4))
+
+	execTrue := true
+	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA, Executive: &execTrue})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Equal(t, m4.ID, results[0].ID)
 }
 
 func TestMembershipRepository_Update(t *testing.T) {

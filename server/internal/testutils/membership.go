@@ -30,6 +30,14 @@ var TEST_MEMBERSHIPS = []models.Membership{
 		Paid:       true,
 		Discounted: false,
 	},
+	{
+		ID:         uuid.MustParse("44444444-4444-4444-4444-444444444444"),
+		UserID:     TEST_USERS[4].ID,
+		SemesterID: TEST_SEMESTERS[3].ID,
+		Paid:       false,
+		Discounted: false,
+		Executive:  true,
+	},
 }
 
 func SeedMemberships(db *gorm.DB, seedDependencies bool) error {

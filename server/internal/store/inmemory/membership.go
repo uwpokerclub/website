@@ -116,6 +116,9 @@ func (r *inMemoryMembershipRepository) List(filter *models.ListMembershipsFilter
 		if filter.Discounted != nil && m.Discounted != *filter.Discounted {
 			continue
 		}
+		if filter.Executive != nil && m.Executive != *filter.Executive {
+			continue
+		}
 		if !matchesJoinedFilter(m, filter) {
 			continue
 		}

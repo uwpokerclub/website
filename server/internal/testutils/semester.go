@@ -46,6 +46,18 @@ var TEST_SEMESTERS = []models.Semester{
 		MembershipDiscountFee: 8,
 		RebuyFee:              4,
 	},
+	{
+		ID:                    uuid.MustParse("c3d4e5f6-a7b8-9012-cdef-123456789012"),
+		Name:                  "Spring 2025",
+		Meta:                  "Future semester",
+		StartDate:             time.Date(2025, 1, 15, 0, 0, 0, 0, time.Now().Local().Location()),
+		EndDate:               time.Date(2025, 4, 30, 0, 0, 0, 0, time.Now().Local().Location()),
+		StartingBudget:        120.0,
+		CurrentBudget:         120.0,
+		MembershipFee:         18,
+		MembershipDiscountFee: 9,
+		RebuyFee:              5,
+	},
 }
 
 func SeedSemesters(db *gorm.DB) error {

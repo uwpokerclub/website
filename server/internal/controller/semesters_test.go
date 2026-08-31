@@ -290,6 +290,7 @@ func TestListSemesters(t *testing.T) {
 			// Sort by start_date DESC (most recent first)
 			// testutils.TEST_SEMESTERS should be: Fall 2024, Spring 2024, Fall 2023
 			expectedOrder := []models.Semester{
+				tc.setupSemesters[3], // Spring 2025 (2025-01-15)
 				tc.setupSemesters[2], // Fall 2024 (2024-09-01)
 				tc.setupSemesters[1], // Spring 2024 (2024-01-15)
 				tc.setupSemesters[0], // Fall 2023 (2023-09-01)

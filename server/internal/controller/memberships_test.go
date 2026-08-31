@@ -385,6 +385,16 @@ func TestListMemberships(t *testing.T) {
 			minResults:     2,
 			expectedTotal:  2,
 		},
+		{
+			name: "filter by executive status",
+			userRole:       authorization.ROLE_BOT.ToString(),
+			semesterID:     testutils.TEST_SEMESTERS[3].ID.String(),
+			queryParams:    "?executive=true",
+			expectedStatus: http.StatusOK,
+			expectError:    false,
+			minResults:     1,
+			expectedTotal:  1,
+		},
 	}
 
 	for _, tc := range testCases {

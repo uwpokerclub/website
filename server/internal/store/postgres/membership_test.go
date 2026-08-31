@@ -145,7 +145,7 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.NoError(t, err)
 
 	m1 := &models.Membership{UserID: user1.ID, SemesterID: semesterA.ID, Paid: true, Discounted: false}
-	m2 := &models.Membership{UserID: user2.ID, SemesterID: semesterA.ID, Paid: false, Discounted: false}
+	m2 := &models.Membership{UserID: user2.ID, SemesterID: semesterA.ID, Paid: false, Discounted: false, Executive: true}
 	m3 := &models.Membership{UserID: user3.ID, SemesterID: semesterB.ID, Paid: true, Discounted: false}
 	require.NoError(t, repo.Create(m1))
 	require.NoError(t, repo.Create(m2))
@@ -203,6 +203,23 @@ func TestMembershipRepository_List(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 0, total)
 	require.Empty(t, results)
+
+	// Filter by executive status: expect only m2.
+	execTrue := true
+	results, total, err = repo.List(&models.ListMembershipsFilter{SemesterID: &semesterA.ID, Executive: &execTrue})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, total)
+	require.Len(t, results, 1)
+	require.Equal(t, m2.ID, results[0].ID)
+
+	// Filter by non-executive status: expect m1 and m3.
+	execFalse := false
+	results, total, err = repo.List(&models.ListMembershipsFilter{Executive: &execFalse})
+	require.NoError(t, err)
+	require.EqualValues(t, 2, total)
+	require.Len(t, results, 2)
+	require.Equal(t, m1.ID, results[0].ID)
+	require.Equal(t, m3.ID, results[1].ID)
 }
 
 func TestMembershipRepository_Update(t *testing.T) {

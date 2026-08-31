@@ -136,6 +136,7 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 // @Param studentId query string false "Filter by student ID (exact match)"
 // @Param paid query bool false "Filter by paid status"
 // @Param discounted query bool false "Filter by discounted status"
+// @Param executive query bool false "Filter by executive status"
 // @Success 200 {array} MembershipWithAttendance
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -182,6 +183,10 @@ func (c *membershipsController) listMemberships(ctx *gin.Context) {
 	if discounted := ctx.Query("discounted"); discounted == "true" || discounted == "false" {
 		v := discounted == "true"
 		filter.Discounted = &v
+	}
+	if executive := ctx.Query("executive"); executive == "true" || executive == "false" {
+		v := executive == "true"
+		filter.Executive = &v
 	}
 
 	memberships, total, err := c.store.Memberships().List(filter)

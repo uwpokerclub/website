@@ -69,6 +69,9 @@ type ListMembershipsFilter struct {
 
 	// Discounted filters memberships by discounted status.
 	Discounted *bool
+
+	// Executive filters memberships by executive status.
+	Executive *bool
 }
 
 type CreateMembershipRequest struct {

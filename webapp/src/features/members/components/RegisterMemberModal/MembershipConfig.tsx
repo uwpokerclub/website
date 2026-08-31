@@ -7,6 +7,7 @@ interface FormWithMembership {
   membership: {
     paid: boolean;
     discounted: boolean;
+    executive: boolean;
   };
 }
 
@@ -27,11 +28,15 @@ export function MembershipConfig() {
   // Watch the paid value to conditionally show discounted
   const isPaid = useWatch<FormWithMembership>({ name: "membership.paid" });
 
+  // Watch the executive value to conditionally show paid/discounted
+  const isExecutive = useWatch<FormWithMembership>({ name: "membership.executive" });
+
   // Get membership errors
   const membershipErrors = errors.membership as
     | {
         paid?: { message?: string };
         discounted?: { message?: string };
+        executive?: { message?: string };
       }
     | undefined;
 
@@ -43,6 +48,14 @@ export function MembershipConfig() {
     }
   };
 
+  const handleExecutiveChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    if (checked) {
+      setValue("membership.paid", false);
+      setValue("membership.discounted", false);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <h3 className={styles.heading}>Membership Status</h3>
@@ -50,13 +63,31 @@ export function MembershipConfig() {
 
       <div className={styles.checkboxGroup}>
         <Checkbox
-          {...register("membership.paid", { onChange: handlePaidChange })}
-          data-qa="checkbox-paid"
-          label="Paid"
+          {...register("membership.executive", {
+            onChange: handleExecutiveChange,
+          })}
+          data-qa="checkbox-executive"
+          label="Executive Member"
         />
 
-        {isPaid && <Checkbox {...register("membership.discounted")} data-qa="checkbox-discounted" label="Discounted" />}
+        {!isExecutive && (
+          <Checkbox
+            {...register("membership.paid", { onChange: handlePaidChange })}
+            data-qa="checkbox-paid"
+            label="Paid"
+          />
+        )}
+
+        {!isExecutive && isPaid && (
+          <Checkbox {...register("membership.discounted")} data-qa="checkbox-discounted" label="Discounted" />
+        )}
       </div>
+
+      {membershipErrors?.executive?.message && (
+        <p className={styles.error} data-qa="membership-error-executive">
+          {membershipErrors.executive.message}
+        </p>
+      )}
 
       {membershipErrors?.discounted?.message && (
         <p className={styles.error} data-qa="membership-error">

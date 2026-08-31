@@ -485,6 +485,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         semesterId,
         paid: false,
         discounted: false,
+        executive: false,
         // A brand-new membership always starts with its free trial intact.
         freeTrialAvailable: true,
       };

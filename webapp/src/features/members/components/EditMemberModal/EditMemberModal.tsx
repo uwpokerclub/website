@@ -46,6 +46,7 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
       membership: {
         paid: false,
         discounted: false,
+        executive: false,
       },
     },
   });
@@ -64,6 +65,7 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
         membership: {
           paid: membership.paid,
           discounted: membership.discounted,
+          executive: membership.executive,
         },
       });
       setSubmitError(null);
@@ -105,6 +107,7 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
           data: {
             paid: data.membership.paid,
             discounted: data.membership.discounted,
+            executive: data.membership.executive,
           },
         }),
       ]);

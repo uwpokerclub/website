@@ -55,6 +55,30 @@ describe("Member Registration", () => {
           cy.getByData("checkbox-paid").click();
           cy.getByData("checkbox-discounted").should("not.exist");
         });
+
+        it("should not offer paid or discounted while executive is checked", () => {
+          cy.getByData("register-member-btn").click();
+          cy.getByData("checkbox-executive").click();
+          cy.getByData("checkbox-paid").should("not.exist");
+          cy.getByData("checkbox-discounted").should("not.exist");
+        });
+
+        it("should clear and hide paid when executive is checked after paid was checked", () => {
+          cy.getByData("register-member-btn").click();
+          cy.getByData("checkbox-paid").click();
+          cy.getByData("checkbox-paid").should("be.checked");
+
+          cy.getByData("checkbox-executive").click();
+
+          cy.getByData("checkbox-executive").should("be.checked");
+          cy.getByData("checkbox-paid").should("not.exist");
+          cy.getByData("checkbox-discounted").should("not.exist");
+
+          // Unchecking executive reveals paid again, and confirms it was
+          // actually cleared (not just hidden while still true underneath).
+          cy.getByData("checkbox-executive").click();
+          cy.getByData("checkbox-paid").should("exist").and("not.be.checked");
+        });
       });
 
       context("submission", () => {
@@ -197,6 +221,37 @@ describe("Member Registration", () => {
       cy.getByData("register-submit-btn").click();
 
       cy.wait("@createMembership").its("response.statusCode").should("eq", 201);
+      cy.contains("registered successfully").should("exist");
+    });
+
+    it("should register existing member as executive successfully", () => {
+      const targetUser = USERS_WITHOUT_MEMBERSHIPS[1]; // Another Unregistered
+
+      cy.getByData("register-member-btn").click();
+      getMemberSearchInput().type(targetUser.firstName);
+      cy.wait("@searchByName");
+      cy.getByData(`combobox-option-${targetUser.id}`).click();
+      cy.getByData("checkbox-executive").click();
+
+      // Paid/discounted must not be offered while executive is checked
+      cy.getByData("checkbox-paid").should("not.exist");
+      cy.getByData("checkbox-discounted").should("not.exist");
+
+      cy.getByData("register-submit-btn").click();
+
+      cy.wait("@createMembership").then((interception) => {
+        expect(interception.response?.statusCode).to.eq(201);
+        expect(interception.request.body).to.deep.include({
+          paid: false,
+          discounted: false,
+          executive: true,
+        });
+        expect(interception.response?.body).to.deep.include({
+          paid: false,
+          discounted: false,
+          executive: true,
+        });
+      });
       cy.contains("registered successfully").should("exist");
     });
 

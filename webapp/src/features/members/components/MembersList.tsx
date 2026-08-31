@@ -373,6 +373,7 @@ export function MembersList() {
             headerVariant="primary"
             data={sortedMembers}
             columns={columns}
+            sortable
             sortKey={sortKey}
             sortDirection={sortDirection}
             onSort={handleSort}

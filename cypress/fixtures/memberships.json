@@ -6,6 +6,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": false,
       "discounted": false,
+      "executive": false,
       "attendance": 0,
       "freeTrialAvailable": true,
       "user": {
@@ -24,6 +25,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": false,
       "discounted": false,
+      "executive": false,
       "attendance": 0,
       "freeTrialAvailable": false,
       "user": {
@@ -42,6 +44,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": false,
       "discounted": false,
+      "executive": false,
       "attendance": 0,
       "freeTrialAvailable": true,
       "user": {
@@ -60,6 +63,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": true,
       "discounted": false,
+      "executive": false,
       "attendance": 0,
       "freeTrialAvailable": false,
       "user": {
@@ -78,6 +82,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": true,
       "discounted": true,
+      "executive": false,
       "attendance": 0,
       "freeTrialAvailable": true,
       "user": {
@@ -96,6 +101,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": true,
       "discounted": false,
+      "executive": false,
       "attendance": 1,
       "freeTrialAvailable": true,
       "user": {
@@ -114,6 +120,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": true,
       "discounted": false,
+      "executive": false,
       "attendance": 1,
       "freeTrialAvailable": true,
       "user": {
@@ -132,6 +139,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": true,
       "discounted": true,
+      "executive": false,
       "attendance": 1,
       "freeTrialAvailable": true,
       "user": {
@@ -150,6 +158,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": false,
       "discounted": false,
+      "executive": false,
       "attendance": 1,
       "freeTrialAvailable": false,
       "user": {
@@ -168,6 +177,7 @@
       "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
       "paid": true,
       "discounted": false,
+      "executive": false,
       "attendance": 1,
       "freeTrialAvailable": true,
       "user": {
@@ -179,7 +189,26 @@
         "questId": "wjosey9",
         "createdAt": "2025-01-30T00:00:00Z"
       }
+    },
+    {
+      "id": "a9b8c7d6-e5f4-4a3b-9c8d-7e6f5a4b3c2d",
+      "userId": 44444444,
+      "semesterId": "84f026be-53e0-4759-ab89-131c4a66d649",
+      "paid": false,
+      "discounted": false,
+      "executive": true,
+      "attendance": 0,
+      "freeTrialAvailable": false,
+      "user": {
+        "id": 44444444,
+        "firstName": "Presley",
+        "lastName": "Novak",
+        "email": "pnovaka@example.com",
+        "faculty": "Math",
+        "questId": "pnovaka",
+        "createdAt": "2025-02-01T00:00:00Z"
+      }
     }
   ],
-  "total": 10
+  "total": 11
 }

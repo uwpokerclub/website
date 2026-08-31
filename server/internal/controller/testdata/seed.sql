@@ -46,7 +46,8 @@ INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_
   (55686346, 'Germayne', 'Croom', 'gcroom6@drupal.org', 'Science', 'gcroom6', '2024-05-28'),
   (81085720, 'Oralie', 'Bunten', 'obunten7@dropbox.com', 'Science', 'obunten7', '2024-07-19'),
   (52873146, 'Kristel', 'Callan', 'kcallan8@arizona.edu', 'Math', 'kcallan8', '2024-06-27'),
-  (75969632, 'Winslow', 'Josey', 'wjosey9@blogger.com', 'Environment', 'wjosey9', '2025-01-30');
+  (75969632, 'Winslow', 'Josey', 'wjosey9@blogger.com', 'Environment', 'wjosey9', '2025-01-30'),
+  (44444444, 'Presley', 'Novak', 'pnovaka@example.com', 'Math', 'pnovaka', '2025-02-01');
 
 -- Seed users WITHOUT memberships (for testing registration flows)
 INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_at) VALUES
@@ -65,6 +66,11 @@ INSERT INTO memberships (id, user_id, semester_id, paid, discounted, free_trial_
   ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 81085720, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true),
   ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 52873146, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false),
   ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 75969632, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true);
+
+-- Seed an executive member: unpaid with an exhausted free trial, to verify the
+-- executive exemption from trial shading takes precedence over both flags.
+INSERT INTO memberships (id, user_id, semester_id, paid, discounted, executive, free_trial_available) VALUES
+  ('a9b8c7d6-e5f4-4a3b-9c8d-7e6f5a4b3c2d', 44444444, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true, false);
 
 -- Seed participants into the started event (Event #1)
 INSERT INTO participants (id, membership_id, event_id) VALUES

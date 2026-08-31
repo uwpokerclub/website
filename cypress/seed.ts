@@ -52,6 +52,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    executive: false,
     freeTrialAvailable: true,
   },
   {
@@ -60,6 +61,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    executive: false,
     freeTrialAvailable: false,
   },
   {
@@ -68,6 +70,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    executive: false,
     freeTrialAvailable: true,
   },
   {
@@ -76,6 +79,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    executive: false,
     freeTrialAvailable: false,
   },
   {
@@ -84,6 +88,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: true,
+    executive: false,
     freeTrialAvailable: true,
   },
   {
@@ -92,6 +97,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    executive: false,
     freeTrialAvailable: true,
   },
   {
@@ -100,6 +106,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    executive: false,
     freeTrialAvailable: true,
   },
   {
@@ -108,6 +115,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: true,
+    executive: false,
     freeTrialAvailable: true,
   },
   {
@@ -116,6 +124,7 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: false,
     discounted: false,
+    executive: false,
     freeTrialAvailable: false,
   },
   {
@@ -124,7 +133,19 @@ export const MEMBERS: Membership[] = [
     semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
     paid: true,
     discounted: false,
+    executive: false,
     freeTrialAvailable: true,
+  },
+  // Presley Novak - executive, unpaid, trial exhausted - must never be shaded despite
+  // both those flags, since the executive exemption takes precedence.
+  {
+    id: "a9b8c7d6-e5f4-4a3b-9c8d-7e6f5a4b3c2d",
+    userId: "44444444",
+    semesterId: "84f026be-53e0-4759-ab89-131c4a66d649",
+    paid: false,
+    discounted: false,
+    executive: true,
+    freeTrialAvailable: false,
   },
 ];
 
@@ -218,6 +239,15 @@ export const USERS: User[] = [
     faculty: "Environment",
     questId: "wjosey9",
     createdAt: "2025-01-30",
+  },
+  {
+    id: "44444444",
+    firstName: "Presley",
+    lastName: "Novak",
+    email: "pnovaka@example.com",
+    faculty: "Math",
+    questId: "pnovaka",
+    createdAt: "2025-02-01",
   },
 ];
 

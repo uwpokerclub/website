@@ -4,6 +4,7 @@ import {
   TRIAL_EXHAUSTED_UNREGISTERED_MEMBER,
   TRIAL_AVAILABLE_UNPAID_MEMBER,
   TRIAL_EXHAUSTED_PAID_MEMBER,
+  EXECUTIVE_MEMBER,
 } from "../support/helpers";
 
 const SHADE = "rgb(254, 226, 226)";
@@ -66,6 +67,14 @@ describe("EventRegistrationModal", () => {
           "contain",
           "Free trial used up",
         );
+      });
+    });
+
+    it("does not shade an executive member despite an unpaid, exhausted trial", () => {
+      cy.getByData("panel-available").within(() => {
+        cy.getByData(`member-row-${EXECUTIVE_MEMBER.id}`)
+          .should("not.have.css", "background-color", SHADE)
+          .and("not.have.attr", "title");
       });
     });
   });

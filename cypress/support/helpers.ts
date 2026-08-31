@@ -60,6 +60,8 @@ export const TRIAL_EXHAUSTED_UNREGISTERED_MEMBER = MEMBERS[8];
 export const TRIAL_AVAILABLE_UNPAID_MEMBER = MEMBERS[0];
 // Khalil Duckham - paid but carrying a stale exhausted flag; must never be shaded
 export const TRIAL_EXHAUSTED_PAID_MEMBER = MEMBERS[3];
+// Presley Novak - executive, unpaid, trial exhausted; must never be shaded, exempt as executive
+export const EXECUTIVE_MEMBER = MEMBERS[10];
 
 /**
  * Default blind level values used in structure creation

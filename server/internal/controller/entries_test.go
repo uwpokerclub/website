@@ -64,7 +64,7 @@ func TestCreateEntry(t *testing.T) {
 					"participant": map[string]any{
 						"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
 						"eventId":      float64(2),
-						"placement":    float64(0),
+						"points":       float64(0),
 						"signedOutAt":  nil,
 					},
 				},
@@ -177,7 +177,7 @@ func TestCreateEntry(t *testing.T) {
 					"participant": map[string]any{
 						"membershipId": testutils.TEST_MEMBERSHIPS[1].ID.String(),
 						"eventId":      float64(2),
-						"placement":    float64(0),
+						"points":       float64(0),
 						"signedOutAt":  nil,
 					},
 				},
@@ -389,7 +389,7 @@ func TestListEntries(t *testing.T) {
 							// Participant fields
 							"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
 							"eventId":      float64(2),
-							"placement":    float64(0),
+							"points":       float64(0),
 							"signedOutAt":  nil,
 							// Nested membership with nested user
 							"membership": map[string]any{
@@ -434,7 +434,7 @@ func TestListEntries(t *testing.T) {
 							// Participant fields
 							"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
 							"eventId":      float64(2),
-							"placement":    float64(0),
+							"points":       float64(0),
 							"signedOutAt":  "2023-10-20T20:00:00-04:00",
 							// Nested membership with nested user
 							"membership": map[string]any{
@@ -593,7 +593,7 @@ func TestSignOutEntry(t *testing.T) {
 			expectedResponse: map[string]any{
 				"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
 				"eventId":      float64(2),
-				"placement":    float64(0),
+				"points":       float64(0),
 				// signedOutAt will be set dynamically
 			},
 		},
@@ -670,7 +670,7 @@ func TestSignOutEntry(t *testing.T) {
 			expectedResponse: map[string]any{
 				"membershipId": testutils.TEST_MEMBERSHIPS[2].ID.String(),
 				"eventId":      float64(2),
-				"placement":    float64(0),
+				"points":       float64(0),
 				// signedOutAt will be set dynamically
 			},
 		})
@@ -765,7 +765,7 @@ func TestSignInEntry(t *testing.T) {
 			expectedResponse: map[string]any{
 				"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
 				"eventId":      float64(2),
-				"placement":    float64(0),
+				"points":       float64(0),
 				"signedOutAt":  nil,
 			},
 		},
@@ -842,7 +842,7 @@ func TestSignInEntry(t *testing.T) {
 			expectedResponse: map[string]any{
 				"membershipId": testutils.TEST_MEMBERSHIPS[0].ID.String(),
 				"eventId":      float64(2),
-				"placement":    float64(0),
+				"points":       float64(0),
 				"signedOutAt":  nil,
 			},
 		})

@@ -361,7 +361,8 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         const results = await registerEntries(semesterId, eventId, [membershipId]);
         const result = results.find((r) => r.membershipId === membershipId);
 
-        if (result?.status === "created") {
+        if (result?.status === "created" && result.participant) {
+          const entryId = result.participant.id;
           hasChangesRef.current = true;
           setRegisteredIds((prev) => new Set(prev).add(membershipId));
 
@@ -369,6 +370,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
           setEntries((prev) => {
             const membership = membershipsMap.get(membershipId);
             const newEntry: ParticipantResponse = {
+              id: entryId,
               membershipId,
               eventId: String(eventId),
               membership: membership

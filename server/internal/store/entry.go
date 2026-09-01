@@ -40,9 +40,8 @@ type EntryRepository interface {
 	// that has not yet signed out (signed_out_at IS NULL).
 	SignOutAllUnsigned(eventID int32, signedOutAt time.Time) error
 
-	// BatchUpdatePlacements sets the placement for each entry ID in placements, in a single
-	// operation.
-	BatchUpdatePlacements(placements map[int32]uint16) error
+	// BatchUpdatePoints sets the points for each entry ID in points, in a single operation.
+	BatchUpdatePoints(points map[int32]int32) error
 
 	// CountByMembershipID returns the total number of entries recorded for the given membership
 	// across all events. Used to determine free-trial event usage.

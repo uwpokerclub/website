@@ -242,7 +242,7 @@ func TestEntryRepository_SignOutAllUnsigned(t *testing.T) {
 	require.Equal(t, now, *found.SignedOutAt)
 }
 
-func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
+func TestEntryRepository_BatchUpdatePoints(t *testing.T) {
 	t.Parallel()
 
 	repo := newEntryRepository()
@@ -250,11 +250,11 @@ func TestEntryRepository_BatchUpdatePlacements(t *testing.T) {
 	participant := &models.Participant{MembershipID: &membershipID, EventID: 1}
 	require.NoError(t, repo.Create(participant))
 
-	require.NoError(t, repo.BatchUpdatePlacements(map[int32]uint16{participant.ID: 3}))
+	require.NoError(t, repo.BatchUpdatePoints(map[int32]int32{participant.ID: 41}))
 
 	found, err := repo.FindByID(participant.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, 3, found.Placement)
+	require.EqualValues(t, 41, found.Points)
 }
 
 func TestEntryRepository_CountByMembershipID(t *testing.T) {

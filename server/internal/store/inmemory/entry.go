@@ -201,13 +201,13 @@ func (r *inMemoryEntryRepository) SignOutAllUnsigned(eventID int32, signedOutAt 
 	return nil
 }
 
-func (r *inMemoryEntryRepository) BatchUpdatePlacements(placements map[int32]uint16) error {
+func (r *inMemoryEntryRepository) BatchUpdatePoints(points map[int32]int32) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for id, placement := range placements {
+	for id, pts := range points {
 		if p, exists := r.participants[id]; exists {
-			p.Placement = placement
+			p.Points = pts
 		}
 	}
 

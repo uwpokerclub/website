@@ -113,13 +113,13 @@ func (r *postgresEntryRepository) SignOutAllUnsigned(eventID int32, signedOutAt 
 		Update("signed_out_at", signedOutAt).Error
 }
 
-func (r *postgresEntryRepository) BatchUpdatePlacements(placements map[int32]uint16) error {
-	if len(placements) == 0 {
+func (r *postgresEntryRepository) BatchUpdatePoints(points map[int32]int32) error {
+	if len(points) == 0 {
 		return nil
 	}
 
-	ids := make([]int32, 0, len(placements))
-	for id := range placements {
+	ids := make([]int32, 0, len(points))
+	for id := range points {
 		ids = append(ids, id)
 	}
 
@@ -128,7 +128,7 @@ func (r *postgresEntryRepository) BatchUpdatePlacements(placements map[int32]uin
 	argIdx := 1
 	for _, id := range ids {
 		caseExprs = append(caseExprs, fmt.Sprintf("WHEN id = $%d THEN $%d::integer", argIdx, argIdx+1))
-		args = append(args, id, placements[id])
+		args = append(args, id, points[id])
 		argIdx += 2
 	}
 
@@ -140,7 +140,7 @@ func (r *postgresEntryRepository) BatchUpdatePlacements(placements map[int32]uin
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE participants SET placement = CASE %s END WHERE id IN (%s)",
+		"UPDATE participants SET points = CASE %s END WHERE id IN (%s)",
 		strings.Join(caseExprs, " "),
 		strings.Join(idPlaceholders, ", "),
 	)

@@ -135,6 +135,17 @@ export function EntriesTable({
     [processingEntry, event.state, hasPermission, handleSignIn, handleSignOut, handleRemove],
   );
 
+  // Display placement is the row's position within the table's existing signed_out_at DESC
+  // order, not a server field: see issue #425. Used by both the "#" column and the badge-styled
+  // "Place" column below so they always agree.
+  const getDisplayPlacement = useCallback(
+    (row: Entry) => {
+      const index = entries.findIndex((e) => e.membershipId === row.membershipId);
+      return (currentPage - 1) * pageSize + index + 1;
+    },
+    [entries, currentPage, pageSize],
+  );
+
   // Define table columns
   const columns: TableColumn<Entry>[] = useMemo(() => {
     const cols: TableColumn<Entry>[] = [
@@ -143,10 +154,7 @@ export function EntriesTable({
         header: "#",
         accessor: () => "",
         sortable: false,
-        render: (_, row) => {
-          const index = entries.findIndex((e) => e.membershipId === row.membershipId);
-          return (currentPage - 1) * pageSize + index + 1;
-        },
+        render: (_, row) => getDisplayPlacement(row),
       },
       {
         key: "firstName",
@@ -175,7 +183,25 @@ export function EntriesTable({
       {
         key: "placement",
         header: "Place",
-        accessor: (row) => (row.placement ? String(row.placement) : "--"),
+        accessor: () => "",
+        sortable: false,
+        render: (_, row) => {
+          const place = getDisplayPlacement(row);
+          const badgeClass =
+            place === 1
+              ? styles.placementFirst
+              : place === 2
+                ? styles.placementSecond
+                : place === 3
+                  ? styles.placementThird
+                  : styles.placementOther;
+          return <span className={`${styles.placementBadge} ${badgeClass}`}>{place}</span>;
+        },
+      },
+      {
+        key: "points",
+        header: "Points",
+        accessor: (row) => (row.points !== undefined && row.points !== null ? String(row.points) : "--"),
         sortable: false,
       },
     ];
@@ -197,7 +223,7 @@ export function EntriesTable({
     }
 
     return cols;
-  }, [currentPage, pageSize, entries, event.state, hasPermission, ActionButtons]);
+  }, [event.state, hasPermission, ActionButtons, getDisplayPlacement]);
 
   // Empty state component
   const emptyState = useMemo(
@@ -283,7 +309,7 @@ export function EntriesTable({
           columns={columns}
           loading={isLoading}
           emptyState={emptyState}
-          getRowKey={(row) => row.membershipId ?? `entry-${row.eventId}-${row.placement}`}
+          getRowKey={(row) => row.membershipId ?? `entry-${row.entryId}`}
           data-qa="entries-table"
         />
       </div>

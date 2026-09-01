@@ -12,7 +12,7 @@ type Participant struct {
 	MembershipID *uuid.UUID  `json:"membershipId" gorm:"type:uuid;uniqueIndex:idx_membership_event"`
 	Membership   *Membership `json:"membership,omitempty" gorm:"constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
 	EventID      int32       `json:"eventId" gorm:"type:integer;not null;uniqueIndex:idx_membership_event"`
-	Placement    uint16      `json:"placement"`
+	Points       int32       `json:"points" gorm:"not null;default:0"`
 	SignedOutAt  *time.Time  `json:"signedOutAt"`
 } //@name Participant
 

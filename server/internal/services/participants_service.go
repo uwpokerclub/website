@@ -105,7 +105,7 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 	participant := models.Participant{
 		MembershipID: &req.MembershipID,
 		EventID:      req.EventID,
-		Placement:    0,
+		Points:       0,
 		SignedOutAt:  nil,
 	}
 

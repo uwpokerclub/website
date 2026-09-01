@@ -69,7 +69,7 @@ erDiagram
         serial id PK
         uuid membership_id FK "nullable"
         integer event_id FK
-        integer placement
+        integer points
         timestamptz signed_out_at
     }
 
@@ -209,7 +209,7 @@ Records a member's participation in a specific event. `membership_id` is nullabl
 | id | serial | PK | Auto-incrementing identifier |
 | membership_id | uuid | nullable, FK -> memberships(id) SET NULL | Participating membership |
 | event_id | integer | NOT NULL, FK -> events(id) CASCADE | Event participated in |
-| placement | integer | | Final placement/position |
+| points | integer | NOT NULL, default 0 | Points earned, written once the event ends (see the logarithmic points formula in `points_service.go`) |
 | signed_out_at | timestamptz | nullable | When the participant was eliminated |
 
 **Indexes:** `UNIQUE(membership_id, event_id)`

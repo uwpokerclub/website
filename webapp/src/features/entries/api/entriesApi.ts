@@ -6,6 +6,7 @@ import { Entry } from "@/types";
  * transform this into the flatter `Entry` shape via `participantToEntry`.
  */
 export interface ParticipantResponse {
+  id: number;
   membershipId: string;
   membership?: {
     id: string;
@@ -19,7 +20,7 @@ export interface ParticipantResponse {
     };
   };
   signedOutAt: Date;
-  placement?: number;
+  points?: number;
   eventId: string;
 }
 
@@ -27,6 +28,7 @@ export interface CreateEntryResult {
   membershipId: string;
   status: "created" | "error";
   error?: string;
+  participant?: { id: number };
 }
 
 export async function fetchEntries(
@@ -80,11 +82,12 @@ export async function signOutEntry(semesterId: string, eventId: number, membersh
 export function participantToEntry(participant: ParticipantResponse): Entry {
   return {
     id: participant.membership?.user?.id ?? "",
+    entryId: participant.id,
     membershipId: participant.membershipId,
     eventId: participant.eventId,
     firstName: participant.membership?.user?.firstName ?? "",
     lastName: participant.membership?.user?.lastName ?? "",
     signedOutAt: participant.signedOutAt,
-    placement: participant.placement,
+    points: participant.points,
   };
 }

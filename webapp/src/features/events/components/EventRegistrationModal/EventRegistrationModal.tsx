@@ -361,7 +361,10 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
         const results = await registerEntries(semesterId, eventId, [membershipId]);
         const result = results.find((r) => r.membershipId === membershipId);
 
+        // `participant` is omitempty, so its absence is not a failure. The negative fallback id
+        // cannot collide with a real serial id and only serves as a key until the refetch.
         if (result?.status === "created") {
+          const entryId = result.participant?.id ?? -Date.now();
           hasChangesRef.current = true;
           setRegisteredIds((prev) => new Set(prev).add(membershipId));
 
@@ -369,6 +372,7 @@ export function EventRegistrationModal({ isOpen, onClose, semesterId, eventId }:
           setEntries((prev) => {
             const membership = membershipsMap.get(membershipId);
             const newEntry: ParticipantResponse = {
+              id: entryId,
               membershipId,
               eventId: String(eventId),
               membership: membership

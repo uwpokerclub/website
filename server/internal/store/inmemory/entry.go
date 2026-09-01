@@ -114,21 +114,20 @@ func (r *inMemoryEntryRepository) List(filter *models.ListParticipantsFilter) ([
 		participants = append(participants, *p)
 	}
 
-	// Matches "ORDER BY signed_out_at DESC" under Postgres' default NULLS FIRST-on-DESC
-	// behavior: not-yet-signed-out entries (nil) sort first, then signed-out entries by
-	// most recent first.
+	// Matches "ORDER BY signed_out_at DESC, id DESC" under Postgres' NULLS FIRST-on-DESC
+	// behavior: nil (not signed out) first, then most recent first, then id to break ties.
 	sort.Slice(participants, func(i, j int) bool {
 		a, b := participants[i].SignedOutAt, participants[j].SignedOutAt
 		switch {
 		case a == nil && b == nil:
-			return false
 		case a == nil:
 			return true
 		case b == nil:
 			return false
-		default:
+		case !a.Equal(*b):
 			return a.After(*b)
 		}
+		return participants[i].ID > participants[j].ID
 	})
 
 	total := int64(len(participants))
@@ -201,13 +200,13 @@ func (r *inMemoryEntryRepository) SignOutAllUnsigned(eventID int32, signedOutAt 
 	return nil
 }
 
-func (r *inMemoryEntryRepository) BatchUpdatePlacements(placements map[int32]uint16) error {
+func (r *inMemoryEntryRepository) BatchUpdatePoints(points map[int32]int32) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for id, placement := range placements {
+	for id, pts := range points {
 		if p, exists := r.participants[id]; exists {
-			p.Placement = placement
+			p.Points = pts
 		}
 	}
 

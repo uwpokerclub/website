@@ -78,20 +78,20 @@ INSERT INTO participants (id, membership_id, event_id) VALUES
   (2, 'c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d', 1),
   (3, 'b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e', 1);
 
--- Seed participants into the ended event (Event #2) with placements
-INSERT INTO participants (id, membership_id, event_id, placement, signed_out_at) VALUES
-  (4, 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 2, 1, '2025-01-10 23:30:00'),
-  (5, 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 2, 2, '2025-01-10 23:25:00'),
-  (6, 'c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 2, 3, '2025-01-10 23:00:00'),
-  (7, 'd4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 2, 4, '2025-01-10 22:30:00'),
-  (8, 'e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 2, 5, '2025-01-10 22:00:00');
+-- Seed participants into the ended event (Event #2) with points
+INSERT INTO participants (id, membership_id, event_id, points, signed_out_at) VALUES
+  (4, 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 2, 41, '2025-01-10 23:30:00'),
+  (5, 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 2, 24, '2025-01-10 23:25:00'),
+  (6, 'c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 2, 14, '2025-01-10 23:00:00'),
+  (7, 'd4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 2, 7, '2025-01-10 22:30:00'),
+  (8, 'e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 2, 1, '2025-01-10 22:00:00');
 SELECT setval('participants_id_seq', (SELECT MAX(id) FROM participants));
 
 -- Seed rankings for members who participated in the ended event
--- Points calculated: ceil((payout * 5) / 50) * 1.0
+-- Points calculated: round(25 * ln(5/place) + 1) with no ties (distinct signed_out_at)
 INSERT INTO rankings (membership_id, points, attendance) VALUES
-  ('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 4, 1),
-  ('b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 3, 1),
-  ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 3, 1),
-  ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 3, 1),
-  ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 2, 1);
+  ('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 41, 1),
+  ('b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 24, 1),
+  ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 14, 1),
+  ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 7, 1),
+  ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 1, 1);

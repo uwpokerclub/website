@@ -14,29 +14,31 @@ func ptrToUUID(u uuid.UUID) *uuid.UUID {
 	return &u
 }
 
+// Points match what CalculateTiePoints awards for event 1: 2 scored entries at a 1.0
+// multiplier, so 1st = round(25*ln(2/1)+1) = 18 and 2nd = round(25*ln(2/2)+1) = 1.
 var TEST_PARTICIPANTS = []models.Participant{
 	{
 		MembershipID: ptrToUUID(TEST_MEMBERSHIPS[0].ID),
 		EventID:      1, // TEST_EVENTS[2] - Fall 2023 Event #1 (Ended)
-		Placement:    1,
+		Points:       18,
 		SignedOutAt:  ptrToTime(time.Date(2023, 9, 15, 20, 30, 0, 0, time.Now().Local().Location())),
 	},
 	{
 		MembershipID: ptrToUUID(TEST_MEMBERSHIPS[1].ID),
 		EventID:      1, // TEST_EVENTS[2] - Fall 2023 Event #1 (Ended)
-		Placement:    2,
+		Points:       1,
 		SignedOutAt:  ptrToTime(time.Date(2023, 9, 15, 20, 15, 0, 0, time.Now().Local().Location())),
 	},
 	{
 		MembershipID: ptrToUUID(TEST_MEMBERSHIPS[2].ID),
 		EventID:      2, // TEST_EVENTS[1] - Fall 2023 Event #2 (Started)
-		Placement:    0,
+		Points:       0,
 		SignedOutAt:  nil,
 	},
 	{
 		MembershipID: ptrToUUID(TEST_MEMBERSHIPS[0].ID),
 		EventID:      2, // TEST_EVENTS[1] - Fall 2023 Event #2 (Started) - signed out, for testing sign-in
-		Placement:    0,
+		Points:       0,
 		SignedOutAt:  ptrToTime(time.Date(2023, 10, 20, 20, 0, 0, 0, time.Now().Local().Location())),
 	},
 }
@@ -71,7 +73,7 @@ func CreateTestParticipant(db *gorm.DB, membershipId uuid.UUID, eventId int32) (
 	participant := models.Participant{
 		MembershipID: &membershipId,
 		EventID:      eventId,
-		Placement:    0,
+		Points:       0,
 		SignedOutAt:  nil,
 	}
 

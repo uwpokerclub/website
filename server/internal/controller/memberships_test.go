@@ -1115,6 +1115,102 @@ func TestListMembershipsSearch(t *testing.T) {
 	}
 }
 
+func TestCreateMembership_RecordsSource(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	testCases := []struct {
+		name     string
+		userRole string
+		expected models.MembershipSource
+	}{
+		{"bot session records discord", authorization.ROLE_BOT.ToString(), models.MembershipSourceDiscord},
+		{"webmaster session records admin", authorization.ROLE_WEBMASTER.ToString(), models.MembershipSourceAdmin},
+		{"tournament director records admin", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(), models.MembershipSourceAdmin},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NoError(t, container.ResetDatabase(ctx))
+			require.NoError(t, testutils.SeedAll(db))
+
+			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
+			require.NoError(t, err)
+
+			req, err := testutils.MakeJSONRequest(
+				"POST",
+				fmt.Sprintf("/api/v2/semesters/%s/memberships", testutils.TEST_SEMESTERS[0].ID),
+				map[string]any{"userId": testutils.TEST_USERS[3].ID, "paid": true},
+			)
+			require.NoError(t, err)
+			testutils.SetAuthCookie(req, sessionID)
+
+			w := httptest.NewRecorder()
+			apiServer.ServeHTTP(w, req)
+			require.Equal(t, http.StatusCreated, w.Code, "Response: %s", w.Body.String())
+
+			var stored models.Membership
+			require.NoError(t, db.
+				Where("user_id = ? AND semester_id = ?", testutils.TEST_USERS[3].ID, testutils.TEST_SEMESTERS[0].ID).
+				First(&stored).Error)
+
+			require.NotNil(t, stored.Source)
+			require.Equal(t, tc.expected, *stored.Source)
+			require.NotNil(t, stored.CreatedAt)
+		})
+	}
+}
+
+func TestCreateMembership_IgnoresSourceInRequestBody(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	require.NoError(t, container.ResetDatabase(ctx))
+	require.NoError(t, testutils.SeedAll(db))
+
+	sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_WEBMASTER.ToString())
+	require.NoError(t, err)
+
+	req, err := testutils.MakeJSONRequest(
+		"POST",
+		fmt.Sprintf("/api/v2/semesters/%s/memberships", testutils.TEST_SEMESTERS[0].ID),
+		map[string]any{
+			"userId": testutils.TEST_USERS[3].ID,
+			"paid":   true,
+			"source": "discord", // must be ignored - source is never client-supplied
+		},
+	)
+	require.NoError(t, err)
+	testutils.SetAuthCookie(req, sessionID)
+
+	w := httptest.NewRecorder()
+	apiServer.ServeHTTP(w, req)
+	require.Equal(t, http.StatusCreated, w.Code, "Response: %s", w.Body.String())
+
+	var stored models.Membership
+	require.NoError(t, db.
+		Where("user_id = ? AND semester_id = ?", testutils.TEST_USERS[3].ID, testutils.TEST_SEMESTERS[0].ID).
+		First(&stored).Error)
+
+	require.NotNil(t, stored.Source)
+	require.Equal(t, models.MembershipSourceAdmin, *stored.Source,
+		"a source supplied in the request body must be ignored")
+}
+
 // Helper function to create bool pointers
 func boolPtr(b bool) *bool {
 	return &b

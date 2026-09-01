@@ -3,6 +3,7 @@ package postgres_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"api/internal/models"
 	"api/internal/store"
@@ -10,6 +11,7 @@ import (
 	"api/internal/testutils"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -372,4 +374,28 @@ func TestMembershipRepository_SetFreeTrialAvailable_NotFound(t *testing.T) {
 
 	err = repo.SetFreeTrialAvailable(uuid.New(), false)
 	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestMembershipRepository_Create_SetsCreatedAt(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+
+	repo := postgres.NewMembershipRepository(db)
+
+	before := time.Now().Add(-time.Second)
+	membership := models.Membership{
+		UserID:     testutils.TEST_USERS[3].ID,
+		SemesterID: testutils.TEST_SEMESTERS[0].ID,
+		Paid:       true,
+	}
+
+	require.NoError(t, repo.Create(&membership))
+
+	require.NotNil(t, membership.CreatedAt, "Create must populate CreatedAt")
+	assert.True(t, membership.CreatedAt.After(before), "CreatedAt should be set to roughly now")
 }

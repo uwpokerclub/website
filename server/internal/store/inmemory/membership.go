@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -61,6 +62,14 @@ func (r *inMemoryMembershipRepository) Create(membership *models.Membership) err
 
 	if !membership.FreeTrialAvailable {
 		membership.FreeTrialAvailable = true
+	}
+
+	// GORM populates CreatedAt automatically on the Postgres path; the in-memory
+	// store never touches GORM, so it sets the timestamp itself. Same reason the
+	// FreeTrialAvailable default is compensated for just above.
+	if membership.CreatedAt == nil {
+		now := time.Now()
+		membership.CreatedAt = &now
 	}
 
 	copy := *membership

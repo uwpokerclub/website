@@ -2,11 +2,13 @@ package inmemory
 
 import (
 	"testing"
+	"time"
 
 	"api/internal/models"
 	"api/internal/store"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -274,4 +276,20 @@ func TestMembershipRepository_SetFreeTrialAvailable_NotFound(t *testing.T) {
 
 	err := repo.SetFreeTrialAvailable(uuid.New(), false)
 	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
+func TestInMemoryMembershipRepository_Create_SetsCreatedAt(t *testing.T) {
+	repo := newMembershipRepository()
+
+	before := time.Now().Add(-time.Second)
+	membership := models.Membership{
+		UserID:     42,
+		SemesterID: uuid.New(),
+		Paid:       true,
+	}
+
+	require.NoError(t, repo.Create(&membership))
+
+	require.NotNil(t, membership.CreatedAt, "Create must populate CreatedAt")
+	assert.True(t, membership.CreatedAt.After(before), "CreatedAt should be set to roughly now")
 }

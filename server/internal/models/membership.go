@@ -37,15 +37,11 @@ type Membership struct {
 	FreeTrialAvailable bool     `json:"freeTrialAvailable" gorm:"not null;default:true"`
 	Ranking            *Ranking `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 
-	// CreatedAt is when this membership was created. It is a pointer because rows
-	// predating the signup-metadata migration have no creation time and must stay
-	// NULL rather than being backfilled with a fabricated value. Marshalled as
-	// json:"-" deliberately - see the plan's Decision Record; exposing it would
-	// break 22 exact-match test fixtures and is needed by nothing.
+	// Pointer since pre-migration rows have no value and stay NULL (no backfill).
+	// json:"-" is deliberate, not an oversight; don't expose it.
 	CreatedAt *time.Time `json:"-" gorm:"type:timestamp;index:idx_memberships_semester_created,priority:2"`
 
-	// Source is the channel this membership was created through. Nil for rows
-	// predating the signup-metadata migration. Also json:"-" - see CreatedAt.
+	// Source is the channel this membership was created through. Nil pre-migration.
 	Source *MembershipSource `json:"-" gorm:"type:text"`
 } //@name Membership
 

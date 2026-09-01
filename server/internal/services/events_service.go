@@ -49,7 +49,9 @@ func (svc *eventService) EndEvent(eventId int32) error {
 	// Every entry now has a non-nil SignedOutAt (the step above set it for anyone still signed
 	// in), so List's existing "signed_out_at DESC" order is exactly the placement order: the
 	// most-recently-signed-out entry (the last one remaining, or the one force-ended) is placed
-	// first.
+	// first. Consecutive entries sharing an identical SignedOutAt - most commonly the bulk block
+	// SignOutAllUnsigned just created - are scored as one tie group so points don't depend on
+	// their arbitrary order within that block.
 	entries, _, err := tx.Entries().List(&models.ListParticipantsFilter{EventID: eventId})
 	if err != nil {
 		return e.InternalServerError(err.Error())
@@ -57,18 +59,28 @@ func (svc *eventService) EndEvent(eventId int32) error {
 
 	eventSize := len(entries)
 	rankingUpdates := make(map[uuid.UUID]int32, eventSize)
-	placements := make(map[int32]uint16, eventSize)
-	for i, entry := range entries {
-		placement := i + 1
-		placements[entry.ID] = uint16(placement)
+	pointsUpdates := make(map[int32]int32, eventSize)
 
-		if entry.MembershipID != nil {
-			points := CalculatePoints(eventSize, placement, event.PointsMultiplier)
-			rankingUpdates[*entry.MembershipID] = int32(points)
+	for i := 0; i < len(entries); {
+		j := i
+		for j+1 < len(entries) && entries[j+1].SignedOutAt != nil && entries[i].SignedOutAt != nil &&
+			entries[j+1].SignedOutAt.Equal(*entries[i].SignedOutAt) {
+			j++
 		}
+
+		groupPoints := int32(CalculateTiePoints(eventSize, i+1, j+1, event.PointsMultiplier))
+		for k := i; k <= j; k++ {
+			entry := entries[k]
+			pointsUpdates[entry.ID] = groupPoints
+			if entry.MembershipID != nil {
+				rankingUpdates[*entry.MembershipID] += groupPoints
+			}
+		}
+
+		i = j + 1
 	}
 
-	if err := tx.Entries().BatchUpdatePlacements(placements); err != nil {
+	if err := tx.Entries().BatchUpdatePoints(pointsUpdates); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
@@ -111,16 +123,24 @@ func (svc *eventService) UndoEndEvent(eventId int32) error {
 		return e.InternalServerError(err.Error())
 	}
 
-	eventSize := len(entries)
-	rankingUpdates := make(map[uuid.UUID]int32, eventSize)
+	// Subtract each entry's own stored Points rather than recomputing from the current field
+	// state: a recompute depends on eventSize and tie grouping at undo time, which can differ
+	// from what was true when EndEvent ran, so it would not reliably reverse what EndEvent
+	// actually applied. Subtracting the stored value is exact regardless.
+	rankingUpdates := make(map[uuid.UUID]int32, len(entries))
+	pointsReset := make(map[int32]int32, len(entries))
 	for _, entry := range entries {
-		if entry.MembershipID != nil && entry.Placement > 0 {
-			points := CalculatePoints(eventSize, int(entry.Placement), event.PointsMultiplier)
-			rankingUpdates[*entry.MembershipID] = -int32(points)
+		if entry.MembershipID != nil && entry.Points != 0 {
+			rankingUpdates[*entry.MembershipID] -= entry.Points
 		}
+		pointsReset[entry.ID] = 0
 	}
 
 	if err := tx.Rankings().BatchIncrementPoints(rankingUpdates); err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	if err := tx.Entries().BatchUpdatePoints(pointsReset); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 

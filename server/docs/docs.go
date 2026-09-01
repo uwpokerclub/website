@@ -3157,7 +3157,7 @@ const docTemplate = `{
                 "membershipId": {
                     "type": "string"
                 },
-                "placement": {
+                "points": {
                     "type": "integer"
                 },
                 "signedOutAt": {

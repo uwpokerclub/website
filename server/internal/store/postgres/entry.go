@@ -76,8 +76,11 @@ func (r *postgresEntryRepository) List(filter *models.ListParticipantsFilter) ([
 		return nil, 0, err
 	}
 
+	// The id tiebreaker makes the order total: SignOutAllUnsigned gives every still-seated entry
+	// one shared timestamp, and without it LIMIT/OFFSET can repeat or skip rows across pages.
+	// inmemory/entry.go sorts to match.
 	query := applyFilter(models.Participant{}.Preload(r.db)).
-		Order("participants.signed_out_at DESC")
+		Order("participants.signed_out_at DESC, participants.id DESC")
 	query = filter.Pagination.Apply(query)
 
 	var participants []models.Participant

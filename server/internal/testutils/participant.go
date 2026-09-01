@@ -14,17 +14,19 @@ func ptrToUUID(u uuid.UUID) *uuid.UUID {
 	return &u
 }
 
+// Points match what CalculateTiePoints awards for event 1: 2 scored entries at a 1.0
+// multiplier, so 1st = round(25*ln(2/1)+1) = 18 and 2nd = round(25*ln(2/2)+1) = 1.
 var TEST_PARTICIPANTS = []models.Participant{
 	{
 		MembershipID: ptrToUUID(TEST_MEMBERSHIPS[0].ID),
 		EventID:      1, // TEST_EVENTS[2] - Fall 2023 Event #1 (Ended)
-		Points:       1,
+		Points:       18,
 		SignedOutAt:  ptrToTime(time.Date(2023, 9, 15, 20, 30, 0, 0, time.Now().Local().Location())),
 	},
 	{
 		MembershipID: ptrToUUID(TEST_MEMBERSHIPS[1].ID),
 		EventID:      1, // TEST_EVENTS[2] - Fall 2023 Event #1 (Ended)
-		Points:       2,
+		Points:       1,
 		SignedOutAt:  ptrToTime(time.Date(2023, 9, 15, 20, 15, 0, 0, time.Now().Local().Location())),
 	},
 	{

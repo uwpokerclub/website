@@ -15,8 +15,7 @@ func rawPoints(eventSize, place int) float64 {
 // CalculateTiePoints returns the points awarded to every member of a tie group occupying
 // positions from..to (1-indexed, inclusive) in an event of eventSize scored entries: the mean of
 // the raw curve value across the group's positions, multiplied by multiplier, rounded once at
-// the end. A singleton group (from == to) reduces to the plain per-position formula, so there is
-// one code path for both tied and untied entries.
+// the end. A singleton group (from == to) reduces to the plain per-position formula.
 func CalculateTiePoints(eventSize, from, to int, multiplier float32) int {
 	sum := 0.0
 	for place := from; place <= to; place++ {

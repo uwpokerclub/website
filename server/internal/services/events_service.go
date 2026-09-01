@@ -46,12 +46,13 @@ func (svc *eventService) EndEvent(eventId int32) error {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Every entry now has a non-nil SignedOutAt (the step above set it for anyone still signed
-	// in), so List's existing "signed_out_at DESC" order is exactly the placement order: the
-	// most-recently-signed-out entry (the last one remaining, or the one force-ended) is placed
-	// first. Consecutive entries sharing an identical SignedOutAt - most commonly the bulk block
-	// SignOutAllUnsigned just created - are scored as one tie group so points don't depend on
-	// their arbitrary order within that block.
+	// Every entry now has a non-nil SignedOutAt, so List's "signed_out_at DESC" order is the
+	// placement order. Consecutive entries sharing a SignedOutAt - most often the bulk block
+	// SignOutAllUnsigned just created - are scored as one tie group, so points don't depend on
+	// their arbitrary order within it.
+	//
+	// Note anyone still seated at force-end places last, not first: SignOutAllUnsigned stamps
+	// them with event.StartDate. That predates this change, but the curve widens its cost.
 	entries, _, err := tx.Entries().List(&models.ListParticipantsFilter{EventID: eventId})
 	if err != nil {
 		return e.InternalServerError(err.Error())
@@ -123,10 +124,8 @@ func (svc *eventService) UndoEndEvent(eventId int32) error {
 		return e.InternalServerError(err.Error())
 	}
 
-	// Subtract each entry's own stored Points rather than recomputing from the current field
-	// state: a recompute depends on eventSize and tie grouping at undo time, which can differ
-	// from what was true when EndEvent ran, so it would not reliably reverse what EndEvent
-	// actually applied. Subtracting the stored value is exact regardless.
+	// Subtract each entry's stored Points rather than recomputing: eventSize and tie grouping
+	// can differ at undo time, so a recompute would not reverse what EndEvent applied.
 	rankingUpdates := make(map[uuid.UUID]int32, len(entries))
 	pointsReset := make(map[int32]int32, len(entries))
 	for _, entry := range entries {

@@ -20,6 +20,10 @@ type EntriesTableProps = {
   onSearchChange: (query: string) => void;
 };
 
+// Rows sharing a signed_out_at are one tie group that EndEvent scores identically.
+const signedOutKey = (entry: Entry): number | null =>
+  entry.signedOutAt ? new Date(entry.signedOutAt).getTime() : null;
+
 // Format signed out at date
 const formatSignedOutAt = (entry: Entry): string => {
   if (!entry.signedOutAt) return "Not Signed Out";
@@ -135,16 +139,33 @@ export function EntriesTable({
     [processingEntry, event.state, hasPermission, handleSignIn, handleSignOut, handleRemove],
   );
 
-  // Display placement is the row's position within the table's existing signed_out_at DESC
-  // order, not a server field: see issue #425. Used by both the "#" column and the badge-styled
-  // "Place" column below so they always agree.
-  const getDisplayPlacement = useCallback(
-    (row: Entry) => {
-      const index = entries.findIndex((e) => e.membershipId === row.membershipId);
-      return (currentPage - 1) * pageSize + index + 1;
-    },
-    [entries, currentPage, pageSize],
-  );
+  const rowOrdinalByEntryId = useMemo(() => {
+    const offset = (currentPage - 1) * pageSize;
+    return new Map(entries.map((entry, index) => [entry.entryId, offset + index + 1]));
+  }, [entries, currentPage, pageSize]);
+
+  // Placement is derived from row order rather than a server field (issue #425), so it only
+  // holds for a finished event listed in full - under search the index is a position within a
+  // filtered subset. Tied rows share the group's first position, as EndEvent scores them. A tie
+  // group split across pages restarts numbering; the neighbouring rows aren't loaded.
+  const placementByEntryId = useMemo(() => {
+    const places = new Map<number, number>();
+    if (event.state !== EventState.Ended || searchQuery) {
+      return places;
+    }
+    const offset = (currentPage - 1) * pageSize;
+    for (let i = 0; i < entries.length; ) {
+      let j = i;
+      while (j + 1 < entries.length && signedOutKey(entries[j + 1]) === signedOutKey(entries[i])) {
+        j++;
+      }
+      for (let k = i; k <= j; k++) {
+        places.set(entries[k].entryId, offset + i + 1);
+      }
+      i = j + 1;
+    }
+    return places;
+  }, [entries, event.state, searchQuery, currentPage, pageSize]);
 
   // Define table columns
   const columns: TableColumn<Entry>[] = useMemo(() => {
@@ -154,7 +175,7 @@ export function EntriesTable({
         header: "#",
         accessor: () => "",
         sortable: false,
-        render: (_, row) => getDisplayPlacement(row),
+        render: (_, row) => rowOrdinalByEntryId.get(row.entryId) ?? "",
       },
       {
         key: "firstName",
@@ -186,7 +207,10 @@ export function EntriesTable({
         accessor: () => "",
         sortable: false,
         render: (_, row) => {
-          const place = getDisplayPlacement(row);
+          const place = placementByEntryId.get(row.entryId);
+          if (place === undefined) {
+            return "--";
+          }
           const badgeClass =
             place === 1
               ? styles.placementFirst
@@ -223,7 +247,7 @@ export function EntriesTable({
     }
 
     return cols;
-  }, [event.state, hasPermission, ActionButtons, getDisplayPlacement]);
+  }, [event.state, hasPermission, ActionButtons, rowOrdinalByEntryId, placementByEntryId]);
 
   // Empty state component
   const emptyState = useMemo(

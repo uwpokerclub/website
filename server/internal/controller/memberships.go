@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"api/internal/authorization"
 	apierrors "api/internal/errors"
 	"api/internal/middleware"
 	"api/internal/models"
@@ -59,6 +60,18 @@ func validateMembershipID(ctx *gin.Context) (uuid.UUID, error) {
 	return id, nil
 }
 
+// membershipSourceFromContext derives the signup channel from the authenticated
+// session's role. UseAuthentication sets "role" into the context
+// (middleware/authentication.go:58). The Discord bot authenticates as "bot";
+// everything else is a human in the admin UI. Source is never read from the
+// request body.
+func membershipSourceFromContext(ctx *gin.Context) models.MembershipSource {
+	if ctx.GetString("role") == authorization.ROLE_BOT.ToString() {
+		return models.MembershipSourceDiscord
+	}
+	return models.MembershipSourceAdmin
+}
+
 // createMembership handles the creation of a new Membership
 //
 // @Summary Create a new Membership
@@ -87,7 +100,7 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 	}
 
 	svc := services.NewMembershipService(c.store)
-	membership, err := svc.CreateMembership(semesterID, &req)
+	membership, err := svc.CreateMembership(semesterID, &req, membershipSourceFromContext(ctx))
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
 			ctx.AbortWithStatusJSON(apiErr.Code, apiErr)

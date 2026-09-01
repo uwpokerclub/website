@@ -72,7 +72,7 @@ export function useEndEvent() {
     onSuccess: (_data, { semesterId, eventId }) => {
       queryClient.invalidateQueries({ queryKey: eventKeys.detail(semesterId, eventId) });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
-      // Ending an event sets entry placements; refresh the entries list
+      // Ending an event sets entry points; refresh the entries list
       queryClient.invalidateQueries({ queryKey: entryKeys.byEvent(semesterId, eventId) });
     },
   });
@@ -86,7 +86,7 @@ export function useRestartEvent() {
     onSuccess: (_data, { semesterId, eventId }) => {
       queryClient.invalidateQueries({ queryKey: eventKeys.detail(semesterId, eventId) });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
-      // Restarting an event clears placements; refresh the entries list
+      // Restarting an event clears points; refresh the entries list
       queryClient.invalidateQueries({ queryKey: entryKeys.byEvent(semesterId, eventId) });
     },
   });

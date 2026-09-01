@@ -21,7 +21,7 @@
         }
       },
       "eventId": 2,
-      "placement": 1,
+      "points": 41,
       "signedOutAt": "2025-01-10T23:30:00Z"
     },
     {
@@ -45,7 +45,7 @@
         }
       },
       "eventId": 2,
-      "placement": 2,
+      "points": 24,
       "signedOutAt": "2025-01-10T23:25:00Z"
     },
     {
@@ -69,7 +69,7 @@
         }
       },
       "eventId": 2,
-      "placement": 3,
+      "points": 14,
       "signedOutAt": "2025-01-10T23:00:00Z"
     },
     {
@@ -93,7 +93,7 @@
         }
       },
       "eventId": 2,
-      "placement": 4,
+      "points": 7,
       "signedOutAt": "2025-01-10T22:30:00Z"
     },
     {
@@ -117,7 +117,7 @@
         }
       },
       "eventId": 2,
-      "placement": 5,
+      "points": 1,
       "signedOutAt": "2025-01-10T22:00:00Z"
     }
   ],

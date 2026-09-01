@@ -183,18 +183,19 @@ describe("EventDetails", () => {
         // Status badge
         cy.contains("Ended").should("be.visible");
 
-        // Placements are displayed
-        const firstPlaceParticipant = ENDED_EVENT_PARTICIPANTS.find(
-          (p) => p.placement === 1
-        )!;
+        // Place is derived from row order (ENDED_EVENT_PARTICIPANTS is already ordered
+        // signed_out_at DESC, so index 0 is 1st place).
+        const firstPlaceParticipant = ENDED_EVENT_PARTICIPANTS[0];
         const user = getUserForMember(firstPlaceParticipant.membershipId);
         // Verify first place participant is visible (use exist due to CSS clipping)
         cy.contains(user.firstName).should("exist");
 
-        // Verify Place column shows placements (use exist due to CSS clipping)
+        // Verify Place column shows derived placements and Points column shows stored points
+        // (use exist due to CSS clipping)
         cy.getByData("entries-table").within(() => {
           cy.contains("td", "1").should("exist");
           cy.contains("td", "2").should("exist");
+          cy.contains("td", String(firstPlaceParticipant.points)).should("exist");
         });
 
         // Action buttons hidden

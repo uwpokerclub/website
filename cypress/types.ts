@@ -59,7 +59,7 @@ export interface Participant {
   id: number;
   membershipId: string;
   eventId: number;
-  placement?: number;
+  points?: number;
   signedOutAt?: string;
 }
 

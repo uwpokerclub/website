@@ -33,7 +33,7 @@ func TestMembershipService_CreateMembership_InvalidState(t *testing.T) {
 		UserID:     1,
 		Paid:       false,
 		Discounted: true,
-	})
+	}, models.MembershipSourceAdmin)
 	require.Error(t, err)
 	_, isAPIError := err.(errors.APIErrorResponse)
 	require.False(t, isAPIError)
@@ -65,7 +65,7 @@ func TestMembershipService_CreateMembership_Paid(t *testing.T) {
 	_, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
 		UserID: 1,
 		Paid:   true,
-	})
+	}, models.MembershipSourceAdmin)
 	require.NoError(t, err)
 
 	found, err := st.Semesters().FindByID(semester.ID)
@@ -85,7 +85,7 @@ func TestMembershipService_CreateMembership_PaidDiscounted(t *testing.T) {
 		UserID:     1,
 		Paid:       true,
 		Discounted: true,
-	})
+	}, models.MembershipSourceAdmin)
 	require.NoError(t, err)
 
 	found, err := st.Semesters().FindByID(semester.ID)
@@ -104,7 +104,7 @@ func TestMembershipService_CreateMembership_Unpaid(t *testing.T) {
 	_, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
 		UserID: 1,
 		Paid:   false,
-	})
+	}, models.MembershipSourceAdmin)
 	require.NoError(t, err)
 
 	found, err := st.Semesters().FindByID(semester.ID)
@@ -302,7 +302,7 @@ func TestMembershipService_CreateMembership_Executive(t *testing.T) {
 	membership, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
 		UserID:    1,
 		Executive: true,
-	})
+	}, models.MembershipSourceAdmin)
 	require.NoError(t, err)
 	require.True(t, membership.Executive)
 
@@ -337,7 +337,7 @@ func TestMembershipService_CreateMembership_ExecutiveCannotBePaid(t *testing.T) 
 			require.NoError(t, st.Semesters().Create(semester))
 
 			svc := NewMembershipService(st)
-			membership, err := svc.CreateMembership(semester.ID, tc.req)
+			membership, err := svc.CreateMembership(semester.ID, tc.req, models.MembershipSourceAdmin)
 			require.Nil(t, membership)
 			require.ErrorIs(t, err, ErrExecutiveCannotBePaid)
 		})
@@ -489,4 +489,23 @@ func TestMembershipService_UpdateMembership_PaidOnAlreadyExecutive_Rejected(t *t
 	require.NoError(t, err)
 	require.True(t, stored.Executive)
 	require.False(t, stored.Paid)
+}
+
+func TestMembershipService_CreateMembership_PersistsSource(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	svc := NewMembershipService(st)
+	membership, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+		UserID: 1,
+		Paid:   true,
+	}, models.MembershipSourceDiscord)
+
+	require.NoError(t, err)
+	require.NotNil(t, membership.Source)
+	require.Equal(t, models.MembershipSourceDiscord, *membership.Source)
+	require.NotNil(t, membership.CreatedAt, "in-memory Create must set CreatedAt - see Task 2")
 }

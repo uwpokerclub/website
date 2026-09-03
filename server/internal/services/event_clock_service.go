@@ -88,6 +88,9 @@ func (s *eventClockService) Resume(eventID int32) (models.DerivedClock, error) {
 // forward into the next level, carrying the overflow.
 func (s *eventClockService) Adjust(eventID int32, deltaSeconds int) (models.DerivedClock, error) {
 	return s.applyAction(eventID, func(clock *models.EventClock, now time.Time) bool {
+		if deltaSeconds == 0 {
+			return false
+		}
 		clock.LevelEndsAt = clock.LevelEndsAt.Add(time.Duration(deltaSeconds) * time.Second)
 		return true
 	})
@@ -111,10 +114,13 @@ func (s *eventClockService) SetLevel(eventID int32, index int32) (models.Derived
 		}
 		return true
 	}, &derived)
+	if err != nil {
+		return models.DerivedClock{}, err
+	}
 	if invalid != nil {
 		return models.DerivedClock{}, invalid
 	}
-	return derived, err
+	return derived, nil
 }
 
 func (s *eventClockService) blindLevels(eventID int32) ([]time.Duration, error) {
@@ -136,12 +142,11 @@ func (s *eventClockService) blindLevels(eventID int32) ([]time.Duration, error) 
 	return levels, nil
 }
 
-func (s *eventClockService) lazilyCreate(eventID int32, levels []time.Duration, now time.Time) (models.EventClock, error) {
-	if len(levels) == 0 {
-		return models.EventClock{}, ErrEmptyStructure
-	}
-
-	clock := models.EventClock{
+// newInitialClock is the "paused, with a full level on the board" state a
+// clock materialises into on first contact, whether that contact is a read
+// or an action.
+func newInitialClock(eventID int32, levels []time.Duration, now time.Time) models.EventClock {
+	return models.EventClock{
 		EventID:     eventID,
 		LevelIndex:  0,
 		LevelEndsAt: now.Add(levels[0]),
@@ -149,6 +154,14 @@ func (s *eventClockService) lazilyCreate(eventID int32, levels []time.Duration, 
 		Version:     1,
 		UpdatedAt:   now,
 	}
+}
+
+func (s *eventClockService) lazilyCreate(eventID int32, levels []time.Duration, now time.Time) (models.EventClock, error) {
+	if len(levels) == 0 {
+		return models.EventClock{}, ErrEmptyStructure
+	}
+
+	clock := newInitialClock(eventID, levels, now)
 
 	if err := s.store.EventClocks().Create(&clock); err != nil {
 		if errors.Is(err, store.ErrAlreadyExists) {
@@ -202,14 +215,7 @@ func (s *eventClockService) applyActionWithLevels(
 	wasCreated := false
 	if errors.Is(err, store.ErrNotFound) {
 		wasCreated = true
-		clock = models.EventClock{
-			EventID:     eventID,
-			LevelIndex:  0,
-			LevelEndsAt: now.Add(levels[0]),
-			PausedAt:    &now,
-			Version:     1,
-			UpdatedAt:   now,
-		}
+		clock = newInitialClock(eventID, levels, now)
 		if err := tx.EventClocks().Create(&clock); err != nil {
 			return models.EventClock{}, err
 		}

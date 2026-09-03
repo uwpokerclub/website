@@ -300,6 +300,46 @@ func TestEventClockService_SetLevel_OutOfRange(t *testing.T) {
 	require.Equal(t, int64(1), stored.Version, "a rejected out-of-range level must not persist")
 }
 
+func TestEventClockService_SetLevel_OutOfRange_FirstEverInteraction(t *testing.T) {
+	t.Parallel()
+
+	// No clock row exists yet: this SetLevel call is the very first contact
+	// the event's clock has ever had, and the index is invalid.
+	st, eventID := setupEventClock(t, 5, 10, 15)
+	svc := NewEventClockService(st)
+
+	_, err := svc.SetLevel(eventID, 5)
+	require.True(t, errors.Is(err, ErrInvalidLevel))
+
+	// Lazy creation still committed: the rejected level jump was layered on
+	// top of a clock that had to be materialised to be evaluated at all.
+	stored, err := st.EventClocks().FindByEventID(eventID)
+	require.NoError(t, err)
+	require.Equal(t, int32(0), stored.LevelIndex)
+	require.NotNil(t, stored.PausedAt)
+	require.Equal(t, int64(1), stored.Version)
+}
+
+func TestEventClockService_Adjust_ZeroDeltaIsNoop(t *testing.T) {
+	t.Parallel()
+
+	st, eventID := setupEventClock(t, 15)
+	endsAt := time.Now().UTC().Add(10 * time.Minute)
+	require.NoError(t, st.EventClocks().Create(&models.EventClock{
+		EventID: eventID, LevelIndex: 0, LevelEndsAt: endsAt, PausedAt: nil, Version: 1, UpdatedAt: time.Now().UTC(),
+	}))
+
+	svc := NewEventClockService(st)
+
+	_, err := svc.Adjust(eventID, 0)
+	require.NoError(t, err)
+
+	stored, err := st.EventClocks().FindByEventID(eventID)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), stored.Version, "adjusting by zero seconds must not bump version")
+	require.WithinDuration(t, endsAt, stored.LevelEndsAt, 0)
+}
+
 func TestEventClockService_ActionAfterLongIdleGap_AppliesToRolledForwardLevel(t *testing.T) {
 	t.Parallel()
 

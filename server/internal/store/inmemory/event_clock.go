@@ -50,14 +50,21 @@ func (r *inMemoryEventClockRepository) FindByEventID(eventID int32) (models.Even
 	return *clock, nil
 }
 
-// FindByEventIDForUpdate has no separate locking mechanism in the in-memory
-// store: BeginTx already snapshots the whole store under a read lock, and
-// Commit swaps the parent's repos under a write lock, so two concurrent
-// transactions are isolated from each other the same way a real
-// SELECT ... FOR UPDATE isolates a row. This does not protect against a
-// non-transactional write racing an in-flight transaction's commit - a
-// pre-existing characteristic of InMemoryStore shared by every repository,
-// not specific to event clocks.
+// FindByEventIDForUpdate has no real locking mechanism in the in-memory
+// store, and unlike a genuine SELECT ... FOR UPDATE it does not block a
+// concurrent transaction: BeginTx snapshots the store the moment it is
+// called, without waiting on any other open transaction, and Commit later
+// overwrites the parent's repos with that snapshot's contents. Two
+// transactions that both call BeginTx before either commits therefore each
+// mutate their own stale clone, and whichever commits second silently wins,
+// discarding the first transaction's write - a lost update a real row lock
+// would have prevented by blocking the second until the first committed.
+// This is a pre-existing characteristic of InMemoryStore.BeginTx/Commit
+// shared by every repository, not something specific to event clocks or
+// fixable here; production correctness for the transactional action path
+// relies on the postgres implementation's real lock (see
+// TestEventClockRepository_FindByEventIDForUpdate_BlocksConcurrentTx in
+// store/postgres).
 func (r *inMemoryEventClockRepository) FindByEventIDForUpdate(eventID int32) (models.EventClock, error) {
 	return r.FindByEventID(eventID)
 }

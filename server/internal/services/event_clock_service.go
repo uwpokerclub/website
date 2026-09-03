@@ -129,9 +129,16 @@ func (s *eventClockService) blindLevels(eventID int32) ([]time.Duration, error) 
 		return nil, err
 	}
 
-	structure, err := s.store.Structures().FindByID(event.StructureID)
-	if err != nil {
-		return nil, err
+	// Events().FindByID preloads the structure (with blinds) on postgres, so
+	// prefer that over a second round trip. The in-memory store does not
+	// preload it, so fall back to a direct lookup there.
+	structure := event.Structure
+	if structure == nil {
+		found, err := s.store.Structures().FindByID(event.StructureID)
+		if err != nil {
+			return nil, err
+		}
+		structure = &found
 	}
 
 	levels := make([]time.Duration, len(structure.Blinds))
@@ -214,10 +221,25 @@ func (s *eventClockService) applyActionWithLevels(
 	clock, err := tx.EventClocks().FindByEventIDForUpdate(eventID)
 	wasCreated := false
 	if errors.Is(err, store.ErrNotFound) {
-		wasCreated = true
-		clock = newInitialClock(eventID, levels, now)
-		if err := tx.EventClocks().Create(&clock); err != nil {
-			return models.EventClock{}, err
+		candidate := newInitialClock(eventID, levels, now)
+		if err := tx.EventClocks().Create(&candidate); err != nil {
+			if !errors.Is(err, store.ErrAlreadyExists) {
+				return models.EventClock{}, err
+			}
+			// Lost the race to create the row within this transaction: a
+			// concurrent transaction committed it first. Postgres' unique
+			// index makes our INSERT block on the conflicting key until that
+			// winner commits, so by the time ON CONFLICT DO NOTHING resolves
+			// here, its row is already visible to us - fetch and lock it
+			// like any other pre-existing clock, same as GetClock's
+			// lazilyCreate does on the read path.
+			clock, err = tx.EventClocks().FindByEventIDForUpdate(eventID)
+			if err != nil {
+				return models.EventClock{}, err
+			}
+		} else {
+			wasCreated = true
+			clock = candidate
 		}
 	} else if err != nil {
 		return models.EventClock{}, err

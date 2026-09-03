@@ -52,9 +52,12 @@ func (r *inMemoryEventClockRepository) FindByEventID(eventID int32) (models.Even
 
 // FindByEventIDForUpdate has no separate locking mechanism in the in-memory
 // store: BeginTx already snapshots the whole store under a read lock, and
-// Commit swaps the parent's repos under a write lock, so a transaction's view
-// is already isolated from concurrent transactions the same way a real
-// SELECT ... FOR UPDATE isolates a row.
+// Commit swaps the parent's repos under a write lock, so two concurrent
+// transactions are isolated from each other the same way a real
+// SELECT ... FOR UPDATE isolates a row. This does not protect against a
+// non-transactional write racing an in-flight transaction's commit - a
+// pre-existing characteristic of InMemoryStore shared by every repository,
+// not specific to event clocks.
 func (r *inMemoryEventClockRepository) FindByEventIDForUpdate(eventID int32) (models.EventClock, error) {
 	return r.FindByEventID(eventID)
 }

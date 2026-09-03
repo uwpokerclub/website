@@ -80,3 +80,16 @@ func (r *inMemorySessionRepository) Delete(id uuid.UUID) error {
 
 	return nil
 }
+
+func (r *inMemorySessionRepository) DeleteByUsername(username string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for id, session := range r.sessions {
+		if session.Username == username {
+			delete(r.sessions, id)
+		}
+	}
+
+	return nil
+}

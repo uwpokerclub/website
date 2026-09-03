@@ -49,3 +49,7 @@ func (r *postgresSessionRepository) Delete(id uuid.UUID) error {
 
 	return nil
 }
+
+func (r *postgresSessionRepository) DeleteByUsername(username string) error {
+	return r.db.Where("username = ?", username).Delete(&models.Session{}).Error
+}

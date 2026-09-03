@@ -47,6 +47,9 @@ func (r *inMemoryLoginRepository) Create(login *models.Login) error {
 	if _, exists := r.logins[login.Username]; exists {
 		return fmt.Errorf("login with username %q already exists", login.Username)
 	}
+	if login.Status == "" {
+		login.Status = models.LoginStatusActive
+	}
 
 	copy := *login
 	r.logins[login.Username] = &copy

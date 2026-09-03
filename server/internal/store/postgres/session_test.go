@@ -123,3 +123,32 @@ func TestSessionRepository_Delete_NotFound(t *testing.T) {
 	err = repo.Delete(uuid.New())
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestSessionRepository_DeleteByUsername(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, db.Create(&models.Login{Username: "alice", Password: "hash1", Role: "executive"}).Error)
+	require.NoError(t, db.Create(&models.Login{Username: "bob", Password: "hash2", Role: "executive"}).Error)
+	repo := postgres.NewSessionRepository(db)
+	now := time.Now().UTC()
+	aliceOne := &models.Session{StartedAt: now, ExpiresAt: now.Add(time.Hour), Username: "alice", Role: "executive"}
+	aliceTwo := &models.Session{StartedAt: now, ExpiresAt: now.Add(time.Hour), Username: "alice", Role: "president"}
+	bob := &models.Session{StartedAt: now, ExpiresAt: now.Add(time.Hour), Username: "bob", Role: "executive"}
+	require.NoError(t, repo.Create(aliceOne))
+	require.NoError(t, repo.Create(aliceTwo))
+	require.NoError(t, repo.Create(bob))
+
+	require.NoError(t, repo.DeleteByUsername("alice"))
+	_, err = repo.FindByID(aliceOne.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	_, err = repo.FindByID(aliceTwo.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	_, err = repo.FindByID(bob.ID)
+	require.NoError(t, err)
+}

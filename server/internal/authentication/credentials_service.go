@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"api/internal/models"
 	"api/internal/store"
 	"errors"
 	"fmt"
@@ -29,6 +30,11 @@ func (svc *credentialsService) Validate(username string, password string) (bool,
 
 		// Any other error is a server error
 		return false, "", fmt.Errorf("find login: %w", err)
+	}
+
+	// Keep inactive accounts indistinguishable from incorrect credentials.
+	if login.Status != models.LoginStatusActive {
+		return false, "", nil
 	}
 
 	// Compare the hashed password and the plaintext password using bcrypt

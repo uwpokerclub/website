@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateTestLogin(db *gorm.DB, username, password string) error {
+func CreateTestLogin(db *gorm.DB, username, password, status string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -23,6 +23,7 @@ func CreateTestLogin(db *gorm.DB, username, password string) error {
 	login := models.Login{
 		Username: username,
 		Password: string(hash),
+		Status:   status,
 	}
 
 	res := db.Create(&login)
@@ -50,7 +51,7 @@ func TestCredentialsService(t *testing.T) {
 		t.Cleanup(resetDB)
 
 		// Create test user
-		err := CreateTestLogin(db, "testuser", "password")
+		err := CreateTestLogin(db, "testuser", "password", models.LoginStatusActive)
 		assert.NoError(t, err)
 
 		valid, role, err := credSvc.Validate("nouser", "password")
@@ -63,7 +64,7 @@ func TestCredentialsService(t *testing.T) {
 		t.Cleanup(resetDB)
 
 		// Create test user
-		err := CreateTestLogin(db, "testuser", "password")
+		err := CreateTestLogin(db, "testuser", "password", models.LoginStatusActive)
 		assert.NoError(t, err)
 
 		valid, role, err := credSvc.Validate("testuser", "wrongpassword")
@@ -76,7 +77,7 @@ func TestCredentialsService(t *testing.T) {
 		t.Cleanup(resetDB)
 
 		// Create test user
-		err := CreateTestLogin(db, "testuser", "password")
+		err := CreateTestLogin(db, "testuser", "password", models.LoginStatusActive)
 		assert.NoError(t, err)
 
 		valid, role, err := credSvc.Validate("testuser", "password")
@@ -84,4 +85,17 @@ func TestCredentialsService(t *testing.T) {
 		assert.True(t, valid)
 		assert.Equal(t, "executive", role)
 	})
+
+	for _, status := range []string{models.LoginStatusDisabled, models.LoginStatusPendingActivation} {
+		t.Run("Validate_"+status+"Login", func(t *testing.T) {
+			t.Cleanup(resetDB)
+
+			require.NoError(t, CreateTestLogin(db, "testuser", "password", status))
+
+			valid, role, err := credSvc.Validate("testuser", "password")
+			require.NoError(t, err)
+			assert.False(t, valid)
+			assert.Empty(t, role)
+		})
+	}
 }

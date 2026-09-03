@@ -19,4 +19,7 @@ type SessionRepository interface {
 	// Delete deletes a session from the data store by its ID.
 	// Returns store.ErrNotFound if no session exists for the given ID.
 	Delete(id uuid.UUID) error
+
+	// DeleteByUsername deletes every session belonging to username.
+	DeleteByUsername(username string) error
 }

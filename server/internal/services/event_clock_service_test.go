@@ -33,6 +33,40 @@ func setupEventClock(t *testing.T, blindMinutes ...int8) (st store.Store, eventI
 	return st, event.ID
 }
 
+func TestEventClockService_GetClock_PrefersPreloadedStructureOverExtraLookup(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+
+	// A structure genuinely stored under the event's StructureID, but with
+	// blinds deliberately different from what gets preloaded onto the event
+	// itself - as postgres's Events().FindByID does via its Structure
+	// preload. If blindLevels ever fell back to a fresh Structures().FindByID
+	// lookup despite a preloaded Structure already being present, it would
+	// pick up these wrong, 99-minute blinds instead.
+	storedStructure := &models.Structure{Name: "Stored", Blinds: []models.Blind{{Index: 0, Time: 99}}}
+	require.NoError(t, st.Structures().Create(storedStructure))
+
+	preloadedStructure := &models.Structure{Blinds: []models.Blind{{Index: 0, Time: 5}}}
+	event := &models.Event{
+		Name:        "Test Event",
+		StructureID: storedStructure.ID,
+		Structure:   preloadedStructure,
+		State:       models.EventStateStarted,
+	}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventClockService(st)
+
+	before := time.Now().UTC()
+	derived, err := svc.GetClock(event.ID)
+	after := time.Now().UTC()
+	require.NoError(t, err)
+
+	require.InDelta(t, 5*time.Minute, derived.Remaining, float64(after.Sub(before)),
+		"GetClock must use the event's already-preloaded Structure rather than issuing a separate, redundant lookup")
+}
+
 func TestEventClockService_GetClock_LazyCreation(t *testing.T) {
 	t.Parallel()
 

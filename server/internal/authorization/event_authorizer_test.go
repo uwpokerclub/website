@@ -232,11 +232,11 @@ func TestEventAuthorizer(t *testing.T) {
 
 func TestEventAuthorizer_GetPermissions(t *testing.T) {
 	testCases := []struct {
-		name                   string
-		role                   string
-		expected               map[string]any
-		resourceAuthorizers    ResourceAuthorizerMap
-		mockResourceAuthorizer func(m *MockResourceAuthorizer)
+		name                    string
+		role                    string
+		expected                map[string]any
+		resourceAuthorizers     ResourceAuthorizerMap
+		mockResourceAuthorizers func(participant, clock *MockResourceAuthorizer)
 	}{
 		{
 			name: "Should return correct permission map",
@@ -256,23 +256,35 @@ func TestEventAuthorizer_GetPermissions(t *testing.T) {
 					"list":   true,
 					"delete": false,
 				},
+				"clock": map[string]any{
+					"get":     true,
+					"control": true,
+				},
 			},
 			resourceAuthorizers: ResourceAuthorizerMap{
 				"participant": &MockResourceAuthorizer{},
+				"clock":       &MockResourceAuthorizer{},
 			},
-			mockResourceAuthorizer: func(m *MockResourceAuthorizer) {
-				m.On("GetPermissions", mock.Anything).Return(map[string]any{
+			mockResourceAuthorizers: func(participant, clock *MockResourceAuthorizer) {
+				participant.On("GetPermissions", mock.Anything).Return(map[string]any{
 					"create": true,
 					"get":    true,
 					"list":   true,
 					"delete": false,
+				})
+				clock.On("GetPermissions", mock.Anything).Return(map[string]any{
+					"get":     true,
+					"control": true,
 				})
 			},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-			tC.mockResourceAuthorizer(tC.resourceAuthorizers["participant"].(*MockResourceAuthorizer))
+			tC.mockResourceAuthorizers(
+				tC.resourceAuthorizers["participant"].(*MockResourceAuthorizer),
+				tC.resourceAuthorizers["clock"].(*MockResourceAuthorizer),
+			)
 			svc := NewEventAuthorizer(tC.resourceAuthorizers)
 			permissions := svc.GetPermissions(tC.role)
 			assert.Equal(t, tC.expected, permissions)

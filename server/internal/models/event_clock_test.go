@@ -155,6 +155,41 @@ func TestEventClock_Derive(t *testing.T) {
 	}
 }
 
+func TestEventClock_Derive_PassesVersionThroughUnchanged(t *testing.T) {
+	t.Parallel()
+
+	state := models.EventClock{
+		LevelIndex:  0,
+		LevelEndsAt: epoch(600),
+		Version:     17,
+	}
+
+	got, ok := state.Derive([]time.Duration{600 * time.Second, 900 * time.Second}, epoch(3000))
+	require.True(t, ok)
+	require.Equal(t, int64(17), got.Version, "Derive must carry Version through unchanged; only actions bump it")
+}
+
+func TestNewClockState(t *testing.T) {
+	t.Parallel()
+
+	pausedAt := epoch(800)
+	derived := models.DerivedClock{
+		LevelIndex:  2,
+		LevelEndsAt: epoch(1000),
+		PausedAt:    &pausedAt,
+		Version:     5,
+	}
+	serverTime := epoch(1234)
+
+	state := models.NewClockState(derived, serverTime)
+
+	require.Equal(t, int32(2), state.LevelIndex)
+	require.Equal(t, epoch(1000), state.LevelEndsAt)
+	require.Equal(t, &pausedAt, state.PausedAt)
+	require.Equal(t, int64(5), state.Version)
+	require.Equal(t, serverTime, state.ServerTime)
+}
+
 func TestEventClock_Derive_DoesNotMutateReceiver(t *testing.T) {
 	t.Parallel()
 

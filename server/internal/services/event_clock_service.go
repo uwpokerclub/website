@@ -27,9 +27,8 @@ func NewEventClockService(st store.Store) *eventClockService {
 }
 
 // GetClock returns the fully derived, rolled-forward state of an event's
-// clock. It lazily creates the clock row on first read but never writes the
-// roll-forward itself: derivation is deterministic, so the stored row plus
-// now always yields the truth.
+// clock, lazily creating the row on first read. It never persists the
+// roll-forward.
 func (s *eventClockService) GetClock(eventID int32) (models.DerivedClock, error) {
 	levels, err := s.blindLevels(eventID)
 	if err != nil {

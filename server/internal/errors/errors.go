@@ -44,6 +44,14 @@ func Forbidden(message string) error {
 	}
 }
 
+func Conflict(message string) error {
+	return APIErrorResponse{
+		Code:    http.StatusConflict,
+		Type:    "CONFLICT",
+		Message: message,
+	}
+}
+
 func NotFound(message string) error {
 	return APIErrorResponse{
 		Code:    http.StatusNotFound,

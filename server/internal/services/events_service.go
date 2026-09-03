@@ -119,6 +119,13 @@ func (svc *eventService) UndoEndEvent(eventId int32) error {
 		return e.InternalServerError(err.Error())
 	}
 
+	// Clear the clock so the restarted event begins at level 1. There may be no
+	// clock row yet - a projector was never opened for this event - which is
+	// not an error.
+	if err := tx.EventClocks().DeleteByEventID(eventId); err != nil && !errors.Is(err, store.ErrNotFound) {
+		return e.InternalServerError(err.Error())
+	}
+
 	entries, _, err := tx.Entries().List(&models.ListParticipantsFilter{EventID: eventId})
 	if err != nil {
 		return e.InternalServerError(err.Error())

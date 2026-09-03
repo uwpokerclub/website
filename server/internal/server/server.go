@@ -84,6 +84,7 @@ func (s *apiServer) SetupV2Routes(db *gorm.DB) {
 		controller.NewSemestersController(s.store),
 		controller.NewEventsController(s.store),
 		controller.NewEntriesController(s.store),
+		controller.NewEventClockController(s.store),
 		controller.NewMembersController(s.store),
 		controller.NewMembershipsController(s.store),
 		controller.NewRankingsController(s.store),

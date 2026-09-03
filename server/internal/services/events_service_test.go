@@ -3,6 +3,7 @@ package services
 import (
 	"api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"api/internal/store/inmemory"
 	"testing"
 	"time"
@@ -145,6 +146,39 @@ func TestEventService_UndoEndEvent(t *testing.T) {
 	for _, entry := range entries {
 		require.EqualValues(t, 0, entry.Points)
 	}
+}
+
+func TestEventService_UndoEndEvent_ClearsClock(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateStarted, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+	require.NoError(t, st.EventClocks().Create(&models.EventClock{
+		EventID:     event.ID,
+		LevelIndex:  3,
+		LevelEndsAt: time.Now().UTC(),
+		Version:     4,
+		UpdatedAt:   time.Now().UTC(),
+	}))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.EndEvent(event.ID))
+	require.NoError(t, svc.UndoEndEvent(event.ID))
+
+	_, err := st.EventClocks().FindByEventID(event.ID)
+	require.ErrorIs(t, err, store.ErrNotFound, "restarting an event must clear its clock so it begins at level 1")
+}
+
+func TestEventService_UndoEndEvent_ClearsClock_NoClockIsNotAnError(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.UndoEndEvent(event.ID))
 }
 
 func TestEventService_UndoEndEvent_ExactDespiteFieldChanges(t *testing.T) {

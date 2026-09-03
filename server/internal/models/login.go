@@ -1,9 +1,17 @@
 package models
 
+const (
+	LoginStatusActive            = "active"
+	LoginStatusPendingActivation = "pending_activation"
+	LoginStatusDisabled          = "disabled"
+)
+
 type Login struct {
-	Username string    `json:"username" binding:"required" gorm:"primaryKey"`
-	Password string    `json:"password" binding:"required" gorm:"not null"`
-	Role     string    `json:"role" binding:"oneof=bot executive tournament_director secretary treasurer vice_president president" gorm:"size:20;not null;default:executive"`
+	Username string `json:"username" binding:"required" gorm:"primaryKey"`
+	Password string `json:"password" binding:"required" gorm:"not null"`
+	Role     string `json:"role" binding:"oneof=bot executive tournament_director secretary treasurer vice_president president" gorm:"size:20;not null;default:executive"`
+	// Any path that changes Status to disabled must delete this login's sessions in the same transaction.
+	Status   string    `json:"status" binding:"oneof=active pending_activation disabled" gorm:"size:20;not null;default:active"`
 	Sessions []Session `json:"-" gorm:"foreignKey:Username;references:Username;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 } //@name Login
 

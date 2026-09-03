@@ -78,6 +78,27 @@ func TestSessionRepository_Delete_NotFound(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
+func TestSessionRepository_DeleteByUsername(t *testing.T) {
+	t.Parallel()
+
+	repo := newSessionRepository()
+	now := time.Now().UTC()
+	aliceOne := &models.Session{StartedAt: now, ExpiresAt: now.Add(time.Hour), Username: "alice", Role: "executive"}
+	aliceTwo := &models.Session{StartedAt: now, ExpiresAt: now.Add(time.Hour), Username: "alice", Role: "president"}
+	bob := &models.Session{StartedAt: now, ExpiresAt: now.Add(time.Hour), Username: "bob", Role: "executive"}
+	require.NoError(t, repo.Create(aliceOne))
+	require.NoError(t, repo.Create(aliceTwo))
+	require.NoError(t, repo.Create(bob))
+
+	require.NoError(t, repo.DeleteByUsername("alice"))
+	_, err := repo.FindByID(aliceOne.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	_, err = repo.FindByID(aliceTwo.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	_, err = repo.FindByID(bob.ID)
+	require.NoError(t, err)
+}
+
 func TestSessionRepository_Clone_Isolation(t *testing.T) {
 	t.Parallel()
 

@@ -19,6 +19,11 @@ type loginService struct {
 	store store.Store
 }
 
+// Status-change invariant: any operation that sets a login's status to disabled
+// must delete that username's sessions through Sessions().DeleteByUsername in the
+// same store transaction. Session roles are snapshots, so leaving those sessions
+// active would preserve the account's access until they expire.
+
 func NewLoginService(st store.Store) *loginService {
 	return &loginService{
 		store: st,

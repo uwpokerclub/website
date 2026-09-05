@@ -172,9 +172,6 @@ func TestEventService_UndoEndEvent_ClearsClock(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound, "restarting an event must clear its clock so it begins at level 1")
 }
 
-// TestEventService_EndEvent_FreezesRunningClock guards against an ended
-// event's clock display continuing to advance forever after control actions
-// are already locked out by the 409 on an ended event.
 func TestEventService_EndEvent_FreezesRunningClock(t *testing.T) {
 	t.Parallel()
 
@@ -198,8 +195,6 @@ func TestEventService_EndEvent_FreezesRunningClock(t *testing.T) {
 	require.WithinDuration(t, endsAt, stored.LevelEndsAt, 0, "freezing must not itself shift the deadline")
 }
 
-// TestEventService_EndEvent_NoClockDoesNotCreateOne guards against EndEvent
-// spawning a clock for an event whose clock was never opened.
 func TestEventService_EndEvent_NoClockDoesNotCreateOne(t *testing.T) {
 	t.Parallel()
 
@@ -216,9 +211,6 @@ func TestEventService_EndEvent_NoClockDoesNotCreateOne(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound, "ending an event that never had a clock opened must not create one")
 }
 
-// TestEventService_EndEvent_AlreadyPausedClockIsUnchanged guards against
-// freezing bumping version or moving PausedAt on a clock that was already
-// paused when the event ended.
 func TestEventService_EndEvent_AlreadyPausedClockIsUnchanged(t *testing.T) {
 	t.Parallel()
 

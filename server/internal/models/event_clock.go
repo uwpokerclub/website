@@ -60,8 +60,7 @@ type AdjustClockRequest struct {
 } //@name AdjustClockRequest
 
 // SetClockLevelRequest is the request body for POST .../clock/level. Index is
-// a pointer so binding's "required" tag can tell an omitted field (nil) apart
-// from an explicit index 0, which would otherwise silently reset the clock.
+// a pointer so an omitted field (nil) is distinguishable from an explicit 0.
 type SetClockLevelRequest struct {
 	Index *int32 `json:"index" binding:"required,min=0"`
 } //@name SetClockLevelRequest

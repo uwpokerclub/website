@@ -82,18 +82,12 @@ func (c *eventClockController) findEvent(ctx *gin.Context) (event models.Event, 
 	return event, true
 }
 
-// eventEndedMessage is shared by requireNotEnded's fast-path rejection and
-// handleClockError's authoritative one, so both routes to the same 409 read
-// identically.
+// eventEndedMessage is the 409 body for both the controller's fast-path
+// check and the service's authoritative one.
 const eventEndedMessage = "This event has ended. Its clock cannot be controlled."
 
-// requireNotEnded aborts the request with 409 if the event has ended. This is
-// a fast path only, checked before opening a transaction; it is not the
-// authoritative check. Only control actions call this; reading the clock of
-// an ended event is allowed. The service re-checks state itself inside its
-// own transaction (surfaced as services.ErrEventEnded via handleClockError),
-// since this read can go stale between here and that transaction if the
-// event ends concurrently.
+// requireNotEnded is a fast path only; the service re-checks state itself
+// inside its own transaction and returns services.ErrEventEnded.
 func (c *eventClockController) requireNotEnded(ctx *gin.Context, event models.Event) bool {
 	if event.State == models.EventStateEnded {
 		ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(eventEndedMessage))
@@ -102,12 +96,6 @@ func (c *eventClockController) requireNotEnded(ctx *gin.Context, event models.Ev
 	return true
 }
 
-// withActiveEvent resolves the event from the URL path and rejects it with
-// 409 if it has ended, returning ok = false in either case after writing the
-// appropriate response. It is the only path a control action has to an
-// event, so a future control action cannot copy-paste its way past the
-// ended-event check the way it could if each handler re-inlined
-// findEvent+requireNotEnded itself.
 func (c *eventClockController) withActiveEvent(ctx *gin.Context) (event models.Event, ok bool) {
 	event, ok = c.findEvent(ctx)
 	if !ok {

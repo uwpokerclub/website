@@ -404,3 +404,50 @@ func TestEventClockService_Pause_FirstEverInteractionLazilyCreates(t *testing.T)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), stored.Version, "lazy creation plus a no-op pause must not bump past version 1")
 }
+
+// TestEventClockService_ControlActionsRejectEndedEvent guards against a TOCTOU
+// race where a caller's own pre-check of event state (e.g. a controller
+// reading the event before opening a transaction) goes stale between that
+// read and the action's transaction. The service must re-check state itself,
+// inside its own transaction, rather than trusting an outside caller.
+func TestEventClockService_ControlActionsRejectEndedEvent(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	structure := &models.Structure{Name: "Test Structure", Blinds: []models.Blind{{Index: 0, Small: 10, Big: 20, Time: 15}}}
+	require.NoError(t, st.Structures().Create(structure))
+	event := &models.Event{Name: "Ended Event", StructureID: structure.ID, State: models.EventStateEnded}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventClockService(st)
+
+	_, err := svc.Pause(event.ID)
+	require.True(t, errors.Is(err, ErrEventEnded), "Pause must reject an ended event even without an outside pre-check")
+
+	_, err = svc.Resume(event.ID)
+	require.True(t, errors.Is(err, ErrEventEnded), "Resume must reject an ended event even without an outside pre-check")
+
+	_, err = svc.Adjust(event.ID, 60)
+	require.True(t, errors.Is(err, ErrEventEnded), "Adjust must reject an ended event even without an outside pre-check")
+
+	_, err = svc.SetLevel(event.ID, 0)
+	require.True(t, errors.Is(err, ErrEventEnded), "SetLevel must reject an ended event even without an outside pre-check")
+
+	_, err = st.EventClocks().FindByEventID(event.ID)
+	require.True(t, errors.Is(err, store.ErrNotFound), "a rejected control action on an ended event must not lazily create a clock row")
+}
+
+func TestEventClockService_GetClock_AllowedOnEndedEvent(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	structure := &models.Structure{Name: "Test Structure", Blinds: []models.Blind{{Index: 0, Small: 10, Big: 20, Time: 15}}}
+	require.NoError(t, st.Structures().Create(structure))
+	event := &models.Event{Name: "Ended Event", StructureID: structure.ID, State: models.EventStateEnded}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventClockService(st)
+
+	_, err := svc.GetClock(event.ID)
+	require.NoError(t, err, "reading the clock of an ended event must remain allowed")
+}

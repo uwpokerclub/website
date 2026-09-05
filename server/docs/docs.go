@@ -3669,6 +3669,9 @@ const docTemplate = `{
         },
         "SetClockLevelRequest": {
             "type": "object",
+            "required": [
+                "index"
+            ],
             "properties": {
                 "index": {
                     "type": "integer",

@@ -59,9 +59,11 @@ type AdjustClockRequest struct {
 	DeltaSeconds int `json:"deltaSeconds" binding:"min=-3600,max=3600"`
 } //@name AdjustClockRequest
 
-// SetClockLevelRequest is the request body for POST .../clock/level.
+// SetClockLevelRequest is the request body for POST .../clock/level. Index is
+// a pointer so binding's "required" tag can tell an omitted field (nil) apart
+// from an explicit index 0, which would otherwise silently reset the clock.
 type SetClockLevelRequest struct {
-	Index int32 `json:"index" binding:"min=0"`
+	Index *int32 `json:"index" binding:"required,min=0"`
 } //@name SetClockLevelRequest
 
 // Derive rolls the clock forward to now given the ordered level durations. It

@@ -424,6 +424,8 @@ definitions:
       index:
         minimum: 0
         type: integer
+    required:
+    - index
     type: object
   Structure:
     properties:

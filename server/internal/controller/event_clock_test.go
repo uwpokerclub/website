@@ -182,6 +182,69 @@ func TestEventClock(t *testing.T) {
 		testutils.AssertBadRequestResponse(t, w, "")
 	})
 
+	t.Run("level rejects a missing index instead of defaulting to 0", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := testutils.CreateTestEvent(db, semester.ID, structure.ID, "Weekly")
+		require.NoError(t, err)
+		url := fmt.Sprintf("/api/v2/semesters/%s/events/%d/clock", semester.ID, event.ID)
+
+		sessionID, err := testutils.CreateTestSession(db, "td", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+		require.NoError(t, err)
+
+		// First move off level 0 so a silent default-to-0 bug would be visible.
+		levelReq, err := testutils.MakeJSONRequest("POST", url+"/level", map[string]any{"index": 2})
+		require.NoError(t, err)
+		testutils.SetAuthCookie(levelReq, sessionID)
+		levelW := httptest.NewRecorder()
+		apiServer.ServeHTTP(levelW, levelReq)
+		require.Equal(t, http.StatusOK, levelW.Code)
+
+		req, err := testutils.MakeJSONRequest("POST", url+"/level", map[string]any{})
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, sessionID)
+		w := httptest.NewRecorder()
+		apiServer.ServeHTTP(w, req)
+		testutils.AssertBadRequestResponse(t, w, "")
+	})
+
+	t.Run("level accepts an explicit index of 0", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := testutils.CreateTestEvent(db, semester.ID, structure.ID, "Weekly")
+		require.NoError(t, err)
+		url := fmt.Sprintf("/api/v2/semesters/%s/events/%d/clock", semester.ID, event.ID)
+
+		sessionID, err := testutils.CreateTestSession(db, "td", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+		require.NoError(t, err)
+
+		// First move off level 0 so an explicit 0 is distinguishable from the starting state.
+		levelReq, err := testutils.MakeJSONRequest("POST", url+"/level", map[string]any{"index": 2})
+		require.NoError(t, err)
+		testutils.SetAuthCookie(levelReq, sessionID)
+		levelW := httptest.NewRecorder()
+		apiServer.ServeHTTP(levelW, levelReq)
+		require.Equal(t, http.StatusOK, levelW.Code)
+
+		req, err := testutils.MakeJSONRequest("POST", url+"/level", map[string]any{"index": 0})
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, sessionID)
+		w := httptest.NewRecorder()
+		apiServer.ServeHTTP(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
+		var body models.ClockState
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 0, body.LevelIndex)
+	})
+
 	t.Run("level jumps to the requested index with a fresh duration", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db := container.GetDB()

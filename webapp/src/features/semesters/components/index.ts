@@ -1,1 +1,1 @@
-export * from "./CreateSemesterModal";
+export * from "./SemesterSetupWizard";

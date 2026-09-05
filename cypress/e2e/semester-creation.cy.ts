@@ -1,281 +1,110 @@
-describe("CreateSemesterModal", () => {
-  before(() => {
+describe("SemesterSetupWizard", () => {
+  const openWizard = () => {
+    cy.getByData("semester-dropdown").click();
+    cy.getByData("create-semester-btn").click();
+    cy.getByData("semester-setup-wizard").should("exist");
+  };
+
+  const fillTermAndDates = (term: "fall" | "winter" | "spring", startDate: string, endDate: string) => {
+    cy.getByData("semester-term").select(term);
+    cy.getByData("input-semester-startDate").type(startDate);
+    cy.getByData("input-semester-endDate").type(endDate);
+  };
+
+  const continueToFees = () => cy.getByData("semester-wizard-next-btn").click();
+
+  const continueToReview = () => {
+    continueToFees();
+    cy.getByData("semester-wizard-next-btn").click();
+  };
+
+  beforeEach(() => {
     cy.resetDatabase();
+    cy.login();
+    cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
+    cy.visit("/admin/dashboard");
+    cy.getByData("sidenav").should("exist");
   });
 
-  context("stubbed tests", () => {
-    beforeEach(() => {
-      cy.login();
-      cy.intercept("GET", "/api/v2/semesters", { fixture: "semesters.json" }).as("getSemesters");
-      cy.visit("/admin/dashboard");
-      cy.getByData("sidenav").should("exist");
-    });
+  it("opens from the semester selector and resets when cancelled", () => {
+    openWizard();
+    cy.getByData("semester-term").select("winter");
+    cy.getByData("semester-wizard-cancel-btn").click();
+    cy.getByData("semester-setup-wizard").should("not.exist");
 
-    context("permission-gated visibility", () => {
-      it("should display create semester option in dropdown for users with permission", () => {
-        // Default e2e_user has WEBMASTER role with semester.create permission
-        // Open dropdown first
-        cy.getByData("semester-dropdown").click();
-        cy.getByData("create-semester-btn").should("exist");
-      });
-
-    });
-
-    context("modal interactions from sidenav", () => {
-      beforeEach(() => {
-        // Open dropdown then click create
-        cy.getByData("semester-dropdown").click();
-        cy.getByData("create-semester-btn").click();
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should open and close modal via cancel button", () => {
-        cy.getByData("create-semester-modal").should("exist");
-        cy.getByData("create-semester-cancel-btn").click();
-        cy.getByData("create-semester-modal").should("not.exist");
-      });
-
-      it("should reset form on close and reopen", () => {
-        // Fill in some values
-        cy.getByData("input-semester-name").type("Test Semester");
-        cy.getByData("input-semester-startingBudget").clear().type("500");
-
-        // Close modal
-        cy.getByData("create-semester-cancel-btn").click();
-        cy.getByData("create-semester-modal").should("not.exist");
-
-        // Reopen modal (need to open dropdown first since it closes with modal)
-        cy.getByData("semester-dropdown").click();
-        cy.getByData("create-semester-btn").click();
-        cy.getByData("create-semester-modal").should("exist");
-
-        // Verify form is reset
-        cy.getByData("input-semester-name").should("have.value", "");
-      });
-    });
-
-    context("form validation", () => {
-      beforeEach(() => {
-        // Open dropdown then click create
-        cy.getByData("semester-dropdown").click();
-        cy.getByData("create-semester-btn").click();
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should show validation error for empty semester name", () => {
-        // Fill required fields except name
-        cy.getByData("input-semester-startDate").type("2025-09-01");
-        cy.getByData("input-semester-endDate").type("2025-12-31");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Verify validation error
-        cy.contains("Semester name is required").should("exist");
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should show validation error for missing start date", () => {
-        cy.getByData("input-semester-name").type("Test Semester");
-        cy.getByData("input-semester-endDate").type("2025-12-31");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Verify validation error
-        cy.contains("Start date is required").should("exist");
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should show validation error for missing end date", () => {
-        cy.getByData("input-semester-name").type("Test Semester");
-        cy.getByData("input-semester-startDate").type("2025-09-01");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Verify validation error
-        cy.contains("End date is required").should("exist");
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should show validation error when end date is before start date", () => {
-        cy.getByData("input-semester-name").type("Test Semester");
-        cy.getByData("input-semester-startDate").type("2025-12-31");
-        cy.getByData("input-semester-endDate").type("2025-09-01");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Verify validation error
-        cy.contains("End date must be after start date").should("exist");
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should fill all semester details fields", () => {
-        cy.getByData("input-semester-name").type("Winter 2026");
-        cy.getByData("input-semester-startDate").type("2026-01-01");
-        cy.getByData("input-semester-endDate").type("2026-04-30");
-        cy.getByData("input-semester-startingBudget").clear().type("1000");
-        cy.getByData("input-semester-membershipFee").clear().type("15");
-        cy.getByData("input-semester-membershipDiscountFee").clear().type("10");
-        cy.getByData("input-semester-rebuyFee").clear().type("5");
-        cy.getByData("input-semester-freeTrialLimit").clear().type("4");
-        cy.getByData("input-semester-meta").type("Winter semester notes");
-
-        // Verify values
-        cy.getByData("input-semester-name").should("have.value", "Winter 2026");
-        cy.getByData("input-semester-startDate").should(
-          "have.value",
-          "2026-01-01",
-        );
-        cy.getByData("input-semester-endDate").should("have.value", "2026-04-30");
-        cy.getByData("input-semester-startingBudget").should(
-          "have.value",
-          "1000",
-        );
-        cy.getByData("input-semester-membershipFee").should("have.value", "15");
-        cy.getByData("input-semester-membershipDiscountFee").should(
-          "have.value",
-          "10",
-        );
-        cy.getByData("input-semester-rebuyFee").should("have.value", "5");
-        cy.getByData("input-semester-freeTrialLimit").should("have.value", "4");
-        cy.getByData("input-semester-meta").should(
-          "have.value",
-          "Winter semester notes",
-        );
-      });
-
-      it("should default the free trial limit to 0", () => {
-        cy.getByData("input-semester-freeTrialLimit").should("have.value", "0");
-      });
-
-      it("should show validation error for a fractional free trial limit", () => {
-        cy.getByData("input-semester-name").type("Test Semester");
-        cy.getByData("input-semester-startDate").type("2025-09-01");
-        cy.getByData("input-semester-endDate").type("2025-12-31");
-        cy.getByData("input-semester-freeTrialLimit").clear().type("2.5");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Verify validation error
-        cy.contains("Free trial limit must be a whole number").should("exist");
-        cy.getByData("create-semester-modal").should("exist");
-      });
-    });
-
-    context("error handling", () => {
-      it("should display error when API fails", () => {
-        cy.intercept("POST", "/api/v2/semesters", {
-          statusCode: 500,
-          body: { message: "Internal server error" },
-        }).as("createSemesterError");
-
-        // Open dropdown then click create
-        cy.getByData("semester-dropdown").click();
-        cy.getByData("create-semester-btn").click();
-        cy.getByData("create-semester-modal").should("exist");
-
-        // Fill all required fields
-        cy.getByData("input-semester-name").type("Test Semester");
-        cy.getByData("input-semester-startDate").type("2025-09-01");
-        cy.getByData("input-semester-endDate").type("2025-12-31");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Wait for the failed request
-        cy.wait("@createSemesterError");
-
-        // Verify error is displayed and modal stays open
-        cy.getByData("create-semester-error-alert").should("exist");
-        cy.getByData("create-semester-modal").should("exist");
-      });
-
-      it("should display error when validation fails on server", () => {
-        cy.intercept("POST", "/api/v2/semesters", {
-          statusCode: 400,
-          body: { message: "Invalid semester data: name already exists" },
-        }).as("createSemesterValidationError");
-
-        // Open dropdown then click create
-        cy.getByData("semester-dropdown").click();
-        cy.getByData("create-semester-btn").click();
-        cy.getByData("create-semester-modal").should("exist");
-
-        // Fill all required fields
-        cy.getByData("input-semester-name").type("Duplicate Semester");
-        cy.getByData("input-semester-startDate").type("2025-09-01");
-        cy.getByData("input-semester-endDate").type("2025-12-31");
-
-        // Submit
-        cy.getByData("create-semester-submit-btn").scrollIntoView().click();
-
-        // Wait for the failed request
-        cy.wait("@createSemesterValidationError");
-
-        // Verify error is displayed and modal stays open
-        cy.getByData("create-semester-error-alert").should(
-          "contain",
-          "Invalid semester data",
-        );
-        cy.getByData("create-semester-modal").should("exist");
-      });
-    });
+    openWizard();
+    cy.getByData("semester-term").should("contain", "Select a term");
   });
 
-  context("contract tests", () => {
-    before(() => {
-      cy.resetDatabase();
-    });
+  it("keeps the generated semester name out of the term-and-dates step", () => {
+    openWizard();
+    fillTermAndDates("fall", "2027-09-01", "2027-12-31");
+    cy.getByData("semester-derived-name").should("not.exist");
+  });
 
-    beforeEach(() => {
-      cy.login();
-    });
+  it("does not expose a free-text name input", () => {
+    openWizard();
+    cy.getByData("input-semester-name").should("not.exist");
+  });
 
-    it("should create semester from sidenav and auto-select it in dropdown", () => {
-      cy.intercept("POST", "/api/v2/semesters").as("createSemester");
+  it("blocks step one until its fields are valid, including date order", () => {
+    openWizard();
+    continueToFees();
+    cy.contains("Select a term").should("exist");
 
-      cy.visit("/admin/dashboard");
-      cy.getByData("semester-dropdown").click();
-      cy.getByData("create-semester-btn").click();
-      cy.getByData("create-semester-modal").should("exist");
+    fillTermAndDates("fall", "2027-12-31", "2027-09-01");
+    continueToFees();
+    cy.contains("End date must be after start date").should("exist");
+    cy.getByData("semester-wizard-step-term-dates").should("exist");
+  });
 
-      // Fill all required fields
-      cy.getByData("input-semester-name").type("Winter 2026");
-      cy.getByData("input-semester-startDate").type("2026-01-01");
-      cy.getByData("input-semester-endDate").type("2026-04-30");
-      cy.getByData("input-semester-startingBudget").clear().type("1000");
-      cy.getByData("input-semester-membershipFee").clear().type("15");
-      cy.getByData("input-semester-membershipDiscountFee").clear().type("10");
-      cy.getByData("input-semester-rebuyFee").clear().type("5");
-      cy.getByData("input-semester-freeTrialLimit").clear().type("4");
-      cy.getByData("input-semester-meta").type("Winter semester notes");
+  it("shows the exact submission values on review", () => {
+    cy.intercept("POST", "/api/v2/semesters").as("createSemester");
+    openWizard();
+    fillTermAndDates("winter", "2028-01-08", "2028-04-30");
+    continueToFees();
+    cy.getByData("input-semester-startingBudget").clear().type("1000");
+    cy.getByData("input-semester-membershipFee").clear().type("15");
+    cy.getByData("input-semester-membershipDiscountFee").clear().type("10");
+    cy.getByData("input-semester-rebuyFee").clear().type("5");
+    cy.getByData("input-semester-freeTrialLimit").clear().type("4");
+    cy.getByData("input-semester-meta").type("Winter semester notes");
+    cy.getByData("semester-wizard-next-btn").click();
 
-      // Submit
-      cy.getByData("create-semester-submit-btn").scrollIntoView().click();
+    cy.get("@createSemester.all").should("have.length", 0);
+    cy.getByData("semester-wizard-step-review").should("exist");
+    cy.getByData("semester-review-name").should("have.text", "Winter 2028");
+    cy.getByData("semester-review-term").should("have.text", "Winter");
+    cy.getByData("semester-review-startDate").should("have.text", "2028-01-08");
+    cy.getByData("semester-review-endDate").should("have.text", "2028-04-30");
+    cy.getByData("semester-review-startingBudget").should("have.text", "$1000");
+    cy.getByData("semester-review-membershipFee").should("have.text", "$15");
+    cy.getByData("semester-review-membershipDiscountFee").should("have.text", "$10");
+    cy.getByData("semester-review-rebuyFee").should("have.text", "$5");
+    cy.getByData("semester-review-freeTrialLimit").should("have.text", "4");
+    cy.getByData("semester-review-meta").should("have.text", "Winter semester notes");
+  });
 
-      // Verify API call
-      cy.wait("@createSemester").then((interception) => {
-        expect(interception.request.body).to.deep.include({
-          name: "Winter 2026",
-          membershipFee: 15,
-          membershipDiscountFee: 10,
-          rebuyFee: 5,
-          freeTrialLimit: 4,
-        });
-        expect(interception.response?.statusCode).to.eq(201);
-        // The server must persist and echo it back, not just accept it.
-        expect(interception.response?.body).to.include({ freeTrialLimit: 4 });
+  it("creates the previewed semester and selects it", () => {
+    cy.intercept("POST", "/api/v2/semesters").as("createSemester");
+    cy.visit("/admin/dashboard");
+    openWizard();
+    fillTermAndDates("winter", "2028-01-08", "2028-04-30");
+    continueToReview();
+    cy.getByData("create-semester-submit-btn").click();
+
+    cy.wait("@createSemester").then((interception) => {
+      expect(interception.request.body).to.deep.include({
+        name: "Winter 2028",
+        membershipFee: 10,
+        membershipDiscountFee: 5,
+        rebuyFee: 2,
+        freeTrialLimit: 0,
       });
-
-      // Verify modal closes
-      cy.getByData("create-semester-modal").should("not.exist");
-
-      // Verify new semester is selected in dropdown
-      cy.getByData("semester-dropdown").should("contain", "Winter 2026");
+      expect(interception.response?.statusCode).to.eq(201);
     });
+
+    cy.getByData("semester-setup-wizard").should("not.exist");
+    cy.getByData("semester-dropdown").should("contain", "Winter 2028");
   });
 });

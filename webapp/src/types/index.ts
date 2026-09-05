@@ -6,3 +6,4 @@ export * from "./rankings";
 export * from "./event";
 export * from "./structures";
 export * from "./entry";
+export * from "./clock";

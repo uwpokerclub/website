@@ -3,6 +3,7 @@ package services
 import (
 	"api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"api/internal/store/inmemory"
 	"testing"
 	"time"
@@ -145,6 +146,102 @@ func TestEventService_UndoEndEvent(t *testing.T) {
 	for _, entry := range entries {
 		require.EqualValues(t, 0, entry.Points)
 	}
+}
+
+func TestEventService_UndoEndEvent_ClearsClock(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	structure := &models.Structure{Name: "Standard", Blinds: []models.Blind{{Index: 0, Time: 15}}}
+	require.NoError(t, st.Structures().Create(structure))
+	event := &models.Event{Name: "Weekly", StructureID: structure.ID, State: models.EventStateStarted, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+	require.NoError(t, st.EventClocks().Create(&models.EventClock{
+		EventID:     event.ID,
+		LevelIndex:  0,
+		LevelEndsAt: time.Now().UTC(),
+		Version:     4,
+		UpdatedAt:   time.Now().UTC(),
+	}))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.EndEvent(event.ID))
+	require.NoError(t, svc.UndoEndEvent(event.ID))
+
+	_, err := st.EventClocks().FindByEventID(event.ID)
+	require.ErrorIs(t, err, store.ErrNotFound, "restarting an event must clear its clock so it begins at level 1")
+}
+
+func TestEventService_EndEvent_FreezesRunningClock(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	structure := &models.Structure{Name: "Standard", Blinds: []models.Blind{{Index: 0, Time: 15}, {Index: 1, Time: 15}}}
+	require.NoError(t, st.Structures().Create(structure))
+	event := &models.Event{Name: "Weekly", StructureID: structure.ID, State: models.EventStateStarted, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+	endsAt := time.Now().UTC().Add(5 * time.Minute)
+	require.NoError(t, st.EventClocks().Create(&models.EventClock{
+		EventID: event.ID, LevelIndex: 0, LevelEndsAt: endsAt, PausedAt: nil, Version: 1, UpdatedAt: time.Now().UTC(),
+	}))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.EndEvent(event.ID))
+
+	stored, err := st.EventClocks().FindByEventID(event.ID)
+	require.NoError(t, err)
+	require.NotNil(t, stored.PausedAt, "an ended event's clock must be frozen so it stops advancing")
+	require.Equal(t, int64(2), stored.Version)
+	require.WithinDuration(t, endsAt, stored.LevelEndsAt, 0, "freezing must not itself shift the deadline")
+}
+
+func TestEventService_EndEvent_NoClockDoesNotCreateOne(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	structure := &models.Structure{Name: "Standard", Blinds: []models.Blind{{Index: 0, Time: 15}}}
+	require.NoError(t, st.Structures().Create(structure))
+	event := &models.Event{Name: "Weekly", StructureID: structure.ID, State: models.EventStateStarted, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.EndEvent(event.ID))
+
+	_, err := st.EventClocks().FindByEventID(event.ID)
+	require.ErrorIs(t, err, store.ErrNotFound, "ending an event that never had a clock opened must not create one")
+}
+
+func TestEventService_EndEvent_AlreadyPausedClockIsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	structure := &models.Structure{Name: "Standard", Blinds: []models.Blind{{Index: 0, Time: 15}}}
+	require.NoError(t, st.Structures().Create(structure))
+	event := &models.Event{Name: "Weekly", StructureID: structure.ID, State: models.EventStateStarted, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+	pausedAt := time.Now().UTC().Add(-time.Minute)
+	require.NoError(t, st.EventClocks().Create(&models.EventClock{
+		EventID: event.ID, LevelIndex: 0, LevelEndsAt: pausedAt.Add(5 * time.Minute), PausedAt: &pausedAt, Version: 1, UpdatedAt: pausedAt,
+	}))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.EndEvent(event.ID))
+
+	stored, err := st.EventClocks().FindByEventID(event.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), stored.Version, "ending an event with an already-paused clock must not bump version")
+	require.WithinDuration(t, pausedAt, *stored.PausedAt, 0)
+}
+
+func TestEventService_UndoEndEvent_ClearsClock_NoClockIsNotAnError(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	event := &models.Event{Name: "Weekly", State: models.EventStateEnded, StartDate: time.Now().UTC(), PointsMultiplier: 1}
+	require.NoError(t, st.Events().Create(event))
+
+	svc := NewEventService(st)
+	require.NoError(t, svc.UndoEndEvent(event.ID))
 }
 
 func TestEventService_UndoEndEvent_ExactDespiteFieldChanges(t *testing.T) {

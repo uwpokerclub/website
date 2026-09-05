@@ -4,6 +4,9 @@
 // (server/internal/models/event_clock_test.go) — a change to one without the
 // other is a defect.
 
+// The server's ClockState wire format (server/internal/models/event_clock.go)
+// serializes levelEndsAt/pausedAt as RFC3339 strings, not numbers — callers
+// must convert with `new Date(...).getTime()` before calling deriveClock.
 export type EventClockState = {
   levelIndex: number;
   levelEndsAt: number;

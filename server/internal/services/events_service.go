@@ -5,6 +5,7 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -43,6 +44,14 @@ func (svc *eventService) EndEvent(eventId int32) error {
 	}
 
 	if err := tx.Events().Update(&event, map[string]any{"state": models.EventStateEnded}); err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	// Freeze the clock so an ended event's display stops advancing once
+	// control actions are already locked out by the 409 on an ended event.
+	// There may be no clock row yet - a projector was never opened for this
+	// event - which is not an error.
+	if err := FreezeClockIfExists(tx, event.ID, time.Now().UTC()); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 

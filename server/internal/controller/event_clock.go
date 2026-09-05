@@ -82,17 +82,41 @@ func (c *eventClockController) findEvent(ctx *gin.Context) (event models.Event, 
 	return event, true
 }
 
-// requireNotEnded aborts the request with 409 if the event has ended. Only
-// control actions call this; reading the clock of an ended event is allowed.
+// eventEndedMessage is shared by requireNotEnded's fast-path rejection and
+// handleClockError's authoritative one, so both routes to the same 409 read
+// identically.
+const eventEndedMessage = "This event has ended. Its clock cannot be controlled."
+
+// requireNotEnded aborts the request with 409 if the event has ended. This is
+// a fast path only, checked before opening a transaction; it is not the
+// authoritative check. Only control actions call this; reading the clock of
+// an ended event is allowed. The service re-checks state itself inside its
+// own transaction (surfaced as services.ErrEventEnded via handleClockError),
+// since this read can go stale between here and that transaction if the
+// event ends concurrently.
 func (c *eventClockController) requireNotEnded(ctx *gin.Context, event models.Event) bool {
 	if event.State == models.EventStateEnded {
-		ctx.AbortWithStatusJSON(
-			http.StatusConflict,
-			apierrors.Conflict("This event has ended. Its clock cannot be controlled."),
-		)
+		ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(eventEndedMessage))
 		return false
 	}
 	return true
+}
+
+// withActiveEvent resolves the event from the URL path and rejects it with
+// 409 if it has ended, returning ok = false in either case after writing the
+// appropriate response. It is the only path a control action has to an
+// event, so a future control action cannot copy-paste its way past the
+// ended-event check the way it could if each handler re-inlined
+// findEvent+requireNotEnded itself.
+func (c *eventClockController) withActiveEvent(ctx *gin.Context) (event models.Event, ok bool) {
+	event, ok = c.findEvent(ctx)
+	if !ok {
+		return models.Event{}, false
+	}
+	if !c.requireNotEnded(ctx, event) {
+		return models.Event{}, false
+	}
+	return event, true
 }
 
 // respondClock writes a derived clock as the standard ClockState response.
@@ -111,6 +135,8 @@ func (c *eventClockController) handleClockError(ctx *gin.Context, err error) {
 		)
 	case errors.Is(err, services.ErrInvalidLevel):
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+	case errors.Is(err, services.ErrEventEnded):
+		ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(eventEndedMessage))
 	default:
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 	}
@@ -168,11 +194,8 @@ func (c *eventClockController) getClock(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/events/{eventId}/clock/pause [post]
 func (c *eventClockController) pauseClock(ctx *gin.Context) {
-	event, ok := c.findEvent(ctx)
+	event, ok := c.withActiveEvent(ctx)
 	if !ok {
-		return
-	}
-	if !c.requireNotEnded(ctx, event) {
 		return
 	}
 
@@ -205,11 +228,8 @@ func (c *eventClockController) pauseClock(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/events/{eventId}/clock/resume [post]
 func (c *eventClockController) resumeClock(ctx *gin.Context) {
-	event, ok := c.findEvent(ctx)
+	event, ok := c.withActiveEvent(ctx)
 	if !ok {
-		return
-	}
-	if !c.requireNotEnded(ctx, event) {
 		return
 	}
 
@@ -243,11 +263,8 @@ func (c *eventClockController) resumeClock(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/events/{eventId}/clock/adjust [post]
 func (c *eventClockController) adjustClock(ctx *gin.Context) {
-	event, ok := c.findEvent(ctx)
+	event, ok := c.withActiveEvent(ctx)
 	if !ok {
-		return
-	}
-	if !c.requireNotEnded(ctx, event) {
 		return
 	}
 
@@ -286,11 +303,8 @@ func (c *eventClockController) adjustClock(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/events/{eventId}/clock/level [post]
 func (c *eventClockController) setClockLevel(ctx *gin.Context) {
-	event, ok := c.findEvent(ctx)
+	event, ok := c.withActiveEvent(ctx)
 	if !ok {
-		return
-	}
-	if !c.requireNotEnded(ctx, event) {
 		return
 	}
 
@@ -300,7 +314,7 @@ func (c *eventClockController) setClockLevel(ctx *gin.Context) {
 	}
 
 	svc := services.NewEventClockService(c.store)
-	derived, err := svc.SetLevel(event.ID, req.Index)
+	derived, err := svc.SetLevel(event.ID, *req.Index)
 	if err != nil {
 		c.handleClockError(ctx, err)
 		return

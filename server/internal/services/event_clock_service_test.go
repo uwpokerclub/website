@@ -405,11 +405,6 @@ func TestEventClockService_Pause_FirstEverInteractionLazilyCreates(t *testing.T)
 	require.Equal(t, int64(1), stored.Version, "lazy creation plus a no-op pause must not bump past version 1")
 }
 
-// TestEventClockService_ControlActionsRejectEndedEvent guards against a TOCTOU
-// race where a caller's own pre-check of event state (e.g. a controller
-// reading the event before opening a transaction) goes stale between that
-// read and the action's transaction. The service must re-check state itself,
-// inside its own transaction, rather than trusting an outside caller.
 func TestEventClockService_ControlActionsRejectEndedEvent(t *testing.T) {
 	t.Parallel()
 

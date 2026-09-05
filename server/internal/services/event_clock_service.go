@@ -16,6 +16,9 @@ var ErrEmptyStructure = errors.New("structure has no blind levels")
 // structure's blind levels.
 var ErrInvalidLevel = errors.New("level index out of range")
 
+// ErrEventEnded is returned by a control action whose event has ended.
+var ErrEventEnded = errors.New("event has ended")
+
 type eventClockService struct {
 	store store.Store
 }
@@ -127,13 +130,15 @@ func (s *eventClockService) blindLevels(eventID int32) ([]time.Duration, error) 
 	if err != nil {
 		return nil, err
 	}
+	return blindLevelsFor(s.store, event)
+}
 
-	// Events().FindByID preloads the structure (with blinds) on postgres, so
-	// prefer that over a second round trip. The in-memory store does not
-	// preload it, so fall back to a direct lookup there.
+// blindLevelsFor prefers event's preloaded Structure over a second lookup;
+// the in-memory store does not preload it, so it falls back to st.
+func blindLevelsFor(st store.Store, event models.Event) ([]time.Duration, error) {
 	structure := event.Structure
 	if structure == nil {
-		found, err := s.store.Structures().FindByID(event.StructureID)
+		found, err := st.Structures().FindByID(event.StructureID)
 		if err != nil {
 			return nil, err
 		}
@@ -146,6 +151,42 @@ func (s *eventClockService) blindLevels(eventID int32) ([]time.Duration, error) 
 	}
 
 	return levels, nil
+}
+
+// FreezeClockIfExists pauses eventID's clock at its rolled-forward state
+// within tx, if a row already exists. It never lazily creates one.
+func FreezeClockIfExists(tx store.Store, eventID int32, now time.Time) error {
+	clock, err := tx.EventClocks().FindByEventIDForUpdate(eventID)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if clock.PausedAt != nil {
+		return nil
+	}
+
+	event, err := tx.Events().FindByID(eventID)
+	if err != nil {
+		return err
+	}
+	levels, err := blindLevelsFor(tx, event)
+	if err != nil {
+		return err
+	}
+
+	derived, ok := clock.Derive(levels, now)
+	if !ok {
+		return nil
+	}
+	clock.LevelIndex = derived.LevelIndex
+	clock.LevelEndsAt = derived.LevelEndsAt
+	clock.PausedAt = &now
+	clock.Version++
+	clock.UpdatedAt = now
+
+	return tx.EventClocks().Update(&clock)
 }
 
 // newInitialClock is the "paused, with a full level on the board" state a
@@ -214,6 +255,15 @@ func (s *eventClockService) applyActionWithLevels(
 		return models.EventClock{}, err
 	}
 	defer tx.Rollback()
+
+	// Re-check state inside the transaction; a caller's pre-check can go stale.
+	event, err := tx.Events().FindByID(eventID)
+	if err != nil {
+		return models.EventClock{}, err
+	}
+	if event.State == models.EventStateEnded {
+		return models.EventClock{}, ErrEventEnded
+	}
 
 	now := time.Now().UTC()
 

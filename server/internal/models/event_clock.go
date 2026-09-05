@@ -26,7 +26,44 @@ type DerivedClock struct {
 	LevelEndsAt time.Time
 	PausedAt    *time.Time
 	Remaining   time.Duration
+	// Version is carried through from the underlying EventClock unchanged:
+	// derivation never bumps it, only a persisted action does.
+	Version int64
 }
+
+// ClockState is the JSON shape returned by every clock endpoint: the fully
+// derived state plus the server's own clock, so a client with a badly-set
+// system clock can apply a one-line offset.
+type ClockState struct {
+	LevelIndex  int32      `json:"levelIndex"`
+	LevelEndsAt time.Time  `json:"levelEndsAt"`
+	PausedAt    *time.Time `json:"pausedAt"`
+	Version     int64      `json:"version"`
+	ServerTime  time.Time  `json:"serverTime"`
+} //@name ClockState
+
+// NewClockState builds the response shape for a derived clock, stamping it
+// with the server's current time.
+func NewClockState(derived DerivedClock, serverTime time.Time) ClockState {
+	return ClockState{
+		LevelIndex:  derived.LevelIndex,
+		LevelEndsAt: derived.LevelEndsAt,
+		PausedAt:    derived.PausedAt,
+		Version:     derived.Version,
+		ServerTime:  serverTime,
+	}
+}
+
+// AdjustClockRequest is the request body for POST .../clock/adjust.
+type AdjustClockRequest struct {
+	DeltaSeconds int `json:"deltaSeconds" binding:"min=-3600,max=3600"`
+} //@name AdjustClockRequest
+
+// SetClockLevelRequest is the request body for POST .../clock/level. Index is
+// a pointer so an omitted field (nil) is distinguishable from an explicit 0.
+type SetClockLevelRequest struct {
+	Index *int32 `json:"index" binding:"required,min=0"`
+} //@name SetClockLevelRequest
 
 // Derive rolls the clock forward to now given the ordered level durations. It
 // returns false if levels is empty. Derive is pure: it does not mutate the
@@ -58,5 +95,6 @@ func (c EventClock) Derive(levels []time.Duration, now time.Time) (DerivedClock,
 		LevelEndsAt: levelEndsAt,
 		PausedAt:    c.PausedAt,
 		Remaining:   remaining,
+		Version:     c.Version,
 	}, true
 }

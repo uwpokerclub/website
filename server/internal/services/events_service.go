@@ -5,6 +5,7 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -43,6 +44,10 @@ func (svc *eventService) EndEvent(eventId int32) error {
 	}
 
 	if err := tx.Events().Update(&event, map[string]any{"state": models.EventStateEnded}); err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	if err := FreezeClockIfExists(tx, event.ID, time.Now().UTC()); err != nil {
 		return e.InternalServerError(err.Error())
 	}
 
@@ -116,6 +121,13 @@ func (svc *eventService) UndoEndEvent(eventId int32) error {
 	defer tx.Rollback()
 
 	if err := tx.Events().Update(&event, map[string]any{"state": models.EventStateStarted}); err != nil {
+		return e.InternalServerError(err.Error())
+	}
+
+	// Clear the clock so the restarted event begins at level 1. There may be no
+	// clock row yet - a projector was never opened for this event - which is
+	// not an error.
+	if err := tx.EventClocks().DeleteByEventID(eventId); err != nil && !errors.Is(err, store.ErrNotFound) {
 		return e.InternalServerError(err.Error())
 	}
 

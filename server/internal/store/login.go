@@ -12,6 +12,8 @@ type LoginRepository interface {
 	// Returns store.ErrNotFound if no login exists for the given username.
 	FindByUsername(username string) (models.Login, error)
 
+	FindByUsernameForUpdate(username string) (models.Login, error)
+
 	// Update applies a partial update to a login using the given column/value map.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	Update(username string, values map[string]any) error

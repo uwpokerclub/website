@@ -85,8 +85,15 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	credentialSvc := authentication.NewCredentialService(controller.store)
-	valid, role, err := credentialSvc.Validate(req.Username, req.Password)
+	tx, err := controller.store.BeginTx()
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+	defer tx.Rollback()
+
+	credentialSvc := authentication.NewCredentialService(tx)
+	valid, role, err := credentialSvc.ValidateForSession(req.Username, req.Password)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
@@ -100,9 +107,13 @@ func (controller *authenticationController) login(ctx *gin.Context) {
 		return
 	}
 
-	sessionManager := authentication.NewSessionManager(controller.store)
+	sessionManager := authentication.NewSessionManager(tx)
 	token, err := sessionManager.Create(req.Username, role)
 	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
+		return
+	}
+	if err := tx.Commit(); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, e.InternalServerError(err.Error()))
 		return
 	}

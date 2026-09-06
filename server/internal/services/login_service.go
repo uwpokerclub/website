@@ -12,7 +12,7 @@ import (
 // Sentinel errors returned by loginService. Controllers map these to HTTP responses.
 var (
 	ErrLoginNotFound       = errors.New("login not found")
-	ErrUpdateLoginNoFields = errors.New("at least one of password or role must be provided")
+	ErrUpdateLoginNoFields = errors.New("at least one field must be provided")
 )
 
 type loginService struct {
@@ -45,11 +45,11 @@ func (svc *loginService) CreateLogin(username string, password string, role stri
 	return svc.store.Logins().Create(&login)
 }
 
-// UpdateLogin updates a login's password and/or role. At least one field must be provided.
-// Returns ErrUpdateLoginNoFields when both inputs are nil and ErrLoginNotFound when the
+// UpdateLogin updates a login's password, role, and/or status. At least one field must be provided.
+// Returns ErrUpdateLoginNoFields when all inputs are nil and ErrLoginNotFound when the
 // username does not exist.
-func (svc *loginService) UpdateLogin(username string, password *string, role *string) error {
-	if password == nil && role == nil {
+func (svc *loginService) UpdateLogin(username string, password *string, role *string, status *string) error {
+	if password == nil && role == nil && status == nil {
 		return ErrUpdateLoginNoFields
 	}
 
@@ -66,11 +66,33 @@ func (svc *loginService) UpdateLogin(username string, password *string, role *st
 	if role != nil {
 		updates["role"] = *role
 	}
+	if status != nil {
+		updates["status"] = *status
+	}
 
-	err := svc.store.Logins().Update(username, updates)
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	err = tx.Logins().Update(username, updates)
 	if errors.Is(err, store.ErrNotFound) {
 		return ErrLoginNotFound
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	if status != nil && *status == models.LoginStatusDisabled {
+		if err := tx.Sessions().DeleteByUsername(username); err != nil {
+			return fmt.Errorf("delete sessions: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
 }

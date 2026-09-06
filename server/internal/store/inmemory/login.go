@@ -69,6 +69,10 @@ func (r *inMemoryLoginRepository) FindByUsername(username string) (models.Login,
 	return *login, nil
 }
 
+func (r *inMemoryLoginRepository) FindByUsernameForUpdate(username string) (models.Login, error) {
+	return r.FindByUsername(username)
+}
+
 func (r *inMemoryLoginRepository) Update(username string, values map[string]any) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -83,6 +87,9 @@ func (r *inMemoryLoginRepository) Update(username string, values map[string]any)
 	}
 	if role, ok := values["role"]; ok {
 		login.Role = role.(string)
+	}
+	if status, ok := values["status"]; ok {
+		login.Status = status.(string)
 	}
 
 	return nil
@@ -137,7 +144,7 @@ func (r *inMemoryLoginRepository) List(pagination *models.Pagination, search str
 	results := make([]models.LoginWithMember, len(usernames))
 	for i, username := range usernames {
 		l := r.logins[username]
-		results[i] = models.LoginWithMember{Username: l.Username, Role: l.Role}
+		results[i] = models.LoginWithMember{Username: l.Username, Role: l.Role, Status: l.Status}
 	}
 
 	return results, total, nil
@@ -152,5 +159,5 @@ func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (mod
 		return models.LoginWithMember{}, store.ErrNotFound
 	}
 
-	return models.LoginWithMember{Username: login.Username, Role: login.Role}, nil
+	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
 }

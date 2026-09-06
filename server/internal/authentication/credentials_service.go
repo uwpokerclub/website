@@ -20,8 +20,22 @@ func NewCredentialService(st store.Store) *credentialsService {
 }
 
 func (svc *credentialsService) Validate(username string, password string) (bool, string, error) {
+	return svc.validate(username, password, false)
+}
+
+func (svc *credentialsService) ValidateForSession(username string, password string) (bool, string, error) {
+	return svc.validate(username, password, true)
+}
+
+func (svc *credentialsService) validate(username string, password string, forSession bool) (bool, string, error) {
 	// Find the login with the specified username
-	login, err := svc.store.Logins().FindByUsername(username)
+	var login models.Login
+	var err error
+	if forSession {
+		login, err = svc.store.Logins().FindByUsernameForUpdate(username)
+	} else {
+		login, err = svc.store.Logins().FindByUsername(username)
+	}
 	if err != nil {
 		// A missing login is not an error to the caller, just a failed validation
 		if errors.Is(err, store.ErrNotFound) {

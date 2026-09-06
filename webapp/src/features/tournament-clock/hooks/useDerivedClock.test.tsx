@@ -85,6 +85,21 @@ describe("useDerivedClock", () => {
     expect(result.current?.remainingMs).toBe(5 * 60_000);
   });
 
+  it("stops ticking while paused, so a screen left on overnight doesn't spin forever", () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-01-01T00:05:00.000Z"));
+
+    const { rerender } = renderHook(({ data }) => useDerivedClock(data, [10 * 60_000]), {
+      initialProps: { data: clockData() },
+    });
+    expect(jest.getTimerCount()).toBe(1);
+
+    rerender({ data: clockData({ pausedAt: "2026-01-01T00:05:00.000Z" }) });
+    expect(jest.getTimerCount()).toBe(0);
+
+    rerender({ data: clockData({ pausedAt: null }) });
+    expect(jest.getTimerCount()).toBe(1);
+  });
+
   it("returns null when there are no levels", () => {
     const { result } = renderHook(() => useDerivedClock(clockData(), []));
 

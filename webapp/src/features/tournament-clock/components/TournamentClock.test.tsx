@@ -124,6 +124,19 @@ describe("TournamentClock", () => {
     });
   });
 
+  it("clamps a server levelIndex that is out of range for the current structure instead of crashing", async () => {
+    // e.g. an admin shrinks the blind structure (PATCH /structures/:id) while
+    // this event's clock has already progressed past the new level count.
+    (fetchClock as jest.Mock).mockResolvedValue(
+      clockState({ levelIndex: 5, levelEndsAt: new Date(Date.now() + 5 * 60_000).toISOString() }),
+    );
+
+    renderClock();
+
+    expect(await screen.findByText("Level 3")).toBeInTheDocument();
+    expect(screen.getByText("100 / 200")).toBeInTheDocument();
+  });
+
   it("never reads or writes localStorage", async () => {
     const getSpy = jest.spyOn(Storage.prototype, "getItem");
     const setSpy = jest.spyOn(Storage.prototype, "setItem");

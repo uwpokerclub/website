@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { ClockActions } from "./ClockActions";
 import { playSound } from "../utils/playSound";
+import { MS_IN_MINUTE, MS_IN_SECOND, SECONDS_IN_MINUTE } from "../utils/time";
 
 import styles from "./ClockDisplay.module.css";
 
@@ -18,9 +19,6 @@ type Props = {
   onAddTime: () => void;
 };
 
-const SECONDS_IN_MINUTE = 60;
-const MS_IN_SECOND = 1000;
-const MS_IN_MINUTE = MS_IN_SECOND * SECONDS_IN_MINUTE;
 const LOW_PITCH_BEEP = 493.883;
 const HIGH_PITCH_BEEP = 659.255;
 

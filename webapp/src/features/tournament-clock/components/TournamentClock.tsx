@@ -10,11 +10,11 @@ import {
 } from "../hooks/useClockQueries";
 import { ClockDisplay } from "./ClockDisplay";
 import { LevelInfo } from "./LevelInfo";
+import { MS_IN_MINUTE } from "../utils/time";
 
 import styles from "./TournamentClock.module.css";
 import { Icon } from "../../../components";
 
-const MS_IN_MINUTE = 60_000;
 const ADJUST_STEP_SECONDS = 60;
 
 type Props = {
@@ -121,7 +121,11 @@ export function TournamentClock({ semesterId, eventId, levels }: Props) {
     );
   }
 
-  const { levelIndex, remainingMs, pausedAt } = derived;
+  const { remainingMs, pausedAt } = derived;
+  // The structure can be edited out from under an in-progress event (e.g. an
+  // admin shrinks the blind levels), leaving a stored levelIndex derive() has
+  // no bound for beyond levels.length; clamp it here so indexing never throws.
+  const levelIndex = Math.min(derived.levelIndex, levels.length - 1);
 
   return (
     <div ref={clockElementRef} className={`${styles.grid}`}>

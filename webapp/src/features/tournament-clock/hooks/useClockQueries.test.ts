@@ -14,8 +14,10 @@ jest.mock("../api/clockApi", () => ({
 
 import {
   acceptClockUpdate,
+  CLOCK_PAUSE_RESUME_MUTATION_KEY,
   clockKeys,
   clockQueryOptions,
+  clockRefetchInterval,
   computeOffsetMs,
   fetchClockWithOffset,
   reconcileClockResponse,
@@ -64,6 +66,37 @@ describe("acceptClockUpdate", () => {
     const first = { version: 1 };
 
     expect(acceptClockUpdate(undefined, first)).toBe(first);
+  });
+});
+
+describe("clockRefetchInterval", () => {
+  it("returns the 2s poll interval when no pause/resume mutation is in flight", () => {
+    const client = new QueryClient();
+
+    expect(clockRefetchInterval(client)).toBe(2000);
+  });
+
+  it("returns false while a pause/resume mutation is in flight, to avoid racing its optimistic update", async () => {
+    const client = new QueryClient();
+    let resolveMutation!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      resolveMutation = resolve;
+    });
+
+    const mutatePromise = client
+      .getMutationCache()
+      .build(client, {
+        mutationKey: CLOCK_PAUSE_RESUME_MUTATION_KEY,
+        mutationFn: () => pending,
+      })
+      .execute(undefined);
+
+    expect(clockRefetchInterval(client)).toBe(false);
+
+    resolveMutation();
+    await mutatePromise;
+
+    expect(clockRefetchInterval(client)).toBe(2000);
   });
 });
 

@@ -17,6 +17,27 @@ export function acceptClockUpdate<T extends { version: number }>(oldData: T | un
   return oldData;
 }
 
+/** Shared mutationKey for pause/resume, so the poll can tell when one is in flight. */
+export const CLOCK_PAUSE_RESUME_MUTATION_KEY = ["clock-pause-resume"];
+
+/**
+ * Poll interval that pauses while a pause/resume mutation is in flight.
+ *
+ * Without this, the 2s poll can race an in-flight optimistic pause/resume:
+ * a poll response that reflects the pre-mutation state carries the same
+ * version as the optimistic value already in the cache, so the version
+ * guard's `>=` lets it clobber the fresher optimistic state — flashing the
+ * display back to the old paused/running state until the mutation's own
+ * response corrects it a moment later. Suppressing the poll for the
+ * mutation's duration removes the race instead of trying to out-guess it
+ * after the fact (setQueryData re-applies this same query's structural
+ * sharing, so a data-level guard can't tell a legitimate rollback/reconcile
+ * write apart from a stale poll).
+ */
+export function clockRefetchInterval(queryClient: QueryClient): number | false {
+  return queryClient.isMutating({ mutationKey: CLOCK_PAUSE_RESUME_MUTATION_KEY }) > 0 ? false : 2000;
+}
+
 /** Returns the difference between the server's clock and the local receive time, in milliseconds. */
 export function computeOffsetMs(serverTime: string, receivedAt: number): number {
   return new Date(serverTime).getTime() - receivedAt;
@@ -29,12 +50,11 @@ export async function fetchClockWithOffset(semesterId: string, eventId: number):
   return { ...state, offsetMs: computeOffsetMs(state.serverTime, receivedAt) };
 }
 
-/** React Query options for polling an event's clock every 2s. */
+/** Base React Query options for fetching an event's clock. See useEventClock for the poll interval. */
 export function clockQueryOptions(semesterId: string, eventId: number) {
   return {
     queryKey: clockKeys.detail(semesterId, eventId),
     queryFn: () => fetchClockWithOffset(semesterId, eventId),
-    refetchInterval: 2000,
     structuralSharing: (oldData: unknown, newData: unknown) =>
       acceptClockUpdate(oldData as ClockQueryData | undefined, newData as ClockQueryData),
   };
@@ -91,10 +111,13 @@ export function rollback(
   queryClient.setQueryData<ClockQueryData>(key, acceptClockUpdate(current, context.previous));
 }
 
-/** Polls an event's tournament clock every 2s. */
+/** Polls an event's tournament clock every 2s, pausing while a pause/resume mutation is in flight. */
 export function useEventClock(semesterId: string | undefined, eventId: number | undefined) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     ...clockQueryOptions(semesterId ?? "", eventId ?? 0),
+    refetchInterval: () => clockRefetchInterval(queryClient),
     enabled: !!semesterId && eventId !== undefined,
   });
 }
@@ -103,6 +126,7 @@ export function usePauseClock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: CLOCK_PAUSE_RESUME_MUTATION_KEY,
     mutationFn: ({ semesterId, eventId }: { semesterId: string; eventId: number }) => pauseClock(semesterId, eventId),
     onMutate: ({ semesterId, eventId }) => withOptimisticPause(queryClient, semesterId, eventId, true),
     onError: (_err, { semesterId, eventId }, context) => rollback(queryClient, semesterId, eventId, context),
@@ -115,6 +139,7 @@ export function useResumeClock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: CLOCK_PAUSE_RESUME_MUTATION_KEY,
     mutationFn: ({ semesterId, eventId }: { semesterId: string; eventId: number }) => resumeClock(semesterId, eventId),
     onMutate: ({ semesterId, eventId }) => withOptimisticPause(queryClient, semesterId, eventId, false),
     onError: (_err, { semesterId, eventId }, context) => rollback(queryClient, semesterId, eventId, context),

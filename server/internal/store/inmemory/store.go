@@ -6,32 +6,36 @@ import (
 )
 
 type InMemoryStore struct {
-	mu          sync.RWMutex
-	semesters   *inMemorySemesterRepository
-	members     *inMemoryMemberRepository
-	memberships *inMemoryMembershipRepository
-	structures  *inMemoryStructureRepository
-	events      *inMemoryEventRepository
-	entries     *inMemoryEntryRepository
-	rankings    *inMemoryRankingRepository
-	logins      *inMemoryLoginRepository
-	sessions    *inMemorySessionRepository
-	parent      *InMemoryStore
+	mu                 sync.RWMutex
+	semesters          *inMemorySemesterRepository
+	members            *inMemoryMemberRepository
+	memberships        *inMemoryMembershipRepository
+	structures         *inMemoryStructureRepository
+	events             *inMemoryEventRepository
+	entries            *inMemoryEntryRepository
+	rankings           *inMemoryRankingRepository
+	logins             *inMemoryLoginRepository
+	sessions           *inMemorySessionRepository
+	accountActivations *inMemoryAccountActivationRepository
+	parent             *InMemoryStore
+	revision           uint64
+	baseRevision       uint64
 }
 
 var _ store.Store = (*InMemoryStore)(nil)
 
 func NewStore() store.Store {
 	return &InMemoryStore{
-		semesters:   newSemesterRepository(),
-		members:     newMemberRepository(),
-		memberships: newMembershipRepository(),
-		structures:  newStructureRepository(),
-		events:      newEventRepository(),
-		entries:     newEntryRepository(),
-		rankings:    newRankingRepository(),
-		logins:      newLoginRepository(),
-		sessions:    newSessionRepository(),
+		semesters:          newSemesterRepository(),
+		members:            newMemberRepository(),
+		memberships:        newMembershipRepository(),
+		structures:         newStructureRepository(),
+		events:             newEventRepository(),
+		entries:            newEntryRepository(),
+		rankings:           newRankingRepository(),
+		logins:             newLoginRepository(),
+		sessions:           newSessionRepository(),
+		accountActivations: newAccountActivationRepository(),
 	}
 }
 
@@ -88,6 +92,11 @@ func (s *InMemoryStore) Sessions() store.SessionRepository {
 	defer s.mu.RUnlock()
 	return s.sessions
 }
+func (s *InMemoryStore) AccountActivations() store.AccountActivationRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.accountActivations
+}
 
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
 // store operates on its own copy of the data, leaving the parent untouched
@@ -96,7 +105,7 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	tx := &InMemoryStore{parent: s}
+	tx := &InMemoryStore{parent: s, baseRevision: s.revision}
 	if s.structures != nil {
 		tx.structures = s.structures.clone()
 	}
@@ -124,6 +133,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	if s.sessions != nil {
 		tx.sessions = s.sessions.clone()
 	}
+	if s.accountActivations != nil {
+		tx.accountActivations = s.accountActivations.clone()
+	}
 	return tx, nil
 }
 
@@ -134,6 +146,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	s.parent.mu.Lock()
 	defer s.parent.mu.Unlock()
+	if s.parent.revision != s.baseRevision {
+		return store.ErrTransactionConflict
+	}
 	if s.structures != nil {
 		s.parent.structures = s.structures
 	}
@@ -161,6 +176,10 @@ func (s *InMemoryStore) Commit() error {
 	if s.sessions != nil {
 		s.parent.sessions = s.sessions
 	}
+	if s.accountActivations != nil {
+		s.parent.accountActivations = s.accountActivations
+	}
+	s.parent.revision++
 	return nil
 }
 

@@ -49,6 +49,20 @@ func (r *postgresLoginRepository) Update(username string, values map[string]any)
 	return nil
 }
 
+func (r *postgresLoginRepository) Activate(username, password string) (models.Login, error) {
+	var login models.Login
+	result := r.db.Raw(`UPDATE logins SET password = ?, status = ?
+		WHERE username = ? AND status <> ?
+		RETURNING username, password, role, status`, password, models.LoginStatusActive, username, models.LoginStatusDisabled).Scan(&login)
+	if result.Error != nil {
+		return models.Login{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return models.Login{}, store.ErrNotFound
+	}
+	return login, nil
+}
+
 func (r *postgresLoginRepository) Delete(username string) error {
 	result := r.db.Where("username = ?", username).Delete(&models.Login{})
 	if err := result.Error; err != nil {

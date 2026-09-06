@@ -84,8 +84,23 @@ func (r *inMemoryLoginRepository) Update(username string, values map[string]any)
 	if role, ok := values["role"]; ok {
 		login.Role = role.(string)
 	}
+	if status, ok := values["status"]; ok {
+		login.Status = status.(string)
+	}
 
 	return nil
+}
+
+func (r *inMemoryLoginRepository) Activate(username, password string) (models.Login, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	login, exists := r.logins[username]
+	if !exists || login.Status == models.LoginStatusDisabled {
+		return models.Login{}, store.ErrNotFound
+	}
+	login.Password = password
+	login.Status = models.LoginStatusActive
+	return *login, nil
 }
 
 func (r *inMemoryLoginRepository) Delete(username string) error {

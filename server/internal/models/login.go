@@ -31,14 +31,16 @@ type LinkedMemberInfo struct {
 type LoginWithMember struct {
 	Username     string            `json:"username"`
 	Role         string            `json:"role"`
+	Status       string            `json:"status"`
 	LinkedMember *LinkedMemberInfo `json:"linkedMember"`
 } //@name LoginWithMember
 
 // UpdateLoginRequest represents the request body for updating a login.
-// At least one of password or role must be provided.
+// At least one field must be provided.
 type UpdateLoginRequest struct {
 	Password *string `json:"password,omitempty" binding:"omitempty,min=8"`
 	Role     *string `json:"role,omitempty" binding:"omitempty,oneof=bot executive tournament_director secretary treasurer vice_president president webmaster"`
+	Status   *string `json:"status,omitempty" binding:"omitempty,oneof=active pending_activation disabled"`
 } //@name UpdateLoginRequest
 
 // CreateLoginRequest represents the request body for creating a new login

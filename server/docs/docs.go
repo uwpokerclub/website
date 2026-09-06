@@ -3007,6 +3007,9 @@ const docTemplate = `{
                 "role": {
                     "type": "string"
                 },
+                "status": {
+                    "type": "string"
+                },
                 "username": {
                     "type": "string"
                 }
@@ -3313,6 +3316,14 @@ const docTemplate = `{
                         "vice_president",
                         "president",
                         "webmaster"
+                    ]
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "pending_activation",
+                        "disabled"
                     ]
                 }
             }

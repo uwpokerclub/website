@@ -99,3 +99,24 @@ func TestCredentialsService(t *testing.T) {
 		})
 	}
 }
+
+func TestCredentialsService_ValidateForSession(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	require.NoError(t, CreateTestLogin(db, "testuser", "password", models.LoginStatusActive))
+
+	st := postgres.NewStore(db)
+	tx, err := st.BeginTx()
+	require.NoError(t, err)
+	defer tx.Rollback()
+
+	valid, role, err := authentication.NewCredentialService(tx).ValidateForSession("testuser", "password")
+	require.NoError(t, err)
+	require.True(t, valid)
+	require.Equal(t, "executive", role)
+	require.NoError(t, tx.Commit())
+}

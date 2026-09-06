@@ -9,12 +9,7 @@ export const clockKeys = {
 
 export type ClockQueryData = ClockState & { offsetMs: number };
 
-/**
- * Accepts an incoming clock value only when its version is at least the
- * cached version. This is the version guard: it stops a stale poll — issued
- * before a control action, landing after it — from clobbering fresher state
- * (#453 design: server response always carries the authoritative version).
- */
+/** Returns whichever of two versioned clock values is newer, preferring the incoming one on a tie. */
 export function acceptClockUpdate<T extends { version: number }>(oldData: T | undefined, newData: T): T {
   if (!oldData || newData.version >= oldData.version) {
     return newData;
@@ -22,27 +17,19 @@ export function acceptClockUpdate<T extends { version: number }>(oldData: T | un
   return oldData;
 }
 
-/**
- * `serverTime` minus local receive time. Consumers add this to their own
- * `Date.now()` before calling `deriveClock`, which is the whole safeguard
- * against a projector laptop with a badly-set system clock.
- */
+/** Returns the difference between the server's clock and the local receive time, in milliseconds. */
 export function computeOffsetMs(serverTime: string, receivedAt: number): number {
   return new Date(serverTime).getTime() - receivedAt;
 }
 
-/** Exported for testing the receive-time ordering; consumed internally by `clockQueryOptions`. */
+/** Fetches an event's clock state and attaches the computed server-time offset. */
 export async function fetchClockWithOffset(semesterId: string, eventId: number): Promise<ClockQueryData> {
   const state = await fetchClock(semesterId, eventId);
   const receivedAt = Date.now();
   return { ...state, offsetMs: computeOffsetMs(state.serverTime, receivedAt) };
 }
 
-/**
- * The query config shared by `useEventClock` and its tests. `structuralSharing`
- * is what applies the version guard to every fetch that lands in this query's
- * cache slot, including the 2s poll — see `acceptClockUpdate`.
- */
+/** React Query options for polling an event's clock every 2s. */
 export function clockQueryOptions(semesterId: string, eventId: number) {
   return {
     queryKey: clockKeys.detail(semesterId, eventId),
@@ -53,15 +40,7 @@ export function clockQueryOptions(semesterId: string, eventId: number) {
   };
 }
 
-/**
- * Replaces the cached clock with a control action's response. Never
- * fabricates `version` — it is carried through verbatim from the server.
- *
- * Applies `acceptClockUpdate` itself rather than relying on the query's
- * registered `structuralSharing` (set by `clockQueryOptions`): that option
- * only exists once something has fetched this key through `useEventClock`,
- * and a mutation can resolve before that first fetch has happened.
- */
+/** Merges a control action's response into the clock query cache. */
 export function reconcileClockResponse(
   queryClient: QueryClient,
   semesterId: string,
@@ -72,18 +51,13 @@ export function reconcileClockResponse(
   const receivedAt = Date.now();
   const incoming: ClockQueryData = { ...response, offsetMs: computeOffsetMs(response.serverTime, receivedAt) };
   const current = queryClient.getQueryData<ClockQueryData>(key);
+  // A mutation can resolve before the first query fetch runs, so structuralSharing isn't registered yet.
   queryClient.setQueryData<ClockQueryData>(key, acceptClockUpdate(current, incoming));
 }
 
 export type ClockMutationContext = { previous: ClockQueryData | undefined };
 
-/**
- * Optimistically patches `pausedAt` ahead of a pause/resume response landing.
- * Leaves `version` untouched — the whole point being that we never guess at a
- * value only the server can assign. The frozen instant is corrected by the
- * cached `offsetMs`, not the raw local clock, so a projector with a
- * badly-set system clock still freezes at the right server-time instant.
- */
+/** Optimistically sets pausedAt in the clock query cache ahead of a pause/resume request resolving. */
 export async function withOptimisticPause(
   queryClient: QueryClient,
   semesterId: string,
@@ -94,17 +68,14 @@ export async function withOptimisticPause(
   await queryClient.cancelQueries({ queryKey: key });
   const previous = queryClient.getQueryData<ClockQueryData>(key);
   if (previous) {
+    // Corrected by offsetMs, not the raw local clock, to stay right under clock skew.
     const pausedAt = paused ? new Date(Date.now() + previous.offsetMs).toISOString() : null;
     queryClient.setQueryData<ClockQueryData>(key, () => ({ ...previous, pausedAt }));
   }
   return { previous };
 }
 
-/**
- * Restores the pre-mutation cached value after a failed control action.
- * Goes through `acceptClockUpdate` so a fresher value that landed in the
- * meantime (e.g. a poll response) is not clobbered by the stale snapshot.
- */
+/** Restores the clock query cache to its pre-mutation value after a failed control action. */
 export function rollback(
   queryClient: QueryClient,
   semesterId: string,
@@ -116,10 +87,11 @@ export function rollback(
   }
   const key = clockKeys.detail(semesterId, eventId);
   const current = queryClient.getQueryData<ClockQueryData>(key);
+  // Guarded so a fresher poll response that landed during the mutation isn't clobbered.
   queryClient.setQueryData<ClockQueryData>(key, acceptClockUpdate(current, context.previous));
 }
 
-/** Polls an event's tournament clock every 2s, deriving level/remaining time on the client from the returned state. */
+/** Polls an event's tournament clock every 2s. */
 export function useEventClock(semesterId: string | undefined, eventId: number | undefined) {
   return useQuery({
     ...clockQueryOptions(semesterId ?? "", eventId ?? 0),

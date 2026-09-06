@@ -3,21 +3,25 @@
     {
       "username": "e2e_user",
       "role": "webmaster",
+      "status": "active",
       "linkedMember": null
     },
     {
       "username": "test_president",
       "role": "president",
+      "status": "active",
       "linkedMember": null
     },
     {
       "username": "test_executive",
       "role": "executive",
+      "status": "active",
       "linkedMember": null
     },
     {
       "username": "hdrust0",
       "role": "executive",
+      "status": "active",
       "linkedMember": {
         "id": "62958169",
         "firstName": "Heinrik",

@@ -18,6 +18,10 @@ type LoginRepository interface {
 	// Returns store.ErrNotFound if no login exists for the given username.
 	Update(username string, values map[string]any) error
 
+	// Activate updates the password and activates a login unless it has been disabled.
+	// Returns ErrNotFound for an unknown or disabled login.
+	Activate(username, password string) (models.Login, error)
+
 	// Delete deletes a login from the data store by its username.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	Delete(username string) error

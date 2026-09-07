@@ -58,6 +58,12 @@ export function clockQueryOptions(semesterId: string, eventId: number) {
     queryFn: () => fetchClockWithOffset(semesterId, eventId),
     structuralSharing: (oldData: unknown, newData: unknown) =>
       acceptClockUpdate(oldData as ClockQueryData | undefined, newData as ClockQueryData),
+    // Default networkMode ("online") pauses fetching without ever calling
+    // queryFn while the browser reports itself offline, so a real
+    // disconnect would never register as a poll failure and
+    // useClockSyncStatus's offline badge could never appear. Always attempt
+    // the request so a genuine disconnect is observed and counted.
+    networkMode: "always" as const,
   };
 }
 

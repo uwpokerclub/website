@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/query-core";
+import { onlineManager, QueryClient } from "@tanstack/query-core";
 
 // clockApi.ts imports the real apiClient, which reads `import.meta.env` —
 // not valid under Jest's CommonJS transform. These tests exercise cache
@@ -168,6 +168,30 @@ describe("clockQueryOptions", () => {
     ).rejects.toThrow("network down");
 
     expect(client.getQueryData(options.queryKey)).toEqual(clockData(5));
+  });
+
+  it("polls even while the browser reports itself offline, so a real disconnect is observed as failures", async () => {
+    // React Query's default networkMode ("online") pauses fetching without
+    // ever calling queryFn when onlineManager reports offline — which is
+    // exactly what Chrome's "Offline" network throttle simulates. Without
+    // an attempted (and failing) fetch, pollFailureCount never increments,
+    // so useClockSyncStatus's offline badge could never appear. The clock
+    // poll must attempt the request regardless, so a genuine failure is
+    // what the offline detection is built to observe.
+    expect(clockQueryOptions("s1", 1).networkMode).toBe("always");
+
+    onlineManager.setOnline(false);
+    try {
+      const client = new QueryClient();
+      const options = clockQueryOptions("s1", 1);
+      const queryFn = jest.fn(() => Promise.resolve(clockData(5)));
+
+      await client.fetchQuery({ ...options, queryFn });
+
+      expect(queryFn).toHaveBeenCalled();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 });
 

@@ -247,5 +247,26 @@ describe("TournamentClock", () => {
         timeout: 4000,
       });
     }, 15000);
+
+    it("keeps the badge visible through a failed pause action taken while offline", async () => {
+      (fetchClock as jest.Mock)
+        .mockResolvedValueOnce(clockState({ pausedAt: null }))
+        .mockRejectedValue(new Error("network error"));
+      (pauseClock as jest.Mock).mockRejectedValue(new Error("network error"));
+
+      renderClock();
+      await screen.findByText("Level 1");
+
+      await waitFor(() => expect(document.querySelector('[data-qa="offline-badge"]')).toBeInTheDocument(), {
+        timeout: 8000,
+      });
+
+      const user = userEvent.setup();
+      await user.click(document.querySelector('[data-qa="toggle-timer-btn"]')!);
+
+      // The optimistic pause write (and its rollback) are local cache writes,
+      // not contact with the server — they must not clear the badge.
+      expect(document.querySelector('[data-qa="offline-badge"]')).toBeInTheDocument();
+    }, 10000);
   });
 });

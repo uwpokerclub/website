@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adjustClock, fetchClock, pauseClock, resumeClock, setClockLevel } from "../api/clockApi";
 import { ClockState } from "@/types";
@@ -114,12 +115,30 @@ export function rollback(
 /** Polls an event's tournament clock every 2s, pausing while a pause/resume mutation is in flight. */
 export function useEventClock(semesterId: string | undefined, eventId: number | undefined) {
   const queryClient = useQueryClient();
+  // Counted inside the queryFn itself (not read off dataUpdatedAt/errorUpdatedAt)
+  // so that mutation-driven cache writes (optimistic pause, rollback, reconcile
+  // all call setQueryData, which bumps dataUpdatedAt/errorUpdatedAt the same as
+  // a real poll would) can't be mistaken for contact with the server. See #455.
+  const pollSuccessCount = useRef(0);
+  const pollFailureCount = useRef(0);
 
-  return useQuery({
+  const query = useQuery({
     ...clockQueryOptions(semesterId ?? "", eventId ?? 0),
+    queryFn: async () => {
+      try {
+        const result = await fetchClockWithOffset(semesterId ?? "", eventId ?? 0);
+        pollSuccessCount.current += 1;
+        return result;
+      } catch (err) {
+        pollFailureCount.current += 1;
+        throw err;
+      }
+    },
     refetchInterval: () => clockRefetchInterval(queryClient),
     enabled: !!semesterId && eventId !== undefined,
   });
+
+  return { ...query, pollSuccessCount: pollSuccessCount.current, pollFailureCount: pollFailureCount.current };
 }
 
 export function usePauseClock() {

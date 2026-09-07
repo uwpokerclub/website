@@ -42,11 +42,11 @@ export function TournamentClock({ semesterId, eventId, levels }: Props) {
 
   const {
     data: clockData,
-    dataUpdatedAt,
-    errorUpdatedAt,
+    pollSuccessCount,
+    pollFailureCount,
   } = useEventClock(levels.length > 0 ? semesterId : undefined, eventId);
   const derived = useDerivedClock(clockData, levelDurationsMs);
-  const isOffline = useClockSyncStatus(dataUpdatedAt, errorUpdatedAt);
+  const isOffline = useClockSyncStatus(pollSuccessCount, pollFailureCount);
 
   const pauseMutation = usePauseClock();
   const resumeMutation = useResumeClock();

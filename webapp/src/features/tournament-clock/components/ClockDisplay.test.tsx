@@ -10,6 +10,8 @@ jest.mock("../utils/playSound", () => ({ playSound: jest.fn() }));
 jest.mock("../../../components", () => ({
   Icon: ({ iconType }: { iconType: string }) => <span data-qa={`icon-${iconType}`} />,
 }));
+// ClockActions checks clock control permission directly (#455); grant it by default here.
+jest.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ hasPermission: () => true }) }));
 
 import { playSound } from "../utils/playSound";
 

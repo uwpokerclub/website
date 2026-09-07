@@ -22,6 +22,9 @@ jest.mock("../../../components", () => ({
   Icon: ({ iconType }: { iconType: string }) => <span data-qa={`icon-${iconType}`} />,
 }));
 jest.mock("../utils/playSound", () => ({ playSound: jest.fn() }));
+// ClockActions checks clock control permission directly (#455); grant it by default here.
+const mockHasPermission = jest.fn().mockReturnValue(true);
+jest.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ hasPermission: mockHasPermission }) }));
 
 import { fetchClock, pauseClock, resumeClock, adjustClock, setClockLevel } from "../api/clockApi";
 import { ClockState } from "@/types";
@@ -54,6 +57,7 @@ function renderClock(levels: Blind[] = LEVELS) {
 describe("TournamentClock", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHasPermission.mockReturnValue(true);
     (global as unknown as { AudioContext: unknown }).AudioContext = class {
       currentTime = 0;
       createOscillator = jest.fn();
@@ -196,5 +200,73 @@ describe("TournamentClock", () => {
 
       expect(setClockLevel).toHaveBeenCalledWith("s1", 1, 0);
     });
+  });
+
+  describe("offline indicator", () => {
+    it("does not show a not-synced badge while polls are succeeding", async () => {
+      (fetchClock as jest.Mock).mockResolvedValue(clockState());
+
+      renderClock();
+      await screen.findByText("Level 1");
+
+      expect(document.querySelector('[data-qa="offline-badge"]')).not.toBeInTheDocument();
+    });
+
+    it("shows a not-synced badge after three consecutive failed polls, without stopping the clock", async () => {
+      (fetchClock as jest.Mock)
+        .mockResolvedValueOnce(clockState({ levelEndsAt: new Date(Date.now() + 10 * 60_000).toISOString() }))
+        .mockRejectedValue(new Error("network error"));
+
+      renderClock();
+      await screen.findByText("Level 1");
+
+      await waitFor(() => expect(document.querySelector('[data-qa="offline-badge"]')).toBeInTheDocument(), {
+        timeout: 8000,
+      });
+
+      // Ticking locally off last known state the whole time — not a stalled display.
+      expect(document.querySelector('[data-qa="timer"]')).not.toHaveTextContent("10:00");
+    }, 10000);
+
+    it("clears the badge as soon as a poll succeeds again", async () => {
+      (fetchClock as jest.Mock)
+        .mockResolvedValueOnce(clockState())
+        .mockRejectedValueOnce(new Error("e1"))
+        .mockRejectedValueOnce(new Error("e2"))
+        .mockRejectedValueOnce(new Error("e3"))
+        .mockResolvedValue(clockState({ levelIndex: 1 }));
+
+      renderClock();
+      await screen.findByText("Level 1");
+
+      await waitFor(() => expect(document.querySelector('[data-qa="offline-badge"]')).toBeInTheDocument(), {
+        timeout: 8000,
+      });
+
+      await waitFor(() => expect(document.querySelector('[data-qa="offline-badge"]')).not.toBeInTheDocument(), {
+        timeout: 4000,
+      });
+    }, 15000);
+
+    it("keeps the badge visible through a failed pause action taken while offline", async () => {
+      (fetchClock as jest.Mock)
+        .mockResolvedValueOnce(clockState({ pausedAt: null }))
+        .mockRejectedValue(new Error("network error"));
+      (pauseClock as jest.Mock).mockRejectedValue(new Error("network error"));
+
+      renderClock();
+      await screen.findByText("Level 1");
+
+      await waitFor(() => expect(document.querySelector('[data-qa="offline-badge"]')).toBeInTheDocument(), {
+        timeout: 8000,
+      });
+
+      const user = userEvent.setup();
+      await user.click(document.querySelector('[data-qa="toggle-timer-btn"]')!);
+
+      // The optimistic pause write (and its rollback) are local cache writes,
+      // not contact with the server — they must not clear the badge.
+      expect(document.querySelector('[data-qa="offline-badge"]')).toBeInTheDocument();
+    }, 10000);
   });
 });

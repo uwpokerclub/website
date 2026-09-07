@@ -66,6 +66,18 @@ func (r *inMemoryMemberRepository) FindByID(id uint64) (models.User, error) {
 	return *member, nil
 }
 
+func (r *inMemoryMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var result []models.User
+	for _, m := range r.members {
+		if m.QuestID == questID {
+			result = append(result, *m)
+		}
+	}
+	return result, nil
+}
+
 func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

@@ -38,6 +38,7 @@ type PostgresStore struct {
 	// sessions is the repository for accessing the sessions in the data store. It provides methods for creating, reading, updating, and deleting sessions.
 	sessions           store.SessionRepository
 	accountActivations store.AccountActivationRepository
+	officerTransitions store.OfficerTransitionRepository
 }
 
 var _ store.Store = (*PostgresStore)(nil)
@@ -55,6 +56,7 @@ func NewStore(db *gorm.DB) store.Store {
 		logins:             NewLoginRepository(db),
 		sessions:           NewSessionRepository(db),
 		accountActivations: NewAccountActivationRepository(db),
+		officerTransitions: NewOfficerTransitionRepository(db),
 	}
 }
 
@@ -97,6 +99,9 @@ func (s *PostgresStore) Sessions() store.SessionRepository {
 func (s *PostgresStore) AccountActivations() store.AccountActivationRepository {
 	return s.accountActivations
 }
+func (s *PostgresStore) OfficerTransitions() store.OfficerTransitionRepository {
+	return s.officerTransitions
+}
 
 func (s *PostgresStore) BeginTx() (store.Store, error) {
 	tx := s.db.Begin()
@@ -116,6 +121,7 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 		logins:             NewLoginRepository(tx),
 		sessions:           NewSessionRepository(tx),
 		accountActivations: NewAccountActivationRepository(tx),
+		officerTransitions: NewOfficerTransitionRepository(tx),
 	}, nil
 }
 

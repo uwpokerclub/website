@@ -17,6 +17,7 @@ type InMemoryStore struct {
 	logins             *inMemoryLoginRepository
 	sessions           *inMemorySessionRepository
 	accountActivations *inMemoryAccountActivationRepository
+	officerTransitions *inMemoryOfficerTransitionRepository
 	parent             *InMemoryStore
 	revision           uint64
 	baseRevision       uint64
@@ -36,6 +37,7 @@ func NewStore() store.Store {
 		logins:             newLoginRepository(),
 		sessions:           newSessionRepository(),
 		accountActivations: newAccountActivationRepository(),
+		officerTransitions: newOfficerTransitionRepository(),
 	}
 }
 
@@ -97,6 +99,11 @@ func (s *InMemoryStore) AccountActivations() store.AccountActivationRepository {
 	defer s.mu.RUnlock()
 	return s.accountActivations
 }
+func (s *InMemoryStore) OfficerTransitions() store.OfficerTransitionRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.officerTransitions
+}
 
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
 // store operates on its own copy of the data, leaving the parent untouched
@@ -135,6 +142,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	}
 	if s.accountActivations != nil {
 		tx.accountActivations = s.accountActivations.clone()
+	}
+	if s.officerTransitions != nil {
+		tx.officerTransitions = s.officerTransitions.clone()
 	}
 	return tx, nil
 }
@@ -178,6 +188,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	if s.accountActivations != nil {
 		s.parent.accountActivations = s.accountActivations
+	}
+	if s.officerTransitions != nil {
+		s.parent.officerTransitions = s.officerTransitions
 	}
 	s.parent.revision++
 	return nil

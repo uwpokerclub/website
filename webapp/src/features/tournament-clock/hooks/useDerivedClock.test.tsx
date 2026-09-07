@@ -100,6 +100,37 @@ describe("useDerivedClock", () => {
     expect(jest.getTimerCount()).toBe(1);
   });
 
+  it("does not flash a stale, inflated remaining time immediately on resume", () => {
+    // Running since T0, level ends at T0+5min.
+    jest.useFakeTimers().setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const { result, rerender } = renderHook(({ data }) => useDerivedClock(data, [5 * 60_000]), {
+      initialProps: { data: clockData({ levelEndsAt: "2026-01-01T00:05:00.000Z" }) },
+    });
+
+    // A minute passes while running; the local tick keeps `now` fresh.
+    act(() => {
+      jest.advanceTimersByTime(60_000);
+    });
+    expect(result.current?.remainingMs).toBe(4 * 60_000);
+
+    // Paused at T0+1min: remaining freezes at 4 minutes.
+    rerender({ data: clockData({ levelEndsAt: "2026-01-01T00:05:00.000Z", pausedAt: "2026-01-01T00:01:00.000Z" }) });
+    expect(result.current?.remainingMs).toBe(4 * 60_000);
+
+    // 30s pass in the real world while paused. The hook's local tick is
+    // stopped, so nothing re-renders it yet.
+    act(() => {
+      jest.advanceTimersByTime(30_000);
+    });
+
+    // Resume: the server shifts levelEndsAt forward by the pause duration
+    // (30s) so remaining is preserved at 4 minutes. The very first render
+    // with this data — before the hook's own tick fires again — must
+    // already reflect that, not the stale `now` from before the pause.
+    rerender({ data: clockData({ levelEndsAt: "2026-01-01T00:05:30.000Z", pausedAt: null }) });
+    expect(result.current?.remainingMs).toBe(4 * 60_000);
+  });
+
   it("returns null when there are no levels", () => {
     const { result } = renderHook(() => useDerivedClock(clockData(), []));
 

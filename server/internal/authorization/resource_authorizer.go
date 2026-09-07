@@ -25,4 +25,5 @@ var DefaultAuthorizerMap = ResourceAuthorizerMap{
 	"event": NewEventAuthorizer(ResourceAuthorizerMap{
 		"participant": NewParticipantAuthorizer(),
 	}),
+	"officer-transition": NewTransitionAuthorizer(),
 }

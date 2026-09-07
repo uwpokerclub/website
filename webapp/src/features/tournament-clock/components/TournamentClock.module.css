@@ -77,6 +77,46 @@
   transform: scale(0.98);
 }
 
+.offlineBadge {
+  position: absolute;
+  top: 1rem;
+  left: 1.25rem;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 197, 66, 0.4);
+
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffc542;
+}
+
+.offlineBadge::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #ffc542;
+  animation: offline-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes offline-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .timerHeader {
   grid-area: header;
   position: relative;
@@ -116,7 +156,12 @@
 /* Fullscreen mode adjustments */
 .grid:fullscreen {
   border-radius: 0;
-  min-height: 100vh;
+  /* A fixed height (not min-height) caps the grid at the viewport so the
+     1fr timer row is forced to share it rather than growing past it to fit
+     its content; overflow-y is a safety net for screens too short even at
+     the components' minimum font sizes. */
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .grid:fullscreen .timerHeader {

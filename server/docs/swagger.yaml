@@ -1,4 +1,11 @@
 definitions:
+  AdjustClockRequest:
+    properties:
+      deltaSeconds:
+        maximum: 3600
+        minimum: -3600
+        type: integer
+    type: object
   Blind:
     properties:
       ante:
@@ -8,6 +15,19 @@ definitions:
       small:
         type: integer
       time:
+        type: integer
+    type: object
+  ClockState:
+    properties:
+      levelEndsAt:
+        type: string
+      levelIndex:
+        type: integer
+      pausedAt:
+        type: string
+      serverTime:
+        type: string
+      version:
         type: integer
     type: object
   CreateEntryResult:
@@ -398,6 +418,14 @@ definitions:
       startingBudget:
         example: 100
         type: number
+    type: object
+  SetClockLevelRequest:
+    properties:
+      index:
+        minimum: 0
+        type: integer
+    required:
+    - index
     type: object
   Structure:
     properties:
@@ -1261,6 +1289,266 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Update Event
+      tags:
+      - Events
+  /semesters/{semesterId}/events/{eventId}/clock:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the current, fully derived state of an event's tournament
+        clock
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ClockState'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get Event Clock
+      tags:
+      - Events
+  /semesters/{semesterId}/events/{eventId}/clock/adjust:
+    post:
+      consumes:
+      - application/json
+      description: Shift the current level's deadline by a number of seconds, which
+        may be negative
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      - description: Adjustment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/AdjustClockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ClockState'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Adjust Event Clock
+      tags:
+      - Events
+  /semesters/{semesterId}/events/{eventId}/clock/level:
+    post:
+      consumes:
+      - application/json
+      description: Jump the clock to an absolute level index with a full, fresh duration
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      - description: Level index
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/SetClockLevelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ClockState'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Set Event Clock Level
+      tags:
+      - Events
+  /semesters/{semesterId}/events/{eventId}/clock/pause:
+    post:
+      consumes:
+      - application/json
+      description: Freeze an event's tournament clock at its current remaining time
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ClockState'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Pause Event Clock
+      tags:
+      - Events
+  /semesters/{semesterId}/events/{eventId}/clock/resume:
+    post:
+      consumes:
+      - application/json
+      description: Unfreeze an event's tournament clock, restoring its remaining time
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: eventId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ClockState'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Resume Event Clock
       tags:
       - Events
   /semesters/{semesterId}/events/{eventId}/end:

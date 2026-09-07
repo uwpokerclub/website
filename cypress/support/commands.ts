@@ -6,9 +6,13 @@ declare namespace Cypress {
     /**
      * Get element by data-qa attribute
      * @param dataTestAttribute - The value of the data-qa attribute
+     * @param options - Options forwarded to the underlying cy.get (e.g. timeout)
      * @example cy.getByData("login-submit").click()
      */
-    getByData(dataTestAttribute: string): Chainable<JQuery<HTMLElement>>;
+    getByData(
+      dataTestAttribute: string,
+      options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>,
+    ): Chainable<JQuery<HTMLElement>>;
 
     /**
      * Login to the application via API
@@ -29,8 +33,8 @@ declare namespace Cypress {
 /**
  * Get element by data-qa attribute
  */
-Cypress.Commands.add("getByData", (selector: string) => {
-  return cy.get(`[data-qa="${selector}"]`);
+Cypress.Commands.add("getByData", (selector: string, options) => {
+  return cy.get(`[data-qa="${selector}"]`, options);
 });
 
 /**

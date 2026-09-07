@@ -1,13 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Blind } from "@/types";
-import { useLocalStorage } from "../../../hooks";
+import { useDerivedClock } from "../hooks/useDerivedClock";
+import { useClockSyncStatus } from "../hooks/useClockSyncStatus";
+import {
+  useAdjustClock,
+  useEventClock,
+  usePauseClock,
+  useResumeClock,
+  useSetClockLevel,
+} from "../hooks/useClockQueries";
 import { ClockDisplay } from "./ClockDisplay";
 import { LevelInfo } from "./LevelInfo";
+import { MS_IN_MINUTE } from "../utils/time";
 
 import styles from "./TournamentClock.module.css";
 import { Icon } from "../../../components";
 
+const ADJUST_STEP_SECONDS = 60;
+
 type Props = {
+  semesterId: string;
+  eventId: number;
   levels: Blind[];
 };
 
@@ -24,14 +37,21 @@ function formatChipValue(value: number): string {
   return String(value);
 }
 
-export function TournamentClock({ levels }: Props) {
-  // The index of the current level, tracked in local storage. The key is shared
-  // across all events, so when navigating between events with different blind
-  // counts we must clamp the stored value to the current structure's bounds.
-  const [storedLevelIndex, setLevelIndex] = useLocalStorage(import.meta.env.VITE_LOCAL_STORAGE_KEY, 0);
-  const levelIndex = Math.min(Math.max(storedLevelIndex, 0), Math.max(levels.length - 1, 0));
-  // Whether or not the clock sould automatically start
-  const [shouldStart, setShouldStart] = useState(false);
+export function TournamentClock({ semesterId, eventId, levels }: Props) {
+  const levelDurationsMs = useMemo(() => levels.map((level) => level.time * MS_IN_MINUTE), [levels]);
+
+  const {
+    data: clockData,
+    pollSuccessCount,
+    pollFailureCount,
+  } = useEventClock(levels.length > 0 ? semesterId : undefined, eventId);
+  const derived = useDerivedClock(clockData, levelDurationsMs);
+  const isOffline = useClockSyncStatus(pollSuccessCount, pollFailureCount);
+
+  const pauseMutation = usePauseClock();
+  const resumeMutation = useResumeClock();
+  const adjustMutation = useAdjustClock();
+  const setLevelMutation = useSetClockLevel();
 
   // Ref to hold the entire clock HTML elements used to enable fullscreen
   const clockElementRef = useRef<HTMLDivElement | null>(null);
@@ -63,34 +83,21 @@ export function TournamentClock({ levels }: Props) {
     };
   }, []);
 
-  // Handles stopping the auto-start feature when the timer is paused
-  const handleTimerPause = useCallback(() => setShouldStart(false), []);
+  const handleResume = () => resumeMutation.mutate({ semesterId, eventId });
+  const handlePause = () => pauseMutation.mutate({ semesterId, eventId });
 
-  // Handles advancing to the next level when the timer is finished
-  const handleTimerEnd = useCallback(() => {
-    if (levelIndex >= levels.length - 1) {
-      setShouldStart(false);
-      return;
-    }
+  const handlePreviousLevel = () => {
+    if (!derived || derived.levelIndex === 0) return;
+    setLevelMutation.mutate({ semesterId, eventId, index: derived.levelIndex - 1 });
+  };
 
-    setShouldStart(true);
+  const handleNextLevel = () => {
+    if (!derived || derived.levelIndex === levels.length - 1) return;
+    setLevelMutation.mutate({ semesterId, eventId, index: derived.levelIndex + 1 });
+  };
 
-    setLevelIndex(levelIndex + 1);
-  }, [levelIndex, levels.length, setLevelIndex]);
-
-  // Handles skipping to the previous level
-  const handlePreviousLevel = useCallback(() => {
-    if (levelIndex === 0) return;
-
-    setLevelIndex(levelIndex - 1);
-  }, [levelIndex, setLevelIndex]);
-
-  // Handles skipping to the next level
-  const handleNextLevel = useCallback(() => {
-    if (levelIndex === levels.length - 1) return;
-
-    setLevelIndex(levelIndex + 1);
-  }, [levelIndex, levels.length, setLevelIndex]);
+  const handleAddTime = () => adjustMutation.mutate({ semesterId, eventId, deltaSeconds: ADJUST_STEP_SECONDS });
+  const handleSubtractTime = () => adjustMutation.mutate({ semesterId, eventId, deltaSeconds: -ADJUST_STEP_SECONDS });
 
   // Handles enabling/disabling fullscreening the clock
   const handleFullscreen = () => {
@@ -110,6 +117,22 @@ export function TournamentClock({ levels }: Props) {
     );
   }
 
+  // The clock row is materialised lazily by the server on first read; until
+  // then (or while the first poll is in flight) there's nothing to derive.
+  if (!derived) {
+    return (
+      <div className={`${styles.grid}`}>
+        <header className={styles.timerHeader}>Loading clock…</header>
+      </div>
+    );
+  }
+
+  const { remainingMs, pausedAt } = derived;
+  // The structure can be edited out from under an in-progress event (e.g. an
+  // admin shrinks the blind levels), leaving a stored levelIndex derive() has
+  // no bound for beyond levels.length; clamp it here so indexing never throws.
+  const levelIndex = Math.min(derived.levelIndex, levels.length - 1);
+
   return (
     <div ref={clockElementRef} className={`${styles.grid}`}>
       <span onClick={handleFullscreen} className={styles.fullscreen}>
@@ -120,14 +143,24 @@ export function TournamentClock({ levels }: Props) {
         Level {levelIndex + 1}
       </header>
 
+      {isOffline && (
+        // Not a claim the displayed time is wrong (deriveClock is exact) — only that
+        // a control action from another room may not have been heard yet. See #455.
+        <span data-qa="offline-badge" className={styles.offlineBadge} title="Not receiving updates from the server">
+          Not synced
+        </span>
+      )}
+
       <ClockDisplay
-        key={levelIndex}
-        startOnRender={shouldStart}
-        levelTime={levels[levelIndex].time}
-        onTimerPause={handleTimerPause}
-        onTimerEnd={handleTimerEnd}
+        remainingMs={remainingMs}
+        totalMs={levelDurationsMs[levelIndex]}
+        isPaused={pausedAt !== null}
+        onResume={handleResume}
+        onPause={handlePause}
         onPreviousLevel={handlePreviousLevel}
         onNextLevel={handleNextLevel}
+        onSubtractTime={handleSubtractTime}
+        onAddTime={handleAddTime}
       />
 
       <LevelInfo

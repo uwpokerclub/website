@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Blind } from "@/types";
 import { useDerivedClock } from "../hooks/useDerivedClock";
+import { useClockSyncStatus } from "../hooks/useClockSyncStatus";
 import {
   useAdjustClock,
   useEventClock,
@@ -39,8 +40,13 @@ function formatChipValue(value: number): string {
 export function TournamentClock({ semesterId, eventId, levels }: Props) {
   const levelDurationsMs = useMemo(() => levels.map((level) => level.time * MS_IN_MINUTE), [levels]);
 
-  const { data: clockData } = useEventClock(levels.length > 0 ? semesterId : undefined, eventId);
+  const {
+    data: clockData,
+    dataUpdatedAt,
+    errorUpdatedAt,
+  } = useEventClock(levels.length > 0 ? semesterId : undefined, eventId);
   const derived = useDerivedClock(clockData, levelDurationsMs);
+  const isOffline = useClockSyncStatus(dataUpdatedAt, errorUpdatedAt);
 
   const pauseMutation = usePauseClock();
   const resumeMutation = useResumeClock();
@@ -136,6 +142,14 @@ export function TournamentClock({ semesterId, eventId, levels }: Props) {
       <header data-qa="level" className={styles.timerHeader}>
         Level {levelIndex + 1}
       </header>
+
+      {isOffline && (
+        // Not a claim the displayed time is wrong (deriveClock is exact) — only that
+        // a control action from another room may not have been heard yet. See #455.
+        <span data-qa="offline-badge" className={styles.offlineBadge} title="Not receiving updates from the server">
+          Not synced
+        </span>
+      )}
 
       <ClockDisplay
         remainingMs={remainingMs}

@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { Button, FormField, Input } from "@uwpokerclub/components";
 import { ApiError } from "@/lib/apiClient";
 import { fetchSession, sessionKeys } from "@/hooks/useSessionQuery";
+import uwpscLogo from "@/assets/uwpsc_logo.svg";
 import { completeActivation, type ActivationMember, verifyActivation } from "../../api/activationApi";
-import styles from "./ActivationPage.module.css";
+import loginStyles from "../LoginPage/LoginPage.module.css";
+import formStyles from "./ActivationPage.module.css";
 
-type PageState = "verifying" | "ready" | "error";
+type PageState = "verifying" | "ready" | "verification-error" | "completion-error" | "signed-in-error";
 
 const recoveryCopy = "Ask whoever sent you this link for a new one.";
 
@@ -33,13 +36,15 @@ export function ActivationPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
+  const verify = useCallback(() => {
     if (!token) {
       setError(`This activation link is invalid. ${recoveryCopy}`);
-      setState("error");
+      setState("verification-error");
       return;
     }
 
+    setError("");
+    setState("verifying");
     void verifyActivation(token)
       .then((verifiedMember) => {
         setMember(verifiedMember);
@@ -47,9 +52,30 @@ export function ActivationPage() {
       })
       .catch((requestError: unknown) => {
         setError(activationError(requestError));
-        setState("error");
+        setState("verification-error");
       });
   }, [token]);
+
+  useEffect(() => {
+    verify();
+  }, [verify]);
+
+  const refreshSessionAndNavigate = useCallback(async () => {
+    queryClient.removeQueries({
+      predicate: (query) => query.queryKey[0] !== sessionKeys.all[0],
+    });
+    await queryClient.fetchQuery({ queryKey: sessionKeys.current(), queryFn: fetchSession, staleTime: 0 });
+    navigate("/admin/dashboard", { replace: true });
+  }, [navigate, queryClient]);
+
+  const retryDashboard = async () => {
+    setError("");
+    try {
+      await refreshSessionAndNavigate();
+    } catch {
+      setError("Your password has been set, but we still could not sign you in. Check your connection and try again.");
+    }
+  };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -63,67 +89,122 @@ export function ActivationPage() {
     }
 
     setPasswordError("");
+    setError("");
     setIsSubmitting(true);
     try {
       await completeActivation(token, password);
-      await queryClient.fetchQuery({ queryKey: sessionKeys.current(), queryFn: fetchSession });
-      navigate("/admin/dashboard", { replace: true });
+      try {
+        await refreshSessionAndNavigate();
+      } catch {
+        setError("Your password has been set, but we could not sign you in. Try again to continue to the dashboard.");
+        setState("signed-in-error");
+      }
     } catch (requestError) {
-      setError(activationError(requestError));
-      setState("error");
+      setError(
+        `We could not confirm that your account was activated. ${activationError(requestError)} You can try again.`,
+      );
+      setState("completion-error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className={styles.container}>
-      <section className={styles.card} aria-live="polite">
+    <main className={loginStyles.container}>
+      <div className={loginStyles.logoContainer}>
+        <img src={uwpscLogo} alt="UWPSC Logo" className={loginStyles.logo} />
+      </div>
+      <section className={loginStyles.card} aria-live="polite">
         {state === "verifying" && <p data-qa="activation-loading">Verifying your activation link…</p>}
-        {state === "error" && (
-          <div role="alert" data-qa="activation-error" className={styles.error}>
+        {(state === "verification-error" || state === "completion-error" || state === "signed-in-error") && (
+          <div role="alert" data-qa="activation-error" className={loginStyles.errorAlert}>
             {error}
+            {state === "verification-error" && token && (
+              <div className={formStyles.retryContainer}>
+                <Button type="button" variant="secondary" onClick={verify} data-qa="activation-retry">
+                  Try again
+                </Button>
+              </div>
+            )}
+            {state === "signed-in-error" && (
+              <div className={formStyles.retryContainer}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void retryDashboard()}
+                  data-qa="activation-dashboard-retry"
+                >
+                  Continue to dashboard
+                </Button>
+              </div>
+            )}
           </div>
         )}
-        {state === "ready" && member && (
+        {(state === "ready" || state === "completion-error") && member && (
           <>
-            <h1 data-qa="activation-heading">
-              Set a password for {member.firstName} {member.lastName}
-            </h1>
-            <p>Choose a password with at least 8 characters to activate your account.</p>
-            <form onSubmit={submit} noValidate className={styles.form}>
-              <label htmlFor="activation-password">Password</label>
-              <input
-                id="activation-password"
-                data-qa="activation-password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                disabled={isSubmitting}
-              />
-              <label htmlFor="activation-confirm-password">Confirm password</label>
-              <input
-                id="activation-confirm-password"
-                data-qa="activation-confirm-password"
-                type="password"
-                autoComplete="new-password"
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                disabled={isSubmitting}
-              />
+            <div className={loginStyles.header}>
+              <h1 data-qa="activation-heading" className={loginStyles.title}>
+                Set your password
+              </h1>
+              <p className={loginStyles.subtitle}>
+                You&apos;re activating an account for {member.firstName} {member.lastName}.
+              </p>
+            </div>
+            <form onSubmit={submit} noValidate className={formStyles.form}>
+              <FormField label="Password" htmlFor="activation-password" required error={passwordError}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    id="activation-password"
+                    data-qa="activation-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    disabled={isSubmitting}
+                    error={Boolean(passwordError)}
+                    fullWidth
+                  />
+                )}
+              </FormField>
+              <FormField label="Confirm password" htmlFor="activation-confirm-password" required>
+                {(props) => (
+                  <Input
+                    {...props}
+                    id="activation-confirm-password"
+                    data-qa="activation-confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    disabled={isSubmitting}
+                    error={Boolean(passwordError)}
+                    fullWidth
+                  />
+                )}
+              </FormField>
               {passwordError && (
-                <p role="alert" data-qa="activation-password-error" className={styles.error}>
+                <p role="alert" data-qa="activation-password-error" className={formStyles.error}>
                   {passwordError}
                 </p>
               )}
-              <button type="submit" data-qa="activation-submit" disabled={isSubmitting}>
-                {isSubmitting ? "Activating…" : "Activate account"}
-              </button>
+              <div className={formStyles.submitContainer}>
+                <Button
+                  type="submit"
+                  data-qa="activation-submit"
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
+                  fullWidth
+                  size="large"
+                >
+                  {isSubmitting ? "Activating…" : "Activate account"}
+                </Button>
+              </div>
             </form>
           </>
         )}
       </section>
+      <p className={loginStyles.footer}>University of Waterloo Poker Studies Club</p>
     </main>
   );
 }

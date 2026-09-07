@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@uwpokerclub/components";
-import { Admin, Index, Login } from "./pages";
+import { Activate, Admin, Index, Login } from "./pages";
 import { AuthProvider, RequireAuth, SemesterProvider } from "@/components";
 
 function App() {
@@ -10,6 +10,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/*" element={<Index />} />
+            <Route path="/activate" element={<Activate />} />
             <Route path="/admin/login/*" element={<Login />} />
             <Route
               path="/admin/*"

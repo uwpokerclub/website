@@ -4,13 +4,46 @@
   flex: 1;
   margin: -1.5rem;
   padding: 1.5rem;
-  background: var(--color-background-secondary, #f5f5f5);
+  background: var(--color-background-secondary, #f8f9fa);
 }
 
-@media screen and (max-width: 48rem) {
+@media screen and (max-width: 768px) {
   .page {
     margin: 0;
     padding: 1rem;
+  }
+}
+
+.header {
+  padding: 1.5rem 2rem 1rem;
+  border-bottom: 1px solid var(--color-gray-200, #e0e0e0);
+  background-color: var(--color-background, #ffffff);
+}
+
+.header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-gray-900, #212121);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-gray-600, #757575);
+}
+
+@media screen and (max-width: 768px) {
+  .header {
+    padding: 1rem 0.5rem 0.75rem;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
   }
 }
 

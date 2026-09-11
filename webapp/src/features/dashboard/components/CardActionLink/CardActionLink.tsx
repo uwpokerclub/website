@@ -2,23 +2,19 @@ import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import styles from "./CardActionLink.module.css";
 
-type CardActionLinkProps = {
-  to?: string;
-  href?: string;
-  children: ReactNode;
-};
+type CardActionLinkProps = { children: ReactNode } & ({ to: string; href?: never } | { href: string; to?: never });
 
-export function CardActionLink({ to, href, children }: CardActionLinkProps) {
-  if (to) {
+export function CardActionLink({ children, ...props }: CardActionLinkProps) {
+  if (props.to) {
     return (
-      <Link to={to} className={styles.link}>
+      <Link to={props.to} className={styles.actionLink}>
         {children}
       </Link>
     );
   }
 
   return (
-    <a href={href} className={styles.link}>
+    <a href={props.href} className={styles.actionLink}>
       {children}
     </a>
   );

@@ -30,10 +30,37 @@ func (r *inMemoryOfficerTransitionRepository) ClaimCompletion(id uuid.UUID) (mod
 	if !ok || t.Status != models.OfficerTransitionPending {
 		return models.OfficerTransition{}, store.ErrNotFound
 	}
-	t.Status = "completed"
+	t.Status = models.OfficerTransitionCompleted
 	now := time.Now().UTC()
 	t.ResolvedAt = &now
 	return *t, nil
+}
+
+func (r *inMemoryOfficerTransitionRepository) Cancel(id uuid.UUID) (models.OfficerTransition, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	t, ok := r.transitions[id.String()]
+	if !ok || t.Status != models.OfficerTransitionPending {
+		return models.OfficerTransition{}, store.ErrNotFound
+	}
+	t.Status = models.OfficerTransitionCancelled
+	now := time.Now().UTC()
+	t.ResolvedAt = &now
+	return *t, nil
+}
+
+func (r *inMemoryOfficerTransitionRepository) ReferencesUsernameElsewhere(id uuid.UUID, username string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for key, transition := range r.transitions {
+		if key == id.String() {
+			continue
+		}
+		if transition.PresidentUsername == username || transition.VicePresidentUsername == username || transition.SecretaryUsername == username || transition.TreasurerUsername == username {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 var _ store.OfficerTransitionRepository = (*inMemoryOfficerTransitionRepository)(nil)

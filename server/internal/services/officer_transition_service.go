@@ -14,9 +14,12 @@ import (
 )
 
 var (
-	ErrTransitionInvalid   = errors.New("invalid transition nominee")
-	ErrTransitionForbidden = errors.New("protected account cannot be nominated")
-	ErrTransitionPending   = errors.New("an officer transition is already pending")
+	ErrTransitionInvalid    = errors.New("invalid transition nominee")
+	ErrTransitionForbidden  = errors.New("protected account cannot be nominated")
+	ErrTransitionPending    = errors.New("an officer transition is already pending")
+	ErrTransitionNotFound   = errors.New("officer transition not found")
+	ErrTransitionResolved   = errors.New("officer transition is already resolved")
+	ErrTransitionIneligible = errors.New("transition nominee has no pending activation")
 )
 
 type officerTransitionService struct{ store store.Store }
@@ -77,7 +80,7 @@ func (s *officerTransitionService) Create(initiatedBy string, r models.CreateOff
 			if e != nil {
 				return models.OfficerTransition{}, nil, e
 			}
-			login = models.Login{Username: u.QuestID, Password: hash, Role: roles[i], Status: models.LoginStatusPendingActivation}
+			login = models.Login{Username: u.QuestID, Password: hash, Role: roles[i], Status: models.LoginStatusPendingActivation, StagedTransitionID: &transition.ID}
 			if e = tx.Logins().Create(&login); e != nil {
 				return models.OfficerTransition{}, nil, e
 			}
@@ -115,6 +118,137 @@ func (s *officerTransitionService) Create(initiatedBy string, r models.CreateOff
 	// response consistently across both implementations.
 	transition.Status = models.OfficerTransitionPending
 	return transition, tokens, nil
+}
+
+// Cancel marks a pending transition cancelled and removes its activation links
+// plus staging-owned pending logins that no other transition names.
+func (s *officerTransitionService) Cancel(id uuid.UUID) (models.OfficerTransition, error) {
+	for attempt := 0; attempt < 2; attempt++ {
+		transition, err := s.cancelOnce(id)
+		if !errors.Is(err, store.ErrTransactionConflict) {
+			return transition, err
+		}
+	}
+	return models.OfficerTransition{}, store.ErrTransactionConflict
+}
+
+func (s *officerTransitionService) cancelOnce(id uuid.UUID) (models.OfficerTransition, error) {
+	tx, err := s.store.BeginTx()
+	if err != nil {
+		return models.OfficerTransition{}, err
+	}
+	defer tx.Rollback()
+	transition, err := tx.OfficerTransitions().FindByIDForUpdate(id)
+	if errors.Is(err, store.ErrNotFound) {
+		return models.OfficerTransition{}, ErrTransitionNotFound
+	}
+	if err != nil {
+		return models.OfficerTransition{}, err
+	}
+	if transition.Status != models.OfficerTransitionPending {
+		return models.OfficerTransition{}, ErrTransitionResolved
+	}
+	transition, err = tx.OfficerTransitions().Cancel(id)
+	if err != nil {
+		return models.OfficerTransition{}, err
+	}
+	// The transition row is locked before its activation rows and login cleanup,
+	// matching activation completion's lock order.
+	if err := tx.AccountActivations().DeleteByTransition(id); err != nil {
+		return models.OfficerTransition{}, err
+	}
+	for _, username := range transitionUsernames(transition) {
+		login, err := tx.Logins().FindByUsernameForUpdate(username)
+		if errors.Is(err, store.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return models.OfficerTransition{}, err
+		}
+		if login.Status != models.LoginStatusPendingActivation || login.StagedTransitionID == nil || *login.StagedTransitionID != id {
+			continue
+		}
+		referenced, err := tx.OfficerTransitions().ReferencesUsernameElsewhere(id, username)
+		if err != nil {
+			return models.OfficerTransition{}, err
+		}
+		if !referenced {
+			if err := tx.Logins().Delete(username); err != nil {
+				return models.OfficerTransition{}, err
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return models.OfficerTransition{}, err
+	}
+	return transition, nil
+}
+
+// Reissue replaces a nominee's unused activation token while the transition is pending.
+func (s *officerTransitionService) Reissue(id uuid.UUID, role string) (string, error) {
+	for attempt := 0; attempt < 2; attempt++ {
+		token, err := s.reissueOnce(id, role)
+		if !errors.Is(err, store.ErrTransactionConflict) {
+			return token, err
+		}
+	}
+	return "", store.ErrTransactionConflict
+}
+
+func (s *officerTransitionService) reissueOnce(id uuid.UUID, role string) (string, error) {
+	tx, err := s.store.BeginTx()
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	transition, err := tx.OfficerTransitions().FindByIDForUpdate(id)
+	if errors.Is(err, store.ErrNotFound) {
+		return "", ErrTransitionNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if transition.Status != models.OfficerTransitionPending {
+		return "", ErrTransitionResolved
+	}
+	username, ok := transitionUsernameForRole(transition, role)
+	if !ok {
+		return "", ErrTransitionInvalid
+	}
+	login, err := tx.Logins().FindByUsernameForUpdate(username)
+	if err != nil {
+		return "", err
+	}
+	if role != "president" && login.Status != models.LoginStatusPendingActivation {
+		return "", ErrTransitionIneligible
+	}
+	token, err := createTransitionToken(tx, username, id)
+	if err != nil {
+		return "", err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+func transitionUsernameForRole(t models.OfficerTransition, role string) (string, bool) {
+	switch role {
+	case "president":
+		return t.PresidentUsername, true
+	case "vice_president":
+		return t.VicePresidentUsername, true
+	case "secretary":
+		return t.SecretaryUsername, true
+	case "treasurer":
+		return t.TreasurerUsername, true
+	default:
+		return "", false
+	}
+}
+
+func transitionUsernames(t models.OfficerTransition) []string {
+	return []string{t.PresidentUsername, t.VicePresidentUsername, t.SecretaryUsername, t.TreasurerUsername}
 }
 func randomHash() (string, error) {
 	b := make([]byte, 32)

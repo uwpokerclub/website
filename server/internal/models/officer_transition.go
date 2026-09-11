@@ -5,7 +5,11 @@ import (
 	"time"
 )
 
-const OfficerTransitionPending = "pending"
+const (
+	OfficerTransitionPending   = "pending"
+	OfficerTransitionCompleted = "completed"
+	OfficerTransitionCancelled = "cancelled"
+)
 
 // OfficerTransition records a proposed team; staging never changes roles.
 type OfficerTransition struct {
@@ -32,4 +36,8 @@ type CreateOfficerTransitionRequest struct {
 	VicePresidentQuestID string `json:"vicePresidentQuestId" binding:"required"`
 	SecretaryQuestID     string `json:"secretaryQuestId" binding:"required"`
 	TreasurerQuestID     string `json:"treasurerQuestId" binding:"required"`
+}
+
+type ReissueOfficerTransitionRequest struct {
+	Role string `json:"role" binding:"required,oneof=president vice_president secretary treasurer"`
 }

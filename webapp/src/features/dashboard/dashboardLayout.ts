@@ -12,7 +12,7 @@ export type DashboardCardId =
 export const CARD_TITLES: Record<DashboardCardId, string> = {
   spotlight: "Event Spotlight",
   quickActions: "Quick Actions",
-  termAtAGlance: "Term at a Glance",
+  termAtAGlance: "Memberships",
   signupTimeline: "Signup Timeline",
   eventActivity: "Event Activity",
   engagement: "Engagement & Retention",

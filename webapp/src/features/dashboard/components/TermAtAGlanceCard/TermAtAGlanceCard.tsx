@@ -55,6 +55,7 @@ function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
   return (
     <div className={styles.container}>
       <div className={styles.headline}>
+        <span className={styles.eyebrow}>TOTAL</span>
         <span className={styles.total}>{current.total}</span>
         {comparison ? (
           <DeltaChip

@@ -7,6 +7,12 @@ import { DASHBOARD_CARDS } from "@/features/dashboard/dashboardCards";
 
 jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
 jest.mock("@/hooks/useCurrentSemester", () => ({ useCurrentSemester: jest.fn() }));
+// dashboardApi.ts imports the real apiClient, which reads `import.meta.env` —
+// not valid under Jest's CommonJS transform (see useClockQueries.test.ts).
+// This suite only cares about card titles/order, not membership data.
+jest.mock("@/features/dashboard/hooks/useDashboardQueries", () => ({
+  useMembershipsDashboard: jest.fn(() => ({ isLoading: true, isError: false, data: undefined, refetch: jest.fn() })),
+}));
 
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentSemester } from "@/hooks/useCurrentSemester";
@@ -58,7 +64,7 @@ describe("Dashboard", () => {
       "Quick Actions",
       "Event Activity",
       "Leaderboard",
-      "Term at a Glance",
+      "Memberships",
       "Engagement & Retention",
       "Signup Timeline",
     ]);
@@ -73,7 +79,7 @@ describe("Dashboard", () => {
     expect(cardTitleOrder()).toEqual([
       "Engagement & Retention",
       "Event Activity",
-      "Term at a Glance",
+      "Memberships",
       "Event Spotlight",
       "Signup Timeline",
       "Leaderboard",

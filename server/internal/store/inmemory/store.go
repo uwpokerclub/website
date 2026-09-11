@@ -17,6 +17,7 @@ type InMemoryStore struct {
 	logins      *inMemoryLoginRepository
 	sessions    *inMemorySessionRepository
 	eventClocks *inMemoryEventClockRepository
+	dashboard   *inMemoryDashboardRepository
 	parent      *InMemoryStore
 }
 
@@ -34,6 +35,7 @@ func NewStore() store.Store {
 		logins:      newLoginRepository(),
 		sessions:    newSessionRepository(),
 		eventClocks: newEventClockRepository(),
+		dashboard:   newDashboardRepository(),
 	}
 }
 
@@ -97,6 +99,12 @@ func (s *InMemoryStore) EventClocks() store.EventClockRepository {
 	return s.eventClocks
 }
 
+func (s *InMemoryStore) Dashboard() store.DashboardRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.dashboard
+}
+
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
 // store operates on its own copy of the data, leaving the parent untouched
 // until Commit is called.
@@ -135,6 +143,7 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	if s.eventClocks != nil {
 		tx.eventClocks = s.eventClocks.clone()
 	}
+	tx.dashboard = s.dashboard
 	return tx, nil
 }
 
@@ -175,6 +184,7 @@ func (s *InMemoryStore) Commit() error {
 	if s.eventClocks != nil {
 		s.parent.eventClocks = s.eventClocks
 	}
+	s.parent.dashboard = s.dashboard
 	return nil
 }
 

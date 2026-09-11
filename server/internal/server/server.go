@@ -90,6 +90,7 @@ func (s *apiServer) SetupV2Routes(db *gorm.DB) {
 		controller.NewRankingsController(s.store),
 		controller.NewStructuresController(s.store),
 		controller.NewLoginsController(s.store),
+		controller.NewDashboardController(s.store),
 	}
 
 	controllers = append(controllers, registerTestControllers(db)...)

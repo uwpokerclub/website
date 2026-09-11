@@ -40,6 +40,9 @@ type PostgresStore struct {
 
 	// eventClocks is the repository for accessing event clocks in the data store.
 	eventClocks store.EventClockRepository
+
+	// dashboard is the repository for the dashboard's read-only aggregate queries.
+	dashboard store.DashboardRepository
 }
 
 var _ store.Store = (*PostgresStore)(nil)
@@ -57,6 +60,7 @@ func NewStore(db *gorm.DB) store.Store {
 		logins:      NewLoginRepository(db),
 		sessions:    NewSessionRepository(db),
 		eventClocks: NewEventClockRepository(db),
+		dashboard:   NewDashboardRepository(db),
 	}
 }
 
@@ -100,6 +104,10 @@ func (s *PostgresStore) EventClocks() store.EventClockRepository {
 	return s.eventClocks
 }
 
+func (s *PostgresStore) Dashboard() store.DashboardRepository {
+	return s.dashboard
+}
+
 func (s *PostgresStore) BeginTx() (store.Store, error) {
 	tx := s.db.Begin()
 	if tx.Error != nil {
@@ -118,6 +126,7 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 		logins:      NewLoginRepository(tx),
 		sessions:    NewSessionRepository(tx),
 		eventClocks: NewEventClockRepository(tx),
+		dashboard:   NewDashboardRepository(tx),
 	}, nil
 }
 

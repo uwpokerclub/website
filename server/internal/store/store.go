@@ -12,6 +12,7 @@ type Store interface {
 	Logins() LoginRepository
 	Sessions() SessionRepository
 	EventClocks() EventClockRepository
+	Dashboard() DashboardRepository
 
 	BeginTx() (Store, error)
 	Commit() error

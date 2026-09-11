@@ -427,6 +427,23 @@ definitions:
     required:
     - index
     type: object
+  SpotlightEvent:
+    properties:
+      entries:
+        type: integer
+      format:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      rebuys:
+        type: integer
+      startDate:
+        type: string
+      state:
+        type: integer
+    type: object
   Structure:
     properties:
       blinds:
@@ -1066,6 +1083,46 @@ paths:
       summary: Get Semester
       tags:
       - Semesters
+  /semesters/{semesterId}/dashboard/spotlight:
+    get:
+      description: Get the live or next upcoming event for a semester, or null if
+        neither exists
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: The live or next upcoming event, or null if neither exists
+          schema:
+            $ref: '#/definitions/SpotlightEvent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get dashboard spotlight
+      tags:
+      - Dashboard
   /semesters/{semesterId}/events:
     get:
       consumes:

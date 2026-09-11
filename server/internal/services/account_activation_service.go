@@ -79,12 +79,15 @@ func (svc *accountActivationService) completeOnce(token, password string) (model
 		return models.Login{}, uuid.UUID{}, fmt.Errorf("begin activation transaction: %w", err)
 	}
 	defer tx.Rollback()
-	activation, err := tx.AccountActivations().Consume(tokenHash(token))
+	// Read first so transition-bound activations acquire the transition lock
+	// before their activation-row lock. Cancellation takes those same locks in
+	// that order when it invalidates its tokens.
+	activation, err := tx.AccountActivations().FindValid(tokenHash(token))
 	if errors.Is(err, store.ErrNotFound) {
 		return models.Login{}, uuid.UUID{}, ErrActivationNotFound
 	}
 	if err != nil {
-		return models.Login{}, uuid.UUID{}, fmt.Errorf("consume activation: %w", err)
+		return models.Login{}, uuid.UUID{}, fmt.Errorf("find activation: %w", err)
 	}
 	var transition *models.OfficerTransition
 	if activation.TransitionID != nil {
@@ -99,6 +102,13 @@ func (svc *accountActivationService) completeOnce(token, password string) (model
 			return models.Login{}, uuid.UUID{}, ErrActivationNotFound
 		}
 		transition = &locked
+	}
+	activation, err = tx.AccountActivations().Consume(tokenHash(token))
+	if errors.Is(err, store.ErrNotFound) {
+		return models.Login{}, uuid.UUID{}, ErrActivationNotFound
+	}
+	if err != nil {
+		return models.Login{}, uuid.UUID{}, fmt.Errorf("consume activation: %w", err)
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

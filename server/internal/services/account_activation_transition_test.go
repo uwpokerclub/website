@@ -98,6 +98,27 @@ func TestTransitionBoundTokenRejectsCancelledOrMismatchedTransition(t *testing.T
 	assertUnusedTransitionToken(t, db, outsiderToken)
 }
 
+func TestTransitionPresidentActivationDoesNotReactivateDisabledLogin(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	transition, tokens := seedActivationTransition(t, db)
+	require.NoError(t, db.Model(&models.Login{}).Where("username = ?", "president").Update("status", models.LoginStatusDisabled).Error)
+
+	_, _, err = services.NewAccountActivationService(postgres.NewStore(db)).Complete(tokens["president"], "newpassword")
+	require.ErrorIs(t, err, services.ErrActivationNotFound)
+	assertUnusedTransitionToken(t, db, tokens["president"])
+	var pending models.OfficerTransition
+	require.NoError(t, db.First(&pending, "id = ?", transition.ID).Error)
+	require.Equal(t, models.OfficerTransitionPending, pending.Status)
+	var president models.Login
+	require.NoError(t, db.First(&president, "username = ?", "president").Error)
+	require.Equal(t, models.LoginStatusDisabled, president.Status)
+	require.Equal(t, "vice_president", president.Role)
+}
+
 func TestTransitionCompletionRollsBackAfterClaimFailure(t *testing.T) {
 	ctx := context.Background()
 	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
@@ -147,18 +168,20 @@ func TestTransitionCompletionLosesToGuardedCancelWithoutPartialWrites(t *testing
 		_, _, e := services.NewAccountActivationService(postgres.NewStore(db)).Complete(tokens["president"], "newpassword")
 		result <- e
 	}()
-	// The completion consumes its token then blocks on this row lock. This guarded
-	// update is the #400 cancel operation racing it.
+	// Completion reads the token then blocks on this row lock. #400 cancellation
+	// claims the transition before invalidating its transition-bound tokens.
 	cancel := lock.Exec("UPDATE officer_transitions SET status = 'cancelled' WHERE id = ? AND status = 'pending'", transition.ID)
 	require.NoError(t, cancel.Error)
 	require.EqualValues(t, 1, cancel.RowsAffected)
+	require.NoError(t, lock.Where("transition_id = ?", transition.ID).Delete(&models.AccountActivation{}).Error)
 	require.NoError(t, lock.Commit().Error)
 	require.ErrorIs(t, <-result, services.ErrActivationNotFound)
 
 	var cancelled models.OfficerTransition
 	require.NoError(t, db.First(&cancelled, "id = ?", transition.ID).Error)
 	require.Equal(t, "cancelled", cancelled.Status)
-	assertUnusedTransitionToken(t, db, tokens["president"])
+	var activation models.AccountActivation
+	require.ErrorIs(t, db.First(&activation, "token_hash = ?", testTokenHash(tokens["president"])).Error, gorm.ErrRecordNotFound)
 	var president models.Login
 	require.NoError(t, db.First(&president, "username = ?", "president").Error)
 	require.Equal(t, "vice_president", president.Role)

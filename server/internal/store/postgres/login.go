@@ -79,8 +79,8 @@ func (r *postgresLoginRepository) Activate(username, password string) (models.Lo
 func (r *postgresLoginRepository) ActivateWithRole(username, password, role string) (models.Login, error) {
 	var login models.Login
 	result := r.db.Raw(`UPDATE logins SET password = ?, status = ?, role = ?
-		WHERE username = ?
-		RETURNING username, password, role, status`, password, models.LoginStatusActive, role, username).Scan(&login)
+		WHERE username = ? AND status <> ?
+		RETURNING username, password, role, status`, password, models.LoginStatusActive, role, username, models.LoginStatusDisabled).Scan(&login)
 	if result.Error != nil {
 		return models.Login{}, result.Error
 	}

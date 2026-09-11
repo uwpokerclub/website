@@ -111,7 +111,7 @@ func (r *inMemoryLoginRepository) ActivateWithRole(username, password, role stri
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	login, exists := r.logins[username]
-	if !exists {
+	if !exists || login.Status == models.LoginStatusDisabled {
 		return models.Login{}, store.ErrNotFound
 	}
 	login.Password, login.Status, login.Role = password, models.LoginStatusActive, role

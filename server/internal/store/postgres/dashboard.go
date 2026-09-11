@@ -89,3 +89,34 @@ func (r *postgresDashboardRepository) MembershipStats(semesterID uuid.UUID) (sto
 
 	return stats, nil
 }
+
+// EngagementStats implements store.DashboardRepository.
+func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID) (store.EngagementStats, error) {
+	var stats store.EngagementStats
+
+	err := r.db.Raw(`
+		WITH per_member AS (
+			SELECT m.user_id, COUNT(DISTINCT p.event_id) AS events
+			FROM participants p
+			JOIN events e ON e.id = p.event_id
+			JOIN memberships m ON m.id = p.membership_id
+			WHERE e.semester_id = ?
+			GROUP BY m.user_id
+		)
+		SELECT
+			COUNT(*) AS players,
+			COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY events), 0) AS median_events_attended,
+			COUNT(*) FILTER (WHERE events = 1) AS played_once_count,
+			COUNT(*) FILTER (WHERE events >= 10) AS ten_plus_count
+		FROM per_member
+	`, semesterID).Scan(&stats).Error
+	if err != nil {
+		return store.EngagementStats{}, err
+	}
+
+	if stats.Players > 0 {
+		stats.PlayedOnceShare = float64(stats.PlayedOnceCount) / float64(stats.Players)
+	}
+
+	return stats, nil
+}

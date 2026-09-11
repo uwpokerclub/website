@@ -794,6 +794,65 @@
                 }
             }
         },
+        "/semesters/{semesterId}/dashboard/engagement": {
+            "get": {
+                "description": "Get distinct players, median events attended, played-once share, and the 10+ cohort size for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard engagement stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/EngagementStatsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/dashboard/memberships": {
             "get": {
                 "description": "Get membership counts by paid/unpaid/discounted/executive and the new-vs-returning split for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
@@ -3226,6 +3285,17 @@
                 }
             }
         },
+        "ComparisonEngagementStats": {
+            "type": "object",
+            "properties": {
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                },
+                "stats": {
+                    "$ref": "#/definitions/EngagementStats"
+                }
+            }
+        },
         "ComparisonMembershipStats": {
             "type": "object",
             "properties": {
@@ -3426,6 +3496,37 @@
                     "type": "number",
                     "minimum": 0,
                     "example": 100
+                }
+            }
+        },
+        "EngagementStats": {
+            "type": "object",
+            "properties": {
+                "medianEventsAttended": {
+                    "type": "number"
+                },
+                "playedOnceCount": {
+                    "type": "integer"
+                },
+                "playedOnceShare": {
+                    "type": "number"
+                },
+                "players": {
+                    "type": "integer"
+                },
+                "tenPlusCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "EngagementStatsResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonEngagementStats"
+                },
+                "current": {
+                    "$ref": "#/definitions/EngagementStats"
                 }
             }
         },

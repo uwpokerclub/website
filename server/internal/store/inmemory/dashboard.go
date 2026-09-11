@@ -32,3 +32,7 @@ func (r *inMemoryDashboardRepository) Spotlight(semesterID uuid.UUID, now time.T
 func (r *inMemoryDashboardRepository) MembershipStats(semesterID uuid.UUID) (store.MembershipStats, error) {
 	return store.MembershipStats{}, store.ErrNotImplemented
 }
+
+func (r *inMemoryDashboardRepository) EngagementStats(semesterID uuid.UUID) (store.EngagementStats, error) {
+	return store.EngagementStats{}, store.ErrNotImplemented
+}

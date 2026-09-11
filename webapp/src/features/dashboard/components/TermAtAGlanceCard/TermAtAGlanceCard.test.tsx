@@ -36,6 +36,12 @@ function withComparison(
   };
 }
 
+function chipFor(label: string): HTMLElement {
+  const el = screen.getByText(label).closest('[data-qa="delta-chip"]');
+  if (!el) throw new Error(`No delta chip found for label "${label}"`);
+  return el as HTMLElement;
+}
+
 describe("TermAtAGlanceCard", () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -44,6 +50,19 @@ describe("TermAtAGlanceCard", () => {
   it("shows the loading state while the query is loading", () => {
     mockedUseMembershipsDashboard.mockReturnValue({
       isLoading: true,
+      isError: false,
+      data: undefined,
+      refetch: jest.fn(),
+    });
+
+    render(<TermAtAGlanceCard semesterId="s1" />);
+
+    expect(screen.getByRole("status", { name: "Loading Term at a Glance" })).toBeInTheDocument();
+  });
+
+  it("shows the loading state, not ready, when data is missing but the query is neither loading nor errored", () => {
+    mockedUseMembershipsDashboard.mockReturnValue({
+      isLoading: false,
       isError: false,
       data: undefined,
       refetch: jest.fn(),
@@ -92,7 +111,7 @@ describe("TermAtAGlanceCard", () => {
     render(<TermAtAGlanceCard semesterId="s1" />);
 
     expect(screen.getByText("290")).toBeInTheDocument();
-    const chip = screen.getByRole("status", { name: "Up 42 (17%) from Fall 2025" });
+    const chip = chipFor("Up 42 (17%) from Fall 2025");
     expect(chip).toHaveTextContent("vs Fall 2025");
   });
 
@@ -108,7 +127,7 @@ describe("TermAtAGlanceCard", () => {
 
     expect(screen.getByText("Paid")).toBeInTheDocument();
     expect(screen.getByText("210")).toBeInTheDocument();
-    const paidChip = screen.getByRole("status", { name: /Up 30 .* from Fall 2025/ });
+    const paidChip = chipFor("Up 30 (17%) from Fall 2025");
     expect(paidChip).not.toHaveTextContent("vs Fall 2025");
   });
 
@@ -122,7 +141,7 @@ describe("TermAtAGlanceCard", () => {
 
     render(<TermAtAGlanceCard semesterId="s1" />);
 
-    const unpaidChip = screen.getByRole("status", { name: /Up 7 .* from Fall 2025/ });
+    const unpaidChip = chipFor("Up 7 (39%) from Fall 2025");
     expect(unpaidChip).toHaveAttribute("data-tone", "negative");
   });
 
@@ -136,8 +155,8 @@ describe("TermAtAGlanceCard", () => {
 
     render(<TermAtAGlanceCard semesterId="s1" />);
 
-    expect(screen.getByRole("status", { name: /Down 7 .* from Fall 2025/ })).toHaveAttribute("data-tone", "neutral");
-    expect(screen.getByRole("status", { name: /Up 2 .* from Fall 2025/ })).toHaveAttribute("data-tone", "neutral");
+    expect(chipFor("Down 7 (58%) from Fall 2025")).toHaveAttribute("data-tone", "neutral");
+    expect(chipFor("Up 2 (25%) from Fall 2025")).toHaveAttribute("data-tone", "neutral");
   });
 
   it("shows a 'No change' chip for a figure whose value is identical to the comparison", () => {
@@ -153,7 +172,7 @@ describe("TermAtAGlanceCard", () => {
 
     render(<TermAtAGlanceCard semesterId="s1" />);
 
-    expect(screen.getByRole("status", { name: "No change from Fall 2025" })).toBeInTheDocument();
+    expect(screen.getByText("No change from Fall 2025")).toBeInTheDocument();
   });
 
   it("shows the absolute-only format for a figure whose comparison value was 0", () => {
@@ -166,7 +185,7 @@ describe("TermAtAGlanceCard", () => {
 
     render(<TermAtAGlanceCard semesterId="s1" />);
 
-    const chip = screen.getByRole("status", { name: "Up 12 from Fall 2025" });
+    const chip = chipFor("Up 12 from Fall 2025");
     expect(chip).not.toHaveTextContent("%");
   });
 
@@ -178,9 +197,9 @@ describe("TermAtAGlanceCard", () => {
       refetch: jest.fn(),
     });
 
-    render(<TermAtAGlanceCard semesterId="s1" />);
+    const { container } = render(<TermAtAGlanceCard semesterId="s1" />);
 
-    expect(screen.queryAllByRole("status", { name: /from/ })).toHaveLength(0);
+    expect(container.querySelectorAll('[data-qa="delta-chip"]')).toHaveLength(0);
     expect(screen.getByText("No comparable term to compare against yet.")).toBeInTheDocument();
   });
 });

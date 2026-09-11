@@ -1,5 +1,6 @@
 import { ComponentType } from "react";
 import { DashboardCardId } from "./dashboardLayout";
+import { TermAtAGlanceCard } from "./components/TermAtAGlanceCard";
 
 type DashboardCardComponentProps = {
   semesterId: string;
@@ -10,4 +11,6 @@ type DashboardCardComponentProps = {
  * fall back to a placeholder in Dashboard.tsx. Each card issue adds one entry
  * here and threads semesterId into its own React Query keys.
  */
-export const DASHBOARD_CARDS: Partial<Record<DashboardCardId, ComponentType<DashboardCardComponentProps>>> = {};
+export const DASHBOARD_CARDS: Partial<Record<DashboardCardId, ComponentType<DashboardCardComponentProps>>> = {
+  termAtAGlance: TermAtAGlanceCard,
+};

@@ -7,6 +7,7 @@ import (
 	"api/internal/store/postgres"
 	"api/internal/testutils"
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -58,5 +59,15 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 		transition := seed(t)
 		w = auth(t, http.MethodPost, "/api/v2/officer-transitions/"+transition.ID.String()+"/reissue", authorization.ROLE_PRESIDENT.ToString(), map[string]string{"role": "nope"})
 		require.Equal(t, http.StatusBadRequest, w.Code)
+	})
+	t.Run("president can reissue and receives the activation token", func(t *testing.T) {
+		transition := seed(t)
+		w := auth(t, http.MethodPost, "/api/v2/officer-transitions/"+transition.ID.String()+"/reissue", authorization.ROLE_PRESIDENT.ToString(), map[string]string{"role": "president"})
+		require.Equal(t, http.StatusCreated, w.Code)
+		var response struct {
+			ActivationToken string `json:"activationToken"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		require.NotEmpty(t, response.ActivationToken)
 	})
 }

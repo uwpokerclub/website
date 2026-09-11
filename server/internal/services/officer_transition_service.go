@@ -216,10 +216,13 @@ func (s *officerTransitionService) reissueOnce(id uuid.UUID, role string) (strin
 		return "", ErrTransitionInvalid
 	}
 	login, err := tx.Logins().FindByUsernameForUpdate(username)
+	if errors.Is(err, store.ErrNotFound) {
+		return "", ErrTransitionIneligible
+	}
 	if err != nil {
 		return "", err
 	}
-	if role != "president" && login.Status != models.LoginStatusPendingActivation {
+	if login.Status == models.LoginStatusDisabled || (role != "president" && login.Status != models.LoginStatusPendingActivation) {
 		return "", ErrTransitionIneligible
 	}
 	token, err := createTransitionToken(tx, username, id)

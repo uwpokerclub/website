@@ -81,9 +81,11 @@ func (r *inMemoryOfficerTransitionRepository) clone() *inMemoryOfficerTransition
 func (r *inMemoryOfficerTransitionRepository) Create(t *models.OfficerTransition) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	for _, x := range r.transitions {
-		if x.Status == models.OfficerTransitionPending {
-			return store.ErrConflict
+	if t.Status == models.OfficerTransitionPending {
+		for _, x := range r.transitions {
+			if x.Status == models.OfficerTransitionPending {
+				return store.ErrConflict
+			}
 		}
 	}
 	x := *t

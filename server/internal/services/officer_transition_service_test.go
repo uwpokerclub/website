@@ -6,6 +6,7 @@ import (
 	"api/internal/store/inmemory"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,12 +35,15 @@ func TestOfficerTransitionCancelRemovesOnlyOwnedStagingLogins(t *testing.T) {
 	require.NoError(t, st.Logins().Create(&models.Login{Username: "pres", Password: "old", Role: "vice_president", Status: models.LoginStatusActive}))
 	transition, tokens, err := NewOfficerTransitionService(st).Create("outgoing", transitionRequest())
 	require.NoError(t, err)
+	// A historical completed transition may still name a login this staging
+	// transition created; cancellation must preserve that account.
+	require.NoError(t, st.OfficerTransitions().Create(&models.OfficerTransition{ID: uuid.New(), InitiatedBy: "earlier", PresidentUsername: "vp", VicePresidentUsername: "old-vp", SecretaryUsername: "old-sec", TreasurerUsername: "old-treas", Status: models.OfficerTransitionCompleted}))
 	_, err = NewOfficerTransitionService(st).Cancel(transition.ID)
 	require.NoError(t, err)
 	_, err = st.Logins().FindByUsername("sec")
 	require.ErrorIs(t, err, store.ErrNotFound)
 	_, err = st.Logins().FindByUsername("vp")
-	require.ErrorIs(t, err, store.ErrNotFound)
+	require.NoError(t, err)
 	require.Equal(t, models.LoginStatusActive, mustLogin(t, st, "pres").Status)
 	_, err = NewAccountActivationService(st).Verify(tokens["president"])
 	require.ErrorIs(t, err, ErrActivationNotFound)
@@ -79,6 +83,29 @@ func TestOfficerTransitionReissueReplacesTokenAndChecksEligibility(t *testing.T)
 	require.NoError(t, err)
 	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "president")
 	require.ErrorIs(t, err, ErrTransitionResolved)
+}
+
+func TestOfficerTransitionReissueRejectsDisabledOrMissingPresident(t *testing.T) {
+	st := transitionStore(t)
+	require.NoError(t, st.Logins().Create(&models.Login{Username: "pres", Password: "old", Role: "vice_president", Status: models.LoginStatusActive}))
+	transition, _, err := NewOfficerTransitionService(st).Create("outgoing", transitionRequest())
+	require.NoError(t, err)
+	require.NoError(t, st.Logins().Update("pres", map[string]any{"status": models.LoginStatusDisabled}))
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "president")
+	require.ErrorIs(t, err, ErrTransitionIneligible)
+	require.NoError(t, st.Logins().Delete("pres"))
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "president")
+	require.ErrorIs(t, err, ErrTransitionIneligible)
+}
+
+func TestOfficerTransitionCancelRejectsResolvedStates(t *testing.T) {
+	st := transitionStore(t)
+	for _, status := range []string{models.OfficerTransitionCompleted, models.OfficerTransitionCancelled} {
+		transition := models.OfficerTransition{ID: uuid.New(), InitiatedBy: "outgoing", PresidentUsername: "pres", VicePresidentUsername: "vp", SecretaryUsername: "sec", TreasurerUsername: "treas", Status: status}
+		require.NoError(t, st.OfficerTransitions().Create(&transition))
+		_, err := NewOfficerTransitionService(st).Cancel(transition.ID)
+		require.ErrorIs(t, err, ErrTransitionResolved)
+	}
 }
 
 func transitionStore(t *testing.T) store.Store {

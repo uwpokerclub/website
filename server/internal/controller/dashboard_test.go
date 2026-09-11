@@ -382,6 +382,306 @@ func TestDashboardMembershipStats(t *testing.T) {
 	})
 }
 
+func TestDashboardEngagementStats(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+
+	semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+	require.NoError(t, err)
+
+	t.Run("requires authentication and at least executive", func(t *testing.T) {
+		testutils.TestInvalidAuthForEndpoint(
+			t, container, apiServer, "GET",
+			fmt.Sprintf("/api/v2/semesters/%s/dashboard/engagement", semester.ID),
+			[]string{"bot"},
+		)
+	})
+
+	getEngagementStats := func(t *testing.T, semesterID string) *httptest.ResponseRecorder {
+		sessionID, err := testutils.CreateTestSession(db, "exec-"+uuid.NewString(), "executive")
+		require.NoError(t, err)
+
+		req, err := testutils.MakeJSONRequest(
+			"GET", fmt.Sprintf("/api/v2/semesters/%s/dashboard/engagement", semesterID), nil,
+		)
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, sessionID)
+
+		w := httptest.NewRecorder()
+		apiServer.ServeHTTP(w, req)
+		return w
+	}
+
+	nextUserID := func() uint64 {
+		return uint64(time.Now().UnixNano())
+	}
+
+	// entrant creates a user, a membership in semesterID, and enters them into each of
+	// the given events.
+	entrant := func(t *testing.T, db *gorm.DB, semesterID uuid.UUID, tag string, eventIDs ...int32) *models.Membership {
+		user, err := testutils.CreateTestUser(db, nextUserID(), tag, "Player", tag+"@uwaterloo.ca", models.FacultyMath, tag)
+		require.NoError(t, err)
+		membership, err := createDashboardTestMembership(db, user.ID, semesterID, true, false, false)
+		require.NoError(t, err)
+		for _, eventID := range eventIDs {
+			_, err = testutils.CreateTestParticipant(db, membership.ID, eventID)
+			require.NoError(t, err)
+		}
+		return membership
+	}
+
+	t.Run("a member with a membership but zero entries is excluded from every figure", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+
+		entrant(t, db, semester.ID, "player", event.ID)
+
+		// Membership with no entries - must not appear in any figure.
+		bystander, err := testutils.CreateTestUser(db, nextUserID(), "No", "Entries", "noentries@uwaterloo.ca", models.FacultyMath, "ne1")
+		require.NoError(t, err)
+		_, err = createDashboardTestMembership(db, bystander.ID, semester.ID, true, false, false)
+		require.NoError(t, err)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 1, body.Current.Players)
+	})
+
+	t.Run("median is correct for an odd population", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		e1, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+		e2, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E2", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+		e3, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E3", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+
+		// Three players with 1, 2, and 3 events attended - median is 2.
+		entrant(t, db, semester.ID, "p1", e1.ID)
+		entrant(t, db, semester.ID, "p2", e1.ID, e2.ID)
+		entrant(t, db, semester.ID, "p3", e1.ID, e2.ID, e3.ID)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 3, body.Current.Players)
+		require.Equal(t, 2.0, body.Current.MedianEventsAttended)
+	})
+
+	t.Run("median is correct for an even population", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		e1, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+		e2, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E2", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+
+		// Two players with 1 and 2 events attended - median is 1.5.
+		entrant(t, db, semester.ID, "p1", e1.ID)
+		entrant(t, db, semester.ID, "p2", e1.ID, e2.ID)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.Equal(t, 1.5, body.Current.MedianEventsAttended)
+	})
+
+	t.Run("played-once count and share, and the 10+ cohort with exactly-10 counting", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+
+		events := make([]int32, 10)
+		for i := range events {
+			e, err := createDashboardTestEvent(db, semester.ID, structure.ID, fmt.Sprintf("E%d", i), models.EventStateEnded, time.Now(), 0)
+			require.NoError(t, err)
+			events[i] = e.ID
+		}
+
+		// One played-once player, two 4-player group played-twice, and one player who
+		// hit exactly 10 events.
+		entrant(t, db, semester.ID, "once", events[0])
+		entrant(t, db, semester.ID, "twice-a", events[0], events[1])
+		entrant(t, db, semester.ID, "twice-b", events[0], events[1])
+		entrant(t, db, semester.ID, "tenplus", events...)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 4, body.Current.Players)
+		require.EqualValues(t, 1, body.Current.PlayedOnceCount)
+		require.Equal(t, 0.25, body.Current.PlayedOnceShare)
+		require.EqualValues(t, 1, body.Current.TenPlusCount)
+	})
+
+	t.Run("returns zeroes, not an error, for a semester with zero entries", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 0, body.Current.Players)
+		require.Equal(t, 0.0, body.Current.MedianEventsAttended)
+		require.EqualValues(t, 0, body.Current.PlayedOnceCount)
+		require.Equal(t, 0.0, body.Current.PlayedOnceShare)
+		require.EqualValues(t, 0, body.Current.TenPlusCount)
+	})
+
+	t.Run("returns comparison null when there is no comparable prior term", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.Nil(t, body.Comparison)
+	})
+
+	t.Run("returns the comparison semester's own independently correct stats", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		comparisonSemester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		currentSemester, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := createDashboardTestEvent(db, comparisonSemester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+
+		entrant(t, db, comparisonSemester.ID, "p1", event.ID)
+
+		w := getEngagementStats(t, currentSemester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison)
+		require.Equal(t, "Fall 2025", body.Comparison.Semester.Name)
+		require.EqualValues(t, 1, body.Comparison.Stats.Players)
+		require.EqualValues(t, 0, body.Current.Players)
+	})
+
+	t.Run("a participant row left with a NULL membership_id after its membership is deleted is excluded", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+
+		orphanMembership := entrant(t, db, semester.ID, "orphan", event.ID)
+		entrant(t, db, semester.ID, "survivor", event.ID)
+
+		// Deleting the membership sets participants.membership_id to NULL at the DB
+		// level (ON DELETE SET NULL) rather than removing the entry row.
+		require.NoError(t, db.Unscoped().Delete(&models.Membership{}, "id = ?", orphanMembership.ID).Error)
+
+		w := getEngagementStats(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 1, body.Current.Players)
+	})
+
+	t.Run("a member entering via two different memberships in this semester's events counts once with combined events", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		priorSemester, err := createDashboardTestSemester(db, "Winter 2025", time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		currentSemester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+
+		// Both events belong to the current semester, but the entries are made
+		// through two different memberships for the same user - one from a prior
+		// semester, one from the current semester. Nothing in CreateParticipant
+		// stops an entry from referencing a membership whose semester differs from
+		// the event's semester.
+		e1, err := createDashboardTestEvent(db, currentSemester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+		e2, err := createDashboardTestEvent(db, currentSemester.ID, structure.ID, "E2", models.EventStateEnded, time.Now(), 0)
+		require.NoError(t, err)
+
+		user, err := testutils.CreateTestUser(db, nextUserID(), "Cross", "Term", "crossterm-eng@uwaterloo.ca", models.FacultyMath, "cte1")
+		require.NoError(t, err)
+		oldMembership, err := createDashboardTestMembership(db, user.ID, priorSemester.ID, true, false, false)
+		require.NoError(t, err)
+		newMembership, err := createDashboardTestMembership(db, user.ID, currentSemester.ID, true, false, false)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, oldMembership.ID, e1.ID)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, newMembership.ID, e2.ID)
+		require.NoError(t, err)
+
+		w := getEngagementStats(t, currentSemester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EngagementStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 1, body.Current.Players)
+		require.Equal(t, 2.0, body.Current.MedianEventsAttended)
+		require.EqualValues(t, 0, body.Current.PlayedOnceCount)
+	})
+
+	t.Run("returns 404 for an unknown semester id", func(t *testing.T) {
+		w := getEngagementStats(t, "00000000-0000-0000-0000-000000000000")
+		require.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns 400 for a malformed semester id", func(t *testing.T) {
+		w := getEngagementStats(t, "not-a-uuid")
+		require.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
 func TestDashboardSpotlight(t *testing.T) {
 	t.Parallel()
 

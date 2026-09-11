@@ -16,20 +16,20 @@
 
 .header {
   padding: 1.5rem 2rem 1rem;
-  border-bottom: 1px solid var(--color-gray-200, #e0e0e0);
+  border-bottom: 1px solid var(--color-gray-200, #eeeeee);
   background-color: var(--color-background, #ffffff);
 }
 
 .header h1 {
   margin: 0 0 0.5rem;
   font-size: 1.75rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold, 600);
   color: var(--color-gray-900, #212121);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm, 0.875rem);
   color: var(--color-gray-600, #757575);
 }
 
@@ -39,11 +39,11 @@
   }
 
   .header h1 {
-    font-size: 1.5rem;
+    font-size: var(--font-size-2xl, 1.5rem);
   }
 
   .subtitle {
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm, 0.875rem);
   }
 }
 

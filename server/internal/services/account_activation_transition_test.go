@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"api/internal/authorization"
 	"api/internal/models"
 	"api/internal/services"
 	"api/internal/store/postgres"
@@ -277,7 +278,7 @@ func TestTransitionConcurrentReissuesLeaveOneValidTokenAndFreshTokenCompletes(t 
 	for range 2 {
 		go func() {
 			<-start
-			token, e := services.NewOfficerTransitionService(postgres.NewStore(db)).Reissue(transition.ID, "president")
+			token, e := services.NewOfficerTransitionService(postgres.NewStore(db)).Reissue(transition.ID, authorization.ROLE_PRESIDENT)
 			results <- token
 			errs <- e
 		}()

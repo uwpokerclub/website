@@ -1,6 +1,7 @@
 package services
 
 import (
+	"api/internal/authorization"
 	"api/internal/models"
 	"api/internal/store"
 	"api/internal/store/inmemory"
@@ -68,20 +69,20 @@ func TestOfficerTransitionReissueReplacesTokenAndChecksEligibility(t *testing.T)
 	require.NoError(t, st.Logins().Create(&models.Login{Username: "vp", Password: "old", Role: "executive", Status: models.LoginStatusActive}))
 	transition, tokens, err := NewOfficerTransitionService(st).Create("outgoing", transitionRequest())
 	require.NoError(t, err)
-	fresh, err := NewOfficerTransitionService(st).Reissue(transition.ID, "president")
+	fresh, err := NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ROLE_PRESIDENT)
 	require.NoError(t, err)
 	require.NotEqual(t, tokens["president"], fresh)
 	_, err = NewAccountActivationService(st).Verify(tokens["president"])
 	require.ErrorIs(t, err, ErrActivationNotFound)
 	_, err = NewAccountActivationService(st).Verify(fresh)
 	require.NoError(t, err)
-	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "vice_president")
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ROLE_VICE_PRESIDENT)
 	require.ErrorIs(t, err, ErrTransitionIneligible)
-	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "invalid")
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ToRole("invalid"))
 	require.ErrorIs(t, err, ErrTransitionInvalid)
 	_, err = NewOfficerTransitionService(st).Cancel(transition.ID)
 	require.NoError(t, err)
-	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "president")
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ROLE_PRESIDENT)
 	require.ErrorIs(t, err, ErrTransitionResolved)
 }
 
@@ -91,10 +92,10 @@ func TestOfficerTransitionReissueRejectsDisabledOrMissingPresident(t *testing.T)
 	transition, _, err := NewOfficerTransitionService(st).Create("outgoing", transitionRequest())
 	require.NoError(t, err)
 	require.NoError(t, st.Logins().Update("pres", map[string]any{"status": models.LoginStatusDisabled}))
-	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "president")
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ROLE_PRESIDENT)
 	require.ErrorIs(t, err, ErrTransitionIneligible)
 	require.NoError(t, st.Logins().Delete("pres"))
-	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, "president")
+	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ROLE_PRESIDENT)
 	require.ErrorIs(t, err, ErrTransitionIneligible)
 }
 
@@ -106,6 +107,22 @@ func TestOfficerTransitionCancelRejectsResolvedStates(t *testing.T) {
 		_, err := NewOfficerTransitionService(st).Cancel(transition.ID)
 		require.ErrorIs(t, err, ErrTransitionResolved)
 	}
+}
+
+func TestTransitionUsernameForCanonicalRole(t *testing.T) {
+	transition := models.OfficerTransition{PresidentUsername: "pres", VicePresidentUsername: "vp", SecretaryUsername: "sec", TreasurerUsername: "treas"}
+	for role, username := range map[authorization.Role]string{
+		authorization.ROLE_PRESIDENT:      "pres",
+		authorization.ROLE_VICE_PRESIDENT: "vp",
+		authorization.ROLE_SECRETARY:      "sec",
+		authorization.ROLE_TREASURER:      "treas",
+	} {
+		actual, ok := transitionUsernameForRole(transition, role)
+		require.True(t, ok)
+		require.Equal(t, username, actual)
+	}
+	_, ok := transitionUsernameForRole(transition, authorization.ROLE_EXECUTIVE)
+	require.False(t, ok)
 }
 
 func transitionStore(t *testing.T) store.Store {

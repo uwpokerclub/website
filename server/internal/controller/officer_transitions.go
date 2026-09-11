@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"api/internal/authorization"
 	"api/internal/errors"
 	"api/internal/middleware"
 	"api/internal/models"
@@ -63,7 +64,7 @@ func (c *officerTransitionsController) reissue(ctx *gin.Context) {
 	if !BindJSON(ctx, &req) {
 		return
 	}
-	token, err := services.NewOfficerTransitionService(c.store).Reissue(id, req.Role)
+	token, err := services.NewOfficerTransitionService(c.store).Reissue(id, authorization.ToRole(req.Role))
 	if err != nil {
 		switch {
 		case stderrors.Is(err, services.ErrTransitionInvalid):

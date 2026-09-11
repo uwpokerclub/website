@@ -2,6 +2,7 @@ package services
 
 import (
 	"api/internal/authentication"
+	"api/internal/authorization"
 	"api/internal/models"
 	"api/internal/store"
 	"crypto/rand"
@@ -151,15 +152,15 @@ func isTransitionNominee(transition models.OfficerTransition, username string) b
 }
 
 func completeOfficerTransition(tx store.Store, transition models.OfficerTransition, password string) (models.Login, error) {
-	president, err := tx.Logins().ActivateWithRole(transition.PresidentUsername, password, "president")
+	president, err := tx.Logins().ActivateWithRole(transition.PresidentUsername, password, authorization.ROLE_PRESIDENT.ToString())
 	if err != nil {
 		return models.Login{}, fmt.Errorf("activate transition president: %w", err)
 	}
 	nominees := []string{transition.PresidentUsername, transition.VicePresidentUsername, transition.SecretaryUsername, transition.TreasurerUsername}
 	for _, nominee := range []struct{ username, role string }{
-		{transition.VicePresidentUsername, "vice_president"},
-		{transition.SecretaryUsername, "secretary"},
-		{transition.TreasurerUsername, "treasurer"},
+		{transition.VicePresidentUsername, authorization.ROLE_VICE_PRESIDENT.ToString()},
+		{transition.SecretaryUsername, authorization.ROLE_SECRETARY.ToString()},
+		{transition.TreasurerUsername, authorization.ROLE_TREASURER.ToString()},
 	} {
 		if err := tx.Logins().Update(nominee.username, map[string]any{"role": nominee.role}); err != nil {
 			return models.Login{}, fmt.Errorf("set transition nominee role: %w", err)

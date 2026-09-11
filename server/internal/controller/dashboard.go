@@ -3,6 +3,8 @@ package controller
 import (
 	apierrors "api/internal/errors"
 	"api/internal/middleware"
+	"api/internal/models"
+	"api/internal/services"
 	"api/internal/store"
 	"errors"
 	"net/http"
@@ -23,6 +25,7 @@ func NewDashboardController(st store.Store) Controller {
 func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/dashboard", middleware.UseAuthentication(c.store))
 	group.GET("spotlight", middleware.UseAuthorization("semester.get"), c.getSpotlight)
+	group.GET("memberships", middleware.UseAuthorization("semester.get"), c.getMembershipStats)
 }
 
 // getSpotlight handles retrieving the dashboard's Event Spotlight card for a semester.
@@ -62,4 +65,80 @@ func (c *dashboardController) getSpotlight(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, event)
+}
+
+// ComparisonMembershipStats pairs a resolved comparison semester with its membership
+// stats.
+type ComparisonMembershipStats struct {
+	Semester store.SemesterRef     `json:"semester"`
+	Stats    store.MembershipStats `json:"stats"`
+} //@name ComparisonMembershipStats
+
+// MembershipStatsResponse is the dashboard's Term at a Glance response: the current
+// semester's membership stats, plus the same figures for the resolved comparison
+// semester, or null when there is no comparable term.
+type MembershipStatsResponse struct {
+	Current    store.MembershipStats      `json:"current"`
+	Comparison *ComparisonMembershipStats `json:"comparison"`
+} //@name MembershipStatsResponse
+
+// getMembershipStats handles retrieving the dashboard's Term at a Glance card for a
+// semester.
+//
+// @Summary Get dashboard membership stats
+// @Description Get membership counts by paid/unpaid/discounted/executive and the new-vs-returning split for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term
+// @Tags Dashboard
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Success 200 {object} MembershipStatsResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/dashboard/memberships [get]
+func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	semester, err := c.store.Semesters().FindByID(semesterID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	semesters, _, err := c.store.Semesters().List(&models.Pagination{})
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	current, err := c.store.Dashboard().MembershipStats(semesterID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	response := MembershipStatsResponse{Current: current}
+
+	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
+		comparisonStats, err := c.store.Dashboard().MembershipStats(comparison.ID)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+		response.Comparison = &ComparisonMembershipStats{
+			Semester: store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+			Stats:    comparisonStats,
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

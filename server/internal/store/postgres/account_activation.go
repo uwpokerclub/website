@@ -38,7 +38,7 @@ func (r *postgresAccountActivationRepository) Consume(tokenHash []byte) (models.
 	var activation models.AccountActivation
 	result := r.db.Raw(`UPDATE account_activations SET used_at = CURRENT_TIMESTAMP
 		WHERE token_hash = ? AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
-		RETURNING token_hash, username, expires_at, used_at`, tokenHash).Scan(&activation)
+		RETURNING token_hash, username, expires_at, used_at, transition_id`, tokenHash).Scan(&activation)
 	if result.Error != nil {
 		return models.AccountActivation{}, result.Error
 	}

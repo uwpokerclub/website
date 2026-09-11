@@ -107,6 +107,35 @@ func (r *inMemoryLoginRepository) Activate(username, password string) (models.Lo
 	return *login, nil
 }
 
+func (r *inMemoryLoginRepository) ActivateWithRole(username, password, role string) (models.Login, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	login, exists := r.logins[username]
+	if !exists || login.Status == models.LoginStatusDisabled {
+		return models.Login{}, store.ErrNotFound
+	}
+	login.Password, login.Status, login.Role = password, models.LoginStatusActive, role
+	return *login, nil
+}
+
+func (r *inMemoryLoginRepository) DisableExecutiveExcept(usernames []string) ([]string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	except := map[string]bool{}
+	for _, username := range usernames {
+		except[username] = true
+	}
+	ladder := map[string]bool{"executive": true, "tournament_director": true, "secretary": true, "treasurer": true, "vice_president": true, "president": true}
+	var disabled []string
+	for username, login := range r.logins {
+		if !except[username] && ladder[login.Role] && login.Status != models.LoginStatusDisabled {
+			login.Status = models.LoginStatusDisabled
+			disabled = append(disabled, username)
+		}
+	}
+	return disabled, nil
+}
+
 func (r *inMemoryLoginRepository) Delete(username string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -93,3 +93,18 @@ func (r *inMemorySessionRepository) DeleteByUsername(username string) error {
 
 	return nil
 }
+
+func (r *inMemorySessionRepository) DeleteByUsernames(usernames []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	set := map[string]bool{}
+	for _, username := range usernames {
+		set[username] = true
+	}
+	for id, session := range r.sessions {
+		if set[session.Username] {
+			delete(r.sessions, id)
+		}
+	}
+	return nil
+}

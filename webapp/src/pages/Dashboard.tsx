@@ -11,6 +11,9 @@ export function Dashboard() {
   if (!currentSemester) {
     return (
       <div className={styles.page} data-qa="dashboard-no-semester">
+        <div className={styles.header}>
+          <h1>Dashboard</h1>
+        </div>
         <div className={styles.noSemester}>
           <p>Please select a semester to view the dashboard.</p>
         </div>
@@ -22,6 +25,10 @@ export function Dashboard() {
 
   return (
     <div className={styles.page} data-qa="dashboard-page">
+      <div className={styles.header}>
+        <h1>Dashboard</h1>
+        <p className={styles.subtitle}>{currentSemester.name}</p>
+      </div>
       <DashboardGrid data-qa="dashboard-grid">
         {layout.map((cardId) => {
           const CardComponent = DASHBOARD_CARDS[cardId];

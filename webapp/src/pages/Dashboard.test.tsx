@@ -30,7 +30,7 @@ const semester: Semester = {
 };
 
 function cardTitleOrder() {
-  return screen.getAllByRole("heading").map((heading) => heading.textContent);
+  return screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 }
 
 afterEach(() => {
@@ -98,6 +98,26 @@ describe("Dashboard", () => {
 
     expect(screen.getByText("Please select a semester to view the dashboard.")).toBeInTheDocument();
     expect(container.querySelector('[data-qa="dashboard-grid"]')).not.toBeInTheDocument();
+  });
+
+  it("shows the title but no subtitle when there is no current semester", () => {
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseCurrentSemester.mockReturnValue({ currentSemester: null });
+
+    render(<Dashboard />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByText(semester.name)).not.toBeInTheDocument();
+  });
+
+  it("shows the current semester's name as the header subtitle", () => {
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
+
+    render(<Dashboard />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByText("Fall 2026")).toBeInTheDocument();
   });
 
   it("renders a registered card component instead of the placeholder and passes semesterId", () => {

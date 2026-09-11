@@ -30,6 +30,13 @@ definitions:
       version:
         type: integer
     type: object
+  ComparisonEngagementStats:
+    properties:
+      semester:
+        $ref: '#/definitions/SemesterRef'
+      stats:
+        $ref: '#/definitions/EngagementStats'
+    type: object
   ComparisonMembershipStats:
     properties:
       semester:
@@ -176,6 +183,26 @@ definitions:
     - name
     - rebuyFee
     - startDate
+    type: object
+  EngagementStats:
+    properties:
+      medianEventsAttended:
+        type: number
+      playedOnceCount:
+        type: integer
+      playedOnceShare:
+        type: number
+      players:
+        type: integer
+      tenPlusCount:
+        type: integer
+    type: object
+  EngagementStatsResponse:
+    properties:
+      comparison:
+        $ref: '#/definitions/ComparisonEngagementStats'
+      current:
+        $ref: '#/definitions/EngagementStats'
     type: object
   ErrorResponse:
     properties:
@@ -1121,6 +1148,47 @@ paths:
       summary: Get Semester
       tags:
       - Semesters
+  /semesters/{semesterId}/dashboard/engagement:
+    get:
+      description: Get distinct players, median events attended, played-once share,
+        and the 10+ cohort size for a semester, plus the same figures for the resolved
+        comparison semester, or null when there is no comparable term
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/EngagementStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get dashboard engagement stats
+      tags:
+      - Dashboard
   /semesters/{semesterId}/dashboard/memberships:
     get:
       description: Get membership counts by paid/unpaid/discounted/executive and the

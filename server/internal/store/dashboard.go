@@ -47,6 +47,23 @@ type MembershipStats struct {
 	Returning  int64 `json:"returning"`
 } //@name MembershipStats
 
+// EngagementStats is the Engagement & Retention card's figures for a single semester:
+// distinct players, median events attended, the played-once cohort, and the 10+
+// cohort.
+//
+// The population is distinct members (by memberships.user_id, not membership_id - a
+// member who entered this semester's events through two different memberships still
+// counts once) with at least one participant row in an event whose semester_id is
+// the requested semester. PlayedOnceShare is PlayedOnceCount / Players, computed in
+// Go so a semester with zero players never divides by zero.
+type EngagementStats struct {
+	Players              int64   `json:"players"`
+	MedianEventsAttended float64 `json:"medianEventsAttended"`
+	PlayedOnceCount      int64   `json:"playedOnceCount"`
+	PlayedOnceShare      float64 `json:"playedOnceShare"`
+	TenPlusCount         int64   `json:"tenPlusCount"`
+} //@name EngagementStats
+
 // DashboardRepository is the interface for the dashboard's read-only aggregate
 // queries. These span memberships, participants, and events, so they are kept here
 // rather than smeared as Stats() methods across those repositories.
@@ -68,4 +85,9 @@ type DashboardRepository interface {
 	// membership is New when the user has no membership in any semester whose
 	// start_date is strictly earlier, otherwise Returning.
 	MembershipStats(semesterID uuid.UUID) (MembershipStats, error)
+
+	// EngagementStats returns the Engagement & Retention figures for the given
+	// semester. A semester with no qualifying participant rows returns a zero-valued
+	// EngagementStats, not an error.
+	EngagementStats(semesterID uuid.UUID) (EngagementStats, error)
 }

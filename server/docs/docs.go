@@ -823,7 +823,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "The live or next upcoming event, or null if neither exists",
                         "schema": {
                             "$ref": "#/definitions/SpotlightEvent"
                         }

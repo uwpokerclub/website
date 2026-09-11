@@ -32,7 +32,7 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 // @Tags Dashboard
 // @Produce json
 // @Param semesterId path string true "Semester ID"
-// @Success 200 {object} SpotlightEvent
+// @Success 200 {object} SpotlightEvent "The live or next upcoming event, or null if neither exists"
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse

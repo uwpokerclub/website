@@ -28,3 +28,7 @@ func NewDashboardRepository() store.DashboardRepository {
 func (r *inMemoryDashboardRepository) Spotlight(semesterID uuid.UUID, now time.Time) (*store.SpotlightEvent, error) {
 	return nil, store.ErrNotImplemented
 }
+
+func (r *inMemoryDashboardRepository) MembershipStats(semesterID uuid.UUID) (store.MembershipStats, error) {
+	return store.MembershipStats{}, store.ErrNotImplemented
+}

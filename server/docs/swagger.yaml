@@ -30,6 +30,13 @@ definitions:
       version:
         type: integer
     type: object
+  ComparisonMembershipStats:
+    properties:
+      semester:
+        $ref: '#/definitions/SemesterRef'
+      stats:
+        $ref: '#/definitions/MembershipStats'
+    type: object
   CreateEntryResult:
     properties:
       error:
@@ -306,6 +313,30 @@ definitions:
       userId:
         type: integer
     type: object
+  MembershipStats:
+    properties:
+      discounted:
+        type: integer
+      executive:
+        type: integer
+      new:
+        type: integer
+      paid:
+        type: integer
+      returning:
+        type: integer
+      total:
+        type: integer
+      unpaid:
+        type: integer
+    type: object
+  MembershipStatsResponse:
+    properties:
+      comparison:
+        $ref: '#/definitions/ComparisonMembershipStats'
+      current:
+        $ref: '#/definitions/MembershipStats'
+    type: object
   MembershipWithAttendance:
     properties:
       attendance:
@@ -418,6 +449,13 @@ definitions:
       startingBudget:
         example: 100
         type: number
+    type: object
+  SemesterRef:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
     type: object
   SetClockLevelRequest:
     properties:
@@ -1083,6 +1121,47 @@ paths:
       summary: Get Semester
       tags:
       - Semesters
+  /semesters/{semesterId}/dashboard/memberships:
+    get:
+      description: Get membership counts by paid/unpaid/discounted/executive and the
+        new-vs-returning split for a semester, plus the same figures for the resolved
+        comparison semester, or null when there is no comparable term
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MembershipStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get dashboard membership stats
+      tags:
+      - Dashboard
   /semesters/{semesterId}/dashboard/spotlight:
     get:
       description: Get the live or next upcoming event for a semester, or null if

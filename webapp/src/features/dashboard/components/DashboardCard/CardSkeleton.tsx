@@ -13,7 +13,7 @@ export function CardSkeleton({ label }: CardSkeletonProps) {
       aria-label={label}
       data-qa="dashboard-card-skeleton"
     >
-      <div className={styles.line} />
+      <div className={styles.headline} />
       <div className={styles.line} />
       <div className={styles.lineShort} />
     </div>

@@ -22,6 +22,13 @@
   width: 60%;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    background: var(--color-gray-200, #e0e0e0);
+    animation: none;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: 100% 50%;

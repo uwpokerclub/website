@@ -15,8 +15,7 @@ type DashboardCardProps = {
   emptyMessage?: ReactNode;
   "data-qa"?: string;
   /**
-   * Rendered only when status is "ready" - kept as a function so callers can
-   * reference data that only exists once loading has finished.
+   * Renders the card body. Called only when status is "ready".
    */
   children: () => ReactNode;
 };
@@ -41,6 +40,7 @@ export function DashboardCard({
         {status === "loading" && <CardSkeleton label={`Loading ${title}`} />}
         {status === "error" && <CardErrorState message={errorMessage} onRetry={onRetry} />}
         {status === "empty" && <CardEmptyState message={emptyMessage} />}
+        {/* a function, not a node, so it's never called with data that only exists once loading has finished */}
         {status === "ready" && children()}
       </div>
     </section>

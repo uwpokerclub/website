@@ -114,6 +114,16 @@
   font-size: 0.875rem;
 }
 
+.warning {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-warning, #b7791f);
+  border-radius: 4px;
+  background-color: var(--color-warning-light, #fffbeb);
+  color: var(--color-warning-dark, #744210);
+  font-size: 0.875rem;
+}
+
 .reviewList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -58,6 +58,91 @@ describe("SemesterSetupWizard", () => {
     cy.getByData("semester-wizard-step-term-dates").should("exist");
   });
 
+  it("prefills editable fees from the semester with the latest start date", () => {
+    cy.intercept("POST", "/api/v2/semesters").as("createSemester");
+    cy.intercept("GET", "/api/v2/semesters", {
+      data: [
+        {
+          id: "older-semester",
+          name: "Fall 2026",
+          startDate: "2026-09-01T00:00:00Z",
+          endDate: "2026-12-31T00:00:00Z",
+          startingBudget: 100,
+          currentBudget: 100,
+          membershipFee: 10,
+          membershipDiscountFee: 5,
+          rebuyFee: 2,
+          freeTrialLimit: 0,
+          meta: "",
+        },
+        {
+          id: "latest-semester",
+          name: "Winter 2027",
+          startDate: "2027-01-01T00:00:00Z",
+          endDate: "2027-04-30T00:00:00Z",
+          startingBudget: 250,
+          currentBudget: 250,
+          membershipFee: 15,
+          membershipDiscountFee: 10,
+          rebuyFee: 0,
+          freeTrialLimit: 4,
+          meta: "",
+        },
+      ],
+      total: 2,
+    }).as("getLatestSemesters");
+    cy.visit("/admin/dashboard");
+    cy.wait("@getLatestSemesters");
+
+    openWizard();
+    fillTermAndDates("spring", "2027-05-01", "2027-08-31");
+    continueToFees();
+
+    cy.getByData("input-semester-startingBudget").should("have.value", "250");
+    cy.getByData("input-semester-membershipFee").should("have.value", "15");
+    cy.getByData("input-semester-membershipDiscountFee").should("have.value", "10");
+    cy.getByData("input-semester-rebuyFee").should("have.value", "0");
+    cy.getByData("input-semester-freeTrialLimit").should("have.value", "4");
+
+    cy.getByData("input-semester-membershipFee").clear().type("20");
+    cy.getByData("semester-wizard-next-btn").click();
+    cy.getByData("semester-review-membershipFee").should("have.text", "$20");
+    cy.getByData("create-semester-submit-btn").click();
+
+    cy.wait("@createSemester").then((interception) => {
+      expect(interception.request.body).to.deep.include({
+        membershipFee: 20,
+        rebuyFee: 0,
+      });
+      expect(interception.response?.statusCode).to.eq(201);
+    });
+  });
+
+  it("uses hardcoded fee defaults when no previous semester exists", () => {
+    cy.intercept("GET", "/api/v2/semesters", { data: [], total: 0 }).as("getEmptySemesters");
+    cy.visit("/admin/dashboard");
+    cy.wait("@getEmptySemesters");
+
+    openWizard();
+    fillTermAndDates("spring", "2027-05-01", "2027-08-31");
+    continueToFees();
+
+    cy.getByData("input-semester-startingBudget").should("have.value", "0");
+    cy.getByData("input-semester-membershipFee").should("have.value", "10");
+    cy.getByData("input-semester-membershipDiscountFee").should("have.value", "5");
+    cy.getByData("input-semester-rebuyFee").should("have.value", "2");
+    cy.getByData("input-semester-freeTrialLimit").should("have.value", "0");
+  });
+
+  it("warns about a mismatched term and start month without blocking progress", () => {
+    openWizard();
+    fillTermAndDates("fall", "2027-06-01", "2027-08-31");
+
+    cy.getByData("semester-term-date-warning").should("contain", "Fall usually starts in September. This starts in June.");
+    continueToFees();
+    cy.getByData("semester-wizard-step-fees-budget").should("exist");
+  });
+
   it("shows the exact submission values on review", () => {
     cy.intercept("POST", "/api/v2/semesters").as("createSemester");
     openWizard();
@@ -96,10 +181,11 @@ describe("SemesterSetupWizard", () => {
     cy.wait("@createSemester").then((interception) => {
       expect(interception.request.body).to.deep.include({
         name: "Winter 2028",
+        startingBudget: 100,
         membershipFee: 10,
-        membershipDiscountFee: 5,
+        membershipDiscountFee: 7,
         rebuyFee: 2,
-        freeTrialLimit: 0,
+        freeTrialLimit: 4,
       });
       expect(interception.response?.statusCode).to.eq(201);
     });

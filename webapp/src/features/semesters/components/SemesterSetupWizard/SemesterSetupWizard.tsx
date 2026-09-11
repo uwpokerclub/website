@@ -1,9 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Modal, useToast } from "@uwpokerclub/components";
 import type { Semester } from "../../../../types";
-import { useCreateSemester } from "../../hooks/useSemesterQueries";
+import { useCreateSemester, useSemesters } from "../../hooks/useSemesterQueries";
 import { FeesAndBudgetStep } from "./FeesAndBudgetStep";
 import { ReviewStep } from "./ReviewStep";
 import { deriveSemesterName, semesterSetupSchema, type SemesterSetupFormData } from "./schema";
@@ -18,30 +18,69 @@ export interface SemesterSetupWizardProps {
 
 const steps = ["Term & Dates", "Fees & Budget", "Review"];
 
+const defaultValues: SemesterSetupFormData = {
+  term: "",
+  startDate: "",
+  endDate: "",
+  startingBudget: 0,
+  membershipFee: 10,
+  membershipDiscountFee: 5,
+  rebuyFee: 2,
+  freeTrialLimit: 0,
+  meta: "",
+};
+
+function getFeeDefaults(
+  semesters: Semester[],
+): Pick<
+  SemesterSetupFormData,
+  "startingBudget" | "membershipFee" | "membershipDiscountFee" | "rebuyFee" | "freeTrialLimit"
+> {
+  const latestSemester = semesters.reduce<Semester | undefined>((latest, semester) => {
+    if (!latest || new Date(semester.startDate).getTime() > new Date(latest.startDate).getTime()) return semester;
+    return latest;
+  }, undefined);
+
+  if (!latestSemester) return defaultValues;
+
+  return {
+    startingBudget: latestSemester.startingBudget,
+    membershipFee: latestSemester.membershipFee,
+    membershipDiscountFee: latestSemester.membershipDiscountFee,
+    rebuyFee: latestSemester.rebuyFee,
+    freeTrialLimit: latestSemester.freeTrialLimit,
+  };
+}
+
 export function SemesterSetupWizard({ isOpen, onClose, onSuccess }: SemesterSetupWizardProps) {
   const { showToast } = useToast();
+  const { data: semesters = [], isLoading: isLoadingSemesters } = useSemesters();
   const createSemester = useCreateSemester();
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const hasInitializedDefaults = useRef(false);
   const form = useForm<SemesterSetupFormData>({
     resolver: zodResolver(semesterSetupSchema),
-    defaultValues: {
-      term: "",
-      startDate: "",
-      endDate: "",
-      startingBudget: 0,
-      membershipFee: 10,
-      membershipDiscountFee: 5,
-      rebuyFee: 2,
-      freeTrialLimit: 0,
-      meta: "",
-    },
+    defaultValues,
   });
+
+  useEffect(() => {
+    if (!isOpen) {
+      hasInitializedDefaults.current = false;
+      return;
+    }
+
+    if (!isLoadingSemesters && !hasInitializedDefaults.current) {
+      form.reset({ ...defaultValues, ...getFeeDefaults(semesters) });
+      hasInitializedDefaults.current = true;
+    }
+  }, [form, isLoadingSemesters, isOpen, semesters]);
+
   const values = form.watch();
   const name = deriveSemesterName(values.term, values.startDate);
 
   const handleClose = useCallback(() => {
-    form.reset();
+    form.reset(defaultValues);
     setStep(0);
     setSubmitError(null);
     onClose();

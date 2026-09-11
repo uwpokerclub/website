@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type inMemoryAccountActivationRepository struct {
@@ -43,6 +45,17 @@ func (r *inMemoryAccountActivationRepository) DeleteUnusedByUsername(username st
 	defer r.mu.Unlock()
 	for key, activation := range r.activations {
 		if activation.Username == username && activation.UsedAt == nil {
+			delete(r.activations, key)
+		}
+	}
+	return nil
+}
+
+func (r *inMemoryAccountActivationRepository) DeleteByTransition(id uuid.UUID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for key, activation := range r.activations {
+		if activation.TransitionID != nil && *activation.TransitionID == id {
 			delete(r.activations, key)
 		}
 	}

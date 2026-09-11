@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"api/internal/authorization"
 	"api/internal/models"
 	"api/internal/services"
 	"api/internal/store/postgres"
@@ -186,6 +187,119 @@ func TestTransitionCompletionLosesToGuardedCancelWithoutPartialWrites(t *testing
 	require.NoError(t, db.First(&president, "username = ?", "president").Error)
 	require.Equal(t, "vice_president", president.Role)
 	require.Equal(t, models.LoginStatusActive, president.Status)
+}
+
+func TestTransitionCancellationRollsBackCleanupFailure(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	transition, tokens := seedActivationTransition(t, db)
+	require.NoError(t, db.Model(&models.Login{}).Where("username = ?", "vp").Update("staged_transition_id", transition.ID).Error)
+	require.NoError(t, db.Exec(`CREATE FUNCTION fail_staged_login_delete() RETURNS trigger AS $$
+	BEGIN
+	  IF OLD.username = 'vp' THEN RAISE EXCEPTION 'forced cleanup failure'; END IF;
+	  RETURN OLD;
+	END;
+	$$ LANGUAGE plpgsql`).Error)
+	require.NoError(t, db.Exec(`CREATE TRIGGER fail_staged_login_delete BEFORE DELETE ON logins
+	FOR EACH ROW EXECUTE FUNCTION fail_staged_login_delete()`).Error)
+
+	_, err = services.NewOfficerTransitionService(postgres.NewStore(db)).Cancel(transition.ID)
+	require.Error(t, err)
+	var pending models.OfficerTransition
+	require.NoError(t, db.First(&pending, "id = ?", transition.ID).Error)
+	require.Equal(t, models.OfficerTransitionPending, pending.Status)
+	assertUnusedTransitionToken(t, db, tokens["president"])
+	var vp models.Login
+	require.NoError(t, db.First(&vp, "username = ?", "vp").Error)
+	require.Equal(t, models.LoginStatusPendingActivation, vp.Status)
+}
+
+func TestTransitionCancelAndCompleteRaceHasOneCoherentWinner(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	transition, tokens := seedActivationTransition(t, db)
+	start := make(chan struct{})
+	cancelResult := make(chan error, 1)
+	completeResult := make(chan error, 1)
+	go func() {
+		<-start
+		_, e := services.NewOfficerTransitionService(postgres.NewStore(db)).Cancel(transition.ID)
+		cancelResult <- e
+	}()
+	go func() {
+		<-start
+		_, _, e := services.NewAccountActivationService(postgres.NewStore(db)).Complete(tokens["president"], "newpassword")
+		completeResult <- e
+	}()
+	close(start)
+	cancelErr, completeErr := <-cancelResult, <-completeResult
+
+	var actual models.OfficerTransition
+	require.NoError(t, db.First(&actual, "id = ?", transition.ID).Error)
+	switch actual.Status {
+	case models.OfficerTransitionCancelled:
+		require.NoError(t, cancelErr)
+		require.ErrorIs(t, completeErr, services.ErrActivationNotFound)
+		var president models.Login
+		require.NoError(t, db.First(&president, "username = ?", "president").Error)
+		require.Equal(t, "vice_president", president.Role)
+		require.Equal(t, models.LoginStatusActive, president.Status)
+		var tokensLeft int64
+		require.NoError(t, db.Model(&models.AccountActivation{}).Where("transition_id = ?", transition.ID).Count(&tokensLeft).Error)
+		require.Zero(t, tokensLeft)
+	case models.OfficerTransitionCompleted:
+		require.NoError(t, completeErr)
+		require.ErrorIs(t, cancelErr, services.ErrTransitionResolved)
+		var president models.Login
+		require.NoError(t, db.First(&president, "username = ?", "president").Error)
+		require.Equal(t, "president", president.Role)
+		require.Equal(t, models.LoginStatusActive, president.Status)
+	default:
+		t.Fatalf("unexpected transition state %q", actual.Status)
+	}
+}
+
+func TestTransitionConcurrentReissuesLeaveOneValidTokenAndFreshTokenCompletes(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	transition, _ := seedActivationTransition(t, db)
+	start := make(chan struct{})
+	results := make(chan string, 2)
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() {
+			<-start
+			token, e := services.NewOfficerTransitionService(postgres.NewStore(db)).Reissue(transition.ID, authorization.ROLE_PRESIDENT)
+			results <- token
+			errs <- e
+		}()
+	}
+	close(start)
+	first, second := <-results, <-results
+	require.NoError(t, <-errs)
+	require.NoError(t, <-errs)
+	require.NotEqual(t, first, second)
+	valid := 0
+	var fresh string
+	for _, token := range []string{first, second} {
+		if _, err := services.NewAccountActivationService(postgres.NewStore(db)).Verify(token); err == nil {
+			valid++
+			fresh = token
+		}
+	}
+	require.Equal(t, 1, valid)
+	login, _, err := services.NewAccountActivationService(postgres.NewStore(db)).Complete(fresh, "newpassword")
+	require.NoError(t, err)
+	require.Equal(t, "president", login.Role)
 }
 
 func seedActivationTransition(t *testing.T, db *gorm.DB) (models.OfficerTransition, map[string]string) {

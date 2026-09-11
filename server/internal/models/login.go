@@ -1,5 +1,7 @@
 package models
 
+import "github.com/google/uuid"
+
 const (
 	LoginStatusActive            = "active"
 	LoginStatusPendingActivation = "pending_activation"
@@ -13,6 +15,10 @@ type Login struct {
 	// Any path that changes Status to disabled must delete this login's sessions in the same transaction.
 	Status   string    `json:"status" binding:"oneof=active pending_activation disabled" gorm:"size:20;not null;default:active"`
 	Sessions []Session `json:"-" gorm:"foreignKey:Username;references:Username;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	// StagedTransitionID is set only for a login first created while staging an
+	// officer transition. It lets cancellation remove only accounts it owns.
+	StagedTransitionID *uuid.UUID         `json:"-" gorm:"type:uuid"`
+	StagedTransition   *OfficerTransition `json:"-" gorm:"foreignKey:StagedTransitionID;references:ID;constraint:OnDelete:SET NULL"`
 } //@name Login
 
 type NewSessionRequest struct {

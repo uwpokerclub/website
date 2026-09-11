@@ -60,3 +60,26 @@ func (r *postgresOfficerTransitionRepository) ClaimCompletion(id uuid.UUID) (mod
 	}
 	return transition, nil
 }
+
+func (r *postgresOfficerTransitionRepository) Cancel(id uuid.UUID) (models.OfficerTransition, error) {
+	var transition models.OfficerTransition
+	result := r.db.Raw(`UPDATE officer_transitions SET status = ?, resolved_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND status = ?
+		RETURNING id, initiated_by, president_username, vice_president_username, secretary_username, treasurer_username, status, created_at, resolved_at`,
+		models.OfficerTransitionCancelled, id, models.OfficerTransitionPending).Scan(&transition)
+	if result.Error != nil {
+		return models.OfficerTransition{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return models.OfficerTransition{}, store.ErrNotFound
+	}
+	return transition, nil
+}
+
+func (r *postgresOfficerTransitionRepository) ReferencesUsernameElsewhere(id uuid.UUID, username string) (bool, error) {
+	var found bool
+	err := r.db.Raw(`SELECT EXISTS (SELECT 1 FROM officer_transitions
+		WHERE id <> ? AND (president_username = ? OR vice_president_username = ? OR secretary_username = ? OR treasurer_username = ?))`,
+		id, username, username, username, username).Scan(&found).Error
+	return found, err
+}

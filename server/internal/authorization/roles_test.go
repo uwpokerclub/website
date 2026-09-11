@@ -9,7 +9,7 @@ import (
 func TestHasRole(t *testing.T) {
 	testCases := []struct {
 		name     string
-		role     role
+		role     Role
 		userRole string
 		expected bool
 	}{
@@ -36,7 +36,7 @@ func TestHasRole(t *testing.T) {
 func TestRoleToString(t *testing.T) {
 	testCases := []struct {
 		name     string
-		role     role
+		role     Role
 		expected string
 	}{
 		{
@@ -57,17 +57,22 @@ func TestStringToRole(t *testing.T) {
 	testCases := []struct {
 		desc     string
 		role     string
-		expected role
+		expected Role
 	}{
 		{
 			desc:     "Executive",
 			role:     "executive",
 			expected: ROLE_EXECUTIVE,
 		},
+		{
+			desc:     "Unknown",
+			role:     "unknown",
+			expected: Role(-1),
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			assert.Equal(t, tC.expected, stringToRole(tC.role))
+			assert.Equal(t, tC.expected, ToRole(tC.role))
 		})
 	}
 }
@@ -75,7 +80,7 @@ func TestStringToRole(t *testing.T) {
 func TestHasAtLeastRole(t *testing.T) {
 	testCases := []struct {
 		name     string
-		role     role
+		role     Role
 		userRole string
 		expected bool
 	}{

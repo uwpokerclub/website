@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
+
 	"gorm.io/gorm"
 )
 
@@ -23,6 +25,10 @@ func (r *postgresAccountActivationRepository) Create(activation *models.AccountA
 
 func (r *postgresAccountActivationRepository) DeleteUnusedByUsername(username string) error {
 	return r.db.Where("username = ? AND used_at IS NULL", username).Delete(&models.AccountActivation{}).Error
+}
+
+func (r *postgresAccountActivationRepository) DeleteByTransition(id uuid.UUID) error {
+	return r.db.Where("transition_id = ?", id).Delete(&models.AccountActivation{}).Error
 }
 
 func (r *postgresAccountActivationRepository) FindValid(tokenHash []byte) (models.AccountActivation, error) {

@@ -1,5 +1,4 @@
 import { FaExclamationTriangle } from "react-icons/fa";
-import { Button } from "@uwpokerclub/components";
 import styles from "./CardErrorState.module.css";
 
 type CardErrorStateProps = {
@@ -13,9 +12,9 @@ export function CardErrorState({ message, onRetry }: CardErrorStateProps) {
       <FaExclamationTriangle className={styles.icon} aria-hidden="true" />
       <p className={styles.message}>{message}</p>
       {onRetry && (
-        <Button variant="secondary" size="small" onClick={onRetry} data-qa="dashboard-card-retry">
+        <button type="button" className={styles.retryButton} onClick={onRetry} data-qa="dashboard-card-retry">
           Retry
-        </Button>
+        </button>
       )}
     </div>
   );

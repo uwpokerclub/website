@@ -1,0 +1,17 @@
+.link {
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-secondary, #4b2e83);
+  text-decoration: none;
+  border-radius: var(--border-radius-sm, 0.25rem);
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--color-primary, #f4b80f);
+  outline-offset: 2px;
+}

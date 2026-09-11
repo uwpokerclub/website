@@ -58,3 +58,34 @@ func (r *postgresDashboardRepository) Spotlight(semesterID uuid.UUID, now time.T
 
 	return nil, nil
 }
+
+// MembershipStats implements store.DashboardRepository.
+func (r *postgresDashboardRepository) MembershipStats(semesterID uuid.UUID) (store.MembershipStats, error) {
+	var stats store.MembershipStats
+
+	err := r.db.Raw(`
+		WITH target AS (
+			SELECT start_date FROM semesters WHERE id = ?
+		)
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE m.executive) AS executive,
+			COUNT(*) FILTER (WHERE NOT m.executive AND NOT m.paid) AS unpaid,
+			COUNT(*) FILTER (WHERE NOT m.executive AND m.paid AND m.discounted) AS discounted,
+			COUNT(*) FILTER (WHERE NOT m.executive AND m.paid AND NOT m.discounted) AS paid,
+			COUNT(*) FILTER (WHERE NOT EXISTS (
+				SELECT 1 FROM memberships pm
+				JOIN semesters ps ON ps.id = pm.semester_id
+				WHERE pm.user_id = m.user_id AND ps.start_date < target.start_date
+			)) AS new
+		FROM memberships m, target
+		WHERE m.semester_id = ?
+	`, semesterID, semesterID).Scan(&stats).Error
+	if err != nil {
+		return store.MembershipStats{}, err
+	}
+
+	stats.Returning = stats.Total - stats.New
+
+	return stats, nil
+}

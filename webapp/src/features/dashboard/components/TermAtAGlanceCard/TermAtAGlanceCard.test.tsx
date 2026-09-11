@@ -57,7 +57,7 @@ describe("TermAtAGlanceCard", () => {
 
     render(<TermAtAGlanceCard semesterId="s1" />);
 
-    expect(screen.getByRole("status", { name: "Loading Term at a Glance" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading Memberships" })).toBeInTheDocument();
   });
 
   it("shows the loading state, not ready, when data is missing but the query is neither loading nor errored", () => {
@@ -70,7 +70,7 @@ describe("TermAtAGlanceCard", () => {
 
     render(<TermAtAGlanceCard semesterId="s1" />);
 
-    expect(screen.getByRole("status", { name: "Loading Term at a Glance" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading Memberships" })).toBeInTheDocument();
   });
 
   it("shows the error state and retries via refetch when the query fails", async () => {
@@ -113,6 +113,25 @@ describe("TermAtAGlanceCard", () => {
     expect(screen.getByText("290")).toBeInTheDocument();
     const chip = chipFor("Up 42 (17%) from Fall 2025");
     expect(chip).toHaveTextContent("vs Fall 2025");
+  });
+
+  it("shows a TOTAL eyebrow above the headline number, before the chip, styled like the mini-stat eyebrows", () => {
+    mockedUseMembershipsDashboard.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: withComparison(stats({ total: 290 }), stats({ total: 248 })),
+      refetch: jest.fn(),
+    });
+
+    render(<TermAtAGlanceCard semesterId="s1" />);
+
+    const eyebrow = screen.getByText("TOTAL");
+    const total = screen.getByText("290");
+    const chip = chipFor("Up 42 (17%) from Fall 2025");
+
+    expect(eyebrow.className).toBe(screen.getByText("Paid").className);
+    expect(eyebrow.compareDocumentPosition(total)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(total.compareDocumentPosition(chip)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it("renders paid, unpaid, discounted, executive, new and returning as compact mini-stats without visible 'vs' text", () => {

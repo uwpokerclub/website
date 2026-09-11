@@ -64,7 +64,7 @@ describe("Dashboard", () => {
       "Quick Actions",
       "Event Activity",
       "Leaderboard",
-      "Term at a Glance",
+      "Memberships",
       "Engagement & Retention",
       "Signup Timeline",
     ]);
@@ -79,7 +79,7 @@ describe("Dashboard", () => {
     expect(cardTitleOrder()).toEqual([
       "Engagement & Retention",
       "Event Activity",
-      "Term at a Glance",
+      "Memberships",
       "Event Spotlight",
       "Signup Timeline",
       "Leaderboard",

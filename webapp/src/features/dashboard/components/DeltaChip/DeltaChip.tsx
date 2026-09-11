@@ -25,20 +25,32 @@ function resolveTone(direction: Direction, sentiment: DeltaSentiment): Tone {
   return isGood ? "positive" : "negative";
 }
 
-function percentChange(current: number, comparison: number): number {
-  return Math.round((Math.abs(current - comparison) / Math.abs(comparison)) * 100);
+function rawPercentChange(current: number, comparison: number): number {
+  return (Math.abs(current - comparison) / Math.abs(comparison)) * 100;
+}
+
+// A real (non-zero) change can still round to 0%, which would misleadingly
+// read as "no change" — show "<1%" (or "less than 1%" spoken) instead.
+function percentDisplay(current: number, comparison: number): string {
+  const rounded = Math.round(rawPercentChange(current, comparison));
+  return rounded === 0 ? "<1%" : `${rounded}%`;
+}
+
+function percentSpoken(current: number, comparison: number): string {
+  const rounded = Math.round(rawPercentChange(current, comparison));
+  return rounded === 0 ? "less than 1%" : `${rounded}%`;
 }
 
 function formatVisible(current: number, comparison: number, direction: Direction): string {
   if (direction === "none") return "No change";
 
   const arrow = direction === "up" ? "▲" : "▼";
-  const sign = direction === "up" ? "+" : "-";
+  const sign = direction === "up" ? "+" : "−";
   const delta = Math.abs(current - comparison);
 
   if (comparison === 0) return `${arrow} ${sign}${delta}`;
 
-  return `${arrow} ${sign}${delta} (${sign}${percentChange(current, comparison)}%)`;
+  return `${arrow} ${sign}${delta} (${sign}${percentDisplay(current, comparison)})`;
 }
 
 function formatAriaLabel(current: number, comparison: number, direction: Direction, comparisonLabel: string): string {
@@ -49,7 +61,7 @@ function formatAriaLabel(current: number, comparison: number, direction: Directi
 
   if (comparison === 0) return `${verb} ${delta} from ${comparisonLabel}`;
 
-  return `${verb} ${delta} (${percentChange(current, comparison)}%) from ${comparisonLabel}`;
+  return `${verb} ${delta} (${percentSpoken(current, comparison)}) from ${comparisonLabel}`;
 }
 
 export function DeltaChip({ current, comparison, comparisonLabel, sentiment, compact = false }: DeltaChipProps) {
@@ -60,14 +72,9 @@ export function DeltaChip({ current, comparison, comparisonLabel, sentiment, com
   const visibleText = compact ? visible : `${visible} vs ${comparisonLabel}`;
 
   return (
-    <span
-      className={`${styles.chip} ${styles[tone]}`}
-      role="status"
-      aria-label={ariaLabel}
-      data-qa="delta-chip"
-      data-tone={tone}
-    >
+    <span className={`${styles.chip} ${styles[tone]}`} data-qa="delta-chip" data-tone={tone}>
       <span aria-hidden="true">{visibleText}</span>
+      <span className={styles.srOnly}>{ariaLabel}</span>
     </span>
   );
 }

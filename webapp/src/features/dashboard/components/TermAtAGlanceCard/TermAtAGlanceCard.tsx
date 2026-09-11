@@ -32,7 +32,9 @@ const RETENTION_STATS: MiniStatConfig[] = [
 export function TermAtAGlanceCard({ semesterId }: TermAtAGlanceCardProps) {
   const { data, isLoading, isError, refetch } = useMembershipsDashboard(semesterId);
 
-  const status = isLoading ? "loading" : isError ? "error" : data && data.current.total === 0 ? "empty" : "ready";
+  // `data` guards "ready": isLoading is false between mount and first fetch on
+  // a disabled query, and the render function must never see undefined data.
+  const status = isError ? "error" : isLoading || !data ? "loading" : data.current.total === 0 ? "empty" : "ready";
 
   return (
     <DashboardCard

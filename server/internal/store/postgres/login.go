@@ -76,6 +76,29 @@ func (r *postgresLoginRepository) Activate(username, password string) (models.Lo
 	return login, nil
 }
 
+func (r *postgresLoginRepository) ActivateWithRole(username, password, role string) (models.Login, error) {
+	var login models.Login
+	result := r.db.Raw(`UPDATE logins SET password = ?, status = ?, role = ?
+		WHERE username = ?
+		RETURNING username, password, role, status`, password, models.LoginStatusActive, role, username).Scan(&login)
+	if result.Error != nil {
+		return models.Login{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return models.Login{}, store.ErrNotFound
+	}
+	return login, nil
+}
+
+func (r *postgresLoginRepository) DisableExecutiveExcept(usernames []string) ([]string, error) {
+	roles := []string{"executive", "tournament_director", "secretary", "treasurer", "vice_president", "president"}
+	var disabled []string
+	result := r.db.Raw(`UPDATE logins SET status = ?
+		WHERE role IN ? AND username NOT IN ? AND status <> ?
+		RETURNING username`, models.LoginStatusDisabled, roles, usernames, models.LoginStatusDisabled).Scan(&disabled)
+	return disabled, result.Error
+}
+
 func (r *postgresLoginRepository) Delete(username string) error {
 	result := r.db.Where("username = ?", username).Delete(&models.Login{})
 	if err := result.Error; err != nil {

@@ -22,4 +22,7 @@ type SessionRepository interface {
 
 	// DeleteByUsername deletes every session belonging to username.
 	DeleteByUsername(username string) error
+
+	// DeleteByUsernames deletes every session belonging to any username.
+	DeleteByUsernames(usernames []string) error
 }

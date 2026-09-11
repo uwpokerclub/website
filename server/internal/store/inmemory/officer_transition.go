@@ -4,11 +4,36 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type inMemoryOfficerTransitionRepository struct {
 	mu          sync.RWMutex
 	transitions map[string]*models.OfficerTransition
+}
+
+func (r *inMemoryOfficerTransitionRepository) FindByIDForUpdate(id uuid.UUID) (models.OfficerTransition, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	t, ok := r.transitions[id.String()]
+	if !ok {
+		return models.OfficerTransition{}, store.ErrNotFound
+	}
+	return *t, nil
+}
+func (r *inMemoryOfficerTransitionRepository) ClaimCompletion(id uuid.UUID) (models.OfficerTransition, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	t, ok := r.transitions[id.String()]
+	if !ok || t.Status != models.OfficerTransitionPending {
+		return models.OfficerTransition{}, store.ErrNotFound
+	}
+	t.Status = "completed"
+	now := time.Now().UTC()
+	t.ResolvedAt = &now
+	return *t, nil
 }
 
 var _ store.OfficerTransitionRepository = (*inMemoryOfficerTransitionRepository)(nil)

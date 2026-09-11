@@ -22,6 +22,13 @@ type LoginRepository interface {
 	// Returns ErrNotFound for an unknown or disabled login.
 	Activate(username, password string) (models.Login, error)
 
+	// ActivateWithRole updates password, status, and role for a transition president.
+	ActivateWithRole(username, password, role string) (models.Login, error)
+
+	// DisableExecutiveExcept disables the executive ladder outside usernames and
+	// returns the accounts whose status changed.
+	DisableExecutiveExcept(usernames []string) ([]string, error)
+
 	// Delete deletes a login from the data store by its username.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	Delete(username string) error

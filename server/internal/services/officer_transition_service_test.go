@@ -31,6 +31,23 @@ func TestOfficerTransitionStagingDoesNotChangeActiveRoles(t *testing.T) {
 	require.Equal(t, models.LoginStatusPendingActivation, mustLogin(t, st, "vp").Status)
 }
 
+func TestOfficerTransitionStagesMixedCaseQuestIDs(t *testing.T) {
+	st := inmemory.NewStore()
+	for i, id := range []string{"Pres", "VP", "Sec", "Treas"} {
+		require.NoError(t, st.Members().Create(&models.User{ID: uint64(i + 1), QuestID: id, FirstName: id, LastName: id}))
+	}
+
+	transition, _, err := NewOfficerTransitionService(st).Create("outgoing", models.CreateOfficerTransitionRequest{
+		PresidentQuestID: " pres ", VicePresidentQuestID: "vp", SecretaryQuestID: "SEC", TreasurerQuestID: "treas",
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, "Pres", transition.PresidentUsername)
+	require.Equal(t, "VP", transition.VicePresidentUsername)
+	require.Equal(t, "Sec", transition.SecretaryUsername)
+	require.Equal(t, "Treas", transition.TreasurerUsername)
+}
+
 func TestOfficerTransitionCancelRemovesOnlyOwnedStagingLogins(t *testing.T) {
 	st := transitionStore(t)
 	require.NoError(t, st.Logins().Create(&models.Login{Username: "pres", Password: "old", Role: "vice_president", Status: models.LoginStatusActive}))

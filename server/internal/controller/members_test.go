@@ -179,7 +179,7 @@ func TestListMembers(t *testing.T) {
 			userRole:        authorization.ROLE_EXECUTIVE.ToString(),
 			queryParams:     "?questId=%20JoHn.DoE%20",
 			expectedStatus:  http.StatusOK,
-			expectedQuestID: "john.doe",
+			expectedQuestID: "John.Doe",
 		},
 	}
 
@@ -190,6 +190,9 @@ func TestListMembers(t *testing.T) {
 
 			// Seed test data
 			require.NoError(t, testutils.SeedAll(db))
+			if tc.expectedQuestID == "John.Doe" {
+				require.NoError(t, db.Model(&models.User{}).Where("id = ?", testutils.TEST_USERS[0].ID).Update("quest_id", "John.Doe").Error)
+			}
 
 			// Setup authentication
 			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)

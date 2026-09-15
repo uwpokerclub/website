@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"strings"
 	"time"
 )
 
@@ -38,7 +39,9 @@ func NewOfficerTransitionService(s store.Store) *officerTransitionService {
 func (s *officerTransitionService) Create(initiatedBy string, r models.CreateOfficerTransitionRequest) (models.OfficerTransition, map[string]string, error) {
 	ids := []string{r.PresidentQuestID, r.VicePresidentQuestID, r.SecretaryQuestID, r.TreasurerQuestID}
 	seen := map[string]bool{}
-	for _, id := range ids {
+	for i, id := range ids {
+		ids[i] = strings.ToLower(strings.TrimSpace(id))
+		id = ids[i]
 		if seen[id] {
 			return models.OfficerTransition{}, nil, fmt.Errorf("%w: quest IDs must be distinct", ErrTransitionInvalid)
 		}

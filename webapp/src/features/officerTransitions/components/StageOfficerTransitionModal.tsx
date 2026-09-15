@@ -1,8 +1,7 @@
 import { useRef, useState } from "react";
 import { Button, FormField, Input, Modal } from "@uwpokerclub/components";
 import { ApiError } from "@/lib/apiClient";
-import { normalizeQuestId, resolveQuestId } from "../api/officerTransitionsApi";
-import { useStageOfficerTransition } from "../hooks/useOfficerTransitionQueries";
+import { normalizeQuestId, resolveQuestId, stageOfficerTransition } from "../api/officerTransitionsApi";
 import { OFFICER_ROLES, type OfficerRole, type ResolvedQuestId, type StageOfficerTransitionResponse } from "../types";
 import styles from "./OfficerTransition.module.css";
 
@@ -41,7 +40,11 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
     treasurer: 0,
   });
   const controllers = useRef<Partial<Record<OfficerRole, AbortController>>>({});
-  const stageMutation = useStageOfficerTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleClose = () => {
+    if (!isSubmitting) onClose();
+  };
 
   const invalidate = (role: OfficerRole, value: string) => {
     requests.current[role] += 1;
@@ -111,8 +114,9 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
   const ready = OFFICER_ROLES.every((role) => Boolean(fields[role].resolved) && !fields[role].resolving);
   const submit = async () => {
     setSubmitError("");
+    setIsSubmitting(true);
     try {
-      const response = await stageMutation.mutateAsync({
+      const response = await stageOfficerTransition({
         presidentQuestId: fields.president.value,
         vicePresidentQuestId: fields.vice_president.value,
         secretaryQuestId: fields.secretary.value,
@@ -124,13 +128,15 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
     } catch (error) {
       setStep("form");
       setSubmitError(error instanceof Error ? error.message : "Unable to stage the officer transition.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const footer =
     step === "form" ? (
       <>
-        <Button variant="tertiary" onClick={onClose} disabled={stageMutation.isPending}>
+        <Button variant="tertiary" onClick={handleClose} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button onClick={() => setStep("confirm")} disabled={!ready} data-qa="officer-transition-review">
@@ -139,10 +145,15 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
       </>
     ) : (
       <>
-        <Button variant="tertiary" onClick={() => setStep("form")} disabled={stageMutation.isPending}>
+        <Button variant="tertiary" onClick={() => setStep("form")} disabled={isSubmitting}>
           Back
         </Button>
-        <Button onClick={() => void submit()} loading={stageMutation.isPending} data-qa="officer-transition-submit">
+        <Button
+          onClick={() => void submit()}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+          data-qa="officer-transition-submit"
+        >
           Stage transition
         </Button>
       </>
@@ -151,7 +162,7 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Finish Semester"
       size="md"
       footer={<div className={styles.footer}>{footer}</div>}

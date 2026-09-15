@@ -9,12 +9,15 @@ const questIds = ["hdrust0", "dhousegoe1", "eaucock2", "kduckham3"];
 describe("Officer transition", () => {
   beforeEach(() => {
     cy.resetDatabase();
-    cy.login("e2e_user", "password123");
+  });
+
+  const openTransition = () => {
+    cy.login("test_president", "password123");
     cy.intercept("GET", "/api/v2/members?*").as("resolveQuestId");
     cy.intercept("POST", "/api/v2/officer-transitions").as("stageTransition");
     cy.visit("/admin/executive");
     cy.getByData("officer-transition-start").click();
-  });
+  };
 
   const resolveAll = () => {
     roles.forEach((role, index) => {
@@ -25,20 +28,21 @@ describe("Officer transition", () => {
   };
 
   it("stages a transition while the outgoing president remains authorized", () => {
+    openTransition();
     resolveAll();
     cy.getByData("officer-transition-review").click();
     cy.contains("No access changes yet.").should("be.visible");
     cy.getByData("officer-transition-submit").click();
     cy.wait("@stageTransition").its("response.statusCode").should("eq", 201);
     cy.getByData("officer-transition-receipt").should("be.visible");
-    cy.getByData("officer-transition-link-president").should(
-      "contain",
-      "/activate#token=",
-    );
-    cy.request("/api/v2/session").its("status").should("eq", 200);
+    cy.getByData("officer-transition-link-president")
+      .should("have.value")
+      .and("contain", "/activate#token=");
+    cy.request("/api/v2/session").its("body.role").should("eq", "president");
   });
 
   it("keeps an ambiguity error inline", () => {
+    openTransition();
     cy.intercept("GET", "/api/v2/members?questId=hdrust0&limit=2", {
       body: {
         data: [{ questId: "hdrust0" }, { questId: "hdrust0" }],
@@ -53,6 +57,7 @@ describe("Officer transition", () => {
   });
 
   it("rejects duplicate Quest IDs before staging", () => {
+    openTransition();
     cy.getByData("officer-transition-president").type("hdrust0").blur();
     cy.wait("@resolveQuestId");
     cy.getByData("officer-transition-vice_president").type("HDRUST0").blur();
@@ -61,6 +66,7 @@ describe("Officer transition", () => {
   });
 
   it("keeps resolved form values after a pending-transition conflict", () => {
+    openTransition();
     resolveAll();
     cy.intercept("POST", "/api/v2/officer-transitions", {
       statusCode: 409,
@@ -81,6 +87,7 @@ describe("Officer transition", () => {
   });
 
   it("offers manual copy guidance when the clipboard is unavailable", () => {
+    openTransition();
     resolveAll();
     cy.intercept("POST", "/api/v2/officer-transitions", {
       fixture: "officer-transition.json",
@@ -97,5 +104,16 @@ describe("Officer transition", () => {
     cy.contains("Copy failed. Select and copy the link manually.").should(
       "be.visible",
     );
+  });
+
+  it("keeps the executive page accessible but hides transition controls from a tournament director", () => {
+    cy.login("e2e_user", "password123");
+    cy.request("PATCH", "/api/v2/logins/test_executive", {
+      role: "tournament_director",
+    });
+    cy.clearCookies();
+    cy.login("test_executive", "password123");
+    cy.visit("/admin/executive");
+    cy.getByData("officer-transition-section").should("not.exist");
   });
 });

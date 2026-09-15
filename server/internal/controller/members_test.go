@@ -177,7 +177,7 @@ func TestListMembers(t *testing.T) {
 		{
 			name:            "filter by exact Quest ID",
 			userRole:        authorization.ROLE_EXECUTIVE.ToString(),
-			queryParams:     "?questId=john.doe",
+			queryParams:     "?questId=%20JoHn.DoE%20",
 			expectedStatus:  http.StatusOK,
 			expectedQuestID: "john.doe",
 		},

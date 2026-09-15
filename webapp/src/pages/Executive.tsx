@@ -1,5 +1,7 @@
-import { ComingSoon } from "@/components";
+import { useAuth } from "@/hooks";
+import { OfficerTransitionSection } from "@/features/officerTransitions";
 
 export function Executive() {
-  return <ComingSoon />;
+  const { hasPermission } = useAuth();
+  return hasPermission("create", "officer-transition") ? <OfficerTransitionSection /> : null;
 }

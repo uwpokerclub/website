@@ -757,6 +757,10 @@ paths:
         in: query
         name: faculty
         type: string
+      - description: Filter by exact Quest ID
+        in: query
+        name: questId
+        type: string
       produces:
       - application/json
       responses:

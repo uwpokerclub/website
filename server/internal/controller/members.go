@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -111,6 +112,11 @@ func (c *membersController) parseListMembersQueryParams(ctx *gin.Context) *model
 		filter.Faculty = &faculty
 	}
 
+	if questID, exists := ctx.GetQuery("questId"); exists {
+		normalizedQuestID := strings.ToLower(strings.TrimSpace(questID))
+		filter.QuestID = &normalizedQuestID
+	}
+
 	return filter
 }
 
@@ -125,6 +131,7 @@ func (c *membersController) parseListMembersQueryParams(ctx *gin.Context) *model
 // @Param email query string false "Filter by Member Email"
 // @Param name query string false "Filter by Member Name"
 // @Param faculty query string false "Filter by Member Faculty"
+// @Param questId query string false "Filter by exact Quest ID"
 // @Success 200 {array} Member
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse

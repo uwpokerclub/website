@@ -136,11 +136,12 @@ func TestListMembers(t *testing.T) {
 	// No unauthorized roles - all roles have access (bot+)
 
 	testCases := []struct {
-		name           string
-		userRole       string
-		queryParams    string
-		expectedStatus int
-		expectEmpty    bool
+		name            string
+		userRole        string
+		queryParams     string
+		expectedStatus  int
+		expectEmpty     bool
+		expectedQuestID string
 	}{
 		{
 			name:           "list all members",
@@ -172,6 +173,13 @@ func TestListMembers(t *testing.T) {
 			userRole:       authorization.ROLE_EXECUTIVE.ToString(),
 			queryParams:    "?id=20780648",
 			expectedStatus: http.StatusOK,
+		},
+		{
+			name:            "filter by exact Quest ID",
+			userRole:        authorization.ROLE_EXECUTIVE.ToString(),
+			queryParams:     "?questId=john.doe",
+			expectedStatus:  http.StatusOK,
+			expectedQuestID: "john.doe",
 		},
 	}
 
@@ -209,6 +217,11 @@ func TestListMembers(t *testing.T) {
 
 			if tc.expectEmpty {
 				require.Empty(t, resp.Data)
+			}
+			if tc.expectedQuestID != "" {
+				require.Len(t, resp.Data, 1)
+				require.Equal(t, tc.expectedQuestID, resp.Data[0].QuestID)
+				require.Equal(t, int64(1), resp.Total)
 			}
 		})
 	}

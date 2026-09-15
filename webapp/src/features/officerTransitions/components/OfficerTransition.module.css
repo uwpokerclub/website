@@ -1,0 +1,30 @@
+.section {
+  max-width: 720px;
+}
+.form,
+.confirmation,
+.receipt {
+  display: grid;
+  gap: 1rem;
+}
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.error {
+  color: var(--color-error, #b42318);
+}
+.linkRow {
+  display: grid;
+  gap: 0.5rem;
+}
+.linkRow input {
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 480px) {
+  .footer {
+    flex-direction: column-reverse;
+  }
+}

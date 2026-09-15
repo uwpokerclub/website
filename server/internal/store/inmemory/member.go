@@ -99,6 +99,9 @@ func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, paginati
 		if filter.Faculty != nil && member.Faculty != *filter.Faculty {
 			continue
 		}
+		if filter.QuestID != nil && member.QuestID != *filter.QuestID {
+			continue
+		}
 		members = append(members, *member)
 	}
 

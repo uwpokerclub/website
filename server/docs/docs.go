@@ -369,6 +369,12 @@ const docTemplate = `{
                         "description": "Filter by Member Faculty",
                         "name": "faculty",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by exact Quest ID",
+                        "name": "questId",
+                        "in": "query"
                     }
                 ],
                 "responses": {

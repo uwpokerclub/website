@@ -46,6 +46,7 @@ export interface PermissionList {
     rankings: Pick<Permissions, "get" | "list" | "export">;
   };
   structure: Pick<Permissions, "create" | "get" | "list" | "edit">;
+  "officer-transition": Pick<Permissions, "create" | "get">;
 }
 
 export type Resources = keyof PermissionList;

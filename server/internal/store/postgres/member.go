@@ -59,6 +59,9 @@ func (r *postgresMemberRepository) List(filter *models.ListUsersFilter, paginati
 	if filter.Faculty != nil {
 		base = base.Where("faculty = ?", *filter.Faculty)
 	}
+	if filter.QuestID != nil {
+		base = base.Where("quest_id = ?", *filter.QuestID)
+	}
 
 	if err := base.Count(&total).Error; err != nil {
 		return nil, 0, err

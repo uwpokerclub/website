@@ -6,10 +6,13 @@ services:
         - GITHUB_PACKAGE_TOKEN
     volumes:
       - ./webapp:/usr/app
+      - /usr/app/node_modules
     ports:
       - 5173:5173
     depends_on:
       - server
+    environment:
+      - VITE_API_HOST=http://server:5000
     networks:
       - services
   server:

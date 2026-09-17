@@ -58,10 +58,20 @@ describe("Officer transition", () => {
     cy.getByData("officer-transition-submit").click();
     cy.wait("@stageTransition").its("response.statusCode").should("eq", 201);
     receiptDialog().should("have.attr", "aria-modal", "true");
-    receiptDialog()
-      .find('[data-qa="officer-transition-link-president"]')
-      .should("have.value")
-      .and("contain", "/activate#token=");
+    cy.location("origin").then((origin) => {
+      receiptDialog()
+        .find('[data-qa="officer-transition-link-president"]')
+        .should("have.attr", "readonly");
+      receiptDialog()
+        .find('[data-qa="officer-transition-link-president"]')
+        .invoke("val")
+        .should((value) => {
+          const link = new URL(String(value));
+          expect(link.origin).to.equal(origin);
+          expect(link.pathname).to.equal("/activate");
+          expect(link.hash).to.match(/^#token=[A-Za-z0-9_-]+$/);
+        });
+    });
     cy.request("/api/v2/session").its("body.role").should("eq", "president");
   });
 

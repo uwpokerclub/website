@@ -48,6 +48,71 @@
   box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
 }
 
+.pendingBanner {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 56rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-warning, #b7791f);
+  border-radius: 8px;
+  background: var(--color-warning-light, #fffbeb);
+}
+
+.pendingHeader {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pendingHeader h2 {
+  margin: 0.15rem 0 0;
+  color: var(--color-gray-900, #212121);
+  font-size: 1.25rem;
+}
+
+.pendingHeader .accessNotice {
+  margin: 0;
+}
+
+.nomineeItem p {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.activated {
+  color: var(--color-success-dark, #155724);
+}
+
+.awaiting {
+  color: var(--color-warning-dark, #744210);
+}
+
+.reissueControl {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.reissueControl > button {
+  justify-self: start;
+}
+
+.pendingActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-warning, #b7791f);
+}
+
+.pendingActions p {
+  margin: 0;
+  color: var(--color-warning-dark, #744210);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .cardCopy h2 {
   margin: 0 0 0.5rem;
   color: var(--color-gray-900, #212121);
@@ -234,6 +299,16 @@
     align-items: stretch;
     flex-direction: column;
     gap: 1.25rem;
+  }
+
+  .pendingActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pendingActions button,
+  .reissueControl > button {
+    width: 100%;
   }
 
   .cardAction {

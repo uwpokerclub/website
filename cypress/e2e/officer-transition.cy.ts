@@ -75,6 +75,37 @@ describe("Officer transition", () => {
     cy.request("/api/v2/session").its("body.role").should("eq", "president");
   });
 
+  it("shows the pending team, replaces a lost president link, and clears after activation", () => {
+    openTransition();
+    resolveAll();
+    cy.getByData("officer-transition-review").click();
+    cy.getByData("officer-transition-submit").click();
+    cy.wait("@stageTransition").its("response.statusCode").should("eq", 201);
+    cy.on("window:confirm", () => true);
+    cy.getByData("officer-transition-receipt-close").click();
+
+    cy.getByData("pending-transition-banner").should("be.visible");
+    cy.getByData("pending-transition-nominees").should("contain", "Heinrik Drust");
+    cy.getByData("pending-transition-president").should("contain", "Awaiting account activation");
+    cy.contains("Current access transfers when the named president activates").should("be.visible");
+    cy.getByData("pending-transition-reissue-president").click();
+    cy.getByData("pending-transition-link-president")
+      .invoke("val")
+      .should("be.a", "string")
+      .then((link) => {
+        cy.visit(String(link));
+      });
+
+    cy.getByData("activation-heading").should("contain", "Set your password");
+    cy.getByData("activation-password").type("replacement password");
+    cy.getByData("activation-confirm-password").type("replacement password");
+    cy.getByData("activation-submit").click();
+    cy.location("pathname").should("eq", "/admin/dashboard");
+
+    cy.visit("/admin/executive");
+    cy.getByData("pending-transition-banner").should("not.exist");
+  });
+
   it("keeps an ambiguity error inline", () => {
     openTransition();
     cy.intercept("GET", "/api/v2/members?questId=hdrust0&limit=2", {
@@ -149,5 +180,6 @@ describe("Officer transition", () => {
     cy.login("test_executive", seededPassword);
     cy.visit("/admin/executive");
     cy.getByData("officer-transition-section").should("not.exist");
+    cy.getByData("pending-transition-banner").should("not.exist");
   });
 });

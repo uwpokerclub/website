@@ -15,7 +15,7 @@ export function TransitionReceipt({ receipt, onClose }: TransitionReceiptProps) 
       receipt
         ? OFFICER_ROLES.flatMap((role) => {
             const token = receipt.activationTokens[role];
-            const nominee = receipt.transition.nominees[role];
+            const nominee = receipt.transition.nominees?.[role];
             return token && nominee
               ? [
                   {
@@ -77,7 +77,7 @@ export function TransitionReceipt({ receipt, onClose }: TransitionReceiptProps) 
         <div className={styles.receiptState}>
           <strong>No access has changed yet.</strong>
           <span>
-            The previous team keeps working until {receipt.transition.nominees.president?.firstName} activates their
+            The previous team keeps working until {receipt.transition.nominees?.president?.firstName} activates their
             account.
           </span>
         </div>

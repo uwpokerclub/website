@@ -21,7 +21,7 @@ export interface OfficerTransition {
   vicePresidentUsername?: string;
   secretaryUsername?: string;
   treasurerUsername?: string;
-  nominees: Partial<Record<OfficerRole, OfficerTransitionNominee>>;
+  nominees?: Partial<Record<OfficerRole, OfficerTransitionNominee>>;
   activated?: Partial<Record<OfficerRole, boolean>>;
 }
 

@@ -28,7 +28,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
   });
 
   const nameFor = (role: OfficerRole) => {
-    const nominee = transition.nominees[role] ?? nameQueries[OFFICER_ROLES.indexOf(role)]?.data?.nominee;
+    const nominee = transition.nominees?.[role] ?? nameQueries[OFFICER_ROLES.indexOf(role)]?.data?.nominee;
     return nominee
       ? `${nominee.firstName} ${nominee.lastName}`
       : (usernameForRole(transition, role) ?? "Unknown member");

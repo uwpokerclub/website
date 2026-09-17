@@ -5,6 +5,7 @@ const roles = [
   "treasurer",
 ] as const;
 const questIds = ["hdrust0", "dhousegoe1", "eaucock2", "kduckham3"];
+const seededPassword = "password";
 
 describe("Officer transition", () => {
   beforeEach(() => {
@@ -12,7 +13,7 @@ describe("Officer transition", () => {
   });
 
   const openTransition = () => {
-    cy.login("test_president");
+    cy.login("test_president", seededPassword);
     cy.intercept("GET", "/api/v2/members?*").as("resolveQuestId");
     cy.intercept("POST", "/api/v2/officer-transitions").as("stageTransition");
     cy.visit("/admin/executive");
@@ -107,12 +108,12 @@ describe("Officer transition", () => {
   });
 
   it("keeps the executive page accessible but hides transition controls from a tournament director", () => {
-    cy.login("e2e_user");
+    cy.login("e2e_user", seededPassword);
     cy.request("PATCH", "/api/v2/logins/test_executive", {
       role: "tournament_director",
     });
     cy.clearCookies();
-    cy.login("test_executive");
+    cy.login("test_executive", seededPassword);
     cy.visit("/admin/executive");
     cy.getByData("officer-transition-section").should("not.exist");
   });

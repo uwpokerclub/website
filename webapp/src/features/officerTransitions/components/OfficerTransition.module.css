@@ -33,10 +33,14 @@
 
 .pageContent {
   display: flex;
+  flex-direction: column;
+  gap: 3rem;
   justify-content: center;
+  align-items: center;
   padding: 2rem;
 }
 
+.executiveTeamSection,
 .transitionSection {
   width: min(100%, 64rem);
 }

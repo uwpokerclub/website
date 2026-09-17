@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@uwpokerclub/components";
+import { ComingSoon } from "@/components";
 import { useAuth } from "@/hooks";
 import { StageOfficerTransitionModal } from "./StageOfficerTransitionModal";
 import { TransitionReceipt } from "./TransitionReceipt";
@@ -21,11 +22,18 @@ export function OfficerTransitionSection() {
     <div className={styles.page}>
       <header className={styles.pageHeader}>
         <p className={styles.eyebrow}>Executive operations</p>
-        <h1>Executive team</h1>
-        <p className={styles.pageSubtitle}>Manage executive team access, roles, and officer transitions.</p>
+        <h1>Executive management</h1>
+        <p className={styles.pageSubtitle}>Manage executive team members, access, roles, and officer transitions.</p>
       </header>
 
       <div className={styles.pageContent}>
+        <section className={styles.executiveTeamSection} aria-labelledby="executive-team-heading">
+          <header className={styles.featureHeader}>
+            <h2 id="executive-team-heading">Executive team</h2>
+            <p>Manage the current executive roster and their responsibilities.</p>
+          </header>
+          <ComingSoon headingLevel="h3" />
+        </section>
         <section className={styles.transitionSection} aria-labelledby="officer-transition-heading">
           <header className={styles.featureHeader}>
             <h2 id="officer-transition-heading">Officer transition</h2>

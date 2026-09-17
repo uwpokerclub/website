@@ -106,6 +106,23 @@ describe("Officer transition", () => {
     cy.getByData("pending-transition-banner").should("not.exist");
   });
 
+  it("removes the pending banner after a confirmed cancellation", () => {
+    openTransition();
+    resolveAll();
+    cy.getByData("officer-transition-review").click();
+    cy.getByData("officer-transition-submit").click();
+    cy.wait("@stageTransition").its("response.statusCode").should("eq", 201);
+    cy.on("window:confirm", () => true);
+    cy.getByData("officer-transition-receipt-close").click();
+    cy.getByData("pending-transition-banner").should("be.visible");
+
+    cy.intercept("POST", /\/api\/v2\/officer-transitions\/[^/]+\/cancel/).as("cancelTransition");
+    cy.getByData("pending-transition-cancel").click();
+    cy.wait("@cancelTransition").its("response.statusCode").should("eq", 204);
+    cy.getByData("pending-transition-banner").should("not.exist");
+    cy.getByData("officer-transition-section").should("be.visible");
+  });
+
   it("keeps an ambiguity error inline", () => {
     openTransition();
     cy.intercept("GET", "/api/v2/members?questId=hdrust0&limit=2", {

@@ -32,7 +32,7 @@ export function useCancelOfficerTransition() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: cancelOfficerTransition,
-    onSuccess: () => queryClient.removeQueries({ queryKey: officerTransitionKeys.current }),
+    onSuccess: () => queryClient.setQueryData(officerTransitionKeys.current, null),
   });
 }
 

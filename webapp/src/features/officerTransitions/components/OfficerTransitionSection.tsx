@@ -27,13 +27,6 @@ export function OfficerTransitionSection() {
       </header>
 
       <div className={styles.pageContent}>
-        <section className={styles.executiveTeamSection} aria-labelledby="executive-team-heading">
-          <header className={styles.featureHeader}>
-            <h2 id="executive-team-heading">Executive team</h2>
-            <p>Manage the current executive roster and their responsibilities.</p>
-          </header>
-          <ComingSoon headingLevel="h3" />
-        </section>
         <section className={styles.transitionSection} aria-labelledby="officer-transition-heading">
           <header className={styles.featureHeader}>
             <h2 id="officer-transition-heading">Officer transition</h2>
@@ -55,6 +48,13 @@ export function OfficerTransitionSection() {
               </div>
             </div>
           ) : null}
+        </section>
+        <section className={styles.executiveTeamSection} aria-labelledby="executive-team-heading">
+          <header className={styles.featureHeader}>
+            <h2 id="executive-team-heading">Executive team</h2>
+            <p>Manage the current executive roster and their responsibilities.</p>
+          </header>
+          <ComingSoon headingLevel="h3" />
         </section>
       </div>
 

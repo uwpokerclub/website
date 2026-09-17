@@ -20,6 +20,8 @@ interface Permissions {
   signin: boolean;
   signout: boolean;
   export: boolean;
+  cancel: boolean;
+  reissue: boolean;
 }
 
 /**
@@ -46,6 +48,7 @@ export interface PermissionList {
     rankings: Pick<Permissions, "get" | "list" | "export">;
   };
   structure: Pick<Permissions, "create" | "get" | "list" | "edit">;
+  "officer-transition": Pick<Permissions, "create" | "get" | "cancel" | "reissue">;
 }
 
 export type Resources = keyof PermissionList;

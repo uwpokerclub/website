@@ -136,11 +136,12 @@ func TestListMembers(t *testing.T) {
 	// No unauthorized roles - all roles have access (bot+)
 
 	testCases := []struct {
-		name           string
-		userRole       string
-		queryParams    string
-		expectedStatus int
-		expectEmpty    bool
+		name            string
+		userRole        string
+		queryParams     string
+		expectedStatus  int
+		expectEmpty     bool
+		expectedQuestID string
 	}{
 		{
 			name:           "list all members",
@@ -173,6 +174,13 @@ func TestListMembers(t *testing.T) {
 			queryParams:    "?id=20780648",
 			expectedStatus: http.StatusOK,
 		},
+		{
+			name:            "filter by exact Quest ID",
+			userRole:        authorization.ROLE_EXECUTIVE.ToString(),
+			queryParams:     "?questId=%20JoHn.DoE%20",
+			expectedStatus:  http.StatusOK,
+			expectedQuestID: "John.Doe",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -182,6 +190,9 @@ func TestListMembers(t *testing.T) {
 
 			// Seed test data
 			require.NoError(t, testutils.SeedAll(db))
+			if tc.expectedQuestID == "John.Doe" {
+				require.NoError(t, db.Model(&models.User{}).Where("id = ?", testutils.TEST_USERS[0].ID).Update("quest_id", "John.Doe").Error)
+			}
 
 			// Setup authentication
 			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
@@ -209,6 +220,11 @@ func TestListMembers(t *testing.T) {
 
 			if tc.expectEmpty {
 				require.Empty(t, resp.Data)
+			}
+			if tc.expectedQuestID != "" {
+				require.Len(t, resp.Data, 1)
+				require.Equal(t, tc.expectedQuestID, resp.Data[0].QuestID)
+				require.Equal(t, int64(1), resp.Total)
 			}
 		})
 	}

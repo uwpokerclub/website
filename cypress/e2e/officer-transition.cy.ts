@@ -18,9 +18,9 @@ describe("Officer transition", () => {
     cy.resetDatabase();
   });
 
-  const stageDialog = () => cy.contains('[role="dialog"]', "Finish Semester");
+  const stageDialog = () => cy.contains('[role="dialog"]:visible', "Finish Semester");
   const receiptDialog = () =>
-    cy.contains('[role="dialog"]', "Officer transition staged");
+    cy.contains('[role="dialog"]:visible', "Officer transition staged");
 
   const openTransition = (clipboardUnavailable = false) => {
     cy.login("test_president", seededPassword);
@@ -86,7 +86,7 @@ describe("Officer transition", () => {
 
     cy.getByData("pending-transition-banner").should("be.visible");
     cy.getByData("pending-transition-nominees").should("contain", "Heinrik Drust");
-    cy.getByData("pending-transition-president").should("contain", "Activation required");
+    cy.getByData("pending-transition-president").should("contain", "Account already active");
     cy.contains("Current access transfers when Heinrik Drust completes their transition activation").should("be.visible");
     cy.getByData("pending-transition-reissue-president").click();
     cy.getByData("pending-transition-link-president")

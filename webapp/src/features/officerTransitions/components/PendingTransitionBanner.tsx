@@ -131,7 +131,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
         <div className={styles.pendingActions}>
           <p>Re-issuing invalidates the previous link. The original link cannot be redisplayed.</p>
           <Button
-            variant="secondary"
+            variant="destructive"
             onClick={cancelTransition}
             disabled={cancel.isPending}
             data-qa="pending-transition-cancel"

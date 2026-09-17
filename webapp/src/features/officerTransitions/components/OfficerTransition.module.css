@@ -32,6 +32,8 @@
 }
 
 .pageContent {
+  display: flex;
+  justify-content: center;
   padding: 2rem;
 }
 
@@ -51,7 +53,7 @@
 .pendingBanner {
   display: grid;
   gap: 1.25rem;
-  max-width: 56rem;
+  width: min(100%, 64rem);
   padding: 1.5rem;
   border: 1px solid var(--color-gray-200, #e0e0e0);
   border-radius: 8px;
@@ -76,6 +78,26 @@
   padding: 0.85rem 1rem;
   border: 1px solid var(--color-warning, #b7791f);
   background: var(--color-warning-light, #fffbeb);
+}
+
+.pendingNomineeList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--color-gray-200, #e0e0e0);
+  border-bottom: 1px solid var(--color-gray-200, #e0e0e0);
+}
+
+.pendingNomineeList .nomineeItem {
+  min-width: 0;
+  padding: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pendingNomineeList .nomineeItem + .nomineeItem {
+  border-left: 1px solid var(--color-gray-200, #e0e0e0);
 }
 
 .nomineeItem p {
@@ -273,6 +295,17 @@
 }
 
 @media (max-width: 480px) {
+  .pendingNomineeList {
+    grid-template-columns: 1fr;
+  }
+
+  .pendingNomineeList .nomineeItem + .nomineeItem,
+  .pendingNomineeList .nomineeItem:nth-child(3),
+  .pendingNomineeList .nomineeItem:nth-child(4) {
+    border-top: 1px solid var(--color-gray-200, #e0e0e0);
+    border-left: 0;
+  }
+
   .footer {
     flex-direction: column-reverse;
   }
@@ -326,5 +359,18 @@
 
   .nomineeList {
     grid-template-columns: 1fr;
+  }
+
+  .pendingNomineeList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pendingNomineeList .nomineeItem:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid var(--color-gray-200, #e0e0e0);
+  }
+
+  .pendingNomineeList .nomineeItem:nth-child(4) {
+    border-top: 1px solid var(--color-gray-200, #e0e0e0);
   }
 }

@@ -85,7 +85,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
           account.
         </p>
       </div>
-      <dl className={styles.nomineeList} data-qa="pending-transition-nominees">
+      <dl className={styles.pendingNomineeList} data-qa="pending-transition-nominees">
         {OFFICER_ROLES.map((role) => {
           const activated = transition.activated?.[role] ?? false;
           const link = links[role];

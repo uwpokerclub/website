@@ -18,9 +18,9 @@ describe("Officer transition", () => {
     cy.resetDatabase();
   });
 
-  const stageDialog = () => cy.contains('[role="dialog"]', "Finish Semester");
+  const stageDialog = () => cy.contains('[role="dialog"]:visible', "Finish Semester");
   const receiptDialog = () =>
-    cy.contains('[role="dialog"]', "Officer transition staged");
+    cy.contains('[role="dialog"]:visible', "Officer transition staged");
 
   const openTransition = (clipboardUnavailable = false) => {
     cy.login("test_president", seededPassword);
@@ -73,6 +73,54 @@ describe("Officer transition", () => {
         });
     });
     cy.request("/api/v2/session").its("body.role").should("eq", "president");
+  });
+
+  it("shows the pending team, replaces a lost president link, and clears after activation", () => {
+    openTransition();
+    resolveAll();
+    cy.getByData("officer-transition-review").click();
+    cy.getByData("officer-transition-submit").click();
+    cy.wait("@stageTransition").its("response.statusCode").should("eq", 201);
+    cy.on("window:confirm", () => true);
+    cy.getByData("officer-transition-receipt-close").click();
+
+    cy.getByData("pending-transition-banner").should("be.visible");
+    cy.getByData("pending-transition-nominees").should("contain", "Heinrik Drust");
+    cy.getByData("pending-transition-president").should("contain", "Account already active");
+    cy.contains("Current access transfers when Heinrik Drust completes their transition activation").should("be.visible");
+    cy.getByData("pending-transition-reissue-president").click();
+    cy.getByData("pending-transition-link-president")
+      .invoke("val")
+      .should("be.a", "string")
+      .then((link) => {
+        cy.visit(String(link));
+      });
+
+    cy.getByData("activation-heading").should("contain", "Set your password");
+    cy.getByData("activation-password").type("replacement password");
+    cy.getByData("activation-confirm-password").type("replacement password");
+    cy.getByData("activation-submit").click();
+    cy.location("pathname").should("eq", "/admin/dashboard");
+
+    cy.visit("/admin/executive");
+    cy.getByData("pending-transition-banner").should("not.exist");
+  });
+
+  it("removes the pending banner after a confirmed cancellation", () => {
+    openTransition();
+    resolveAll();
+    cy.getByData("officer-transition-review").click();
+    cy.getByData("officer-transition-submit").click();
+    cy.wait("@stageTransition").its("response.statusCode").should("eq", 201);
+    cy.on("window:confirm", () => true);
+    cy.getByData("officer-transition-receipt-close").click();
+    cy.getByData("pending-transition-banner").should("be.visible");
+
+    cy.intercept("POST", /\/api\/v2\/officer-transitions\/[^/]+\/cancel/).as("cancelTransition");
+    cy.getByData("pending-transition-cancel").click();
+    cy.wait("@cancelTransition").its("response.statusCode").should("eq", 204);
+    cy.getByData("pending-transition-banner").should("not.exist");
+    cy.getByData("officer-transition-section").should("be.visible");
   });
 
   it("keeps an ambiguity error inline", () => {
@@ -149,5 +197,6 @@ describe("Officer transition", () => {
     cy.login("test_executive", seededPassword);
     cy.visit("/admin/executive");
     cy.getByData("officer-transition-section").should("not.exist");
+    cy.getByData("pending-transition-banner").should("not.exist");
   });
 });

@@ -1,6 +1,12 @@
 import { ApiError, apiClient } from "@/lib/apiClient";
 import type { User } from "@/types/user";
-import type { OfficerTransitionFormData, ResolvedQuestId, StageOfficerTransitionResponse } from "../types";
+import type {
+  OfficerRole,
+  OfficerTransition,
+  OfficerTransitionFormData,
+  ResolvedQuestId,
+  StageOfficerTransitionResponse,
+} from "../types";
 
 function normalizeQuestId(value: string): string {
   return value.trim().toLowerCase();
@@ -48,6 +54,21 @@ export function stageOfficerTransition(data: OfficerTransitionFormData): Promise
       secretaryQuestId: normalizeQuestId(data.secretaryQuestId),
       treasurerQuestId: normalizeQuestId(data.treasurerQuestId),
     },
+  });
+}
+
+export function fetchCurrentOfficerTransition(): Promise<OfficerTransition> {
+  return apiClient<OfficerTransition>("v2/officer-transitions/current");
+}
+
+export function cancelOfficerTransition(id: string): Promise<void> {
+  return apiClient<void>(`v2/officer-transitions/${id}/cancel`, { method: "POST" });
+}
+
+export function reissueOfficerTransitionLink(id: string, role: OfficerRole): Promise<{ activationToken: string }> {
+  return apiClient<{ activationToken: string }>(`v2/officer-transitions/${id}/reissue`, {
+    method: "POST",
+    body: { role },
   });
 }
 

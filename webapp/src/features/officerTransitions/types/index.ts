@@ -17,7 +17,12 @@ export interface OfficerTransitionNominee {
 export interface OfficerTransition {
   id: string;
   status: "pending" | "completed" | "cancelled";
-  nominees: Partial<Record<OfficerRole, OfficerTransitionNominee>>;
+  presidentUsername?: string;
+  vicePresidentUsername?: string;
+  secretaryUsername?: string;
+  treasurerUsername?: string;
+  nominees?: Partial<Record<OfficerRole, OfficerTransitionNominee>>;
+  activated?: Partial<Record<OfficerRole, boolean>>;
 }
 
 export interface StageOfficerTransitionResponse {

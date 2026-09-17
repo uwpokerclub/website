@@ -111,5 +111,17 @@ func (c *officerTransitionsController) current(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, errors.InternalServerError(err.Error()))
 		return
 	}
+	transition.Activated = make(map[string]bool)
+	for role, username := range map[string]string{
+		"president": transition.PresidentUsername, "vice_president": transition.VicePresidentUsername,
+		"secretary": transition.SecretaryUsername, "treasurer": transition.TreasurerUsername,
+	} {
+		login, loginErr := c.store.Logins().FindByUsername(username)
+		if loginErr != nil && !stderrors.Is(loginErr, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, errors.InternalServerError(loginErr.Error()))
+			return
+		}
+		transition.Activated[role] = loginErr == nil && login.Status == models.LoginStatusActive
+	}
 	ctx.JSON(http.StatusOK, transition)
 }

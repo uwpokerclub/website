@@ -70,4 +70,18 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 		require.NotEmpty(t, response.ActivationToken)
 	})
+	t.Run("current transition exposes nominee activation progress to the executive ladder", func(t *testing.T) {
+		transition := seed(t)
+		require.NoError(t, db.Model(&models.Login{}).Where("username = ?", "vp").Update("status", models.LoginStatusActive).Error)
+		w := auth(t, http.MethodGet, "/api/v2/officer-transitions/current", authorization.ROLE_EXECUTIVE.ToString(), nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		var response struct {
+			ID        string          `json:"id"`
+			Activated map[string]bool `json:"activated"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		require.Equal(t, transition.ID.String(), response.ID)
+		require.False(t, response.Activated["president"])
+		require.True(t, response.Activated["vice_president"])
+	})
 }

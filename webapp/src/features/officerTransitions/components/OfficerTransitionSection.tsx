@@ -17,7 +17,7 @@ export function OfficerTransitionSection() {
         <p className={styles.pageSubtitle}>Prepare the next elected team without interrupting the current one.</p>
       </header>
 
-      <main className={styles.pageContent}>
+      <div className={styles.pageContent}>
         <section
           className={styles.transitionCard}
           aria-labelledby="officer-transition-heading"
@@ -34,7 +34,7 @@ export function OfficerTransitionSection() {
             <p>Access stays unchanged until the incoming president activates their account.</p>
           </div>
         </section>
-      </main>
+      </div>
 
       <StageOfficerTransitionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onStaged={setReceipt} />
       <TransitionReceipt receipt={receipt} onClose={() => setReceipt(null)} />

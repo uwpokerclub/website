@@ -14,7 +14,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
   const canManage = hasPermission("cancel", "officer-transition");
   const cancel = useCancelOfficerTransition();
   const reissue = useReissueOfficerTransitionLink();
-  const [links, setLinks] = useState<Partial<Record<OfficerRole, string>>>({});
+  const [replacementLink, setReplacementLink] = useState<{ role: OfficerRole; link: string } | null>(null);
   const nameQueries = useQueries({
     queries: OFFICER_ROLES.map((role) => {
       const username = usernameForRole(transition, role);
@@ -34,10 +34,9 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
       : (usernameForRole(transition, role) ?? "Unknown member");
   };
   const copy = async (role: OfficerRole) => {
-    const link = links[role];
-    if (!link) return;
+    if (replacementLink?.role !== role) return;
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(replacementLink.link);
       showToast({ message: "Activation link copied.", variant: "success", duration: 3000 });
     } catch {
       showToast({ message: "Copy failed. Select and copy the link manually.", variant: "error", duration: 5000 });
@@ -59,10 +58,10 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
       { id: transition.id, role },
       {
         onSuccess: ({ activationToken }) => {
-          setLinks((current) => ({
-            ...current,
-            [role]: `${window.location.origin}/activate#token=${encodeURIComponent(activationToken)}`,
-          }));
+          setReplacementLink({
+            role,
+            link: `${window.location.origin}/activate#token=${encodeURIComponent(activationToken)}`,
+          });
         },
         onError: (error) => showToast({ message: error.message, variant: "error", duration: 5000 }),
       },
@@ -87,7 +86,6 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
       <dl className={styles.pendingNomineeList} data-qa="pending-transition-nominees">
         {OFFICER_ROLES.map((role) => {
           const activated = transition.activated?.[role] ?? false;
-          const link = links[role];
           return (
             <div key={role} className={styles.nomineeItem} data-qa={`pending-transition-${role}`}>
               <dt>{roleLabels[role]}</dt>
@@ -103,29 +101,35 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
                   >
                     Re-issue link
                   </Button>
-                  {link && (
-                    <div className={styles.linkControl}>
-                      <input
-                        readOnly
-                        value={link}
-                        aria-label={`${nameFor(role)} replacement activation link`}
-                        data-qa={`pending-transition-link-${role}`}
-                      />
-                      <Button
-                        variant="secondary"
-                        onClick={() => void copy(role)}
-                        data-qa={`pending-transition-copy-${role}`}
-                      >
-                        Copy link
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
           );
         })}
       </dl>
+      {replacementLink && (
+        <div className={styles.replacementLink} data-qa="pending-transition-replacement-link">
+          <label htmlFor="replacement-activation-link">
+            Replacement activation link for {nameFor(replacementLink.role)}
+          </label>
+          <div className={styles.linkControl}>
+            <input
+              id="replacement-activation-link"
+              readOnly
+              value={replacementLink.link}
+              aria-label={`${nameFor(replacementLink.role)} replacement activation link`}
+              data-qa={`pending-transition-link-${replacementLink.role}`}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => void copy(replacementLink.role)}
+              data-qa={`pending-transition-copy-${replacementLink.role}`}
+            >
+              Copy link
+            </Button>
+          </div>
+        </div>
+      )}
       {canManage && (
         <div className={styles.pendingActions}>
           <p>Re-issuing invalidates the previous link. The original link cannot be redisplayed.</p>

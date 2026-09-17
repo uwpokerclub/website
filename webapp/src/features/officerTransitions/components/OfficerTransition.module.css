@@ -148,6 +148,21 @@
   justify-self: start;
 }
 
+.replacementLink {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border: 1px solid var(--color-gray-200, #e0e0e0);
+  border-radius: 6px;
+  background: var(--color-gray-50, #fafafa);
+}
+
+.replacementLink label {
+  color: var(--color-gray-900, #212121);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .pendingActions {
   display: flex;
   align-items: center;

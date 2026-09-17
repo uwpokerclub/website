@@ -81,8 +81,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
           <h2 id="pending-transition-heading">Incoming executive team</h2>
         </div>
         <p className={styles.accessNotice}>
-          Current access transfers when the named president, <strong>{nameFor("president")}</strong>, activates their
-          account.
+          Current access transfers when <strong>{nameFor("president")}</strong> completes their transition activation.
         </p>
       </div>
       <dl className={styles.pendingNomineeList} data-qa="pending-transition-nominees">

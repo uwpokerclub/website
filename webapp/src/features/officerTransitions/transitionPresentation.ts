@@ -18,5 +18,5 @@ export function usernameForRole(transition: OfficerTransition, role: OfficerRole
 }
 
 export function activationLabel(activated: boolean | undefined): string {
-  return activated ? "Account activated" : "Awaiting account activation";
+  return activated ? "Account already active" : "Activation required";
 }

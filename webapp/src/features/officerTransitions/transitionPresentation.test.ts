@@ -21,8 +21,8 @@ describe("pending transition presentation", () => {
   });
 
   it("makes inactive and active nominee progress unambiguous", () => {
-    expect(activationLabel(false)).toBe("Awaiting account activation");
-    expect(activationLabel(undefined)).toBe("Awaiting account activation");
-    expect(activationLabel(true)).toBe("Account activated");
+    expect(activationLabel(false)).toBe("Activation required");
+    expect(activationLabel(undefined)).toBe("Activation required");
+    expect(activationLabel(true)).toBe("Account already active");
   });
 });

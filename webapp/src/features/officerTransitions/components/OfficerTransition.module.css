@@ -1,12 +1,163 @@
-.section {
-  max-width: 720px;
+.page {
+  width: 100%;
 }
+
+.pageHeader {
+  padding: 1.5rem 2rem 1rem;
+  border-bottom: 1px solid var(--color-gray-200, #e0e0e0);
+  background: var(--color-background, #fff);
+}
+
+.pageHeader h1 {
+  margin: 0.15rem 0 0.5rem;
+  color: var(--color-gray-900, #212121);
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-primary, #0056b3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pageSubtitle {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--color-gray-600, #757575);
+  font-size: 0.9rem;
+}
+
+.pageContent {
+  padding: 2rem;
+}
+
+.transitionCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  max-width: 56rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-gray-200, #e0e0e0);
+  border-radius: 8px;
+  background: var(--color-background, #fff);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+}
+
+.cardCopy h2 {
+  margin: 0 0 0.5rem;
+  color: var(--color-gray-900, #212121);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.cardCopy p,
+.cardAction p {
+  margin: 0;
+  color: var(--color-text-secondary, #666);
+  line-height: 1.5;
+}
+
+.cardAction {
+  display: grid;
+  min-width: 15rem;
+  gap: 0.65rem;
+}
+
+.cardAction p {
+  font-size: 0.8rem;
+}
+
 .form,
 .confirmation,
 .receipt {
   display: grid;
   gap: 1rem;
 }
+
+.form {
+  gap: 1.25rem;
+}
+
+.fieldStatus,
+.resolvedMember {
+  margin: 0.45rem 0 0;
+  font-size: 0.875rem;
+}
+
+.fieldStatus {
+  color: var(--color-text-muted, #666);
+}
+
+.resolvedMember {
+  color: var(--color-success-dark, #155724);
+  font-weight: 600;
+}
+
+.resolvedMember::before {
+  content: "✓ ";
+}
+
+.confirmationHeading p:last-child,
+.receiptHeading p:last-child {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-secondary, #666);
+  line-height: 1.5;
+}
+
+.nomineeList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.nomineeItem {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-gray-200, #e0e0e0);
+  border-radius: 6px;
+  background: var(--color-gray-50, #fafafa);
+}
+
+.nomineeItem dt {
+  color: var(--color-text-muted, #666);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.nomineeItem dd {
+  margin: 0.3rem 0 0;
+  color: var(--color-gray-900, #212121);
+  font-weight: 600;
+}
+
+.accessNotice,
+.receiptState {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-warning, #b7791f);
+  border-radius: 6px;
+  background: var(--color-warning-light, #fffbeb);
+  color: var(--color-warning-dark, #744210);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.receiptHeading {
+  padding-bottom: 0.25rem;
+}
+
+.linkList {
+  display: grid;
+  gap: 0.9rem;
+}
+
 .footer {
   display: flex;
   justify-content: flex-end;
@@ -17,14 +168,83 @@
 }
 .linkRow {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
+
+.linkRow label {
+  color: var(--color-gray-900, #212121);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.linkControl {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
 .linkRow input {
   min-width: 0;
-  width: 100%;
+  flex: 1;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border, #ced4da);
+  border-radius: 4px;
+  background: var(--color-gray-50, #fafafa);
+  color: var(--color-text-secondary, #666);
+  font-family: monospace;
+  font-size: 0.8rem;
 }
+
+.receiptWarning {
+  margin: 0;
+  color: var(--color-text-muted, #666);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 480px) {
   .footer {
     flex-direction: column-reverse;
+  }
+
+  .footer button,
+  .linkControl button {
+    width: 100%;
+  }
+
+  .linkControl {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .pageHeader {
+    padding: 1rem 0.5rem 0.75rem;
+  }
+
+  .pageHeader h1 {
+    font-size: 1.5rem;
+  }
+
+  .pageContent {
+    padding: 1rem 0.5rem 4rem;
+  }
+
+  .transitionCard {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .cardAction {
+    min-width: 0;
+  }
+
+  .cardAction button {
+    width: 100%;
+  }
+
+  .nomineeList {
+    grid-template-columns: 1fr;
   }
 }

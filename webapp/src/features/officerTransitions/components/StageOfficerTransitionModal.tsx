@@ -192,9 +192,13 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
                       error={Boolean(field.error)}
                       fullWidth
                     />
-                    {field.resolving && <p>Resolving…</p>}
+                    {field.resolving && (
+                      <p className={styles.fieldStatus} aria-live="polite">
+                        Resolving member…
+                      </p>
+                    )}
                     {field.resolved && (
-                      <p data-qa={`officer-transition-${role}-name`}>
+                      <p className={styles.resolvedMember} data-qa={`officer-transition-${role}-name`}>
                         {field.resolved.nominee.firstName} {field.resolved.nominee.lastName}
                       </p>
                     )}
@@ -211,18 +215,24 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
         </div>
       ) : (
         <div className={styles.confirmation}>
-          <p>Confirm the next officer team:</p>
-          <ul>
+          <div className={styles.confirmationHeading}>
+            <p className={styles.eyebrow}>Review transition</p>
+            <p>Confirm the elected team before creating their activation links.</p>
+          </div>
+          <dl className={styles.nomineeList}>
             {OFFICER_ROLES.map((role) => (
-              <li key={role}>
-                {labels[role]}: {fields[role].resolved?.nominee.firstName} {fields[role].resolved?.nominee.lastName}
-              </li>
+              <div key={role} className={styles.nomineeItem}>
+                <dt>{labels[role]}</dt>
+                <dd>
+                  {fields[role].resolved?.nominee.firstName} {fields[role].resolved?.nominee.lastName}
+                </dd>
+              </div>
             ))}
-          </ul>
-          <p>
-            <strong>No access changes yet.</strong> The previous team keeps working until the incoming president
-            activates their account.
-          </p>
+          </dl>
+          <div className={styles.accessNotice}>
+            <strong>No access changes yet.</strong>
+            <span>The previous team keeps working until the incoming president activates their account.</span>
+          </div>
           {submitError && (
             <p role="alert" className={styles.error}>
               {submitError}

@@ -10,18 +10,34 @@ export function OfficerTransitionSection() {
   const [receipt, setReceipt] = useState<StageOfficerTransitionResponse | null>(null);
 
   return (
-    <section
-      className={styles.section}
-      aria-labelledby="officer-transition-heading"
-      data-qa="officer-transition-section"
-    >
-      <h1 id="officer-transition-heading">Officer Transition</h1>
-      <p>Stage the next elected officer team at the end of the semester.</p>
-      <Button onClick={() => setIsModalOpen(true)} data-qa="officer-transition-start">
-        Finish Semester
-      </Button>
+    <div className={styles.page}>
+      <header className={styles.pageHeader}>
+        <p className={styles.eyebrow}>Executive operations</p>
+        <h1 id="officer-transition-heading">Officer Transition</h1>
+        <p className={styles.pageSubtitle}>Prepare the next elected team without interrupting the current one.</p>
+      </header>
+
+      <main className={styles.pageContent}>
+        <section
+          className={styles.transitionCard}
+          aria-labelledby="officer-transition-heading"
+          data-qa="officer-transition-section"
+        >
+          <div className={styles.cardCopy}>
+            <h2>Finish Semester</h2>
+            <p>Confirm the four elected officers and securely hand each person their activation link.</p>
+          </div>
+          <div className={styles.cardAction}>
+            <Button onClick={() => setIsModalOpen(true)} data-qa="officer-transition-start">
+              Start officer transition
+            </Button>
+            <p>Access stays unchanged until the incoming president activates their account.</p>
+          </div>
+        </section>
+      </main>
+
       <StageOfficerTransitionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onStaged={setReceipt} />
       <TransitionReceipt receipt={receipt} onClose={() => setReceipt(null)} />
-    </section>
+    </div>
   );
 }

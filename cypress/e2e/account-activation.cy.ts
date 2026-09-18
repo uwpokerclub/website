@@ -55,6 +55,7 @@ describe("Account activation", () => {
 
     cy.wait("@completeActivation");
     cy.location("pathname").should("eq", "/admin/dashboard");
+    cy.getByData("semester-setup-prompt").should("be.visible");
   });
 
   it("shows actionable invalid-token copy", () => {

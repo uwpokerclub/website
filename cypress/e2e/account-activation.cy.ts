@@ -17,6 +17,11 @@ describe("Account activation", () => {
       request.reply({ statusCode: 200, body: { username: sessionIdentity, role: "president", permissions: {} } });
     });
     cy.intercept("GET", "/api/v2/semesters", { body: { data: [] } });
+    cy.intercept("GET", "/api/v2/officer-transitions/completed", {
+      id: "completed-transition",
+      status: "completed",
+      presidentUsername: "ada",
+    });
     cy.intercept("POST", "/api/v2/activations/verify", (request) => {
       expect(request.body).to.deep.equal({ token });
       expect(request.url).not.to.contain(token);
@@ -55,6 +60,7 @@ describe("Account activation", () => {
 
     cy.wait("@completeActivation");
     cy.location("pathname").should("eq", "/admin/dashboard");
+    cy.getByData("semester-setup-prompt").should("be.visible");
   });
 
   it("shows actionable invalid-token copy", () => {

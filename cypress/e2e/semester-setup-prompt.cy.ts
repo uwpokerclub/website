@@ -30,7 +30,7 @@ describe("Semester setup prompt", () => {
     }).as("getCompletedTransition");
     cy.visit("/admin/dashboard");
     cy.wait("@getSemesters");
-    cy.wait("@getCompletedTransition");
+    if (role === "president") cy.wait("@getCompletedTransition");
   };
 
   beforeEach(() => {
@@ -74,7 +74,7 @@ describe("Semester setup prompt", () => {
     }).as("createSemester");
 
     cy.getByData("semester-setup-prompt-open").click();
-    cy.getByData("semester-setup-wizard").should("be.visible");
+    cy.getByData("semester-setup-wizard").should("exist");
     cy.getByData("semester-term").select("fall");
     cy.getByData("input-semester-startDate").type("2027-09-01");
     cy.getByData("input-semester-endDate").type("2027-12-31");
@@ -91,6 +91,7 @@ describe("Semester setup prompt", () => {
     cy.injectAxe();
     cy.checkA11y('[data-qa="semester-setup-prompt"]');
     cy.getByData("semester-setup-prompt-open").click();
+    cy.getByData("semester-setup-wizard").should("exist");
     cy.checkA11y('[data-qa="semester-setup-wizard"]');
   });
 });

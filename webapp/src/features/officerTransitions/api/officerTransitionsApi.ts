@@ -61,6 +61,15 @@ export function fetchCurrentOfficerTransition(): Promise<OfficerTransition> {
   return apiClient<OfficerTransition>("v2/officer-transitions/current");
 }
 
+export async function fetchCompletedIncomingOfficerTransition(): Promise<OfficerTransition | null> {
+  try {
+    return await apiClient<OfficerTransition>("v2/officer-transitions/completed");
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export function cancelOfficerTransition(id: string): Promise<void> {
   return apiClient<void>(`v2/officer-transitions/${id}/cancel`, { method: "POST" });
 }

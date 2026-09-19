@@ -102,3 +102,18 @@ func (r *inMemoryOfficerTransitionRepository) Current() (models.OfficerTransitio
 	}
 	return models.OfficerTransition{}, store.ErrNotFound
 }
+
+func (r *inMemoryOfficerTransitionRepository) CompletedForPresident(username string) (models.OfficerTransition, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var latest *models.OfficerTransition
+	for _, transition := range r.transitions {
+		if transition.Status == models.OfficerTransitionCompleted && transition.PresidentUsername == username && (latest == nil || transition.ResolvedAt.After(*latest.ResolvedAt)) {
+			latest = transition
+		}
+	}
+	if latest == nil {
+		return models.OfficerTransition{}, store.ErrNotFound
+	}
+	return *latest, nil
+}

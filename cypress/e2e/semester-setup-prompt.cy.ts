@@ -23,8 +23,14 @@ describe("Semester setup prompt", () => {
       statusCode,
       body: statusCode === 200 ? { data: semesters, total: semesters.length } : { message: "Unavailable" },
     }).as("getSemesters");
+    cy.intercept("GET", "/api/v2/officer-transitions/completed", {
+      id: "completed-transition",
+      status: "completed",
+      presidentUsername: "test_president",
+    }).as("getCompletedTransition");
     cy.visit("/admin/dashboard");
     cy.wait("@getSemesters");
+    cy.wait("@getCompletedTransition");
   };
 
   beforeEach(() => {

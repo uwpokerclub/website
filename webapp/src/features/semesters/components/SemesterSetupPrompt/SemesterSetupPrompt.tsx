@@ -5,6 +5,7 @@ import { ROLES } from "@/types/roles";
 import { useSemesters } from "../../hooks/useSemesterQueries";
 import { hasFutureSemester } from "../../utils";
 import { SemesterSetupWizard } from "../SemesterSetupWizard";
+import { useCompletedIncomingOfficerTransition } from "@/features/officerTransitions/hooks/useOfficerTransitionQueries";
 import styles from "./SemesterSetupPrompt.module.css";
 
 export function SemesterSetupPrompt() {
@@ -15,8 +16,16 @@ export function SemesterSetupPrompt() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   const isPresident = hasRoles([ROLES.PRESIDENT]);
+  const completedTransition = useCompletedIncomingOfficerTransition(isPresident);
   const needsSetup = !isLoading && !isError && !hasFutureSemester(semesters, Date.now());
-  const isVisible = isPresident && needsSetup && !dismissed && !resolved;
+  const isVisible =
+    isPresident &&
+    !completedTransition.isLoading &&
+    !completedTransition.isError &&
+    completedTransition.data !== null &&
+    needsSetup &&
+    !dismissed &&
+    !resolved;
 
   if (!isVisible) return null;
 

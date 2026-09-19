@@ -84,4 +84,23 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 		require.False(t, response.Activated["president"])
 		require.True(t, response.Activated["vice_president"])
 	})
+	t.Run("completed transition is available only to its incoming president", func(t *testing.T) {
+		transition := seed(t)
+		_, err := postgres.NewStore(db).OfficerTransitions().ClaimCompletion(transition.ID)
+		require.NoError(t, err)
+		require.NoError(t, db.Where("username = ?", "pres").Delete(&models.Login{}).Error)
+		session, err := testutils.CreateTestSession(db, "pres", authorization.ROLE_PRESIDENT.ToString())
+		require.NoError(t, err)
+		req, err := testutils.MakeJSONRequest(http.MethodGet, "/api/v2/officer-transitions/completed", nil)
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, session)
+		w := httptest.NewRecorder()
+		api.ServeHTTP(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
+		var response struct {
+			ID string `json:"id"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+		require.Equal(t, transition.ID.String(), response.ID)
+	})
 }

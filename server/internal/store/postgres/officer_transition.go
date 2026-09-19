@@ -37,6 +37,16 @@ func (r *postgresOfficerTransitionRepository) Current() (models.OfficerTransitio
 	return t, err
 }
 
+func (r *postgresOfficerTransitionRepository) CompletedForPresident(username string) (models.OfficerTransition, error) {
+	var t models.OfficerTransition
+	err := r.db.Where("status = ? AND president_username = ?", models.OfficerTransitionCompleted, username).
+		Order("resolved_at DESC").First(&t).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return models.OfficerTransition{}, store.ErrNotFound
+	}
+	return t, err
+}
+
 func (r *postgresOfficerTransitionRepository) FindByIDForUpdate(id uuid.UUID) (models.OfficerTransition, error) {
 	var transition models.OfficerTransition
 	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&transition, "id = ?", id).Error

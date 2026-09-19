@@ -22,8 +22,23 @@ func (c *officerTransitionsController) LoadRoutes(r *gin.RouterGroup) {
 	g := r.Group("officer-transitions", middleware.UseAuthentication(c.store))
 	g.POST("", middleware.UseAuthorization("officer-transition.create"), c.create)
 	g.GET("current", middleware.UseAuthorization("officer-transition.get"), c.current)
+	g.GET("completed", middleware.UseAuthorization("officer-transition.get"), c.completed)
 	g.POST(":id/cancel", middleware.UseAuthorization("officer-transition.cancel"), c.cancel)
 	g.POST(":id/reissue", middleware.UseAuthorization("officer-transition.reissue"), c.reissue)
+}
+
+// completed returns the latest completed transition in which the signed-in user became president.
+func (c *officerTransitionsController) completed(ctx *gin.Context) {
+	transition, err := c.store.OfficerTransitions().CompletedForPresident(ctx.GetString("username"))
+	if stderrors.Is(err, store.ErrNotFound) {
+		ctx.AbortWithStatusJSON(http.StatusNotFound, errors.NotFound("no completed incoming officer transition"))
+		return
+	}
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, errors.InternalServerError(err.Error()))
+		return
+	}
+	ctx.JSON(http.StatusOK, transition)
 }
 
 func transitionID(ctx *gin.Context) (uuid.UUID, bool) {

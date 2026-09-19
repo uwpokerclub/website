@@ -83,6 +83,7 @@ describe("Semester setup prompt", () => {
     cy.getByData("create-semester-submit-btn").click();
     cy.wait("@createSemester");
     cy.getByData("semester-setup-prompt").should("not.exist");
+    cy.getByData("semester-dropdown").should("contain", "Fall 2027");
   });
 
   it("has no axe violations for the prompt and wizard", () => {

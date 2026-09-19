@@ -1,6 +1,6 @@
 import { Button } from "@uwpokerclub/components";
 import { useState } from "react";
-import { useAuth } from "@/hooks";
+import { useAuth, useCurrentSemester } from "@/hooks";
 import { ROLES } from "@/types/roles";
 import { useSemesters } from "../../hooks/useSemesterQueries";
 import { hasFutureSemester } from "../../utils";
@@ -10,6 +10,7 @@ import styles from "./SemesterSetupPrompt.module.css";
 
 export function SemesterSetupPrompt() {
   const { hasRoles } = useAuth();
+  const { setCurrentSemester } = useCurrentSemester();
   const { data: semesters = [], isLoading, isError } = useSemesters();
   const [dismissed, setDismissed] = useState(false);
   const [resolved, setResolved] = useState(false);
@@ -53,7 +54,8 @@ export function SemesterSetupPrompt() {
       <SemesterSetupWizard
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
-        onSuccess={() => {
+        onSuccess={(semester) => {
+          setCurrentSemester(semester);
           setResolved(true);
           setIsWizardOpen(false);
         }}

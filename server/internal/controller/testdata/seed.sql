@@ -9,6 +9,14 @@ INSERT INTO logins (username, password, role) VALUES
   ('hdrust0', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive')
 ON CONFLICT (username) DO NOTHING;
 
+-- A login dedicated to tournament-clock.cy.ts. logins-management.cy.ts edits
+-- test_executive's real password/role, and `logins` is never truncated by
+-- /test/reset, so any spec authenticating as that account is at the mercy of
+-- run order. This one is untouched by any other spec.
+INSERT INTO logins (username, password, role) VALUES
+  ('clock_executive', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive')
+ON CONFLICT (username) DO NOTHING;
+
 -- Seed a testing semester
 INSERT INTO semesters 
   (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta, free_trial_limit) 
@@ -25,14 +33,25 @@ INSERT INTO blinds (id, small, big, ante, time, index, structure_id) VALUES
   (3, 30, 60, 60, 5, 2, 1),
   (4, 40, 80, 80, 5, 3, 1),
   (5, 50, 100, 100, 5, 4, 1);
+
+-- A second structure with a very short first level, so tournament-clock.cy.ts
+-- can wait out a real level expiry (case 4) without a long-running test.
+INSERT INTO structures (id, name) VALUES (2, 'Clock Test Structure');
+
+INSERT INTO blinds (id, small, big, ante, time, index, structure_id) VALUES
+  (6, 10, 20, 0, 1, 0, 2),
+  (7, 20, 40, 0, 5, 1, 2),
+  (8, 30, 60, 0, 5, 2, 2);
 SELECT setval('blinds_id_seq', (SELECT MAX(id) FROM blinds));
+SELECT setval('structures_id_seq', (SELECT MAX(id) FROM structures));
 
 -- Seed events for the seed semester
 INSERT INTO events
   (id, name, format, notes, semester_id, start_date, state, structure_id, rebuys, points_multiplier)
 VALUES
   (1, 'Winter 2025 Event #1', 'No Limit Hold''em', 'Seed event', '84f026be-53e0-4759-ab89-131c4a66d649', '2025-01-03 19:00:00', 0, 1, 0, 1.0),
-  (2, 'Winter 2025 Event #2', 'No Limit Hold''em', 'Completed event', '84f026be-53e0-4759-ab89-131c4a66d649', '2025-01-10 19:00:00', 1, 1, 0, 1.0);
+  (2, 'Winter 2025 Event #2', 'No Limit Hold''em', 'Completed event', '84f026be-53e0-4759-ab89-131c4a66d649', '2025-01-10 19:00:00', 1, 1, 0, 1.0),
+  (3, 'Winter 2025 Clock Sync Event', 'No Limit Hold''em', 'Clock sync test event', '84f026be-53e0-4759-ab89-131c4a66d649', '2025-01-15 19:00:00', 0, 2, 0, 1.0);
 SELECT setval('events_id_seq', (SELECT MAX(id) FROM events));
 
 -- Seed users

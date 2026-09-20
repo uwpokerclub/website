@@ -22,6 +22,7 @@ interface Permissions {
   export: boolean;
   cancel: boolean;
   reissue: boolean;
+  control: boolean;
 }
 
 /**
@@ -41,6 +42,7 @@ export interface PermissionList {
   user: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete">;
   event: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete" | "end" | "restart" | "rebuy"> & {
     participant: Pick<Permissions, "create" | "get" | "list" | "signin" | "signout" | "delete">;
+    clock: Pick<Permissions, "get" | "control">;
   };
   login: Pick<Permissions, "create" | "list" | "get" | "edit" | "delete">;
   membership: Pick<Permissions, "create" | "get" | "list" | "edit" | "delete">;
@@ -55,7 +57,7 @@ export type Resources = keyof PermissionList;
 
 export type Actions = keyof Permissions;
 
-export type SubResources = "participant" | "rankings";
+export type SubResources = "participant" | "rankings" | "clock";
 
 /**
  * @interface UserSession

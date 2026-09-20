@@ -21,6 +21,7 @@ type InMemoryStore struct {
 	parent             *InMemoryStore
 	revision           uint64
 	baseRevision       uint64
+	eventClocks *inMemoryEventClockRepository
 }
 
 var _ store.Store = (*InMemoryStore)(nil)
@@ -38,6 +39,7 @@ func NewStore() store.Store {
 		sessions:           newSessionRepository(),
 		accountActivations: newAccountActivationRepository(),
 		officerTransitions: newOfficerTransitionRepository(),
+		eventClocks: newEventClockRepository(),
 	}
 }
 
@@ -105,6 +107,12 @@ func (s *InMemoryStore) OfficerTransitions() store.OfficerTransitionRepository {
 	return s.officerTransitions
 }
 
+func (s *InMemoryStore) EventClocks() store.EventClockRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.eventClocks
+}
+
 // BeginTx snapshots all active repos into a new InMemoryStore. The returned
 // store operates on its own copy of the data, leaving the parent untouched
 // until Commit is called.
@@ -145,6 +153,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	}
 	if s.officerTransitions != nil {
 		tx.officerTransitions = s.officerTransitions.clone()
+	}
+	if s.eventClocks != nil {
+		tx.eventClocks = s.eventClocks.clone()
 	}
 	return tx, nil
 }
@@ -191,6 +202,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	if s.officerTransitions != nil {
 		s.parent.officerTransitions = s.officerTransitions
+	}
+	if s.eventClocks != nil {
+		s.parent.eventClocks = s.eventClocks
 	}
 	s.parent.revision++
 	return nil

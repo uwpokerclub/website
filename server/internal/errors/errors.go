@@ -44,6 +44,14 @@ func Forbidden(message string) error {
 	}
 }
 
+func Conflict(message string) error {
+	return APIErrorResponse{
+		Code:    http.StatusConflict,
+		Type:    "CONFLICT",
+		Message: message,
+	}
+}
+
 func NotFound(message string) error {
 	return APIErrorResponse{
 		Code:    http.StatusNotFound,
@@ -51,10 +59,6 @@ func NotFound(message string) error {
 		Message: message,
 	}
 }
-func Conflict(message string) error {
-	return APIErrorResponse{Code: http.StatusConflict, Type: "CONFLICT", Message: message}
-}
-
 func RequestEntityTooLarge(message string) error {
 	return APIErrorResponse{
 		Code:    http.StatusRequestEntityTooLarge,

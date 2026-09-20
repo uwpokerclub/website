@@ -527,7 +527,7 @@ export function EventDetails() {
               <p className={styles.loadingText}>Loading structure...</p>
             </div>
           ) : (
-            <TournamentClock levels={structure?.blinds || []} />
+            <TournamentClock semesterId={currentSemester.id} eventId={event.id} levels={structure?.blinds || []} />
           )}
         </div>
       </div>

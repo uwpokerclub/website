@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/useAuth";
 import { Icon } from "../../../components";
 
 import styles from "./ClockActions.module.css";
@@ -21,6 +22,14 @@ export function ClockActions({
   onSubtractTime,
   onAddTime,
 }: Props) {
+  const { hasPermission } = useAuth();
+
+  // A mirror screen run by an executive has no control permission; the bar
+  // is absent there rather than shown-but-disabled, per #455.
+  if (!hasPermission("control", "event", "clock")) {
+    return null;
+  }
+
   return (
     <div className={styles.row}>
       <span data-qa="prev-level-btn" onClick={onStepBack}>

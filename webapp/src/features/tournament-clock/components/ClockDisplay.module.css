@@ -6,6 +6,10 @@
   grid-area: timer;
   position: relative;
   z-index: 1;
+  /* Without this, a grid/flex item defaults to min-height: auto, which
+     floors it at its content's natural size and defeats the fullscreen
+     grid's fixed height above. */
+  min-height: 0;
 
   display: flex;
   flex-direction: column;
@@ -121,11 +125,14 @@
 
 /* Fullscreen mode adjustments */
 :fullscreen .container {
-  padding: 3rem 2rem;
+  padding: 1.5rem 2rem;
 }
 
+/* min() with a vh term keeps this from outgrowing the viewport on a wide
+   but short screen (e.g. a 1366x768 laptop feeding a projector), where a
+   purely vw-based size would push the controls below the fold. */
 :fullscreen .timer {
-  font-size: clamp(10rem, 25vw, 20rem);
+  font-size: clamp(6rem, min(25vw, 22vh), 20rem);
 }
 
 :fullscreen .progress {

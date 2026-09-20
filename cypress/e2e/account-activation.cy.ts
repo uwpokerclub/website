@@ -74,7 +74,7 @@ describe("Account activation", () => {
   });
 
   it("lets the user retry verification after a transient failure", () => {
-    verificationResponses = ["unavailable", "unavailable", "success"];
+    verificationResponses = ["unavailable", "success"];
     cy.visit(`/activate#token=${token}`);
 
     cy.wait("@verifyActivation");

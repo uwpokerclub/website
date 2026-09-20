@@ -36,9 +36,11 @@ type PostgresStore struct {
 	logins store.LoginRepository
 
 	// sessions is the repository for accessing the sessions in the data store. It provides methods for creating, reading, updating, and deleting sessions.
-	sessions           store.SessionRepository
+	sessions store.SessionRepository
 	accountActivations store.AccountActivationRepository
 	officerTransitions store.OfficerTransitionRepository
+	// eventClocks is the repository for accessing event clocks in the data store.
+	eventClocks store.EventClockRepository
 }
 
 var _ store.Store = (*PostgresStore)(nil)
@@ -57,6 +59,7 @@ func NewStore(db *gorm.DB) store.Store {
 		sessions:           NewSessionRepository(db),
 		accountActivations: NewAccountActivationRepository(db),
 		officerTransitions: NewOfficerTransitionRepository(db),
+		eventClocks: NewEventClockRepository(db),
 	}
 }
 
@@ -103,6 +106,10 @@ func (s *PostgresStore) OfficerTransitions() store.OfficerTransitionRepository {
 	return s.officerTransitions
 }
 
+func (s *PostgresStore) EventClocks() store.EventClockRepository {
+	return s.eventClocks
+}
+
 func (s *PostgresStore) BeginTx() (store.Store, error) {
 	tx := s.db.Begin()
 	if tx.Error != nil {
@@ -122,6 +129,7 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 		sessions:           NewSessionRepository(tx),
 		accountActivations: NewAccountActivationRepository(tx),
 		officerTransitions: NewOfficerTransitionRepository(tx),
+		eventClocks: NewEventClockRepository(tx),
 	}, nil
 }
 

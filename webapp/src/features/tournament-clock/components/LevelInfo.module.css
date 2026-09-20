@@ -113,8 +113,10 @@
   margin-bottom: 1rem;
 }
 
+/* min() with a vh term keeps this from outgrowing the viewport on a wide
+   but short screen; see the matching comment in ClockDisplay.module.css. */
 :fullscreen .amount {
-  font-size: clamp(4rem, 10vw, 10rem);
+  font-size: clamp(2.5rem, min(10vw, 10vh), 10rem);
 }
 
 :fullscreen .next {

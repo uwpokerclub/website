@@ -24,6 +24,7 @@ var DefaultAuthorizerMap = ResourceAuthorizerMap{
 	"structure":  NewStructureAuthorizer(),
 	"event": NewEventAuthorizer(ResourceAuthorizerMap{
 		"participant": NewParticipantAuthorizer(),
+		"clock":       NewClockAuthorizer(),
 	}),
 	"officer-transition": NewTransitionAuthorizer(),
 }

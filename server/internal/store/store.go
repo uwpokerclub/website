@@ -13,6 +13,7 @@ type Store interface {
 	Sessions() SessionRepository
 	AccountActivations() AccountActivationRepository
 	OfficerTransitions() OfficerTransitionRepository
+	EventClocks() EventClockRepository
 
 	BeginTx() (Store, error)
 	Commit() error

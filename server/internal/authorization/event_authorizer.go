@@ -15,7 +15,7 @@ func NewEventAuthorizer(resourceAuthorizers ResourceAuthorizerMap) ResourceAutho
 	return &eventAuthorizer{
 		resourceAuthorizers: resourceAuthorizers,
 		actions:             []string{"create", "get", "list", "edit", "delete", "end", "restart", "rebuy"},
-		subResources:        []string{"participant"},
+		subResources:        []string{"participant", "clock"},
 	}
 }
 

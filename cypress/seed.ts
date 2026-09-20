@@ -32,6 +32,27 @@ export const EVENT: Event = {
   additionalDetails: "Seed event",
 };
 
+// A dedicated structure with a very short (1 minute) first level, so
+// tournament-clock.cy.ts can wait out a real level expiry without a
+// long-running test.
+export const CLOCK_STRUCTURE = {
+  id: 2,
+  name: "Clock Test Structure",
+};
+
+export const CLOCK_EVENT: Event = {
+  id: "3",
+  name: "Winter 2025 Clock Sync Event",
+  format: "No Limit Hold'em",
+  semesterId: SEMESTER.id,
+  state: 0,
+  structureId: "2",
+  rebuys: 0,
+  pointsMultiplier: 1.0,
+  startDate: "2025-01-15T19:00:00.000Z",
+  additionalDetails: "Clock sync test event",
+};
+
 export const ENDED_EVENT: Event = {
   id: "2",
   name: "Winter 2025 Event #2",
@@ -380,5 +401,14 @@ export const LOGINS: Login[] = [
       firstName: "Heinrik",
       lastName: "Drust",
     },
+  },
+  // Dedicated to tournament-clock.cy.ts. logins-management.cy.ts edits
+  // test_executive's real password/role, and `logins` is never truncated by
+  // /test/reset, so any spec authenticating as that account is at the mercy
+  // of run order. This one is untouched by any other spec. Also mirrored in
+  // cypress/fixtures/logins.json for the stubbed logins-table tests.
+  {
+    username: "clock_executive",
+    role: "executive",
   },
 ];

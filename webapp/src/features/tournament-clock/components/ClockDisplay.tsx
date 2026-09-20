@@ -1,109 +1,62 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ClockActions } from "./ClockActions";
 import { playSound } from "../utils/playSound";
+import { MS_IN_MINUTE, MS_IN_SECOND, SECONDS_IN_MINUTE } from "../utils/time";
 
 import styles from "./ClockDisplay.module.css";
 
 type Props = {
-  levelTime: number;
-  startOnRender: boolean;
-  onTimerPause: () => void;
-  onTimerEnd: () => void;
+  // Remaining time in the current level, derived from server state (ms).
+  remainingMs: number;
+  // The current level's total duration, for the progress bar (ms).
+  totalMs: number;
+  isPaused: boolean;
+  onResume: () => void;
+  onPause: () => void;
   onPreviousLevel: () => void;
   onNextLevel: () => void;
+  onSubtractTime: () => void;
+  onAddTime: () => void;
 };
 
-const SECONDS_IN_MINUTE = 60;
-const MS_IN_SECOND = 1000;
-const MS_IN_MINUTE = MS_IN_SECOND * SECONDS_IN_MINUTE;
 const LOW_PITCH_BEEP = 493.883;
 const HIGH_PITCH_BEEP = 659.255;
 
 export function ClockDisplay({
-  levelTime,
-  startOnRender,
-  onTimerPause,
-  onTimerEnd,
+  remainingMs,
+  totalMs,
+  isPaused,
+  onResume,
+  onPause,
   onPreviousLevel,
   onNextLevel,
+  onSubtractTime,
+  onAddTime,
 }: Props) {
-  // The time when the timer is supposed to end (in ms)
-  const [endTime, setEndTime] = useState(Date.now() + levelTime * MS_IN_MINUTE);
-  // The current time (in ms)
-  const [now, setNow] = useState(Date.now());
-  // Whether or not the timer is paused
-  const [isPaused, setIsPaused] = useState(true);
-
-  // Ref to hold the interval ID
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Ref to hold the AudioContext instance
+  // Ref to hold the AudioContext instance, created lazily on the first resume
+  // click so it happens within a user gesture (required by browser autoplay policy).
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // The amount of time remaining in the level
-  const timeRemaining = endTime - now;
+  const minutes = Math.floor(remainingMs / MS_IN_MINUTE);
+  const seconds = Math.floor((remainingMs / MS_IN_SECOND) % SECONDS_IN_MINUTE);
 
-  // Convert the time remaining into minutes and seconds
-  const minutes = Math.floor(timeRemaining / MS_IN_MINUTE);
-  const seconds = Math.floor((timeRemaining / MS_IN_SECOND) % SECONDS_IN_MINUTE);
-
-  // Handles starting the clock timer
   const handleStart = useCallback(() => {
-    // Create a new audio context
-    audioContextRef.current = new AudioContext();
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    onResume();
+  }, [onResume]);
 
-    setIsPaused(false);
-
-    // Update the time the clock is supposed to end by adding the time remaining to the current time
-    setEndTime(Date.now() + timeRemaining);
-    setNow(Date.now());
-
-    // Clear the previous interval to prevent multiple intervals from being started
-    clearInterval(intervalRef.current!);
-    intervalRef.current = null;
-
-    // Every half second, update the current time, which will update the time on the clock
-    intervalRef.current = setInterval(() => {
-      setNow(Date.now());
-    }, 500);
-  }, [timeRemaining]);
-
-  // Handles pausing the clock timer
-  const handlePause = useCallback(() => {
-    setIsPaused(true);
-
-    clearInterval(intervalRef.current!);
-    intervalRef.current = null;
-
-    onTimerPause();
-  }, [onTimerPause]);
-
-  // Handles adding 1 minute to the clock when the add button is clicked
-  const handleAddTime = useCallback(() => {
-    setEndTime(endTime + MS_IN_MINUTE);
-  }, [endTime]);
-
-  // Handles subtracting 1 minute to the clock when the subtract button is clicked
-  const handleSubtractTime = useCallback(() => {
-    setEndTime(endTime - MS_IN_MINUTE);
-  }, [endTime]);
-
-  // Handles stopping the timer and playing sounds once its finished
+  // Plays the level's warning/end beeps off the locally derived remaining time.
   useEffect(() => {
+    if (isPaused || !audioContextRef.current) return;
+
     if (minutes === 0 && seconds >= 1 && seconds <= 5) {
-      playSound(audioContextRef.current!, LOW_PITCH_BEEP, audioContextRef.current!.currentTime, 0.15);
+      playSound(audioContextRef.current, LOW_PITCH_BEEP, audioContextRef.current.currentTime, 0.15);
     } else if (minutes <= 0 && seconds <= 0) {
-      playSound(audioContextRef.current!, HIGH_PITCH_BEEP, audioContextRef.current!.currentTime, 0.25);
-      clearInterval(intervalRef.current!);
-      onTimerEnd();
+      playSound(audioContextRef.current, HIGH_PITCH_BEEP, audioContextRef.current.currentTime, 0.25);
     }
-  }, [minutes, onTimerEnd, seconds]);
-
-  // Handles starting the clock on render
-  useEffect(() => {
-    if (startOnRender && intervalRef.current === null) {
-      handleStart();
-    }
-  }, [handleStart, startOnRender]);
+  }, [isPaused, minutes, seconds]);
 
   return (
     <section className={styles.container}>
@@ -114,14 +67,14 @@ export function ClockDisplay({
       <ClockActions
         isPaused={isPaused}
         onStart={handleStart}
-        onPause={handlePause}
+        onPause={onPause}
         onStepBack={onPreviousLevel}
         onStepForward={onNextLevel}
-        onSubtractTime={handleSubtractTime}
-        onAddTime={handleAddTime}
+        onSubtractTime={onSubtractTime}
+        onAddTime={onAddTime}
       />
 
-      <progress className={styles.progress} max={1} value={timeRemaining / (levelTime * MS_IN_MINUTE)} />
+      <progress className={styles.progress} max={1} value={totalMs > 0 ? remainingMs / totalMs : 0} />
     </section>
   );
 }

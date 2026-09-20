@@ -29,7 +29,11 @@ module.exports = {
     {
       files: ['**/*.test.js', '**/*.test.ts', '**/*.test.jsx', '**/*.test.tsx'],
       extends: ['plugin:jest/recommended', 'plugin:jest/style'],
-    }
+    },
+    {
+      files: ['src/__mocks__/**'],
+      env: { node: true },
+    },
   ],
   settings: {
     react: {

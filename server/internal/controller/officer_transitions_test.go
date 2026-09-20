@@ -22,15 +22,15 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 	defer container.Close(ctx)
 	db := container.GetDB()
 	api := testutils.NewTestAPIServer(db)
-	seed := func(t *testing.T) models.OfficerTransition {
+	seed := func(t *testing.T) (models.OfficerTransition, map[string]string) {
 		t.Helper()
 		require.NoError(t, container.ResetDatabase(ctx))
 		for i, username := range []string{"pres", "vp", "sec", "treas"} {
 			require.NoError(t, db.Create(&models.User{ID: uint64(i + 1), FirstName: username, LastName: username, Email: username + "@example.com", Faculty: models.FacultyMath, QuestID: username}).Error)
 		}
-		transition, _, err := services.NewOfficerTransitionService(postgres.NewStore(db)).Create("outgoing", models.CreateOfficerTransitionRequest{PresidentQuestID: "pres", VicePresidentQuestID: "vp", SecretaryQuestID: "sec", TreasurerQuestID: "treas"})
+		transition, tokens, err := services.NewOfficerTransitionService(postgres.NewStore(db)).Create("outgoing", models.CreateOfficerTransitionRequest{PresidentQuestID: "pres", VicePresidentQuestID: "vp", SecretaryQuestID: "sec", TreasurerQuestID: "treas"})
 		require.NoError(t, err)
-		return transition
+		return transition, tokens
 	}
 	auth := func(t *testing.T, method, path, role string, body any) *httptest.ResponseRecorder {
 		t.Helper()
@@ -45,7 +45,7 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 	}
 
 	t.Run("president and webmaster can cancel, lower roles cannot", func(t *testing.T) {
-		transition := seed(t)
+		transition, _ := seed(t)
 		w := auth(t, http.MethodPost, "/api/v2/officer-transitions/"+transition.ID.String()+"/cancel", authorization.ROLE_VICE_PRESIDENT.ToString(), nil)
 		require.Equal(t, http.StatusForbidden, w.Code)
 		w = auth(t, http.MethodPost, "/api/v2/officer-transitions/"+transition.ID.String()+"/cancel", authorization.ROLE_WEBMASTER.ToString(), nil)
@@ -53,15 +53,15 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 		require.Empty(t, w.Body.String())
 	})
 	t.Run("reissue validates ID and role", func(t *testing.T) {
-		seed(t)
+		_, _ = seed(t)
 		w := auth(t, http.MethodPost, "/api/v2/officer-transitions/not-a-uuid/reissue", authorization.ROLE_PRESIDENT.ToString(), map[string]string{"role": "president"})
 		require.Equal(t, http.StatusBadRequest, w.Code)
-		transition := seed(t)
+		transition, _ := seed(t)
 		w = auth(t, http.MethodPost, "/api/v2/officer-transitions/"+transition.ID.String()+"/reissue", authorization.ROLE_PRESIDENT.ToString(), map[string]string{"role": "nope"})
 		require.Equal(t, http.StatusBadRequest, w.Code)
 	})
 	t.Run("president can reissue and receives the activation token", func(t *testing.T) {
-		transition := seed(t)
+		transition, _ := seed(t)
 		w := auth(t, http.MethodPost, "/api/v2/officer-transitions/"+transition.ID.String()+"/reissue", authorization.ROLE_PRESIDENT.ToString(), map[string]string{"role": "president"})
 		require.Equal(t, http.StatusCreated, w.Code)
 		var response struct {
@@ -71,9 +71,10 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 		require.NotEmpty(t, response.ActivationToken)
 	})
 	t.Run("current transition exposes nominee activation progress to the executive ladder", func(t *testing.T) {
-		transition := seed(t)
-		require.NoError(t, db.Model(&models.Login{}).Where("username = ?", "vp").Update("status", models.LoginStatusActive).Error)
-		w := auth(t, http.MethodGet, "/api/v2/officer-transitions/current", authorization.ROLE_EXECUTIVE.ToString(), nil)
+		transition, tokens := seed(t)
+		_, _, err := services.NewAccountActivationService(postgres.NewStore(db)).Complete(tokens["vice_president"], "newpassword")
+		require.NoError(t, err)
+		w := auth(t, http.MethodGet, "/api/v2/officer-transitions/current", authorization.ROLE_SECRETARY.ToString(), nil)
 		require.Equal(t, http.StatusOK, w.Code)
 		var response struct {
 			ID        string          `json:"id"`
@@ -85,7 +86,7 @@ func TestOfficerTransitionRecoveryEndpoints(t *testing.T) {
 		require.True(t, response.Activated["vice_president"])
 	})
 	t.Run("completed transition is available only to its incoming president", func(t *testing.T) {
-		transition := seed(t)
+		transition, _ := seed(t)
 		_, err := postgres.NewStore(db).OfficerTransitions().ClaimCompletion(transition.ID)
 		require.NoError(t, err)
 		require.NoError(t, db.Where("username = ?", "pres").Delete(&models.Login{}).Error)

@@ -25,8 +25,9 @@ type OfficerTransition struct {
 	// Nominees is populated on staging so the caller can confirm the resolved
 	// people, not merely the supplied Quest IDs. It is not persisted.
 	Nominees map[string]OfficerTransitionNominee `json:"nominees,omitempty" gorm:"-"`
-	// Activated reports whether each nominee already has an active account. It
-	// is a current-transition read model, not persisted transition state.
+	// Activated reports whether each nominee has consumed their transition
+	// activation link. It is a current-transition read model, not persisted
+	// transition state.
 	Activated map[string]bool `json:"activated,omitempty" gorm:"-"`
 }
 

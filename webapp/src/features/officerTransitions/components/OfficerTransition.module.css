@@ -360,7 +360,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .pageHeader {
     padding: 1rem 0.5rem 0.75rem;
   }
@@ -412,5 +412,18 @@
 
   .pendingNomineeList .nomineeItem:nth-child(4) {
     border-top: 1px solid var(--color-gray-200, #e0e0e0);
+  }
+}
+
+@media (max-width: 480px) {
+  .pendingNomineeList {
+    grid-template-columns: 1fr;
+  }
+
+  .pendingNomineeList .nomineeItem + .nomineeItem,
+  .pendingNomineeList .nomineeItem:nth-child(3),
+  .pendingNomineeList .nomineeItem:nth-child(4) {
+    border-top: 1px solid var(--color-gray-200, #e0e0e0);
+    border-left: 0;
   }
 }

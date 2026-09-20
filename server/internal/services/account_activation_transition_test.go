@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestTransitionPresidentActivationCompletesAndInvalidatesSessions(t *testing.T) {
+func TestTransitionPresidentActivationTransfersAccessWhileTransitionRemainsPending(t *testing.T) {
 	ctx := context.Background()
 	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
 	require.NoError(t, err)
@@ -32,10 +32,10 @@ func TestTransitionPresidentActivationCompletesAndInvalidatesSessions(t *testing
 	var session models.Session
 	require.NoError(t, db.First(&session, "id = ?", sessionID).Error)
 	require.Equal(t, "president", session.Role)
-	var completed models.OfficerTransition
-	require.NoError(t, db.First(&completed, "id = ?", transition.ID).Error)
-	require.Equal(t, "completed", completed.Status)
-	require.NotNil(t, completed.ResolvedAt)
+	var pending models.OfficerTransition
+	require.NoError(t, db.First(&pending, "id = ?", transition.ID).Error)
+	require.Equal(t, models.OfficerTransitionPending, pending.Status)
+	require.Nil(t, pending.ResolvedAt)
 
 	assertLogin := func(username, role, status string) {
 		var actual models.Login
@@ -44,9 +44,9 @@ func TestTransitionPresidentActivationCompletesAndInvalidatesSessions(t *testing
 		require.Equal(t, status, actual.Status, username)
 	}
 	assertLogin("president", "president", models.LoginStatusActive)
-	assertLogin("vp", "vice_president", models.LoginStatusPendingActivation)
-	assertLogin("secretary", "secretary", models.LoginStatusActive)
-	assertLogin("treasurer", "treasurer", models.LoginStatusPendingActivation)
+	assertLogin("vp", "executive", models.LoginStatusPendingActivation)
+	assertLogin("secretary", "executive", models.LoginStatusActive)
+	assertLogin("treasurer", "executive", models.LoginStatusPendingActivation)
 	assertLogin("outgoing", "president", models.LoginStatusDisabled)
 	assertLogin("director", "tournament_director", models.LoginStatusDisabled)
 	assertLogin("webmaster", "webmaster", models.LoginStatusActive)
@@ -70,13 +70,56 @@ func TestTransitionBoundNonPresidentActivatesWithoutCompleting(t *testing.T) {
 
 	login, _, err := services.NewAccountActivationService(postgres.NewStore(db)).Complete(tokens["vp"], "newpassword")
 	require.NoError(t, err)
-	require.Equal(t, "executive", login.Role)
+	require.Equal(t, authorization.ROLE_VICE_PRESIDENT.ToString(), login.Role)
 	var actual models.Login
 	require.NoError(t, db.First(&actual, "username = ?", "vp").Error)
 	require.Equal(t, models.LoginStatusActive, actual.Status)
 	var pending models.OfficerTransition
 	require.NoError(t, db.First(&pending, "id = ?", transition.ID).Error)
 	require.Equal(t, models.OfficerTransitionPending, pending.Status)
+}
+
+func TestTransitionBoundNonPresidentActivatesAfterPresidentCompletes(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	_, tokens := seedActivationTransition(t, db)
+	service := services.NewAccountActivationService(postgres.NewStore(db))
+
+	_, _, err = service.Complete(tokens["president"], "president password")
+	require.NoError(t, err)
+
+	login, _, err := service.Complete(tokens["vp"], "vice president password")
+	require.NoError(t, err)
+	require.Equal(t, authorization.ROLE_VICE_PRESIDENT.ToString(), login.Role)
+	require.Equal(t, models.LoginStatusActive, login.Status)
+}
+
+func TestTransitionCompletesOnlyAfterEveryNomineeActivates(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	transition, tokens := seedActivationTransition(t, db)
+	service := services.NewAccountActivationService(postgres.NewStore(db))
+
+	for _, role := range []string{"president", "vp", "secretary"} {
+		_, _, err = service.Complete(tokens[role], role+" password")
+		require.NoError(t, err)
+	}
+	var pending models.OfficerTransition
+	require.NoError(t, db.First(&pending, "id = ?", transition.ID).Error)
+	require.Equal(t, models.OfficerTransitionPending, pending.Status)
+
+	_, _, err = service.Complete(tokens["treasurer"], "treasurer password")
+	require.NoError(t, err)
+	var completed models.OfficerTransition
+	require.NoError(t, db.First(&completed, "id = ?", transition.ID).Error)
+	require.Equal(t, models.OfficerTransitionCompleted, completed.Status)
+	require.NotNil(t, completed.ResolvedAt)
 }
 
 func TestTransitionBoundTokenRejectsCancelledOrMismatchedTransition(t *testing.T) {
@@ -120,7 +163,7 @@ func TestTransitionPresidentActivationDoesNotReactivateDisabledLogin(t *testing.
 	require.Equal(t, "vice_president", president.Role)
 }
 
-func TestTransitionCompletionRollsBackAfterClaimFailure(t *testing.T) {
+func TestTransitionPresidentActivationRollsBackAfterRoleUpdateFailure(t *testing.T) {
 	ctx := context.Background()
 	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
 	require.NoError(t, err)
@@ -129,7 +172,7 @@ func TestTransitionCompletionRollsBackAfterClaimFailure(t *testing.T) {
 	transition, tokens := seedActivationTransition(t, db)
 	require.NoError(t, db.Exec(`CREATE FUNCTION fail_transition_role_update() RETURNS trigger AS $$
 	BEGIN
-	  IF NEW.username = 'vp' THEN RAISE EXCEPTION 'forced role update failure'; END IF;
+		IF NEW.username = 'president' THEN RAISE EXCEPTION 'forced role update failure'; END IF;
 	  RETURN NEW;
 	END;
 	$$ LANGUAGE plpgsql`).Error)
@@ -326,6 +369,8 @@ func seedActivationTransition(t *testing.T, db *gorm.DB) (models.OfficerTransiti
 	return transition, map[string]string{
 		"president": createBoundToken(t, db, "president", transition.ID),
 		"vp":        createBoundToken(t, db, "vp", transition.ID),
+		"secretary": createBoundToken(t, db, "secretary", transition.ID),
+		"treasurer": createBoundToken(t, db, "treasurer", transition.ID),
 	}
 }
 

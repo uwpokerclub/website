@@ -11,7 +11,8 @@ import styles from "./OfficerTransition.module.css";
 export function PendingTransitionBanner({ transition }: { transition: OfficerTransition }) {
   const { hasPermission } = useAuth();
   const { showToast } = useToast();
-  const canManage = hasPermission("cancel", "officer-transition");
+  const canReissue = hasPermission("reissue", "officer-transition");
+  const canCancel = hasPermission("cancel", "officer-transition") && !transition.activated?.president;
   const cancel = useCancelOfficerTransition();
   const reissue = useReissueOfficerTransitionLink();
   const [replacementLink, setReplacementLink] = useState<{ role: OfficerRole; link: string } | null>(null);
@@ -80,7 +81,8 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
           <h2 id="pending-transition-heading">Incoming executive team</h2>
         </div>
         <p className={styles.accessNotice}>
-          Current access transfers when <strong>{nameFor("president")}</strong> completes their transition activation.
+          Current access transfers when <strong>{nameFor("president")}</strong> activates. This transition stays open until
+          every incoming officer has activated their account.
         </p>
       </div>
       <dl className={styles.pendingNomineeList} data-qa="pending-transition-nominees">
@@ -91,7 +93,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
               <dt>{roleLabels[role]}</dt>
               <dd>{nameFor(role)}</dd>
               <p className={activated ? styles.activated : styles.awaiting}>{activationLabel(activated)}</p>
-              {canManage && (
+              {canReissue && !activated && (
                 <div className={styles.reissueControl}>
                   <Button
                     variant="secondary"
@@ -130,7 +132,7 @@ export function PendingTransitionBanner({ transition }: { transition: OfficerTra
           </div>
         </div>
       )}
-      {canManage && (
+      {canCancel && (
         <div className={styles.pendingActions}>
           <p>Re-issuing invalidates the previous link. The original link cannot be redisplayed.</p>
           <Button

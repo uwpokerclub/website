@@ -31,6 +31,23 @@ func (r *postgresAccountActivationRepository) DeleteByTransition(id uuid.UUID) e
 	return r.db.Where("transition_id = ?", id).Delete(&models.AccountActivation{}).Error
 }
 
+func (r *postgresAccountActivationRepository) ActivationProgress(id uuid.UUID) (map[string]bool, error) {
+	type row struct {
+		Username  string
+		Activated bool
+	}
+	var rows []row
+	if err := r.db.Raw(`SELECT username, BOOL_OR(used_at IS NOT NULL) AS activated
+		FROM account_activations WHERE transition_id = ? GROUP BY username`, id).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	progress := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		progress[row.Username] = row.Activated
+	}
+	return progress, nil
+}
+
 func (r *postgresAccountActivationRepository) FindValid(tokenHash []byte) (models.AccountActivation, error) {
 	var activation models.AccountActivation
 	err := r.db.Where("token_hash = ? AND used_at IS NULL AND expires_at > ?", tokenHash, time.Now().UTC()).First(&activation).Error

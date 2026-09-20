@@ -75,7 +75,7 @@ describe("Officer transition", () => {
     cy.request("/api/v2/session").its("body.role").should("eq", "president");
   });
 
-  it("shows the pending team, replaces a lost president link, and clears after activation", () => {
+  it("keeps the pending team visible after president activation so remaining officers can activate", () => {
     openTransition();
     resolveAll();
     cy.getByData("officer-transition-review").click();
@@ -103,7 +103,9 @@ describe("Officer transition", () => {
     cy.location("pathname").should("eq", "/admin/dashboard");
 
     cy.visit("/admin/executive");
-    cy.getByData("pending-transition-banner").should("not.exist");
+    cy.getByData("pending-transition-banner").should("be.visible");
+    cy.getByData("pending-transition-president").should("contain", "Account already active");
+    cy.getByData("pending-transition-cancel").should("not.exist");
   });
 
   it("removes the pending banner after a confirmed cancellation", () => {
@@ -145,6 +147,10 @@ describe("Officer transition", () => {
     cy.getByData("officer-transition-vice_president").type("HDRUST0").blur();
     cy.contains("Quest IDs must be distinct.").should("be.visible");
     cy.getByData("officer-transition-review").should("be.disabled");
+
+    cy.getByData("officer-transition-president").clear().type("alibbis4").blur();
+    cy.wait("@resolveQuestId");
+    cy.contains("Quest IDs must be distinct.").should("not.exist");
   });
 
   it("keeps resolved form values after a pending-transition conflict", () => {
@@ -188,7 +194,7 @@ describe("Officer transition", () => {
     ).should("exist");
   });
 
-  it("keeps the executive page accessible but hides transition controls from a tournament director", () => {
+  it("redirects a tournament director away from executive management", () => {
     cy.login("e2e_user", seededPassword);
     cy.request("PATCH", "/api/v2/logins/test_executive", {
       role: "tournament_director",
@@ -196,7 +202,7 @@ describe("Officer transition", () => {
     cy.clearCookies();
     cy.login("test_executive", seededPassword);
     cy.visit("/admin/executive");
-    cy.getByData("officer-transition-section").should("not.exist");
-    cy.getByData("pending-transition-banner").should("not.exist");
+    cy.location("pathname").should("eq", "/admin/dashboard");
+    cy.getByData("sidenav-officers-section").should("not.exist");
   });
 });

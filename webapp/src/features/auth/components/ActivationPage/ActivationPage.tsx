@@ -34,16 +34,19 @@ export function ActivationPage() {
   const [confirmation, setConfirmation] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState("");
+  const [canRetryVerification, setCanRetryVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const verify = useCallback(() => {
     if (!token) {
       setError(`This activation link is invalid. ${recoveryCopy}`);
+      setCanRetryVerification(false);
       setState("verification-error");
       return;
     }
 
     setError("");
+    setCanRetryVerification(false);
     setState("verifying");
     void verifyActivation(token)
       .then((verifiedMember) => {
@@ -52,6 +55,7 @@ export function ActivationPage() {
       })
       .catch((requestError: unknown) => {
         setError(activationError(requestError));
+        setCanRetryVerification(!(requestError instanceof ApiError && requestError.status === 401));
         setState("verification-error");
       });
   }, [token]);
@@ -119,7 +123,7 @@ export function ActivationPage() {
         {(state === "verification-error" || state === "completion-error" || state === "signed-in-error") && (
           <div role="alert" data-qa="activation-error" className={loginStyles.errorAlert}>
             {error}
-            {state === "verification-error" && token && (
+            {state === "verification-error" && canRetryVerification && (
               <div className={formStyles.retryContainer}>
                 <Button type="button" variant="secondary" onClick={verify} data-qa="activation-retry">
                   Try again

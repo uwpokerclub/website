@@ -61,6 +61,18 @@ func (r *inMemoryAccountActivationRepository) DeleteByTransition(id uuid.UUID) e
 	}
 	return nil
 }
+
+func (r *inMemoryAccountActivationRepository) ActivationProgress(id uuid.UUID) (map[string]bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	progress := map[string]bool{}
+	for _, activation := range r.activations {
+		if activation.TransitionID != nil && *activation.TransitionID == id {
+			progress[activation.Username] = progress[activation.Username] || activation.UsedAt != nil
+		}
+	}
+	return progress, nil
+}
 func (r *inMemoryAccountActivationRepository) FindValid(hash []byte) (models.AccountActivation, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

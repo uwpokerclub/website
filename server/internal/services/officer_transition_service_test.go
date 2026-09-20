@@ -25,10 +25,28 @@ func TestOfficerTransitionStagingDoesNotChangeActiveRoles(t *testing.T) {
 	require.Equal(t, models.OfficerTransitionPending, transition.Status)
 	require.NotEmpty(t, tokens["president"])
 	require.NotEmpty(t, tokens["vice_president"])
+	require.NotEmpty(t, tokens["secretary"])
+	require.NotEmpty(t, tokens["treasurer"])
 	require.Equal(t, models.OfficerTransitionNominee{FirstName: "Firstpres", LastName: "Lastpres"}, transition.Nominees["president"])
 	require.Equal(t, "vice_president", mustLogin(t, st, "pres").Role)
 	require.Equal(t, models.LoginStatusActive, mustLogin(t, st, "pres").Status)
 	require.Equal(t, models.LoginStatusPendingActivation, mustLogin(t, st, "vp").Status)
+}
+
+func TestExistingNomineeReceivesTheirOfficerRoleAfterPresidentActivates(t *testing.T) {
+	st := transitionStore(t)
+	require.NoError(t, st.Logins().Create(&models.Login{Username: "pres", Password: "old", Role: "executive", Status: models.LoginStatusActive}))
+	require.NoError(t, st.Logins().Create(&models.Login{Username: "vp", Password: "old", Role: "executive", Status: models.LoginStatusActive}))
+
+	_, tokens, err := NewOfficerTransitionService(st).Create("outgoing", transitionRequest())
+	require.NoError(t, err)
+	require.NotEmpty(t, tokens["vice_president"])
+
+	_, _, err = NewAccountActivationService(st).Complete(tokens["president"], "president password")
+	require.NoError(t, err)
+	login, _, err := NewAccountActivationService(st).Complete(tokens["vice_president"], "vice president password")
+	require.NoError(t, err)
+	require.Equal(t, authorization.ROLE_VICE_PRESIDENT.ToString(), login.Role)
 }
 
 func TestOfficerTransitionStagesMixedCaseQuestIDs(t *testing.T) {
@@ -94,7 +112,7 @@ func TestOfficerTransitionReissueReplacesTokenAndChecksEligibility(t *testing.T)
 	_, err = NewAccountActivationService(st).Verify(fresh)
 	require.NoError(t, err)
 	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ROLE_VICE_PRESIDENT)
-	require.ErrorIs(t, err, ErrTransitionIneligible)
+	require.NoError(t, err)
 	_, err = NewOfficerTransitionService(st).Reissue(transition.ID, authorization.ToRole("invalid"))
 	require.ErrorIs(t, err, ErrTransitionInvalid)
 	_, err = NewOfficerTransitionService(st).Cancel(transition.ID)
@@ -124,6 +142,17 @@ func TestOfficerTransitionCancelRejectsResolvedStates(t *testing.T) {
 		_, err := NewOfficerTransitionService(st).Cancel(transition.ID)
 		require.ErrorIs(t, err, ErrTransitionResolved)
 	}
+}
+
+func TestOfficerTransitionCannotBeCancelledAfterPresidentActivates(t *testing.T) {
+	st := transitionStore(t)
+	transition, tokens, err := NewOfficerTransitionService(st).Create("outgoing", transitionRequest())
+	require.NoError(t, err)
+	_, _, err = NewAccountActivationService(st).Complete(tokens["president"], "newpassword")
+	require.NoError(t, err)
+
+	_, err = NewOfficerTransitionService(st).Cancel(transition.ID)
+	require.ErrorIs(t, err, ErrTransitionResolved)
 }
 
 func TestTransitionUsernameForCanonicalRole(t *testing.T) {

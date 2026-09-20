@@ -20,8 +20,21 @@ type FieldState = {
 };
 type Fields = Record<OfficerRole, FieldState>;
 
+const duplicateQuestIdError = "Quest IDs must be distinct.";
+
 const emptyFields = (): Fields =>
   Object.fromEntries(OFFICER_ROLES.map((role) => [role, { value: "", resolving: false }])) as Fields;
+
+function clearResolvedDuplicateErrors(fields: Fields): Fields {
+  return Object.fromEntries(
+    OFFICER_ROLES.map((role) => {
+      const field = fields[role];
+      const value = normalizeQuestId(field.value);
+      const isDuplicate = value && OFFICER_ROLES.some((other) => other !== role && normalizeQuestId(fields[other].value) === value);
+      return [role, !isDuplicate && field.error === duplicateQuestIdError ? { ...field, error: undefined } : field];
+    }),
+  ) as Fields;
+}
 
 export interface StageOfficerTransitionModalProps {
   isOpen: boolean;
@@ -49,7 +62,7 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
   const invalidate = (role: OfficerRole, value: string) => {
     requests.current[role] += 1;
     controllers.current[role]?.abort();
-    setFields((current) => ({
+    setFields((current) => clearResolvedDuplicateErrors({
       ...current,
       [role]: { value, resolving: false },
     }));
@@ -78,7 +91,7 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
         [role]: {
           value: current[role].value,
           resolving: false,
-          error: "Quest IDs must be distinct.",
+          error: duplicateQuestIdError,
         },
       }));
       return;

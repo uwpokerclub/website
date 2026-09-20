@@ -117,14 +117,13 @@ func (svc *accountActivationService) completeOnce(token, password string) (model
 	}
 	var login models.Login
 	if transition != nil && activation.Username == transition.PresidentUsername {
-		claimed, e := tx.OfficerTransitions().ClaimCompletion(transition.ID)
-		if errors.Is(e, store.ErrNotFound) {
-			return models.Login{}, uuid.UUID{}, ErrActivationNotFound
-		}
-		if e != nil {
-			return models.Login{}, uuid.UUID{}, fmt.Errorf("claim officer transition: %w", e)
-		}
-		login, err = completeOfficerTransition(tx, claimed, string(hash))
+		login, err = completeOfficerTransition(tx, *transition, string(hash))
+	} else if transition != nil {
+		login, err = tx.Logins().ActivateWithRole(
+			activation.Username,
+			string(hash),
+			transitionRoleForNominee(*transition, activation.Username),
+		)
 	} else {
 		login, err = tx.Logins().Activate(activation.Username, string(hash))
 	}
@@ -133,6 +132,17 @@ func (svc *accountActivationService) completeOnce(token, password string) (model
 	}
 	if err != nil {
 		return models.Login{}, uuid.UUID{}, fmt.Errorf("activate login: %w", err)
+	}
+	if transition != nil {
+		progress, e := tx.AccountActivations().ActivationProgress(transition.ID)
+		if e != nil {
+			return models.Login{}, uuid.UUID{}, fmt.Errorf("read transition activation progress: %w", e)
+		}
+		if allTransitionNomineesActivated(*transition, progress) {
+			if _, e = tx.OfficerTransitions().ClaimCompletion(transition.ID); e != nil {
+				return models.Login{}, uuid.UUID{}, fmt.Errorf("complete officer transition: %w", e)
+			}
+		}
 	}
 	sessionToken, err := authentication.NewSessionManager(tx).Create(login.Username, login.Role)
 	if err != nil {
@@ -151,21 +161,39 @@ func isTransitionNominee(transition models.OfficerTransition, username string) b
 		username == transition.TreasurerUsername
 }
 
+func allTransitionNomineesActivated(transition models.OfficerTransition, progress map[string]bool) bool {
+	for _, username := range []string{
+		transition.PresidentUsername,
+		transition.VicePresidentUsername,
+		transition.SecretaryUsername,
+		transition.TreasurerUsername,
+	} {
+		if !progress[username] {
+			return false
+		}
+	}
+	return true
+}
+
+func transitionRoleForNominee(transition models.OfficerTransition, username string) string {
+	switch username {
+	case transition.VicePresidentUsername:
+		return authorization.ROLE_VICE_PRESIDENT.ToString()
+	case transition.SecretaryUsername:
+		return authorization.ROLE_SECRETARY.ToString()
+	case transition.TreasurerUsername:
+		return authorization.ROLE_TREASURER.ToString()
+	default:
+		return authorization.ROLE_EXECUTIVE.ToString()
+	}
+}
+
 func completeOfficerTransition(tx store.Store, transition models.OfficerTransition, password string) (models.Login, error) {
 	president, err := tx.Logins().ActivateWithRole(transition.PresidentUsername, password, authorization.ROLE_PRESIDENT.ToString())
 	if err != nil {
 		return models.Login{}, fmt.Errorf("activate transition president: %w", err)
 	}
 	nominees := []string{transition.PresidentUsername, transition.VicePresidentUsername, transition.SecretaryUsername, transition.TreasurerUsername}
-	for _, nominee := range []struct{ username, role string }{
-		{transition.VicePresidentUsername, authorization.ROLE_VICE_PRESIDENT.ToString()},
-		{transition.SecretaryUsername, authorization.ROLE_SECRETARY.ToString()},
-		{transition.TreasurerUsername, authorization.ROLE_TREASURER.ToString()},
-	} {
-		if err := tx.Logins().Update(nominee.username, map[string]any{"role": nominee.role}); err != nil {
-			return models.Login{}, fmt.Errorf("set transition nominee role: %w", err)
-		}
-	}
 	disabled, err := tx.Logins().DisableExecutiveExcept(nominees)
 	if err != nil {
 		return models.Login{}, fmt.Errorf("disable outgoing executives: %w", err)

@@ -7,10 +7,12 @@ func NewTransitionAuthorizer() ResourceAuthorizer {
 }
 func (a *transitionAuthorizer) IsAuthorized(role, action string) bool {
 	switch action {
-	case "create", "cancel", "reissue":
+	case "create", "cancel":
 		return HasAtleastRole(ROLE_PRESIDENT, role)
+	case "reissue":
+		return HasAtleastRole(ROLE_VICE_PRESIDENT, role)
 	case "get":
-		return HasAtleastRole(ROLE_EXECUTIVE, role)
+		return HasAtleastRole(ROLE_SECRETARY, role)
 	}
 	return false
 }

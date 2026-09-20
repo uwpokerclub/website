@@ -46,6 +46,26 @@ describe("Semester setup prompt", () => {
     cy.getByData("semester-setup-prompt").should("not.exist");
   });
 
+  it("appears after the incoming president activates while other officers are still pending", () => {
+    cy.intercept("GET", "/api/v2/session", {
+      username: "test_president",
+      role: "president",
+      permissions: { semester: { create: true, get: true, list: true, edit: true } },
+    });
+    cy.intercept("GET", "/api/v2/semesters", { body: { data: [], total: 0 } });
+    cy.intercept("GET", "/api/v2/officer-transitions/completed", { statusCode: 404, body: { message: "Not found" } });
+    cy.intercept("GET", "/api/v2/officer-transitions/current", {
+      id: "pending-transition",
+      status: "pending",
+      presidentUsername: "test_president",
+      activated: { president: true, vice_president: false, secretary: false, treasurer: false },
+    }).as("getCurrentTransition");
+
+    cy.visit("/admin/dashboard");
+    cy.wait("@getCurrentTransition");
+    cy.getByData("semester-setup-prompt").should("be.visible");
+  });
+
   it("ignores malformed legacy ranges and remains usable when the read fails", () => {
     visitDashboard([{ ...pastSemester, startDate: "2027-01-01T00:00:00Z", endDate: "2026-04-30T00:00:00Z" }]);
     cy.getByData("semester-setup-prompt").should("be.visible");

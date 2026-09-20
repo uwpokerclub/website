@@ -70,10 +70,11 @@ describe("Account activation", () => {
     cy.wait("@verifyActivation");
     cy.getByData("activation-error").should("contain", "This activation link is invalid");
     cy.getByData("activation-error").should("contain", "Ask whoever sent you this link for a new one");
+    cy.getByData("activation-retry").should("not.exist");
   });
 
   it("lets the user retry verification after a transient failure", () => {
-    verificationResponses = ["unavailable", "success"];
+    verificationResponses = ["unavailable", "unavailable", "success"];
     cy.visit(`/activate#token=${token}`);
 
     cy.wait("@verifyActivation");

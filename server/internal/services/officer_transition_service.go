@@ -85,7 +85,6 @@ func (s *officerTransitionService) Create(initiatedBy string, r models.CreateOff
 	for i, u := range users {
 		role := officerTransitionRoles[i]
 		login, err := tx.Logins().FindByUsernameForUpdate(u.QuestID)
-		mint := role == authorization.ROLE_PRESIDENT
 		if errors.Is(err, store.ErrNotFound) {
 			hash, e := randomHash()
 			if e != nil {
@@ -95,7 +94,6 @@ func (s *officerTransitionService) Create(initiatedBy string, r models.CreateOff
 			if e = tx.Logins().Create(&login); e != nil {
 				return models.OfficerTransition{}, nil, e
 			}
-			mint = true
 		} else if err != nil {
 			return models.OfficerTransition{}, nil, err
 		} else {
@@ -110,16 +108,15 @@ func (s *officerTransitionService) Create(initiatedBy string, r models.CreateOff
 				if e = tx.Logins().Update(login.Username, map[string]any{"status": models.LoginStatusPendingActivation, "password": hash}); e != nil {
 					return models.OfficerTransition{}, nil, e
 				}
-				mint = true
 			}
 		}
-		if mint {
-			token, e := createTransitionToken(tx, u.QuestID, transition.ID)
-			if e != nil {
-				return models.OfficerTransition{}, nil, e
-			}
-			tokens[role.ToString()] = token
+		// Every incoming officer must explicitly claim the transition, even
+		// when they already have an active account.
+		token, e := createTransitionToken(tx, u.QuestID, transition.ID)
+		if e != nil {
+			return models.OfficerTransition{}, nil, e
 		}
+		tokens[role.ToString()] = token
 	}
 	if err := tx.Commit(); err != nil {
 		return models.OfficerTransition{}, nil, err
@@ -157,6 +154,13 @@ func (s *officerTransitionService) cancelOnce(id uuid.UUID) (models.OfficerTrans
 		return models.OfficerTransition{}, err
 	}
 	if transition.Status != models.OfficerTransitionPending {
+		return models.OfficerTransition{}, ErrTransitionResolved
+	}
+	progress, err := tx.AccountActivations().ActivationProgress(id)
+	if err != nil {
+		return models.OfficerTransition{}, err
+	}
+	if progress[transition.PresidentUsername] {
 		return models.OfficerTransition{}, ErrTransitionResolved
 	}
 	transition, err = tx.OfficerTransitions().Cancel(id)
@@ -233,7 +237,14 @@ func (s *officerTransitionService) reissueOnce(id uuid.UUID, role authorization.
 	if err != nil {
 		return "", err
 	}
-	if login.Status == models.LoginStatusDisabled || (role != authorization.ROLE_PRESIDENT && login.Status != models.LoginStatusPendingActivation) {
+	if login.Status == models.LoginStatusDisabled {
+		return "", ErrTransitionIneligible
+	}
+	progress, err := tx.AccountActivations().ActivationProgress(id)
+	if err != nil {
+		return "", err
+	}
+	if progress[username] {
 		return "", ErrTransitionIneligible
 	}
 	token, err := createTransitionToken(tx, username, id)

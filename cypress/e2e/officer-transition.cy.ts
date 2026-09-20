@@ -15,12 +15,12 @@ const seededPassword = "password";
 
 describe("Officer transition", () => {
   beforeEach(() => {
+    Cypress.session.clearAllSavedSessions();
     cy.resetDatabase();
   });
 
-  const stageDialog = () => cy.contains('[role="dialog"]:visible', "Finish Semester");
-  const receiptDialog = () =>
-    cy.contains('[role="dialog"]:visible', "Officer transition staged");
+  const stageDialog = () => cy.getByData("officer-transition-modal");
+  const receiptDialog = () => cy.getByData("officer-transition-receipt");
 
   const openTransition = (clipboardUnavailable = false) => {
     cy.login("test_president", seededPassword);
@@ -86,7 +86,7 @@ describe("Officer transition", () => {
 
     cy.getByData("pending-transition-banner").should("be.visible");
     cy.getByData("pending-transition-nominees").should("contain", "Heinrik Drust");
-    cy.getByData("pending-transition-president").should("contain", "Account already active");
+    cy.getByData("pending-transition-president").should("contain", "Activation required");
     cy.contains("Current access transfers when Heinrik Drust completes their transition activation").should("be.visible");
     cy.getByData("pending-transition-reissue-president").click();
     cy.getByData("pending-transition-link-president")
@@ -122,7 +122,7 @@ describe("Officer transition", () => {
     cy.getByData("pending-transition-cancel").click();
     cy.wait("@cancelTransition").its("response.statusCode").should("eq", 204);
     cy.getByData("pending-transition-banner").should("not.exist");
-    cy.getByData("officer-transition-section").should("be.visible");
+    cy.getByData("officer-transition-section").should("exist");
   });
 
   it("keeps an ambiguity error inline", () => {

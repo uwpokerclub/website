@@ -87,7 +87,9 @@ describe("Officer transition", () => {
     cy.getByData("pending-transition-banner").should("be.visible");
     cy.getByData("pending-transition-nominees").should("contain", "Heinrik Drust");
     cy.getByData("pending-transition-president").should("contain", "Activation required");
-    cy.contains("Current access transfers when Heinrik Drust completes their transition activation").should("be.visible");
+    cy.getByData("pending-transition-banner")
+      .should("contain", "Current access transfers when Heinrik Drust activates.")
+      .and("contain", "until every incoming officer has activated their account.");
     cy.getByData("pending-transition-reissue-president").click();
     cy.getByData("pending-transition-link-president")
       .invoke("val")

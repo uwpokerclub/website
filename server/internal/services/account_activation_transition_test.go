@@ -296,7 +296,7 @@ func TestTransitionCancelAndCompleteRaceHasOneCoherentWinner(t *testing.T) {
 		var tokensLeft int64
 		require.NoError(t, db.Model(&models.AccountActivation{}).Where("transition_id = ?", transition.ID).Count(&tokensLeft).Error)
 		require.Zero(t, tokensLeft)
-	case models.OfficerTransitionCompleted:
+	case models.OfficerTransitionPending:
 		require.NoError(t, completeErr)
 		require.ErrorIs(t, cancelErr, services.ErrTransitionResolved)
 		var president models.Login

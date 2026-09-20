@@ -30,7 +30,8 @@ function clearResolvedDuplicateErrors(fields: Fields): Fields {
     OFFICER_ROLES.map((role) => {
       const field = fields[role];
       const value = normalizeQuestId(field.value);
-      const isDuplicate = value && OFFICER_ROLES.some((other) => other !== role && normalizeQuestId(fields[other].value) === value);
+      const isDuplicate =
+        value && OFFICER_ROLES.some((other) => other !== role && normalizeQuestId(fields[other].value) === value);
       return [role, !isDuplicate && field.error === duplicateQuestIdError ? { ...field, error: undefined } : field];
     }),
   ) as Fields;
@@ -62,10 +63,12 @@ export function StageOfficerTransitionModal({ isOpen, onClose, onStaged }: Stage
   const invalidate = (role: OfficerRole, value: string) => {
     requests.current[role] += 1;
     controllers.current[role]?.abort();
-    setFields((current) => clearResolvedDuplicateErrors({
-      ...current,
-      [role]: { value, resolving: false },
-    }));
+    setFields((current) =>
+      clearResolvedDuplicateErrors({
+        ...current,
+        [role]: { value, resolving: false },
+      }),
+    );
     setSubmitError("");
   };
 

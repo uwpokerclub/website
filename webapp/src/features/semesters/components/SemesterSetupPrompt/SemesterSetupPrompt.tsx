@@ -5,7 +5,10 @@ import { ROLES } from "@/types/roles";
 import { useSemesters } from "../../hooks/useSemesterQueries";
 import { hasFutureSemester } from "../../utils";
 import { SemesterSetupWizard } from "../SemesterSetupWizard";
-import { useCompletedIncomingOfficerTransition, useCurrentOfficerTransition } from "@/features/officerTransitions/hooks/useOfficerTransitionQueries";
+import {
+  useCompletedIncomingOfficerTransition,
+  useCurrentOfficerTransition,
+} from "@/features/officerTransitions/hooks/useOfficerTransitionQueries";
 import styles from "./SemesterSetupPrompt.module.css";
 
 export function SemesterSetupPrompt() {

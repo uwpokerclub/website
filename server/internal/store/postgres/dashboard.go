@@ -120,3 +120,36 @@ func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID) (sto
 
 	return stats, nil
 }
+
+// EventActivity implements store.DashboardRepository.
+func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID) (store.EventActivityStats, []store.EventSeriesPoint, error) {
+	series := []store.EventSeriesPoint{}
+
+	err := r.db.Table("events e").
+		Select("e.id, e.name, e.start_date, COUNT(p.id) AS entries").
+		Joins("LEFT JOIN participants p ON p.event_id = e.id").
+		Where("e.semester_id = ? AND e.state = ?", semesterID, models.EventStateEnded).
+		Group("e.id").
+		Order("e.start_date ASC, e.id ASC").
+		Scan(&series).Error
+	if err != nil {
+		return store.EventActivityStats{}, nil, err
+	}
+
+	stats := store.EventActivityStats{EventsRun: int64(len(series))}
+	for _, point := range series {
+		stats.TotalEntries += point.Entries
+	}
+	if stats.EventsRun > 0 {
+		stats.AverageFieldSize = float64(stats.TotalEntries) / float64(stats.EventsRun)
+	}
+
+	err = r.db.Model(&models.Event{}).
+		Where("semester_id = ? AND state = ?", semesterID, models.EventStateStarted).
+		Count(&stats.EventsScheduled).Error
+	if err != nil {
+		return store.EventActivityStats{}, nil, err
+	}
+
+	return stats, series, nil
+}

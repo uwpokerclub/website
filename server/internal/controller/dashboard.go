@@ -27,6 +27,7 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("spotlight", middleware.UseAuthorization("semester.get"), c.getSpotlight)
 	group.GET("memberships", middleware.UseAuthorization("semester.get"), c.getMembershipStats)
 	group.GET("engagement", middleware.UseAuthorization("semester.get"), c.getEngagementStats)
+	group.GET("events", middleware.UseAuthorization("semester.get"), c.getEventActivity)
 }
 
 // getSpotlight handles retrieving the dashboard's Event Spotlight card for a semester.
@@ -214,6 +215,83 @@ func (c *dashboardController) getEngagementStats(ctx *gin.Context) {
 		response.Comparison = &ComparisonEngagementStats{
 			Semester: store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
 			Stats:    comparisonStats,
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+// EventActivityCurrent is the current semester's Event Activity figures and series.
+type EventActivityCurrent struct {
+	store.EventActivityStats
+	Series []store.EventSeriesPoint `json:"series"`
+} //@name EventActivityCurrent
+
+// ComparisonEventActivity is the comparison semester and its average field size.
+type ComparisonEventActivity struct {
+	Semester         store.SemesterRef `json:"semester"`
+	AverageFieldSize float64           `json:"averageFieldSize"`
+} //@name ComparisonEventActivity
+
+// EventActivityResponse is the dashboard's Event Activity response.
+type EventActivityResponse struct {
+	Current    EventActivityCurrent     `json:"current"`
+	Comparison *ComparisonEventActivity `json:"comparison"`
+} //@name EventActivityResponse
+
+// getEventActivity handles retrieving the dashboard's Event Activity card for a semester.
+//
+// @Summary Get dashboard event activity
+// @Description Get events run vs scheduled, total entries, average field size, and per-event attendance for a semester, plus the comparison semester and its average field size, or null when there is no comparable term
+// @Tags Dashboard
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Success 200 {object} EventActivityResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/dashboard/events [get]
+func (c *dashboardController) getEventActivity(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	semester, err := c.store.Semesters().FindByID(semesterID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	semesters, _, err := c.store.Semesters().List(&models.Pagination{})
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	stats, series, err := c.store.Dashboard().EventActivity(semesterID)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	response := EventActivityResponse{Current: EventActivityCurrent{EventActivityStats: stats, Series: series}}
+	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
+		comparisonStats, _, err := c.store.Dashboard().EventActivity(comparison.ID)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+		response.Comparison = &ComparisonEventActivity{
+			Semester:         store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+			AverageFieldSize: comparisonStats.AverageFieldSize,
 		}
 	}
 

@@ -6,33 +6,39 @@ import (
 )
 
 type InMemoryStore struct {
-	mu          sync.RWMutex
-	semesters   *inMemorySemesterRepository
-	members     *inMemoryMemberRepository
-	memberships *inMemoryMembershipRepository
-	structures  *inMemoryStructureRepository
-	events      *inMemoryEventRepository
-	entries     *inMemoryEntryRepository
-	rankings    *inMemoryRankingRepository
-	logins      *inMemoryLoginRepository
-	sessions    *inMemorySessionRepository
+	mu                 sync.RWMutex
+	semesters          *inMemorySemesterRepository
+	members            *inMemoryMemberRepository
+	memberships        *inMemoryMembershipRepository
+	structures         *inMemoryStructureRepository
+	events             *inMemoryEventRepository
+	entries            *inMemoryEntryRepository
+	rankings           *inMemoryRankingRepository
+	logins             *inMemoryLoginRepository
+	sessions           *inMemorySessionRepository
+	accountActivations *inMemoryAccountActivationRepository
+	officerTransitions *inMemoryOfficerTransitionRepository
+	parent             *InMemoryStore
+	revision           uint64
+	baseRevision       uint64
 	eventClocks *inMemoryEventClockRepository
-	parent      *InMemoryStore
 }
 
 var _ store.Store = (*InMemoryStore)(nil)
 
 func NewStore() store.Store {
 	return &InMemoryStore{
-		semesters:   newSemesterRepository(),
-		members:     newMemberRepository(),
-		memberships: newMembershipRepository(),
-		structures:  newStructureRepository(),
-		events:      newEventRepository(),
-		entries:     newEntryRepository(),
-		rankings:    newRankingRepository(),
-		logins:      newLoginRepository(),
-		sessions:    newSessionRepository(),
+		semesters:          newSemesterRepository(),
+		members:            newMemberRepository(),
+		memberships:        newMembershipRepository(),
+		structures:         newStructureRepository(),
+		events:             newEventRepository(),
+		entries:            newEntryRepository(),
+		rankings:           newRankingRepository(),
+		logins:             newLoginRepository(),
+		sessions:           newSessionRepository(),
+		accountActivations: newAccountActivationRepository(),
+		officerTransitions: newOfficerTransitionRepository(),
 		eventClocks: newEventClockRepository(),
 	}
 }
@@ -90,6 +96,16 @@ func (s *InMemoryStore) Sessions() store.SessionRepository {
 	defer s.mu.RUnlock()
 	return s.sessions
 }
+func (s *InMemoryStore) AccountActivations() store.AccountActivationRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.accountActivations
+}
+func (s *InMemoryStore) OfficerTransitions() store.OfficerTransitionRepository {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.officerTransitions
+}
 
 func (s *InMemoryStore) EventClocks() store.EventClockRepository {
 	s.mu.RLock()
@@ -104,7 +120,7 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	tx := &InMemoryStore{parent: s}
+	tx := &InMemoryStore{parent: s, baseRevision: s.revision}
 	if s.structures != nil {
 		tx.structures = s.structures.clone()
 	}
@@ -132,6 +148,12 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	if s.sessions != nil {
 		tx.sessions = s.sessions.clone()
 	}
+	if s.accountActivations != nil {
+		tx.accountActivations = s.accountActivations.clone()
+	}
+	if s.officerTransitions != nil {
+		tx.officerTransitions = s.officerTransitions.clone()
+	}
 	if s.eventClocks != nil {
 		tx.eventClocks = s.eventClocks.clone()
 	}
@@ -145,6 +167,9 @@ func (s *InMemoryStore) Commit() error {
 	}
 	s.parent.mu.Lock()
 	defer s.parent.mu.Unlock()
+	if s.parent.revision != s.baseRevision {
+		return store.ErrTransactionConflict
+	}
 	if s.structures != nil {
 		s.parent.structures = s.structures
 	}
@@ -172,9 +197,16 @@ func (s *InMemoryStore) Commit() error {
 	if s.sessions != nil {
 		s.parent.sessions = s.sessions
 	}
+	if s.accountActivations != nil {
+		s.parent.accountActivations = s.accountActivations
+	}
+	if s.officerTransitions != nil {
+		s.parent.officerTransitions = s.officerTransitions
+	}
 	if s.eventClocks != nil {
 		s.parent.eventClocks = s.eventClocks
 	}
+	s.parent.revision++
 	return nil
 }
 

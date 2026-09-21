@@ -247,6 +247,8 @@ definitions:
         $ref: '#/definitions/LinkedMemberInfo'
       role:
         type: string
+      status:
+        type: string
       username:
         type: string
     type: object
@@ -474,6 +476,12 @@ definitions:
         - vice_president
         - president
         - webmaster
+        type: string
+      status:
+        enum:
+        - active
+        - pending_activation
+        - disabled
         type: string
     type: object
   UpdateMemberRequest:
@@ -776,6 +784,10 @@ paths:
       - description: Filter by Member Faculty
         in: query
         name: faculty
+        type: string
+      - description: Filter by exact Quest ID
+        in: query
+        name: questId
         type: string
       produces:
       - application/json

@@ -5,7 +5,7 @@ import { useCurrentSemester, useAuth } from "@/hooks";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { Semester } from "@/types";
-import { CreateSemesterModal } from "@/features/semesters";
+import { SemesterSetupWizard } from "@/features/semesters";
 import { useSemesters } from "@/features/semesters/hooks/useSemesterQueries";
 
 type SemesterSelectorProps = {
@@ -78,7 +78,7 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
           <FaGraduationCap />
         </button>
         {canCreateSemester && (
-          <CreateSemesterModal isOpen={isModalOpen} onClose={handleModalClose} onSuccess={handleCreateSuccess} />
+          <SemesterSetupWizard isOpen={isModalOpen} onClose={handleModalClose} onSuccess={handleCreateSuccess} />
         )}
       </>
     );
@@ -136,7 +136,7 @@ function SemesterSelector({ isExpanded, onIconClick }: SemesterSelectorProps) {
       </div>
 
       {canCreateSemester && (
-        <CreateSemesterModal isOpen={isModalOpen} onClose={handleModalClose} onSuccess={handleCreateSuccess} />
+        <SemesterSetupWizard isOpen={isModalOpen} onClose={handleModalClose} onSuccess={handleCreateSuccess} />
       )}
     </>
   );

@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type postgresLoginRepository struct {
@@ -23,9 +24,21 @@ func (r *postgresLoginRepository) Create(login *models.Login) error {
 }
 
 func (r *postgresLoginRepository) FindByUsername(username string) (models.Login, error) {
+	return r.findByUsername(username, false)
+}
+
+func (r *postgresLoginRepository) FindByUsernameForUpdate(username string) (models.Login, error) {
+	return r.findByUsername(username, true)
+}
+
+func (r *postgresLoginRepository) findByUsername(username string, forUpdate bool) (models.Login, error) {
 	var login models.Login
 
-	err := r.db.Where("username = ?", username).First(&login).Error
+	query := r.db.Where("username = ?", username)
+	if forUpdate {
+		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+	err := query.First(&login).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return models.Login{}, store.ErrNotFound
@@ -49,6 +62,43 @@ func (r *postgresLoginRepository) Update(username string, values map[string]any)
 	return nil
 }
 
+func (r *postgresLoginRepository) Activate(username, password string) (models.Login, error) {
+	var login models.Login
+	result := r.db.Raw(`UPDATE logins SET password = ?, status = ?
+		WHERE username = ? AND status <> ?
+		RETURNING username, password, role, status`, password, models.LoginStatusActive, username, models.LoginStatusDisabled).Scan(&login)
+	if result.Error != nil {
+		return models.Login{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return models.Login{}, store.ErrNotFound
+	}
+	return login, nil
+}
+
+func (r *postgresLoginRepository) ActivateWithRole(username, password, role string) (models.Login, error) {
+	var login models.Login
+	result := r.db.Raw(`UPDATE logins SET password = ?, status = ?, role = ?
+		WHERE username = ? AND status <> ?
+		RETURNING username, password, role, status`, password, models.LoginStatusActive, role, username, models.LoginStatusDisabled).Scan(&login)
+	if result.Error != nil {
+		return models.Login{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return models.Login{}, store.ErrNotFound
+	}
+	return login, nil
+}
+
+func (r *postgresLoginRepository) DisableExecutiveExcept(usernames []string) ([]string, error) {
+	roles := []string{"executive", "tournament_director", "secretary", "treasurer", "vice_president", "president"}
+	var disabled []string
+	result := r.db.Raw(`UPDATE logins SET status = ?
+		WHERE role IN ? AND username NOT IN ? AND status <> ?
+		RETURNING username`, models.LoginStatusDisabled, roles, usernames, models.LoginStatusDisabled).Scan(&disabled)
+	return disabled, result.Error
+}
+
 func (r *postgresLoginRepository) Delete(username string) error {
 	result := r.db.Where("username = ?", username).Delete(&models.Login{})
 	if err := result.Error; err != nil {
@@ -65,13 +115,14 @@ func (r *postgresLoginRepository) Delete(username string) error {
 type loginWithUserRow struct {
 	Username  string
 	Role      string
+	Status    string
 	UserID    *uint64
 	FirstName *string
 	LastName  *string
 }
 
 func toLoginWithMember(row loginWithUserRow) models.LoginWithMember {
-	result := models.LoginWithMember{Username: row.Username, Role: row.Role}
+	result := models.LoginWithMember{Username: row.Username, Role: row.Role, Status: row.Status}
 	if row.UserID != nil && *row.UserID != 0 {
 		result.LinkedMember = &models.LinkedMemberInfo{
 			ID:        *row.UserID,
@@ -102,7 +153,7 @@ func (r *postgresLoginRepository) List(pagination *models.Pagination, search str
 
 	var rows []loginWithUserRow
 	query := base().
-		Select("logins.username, logins.role, users.id as user_id, users.first_name, users.last_name").
+		Select("logins.username, logins.role, logins.status, users.id as user_id, users.first_name, users.last_name").
 		Order("logins.username ASC")
 	query = pagination.Apply(query)
 
@@ -122,7 +173,7 @@ func (r *postgresLoginRepository) FindByUsernameWithMember(username string) (mod
 	var row loginWithUserRow
 
 	err := r.db.Table("logins").
-		Select("logins.username, logins.role, users.id as user_id, users.first_name, users.last_name").
+		Select("logins.username, logins.role, logins.status, users.id as user_id, users.first_name, users.last_name").
 		Joins("LEFT JOIN users ON logins.username = users.quest_id").
 		Where("logins.username = ?", username).
 		Scan(&row).Error

@@ -37,7 +37,8 @@ type PostgresStore struct {
 
 	// sessions is the repository for accessing the sessions in the data store. It provides methods for creating, reading, updating, and deleting sessions.
 	sessions store.SessionRepository
-
+	accountActivations store.AccountActivationRepository
+	officerTransitions store.OfficerTransitionRepository
 	// eventClocks is the repository for accessing event clocks in the data store.
 	eventClocks store.EventClockRepository
 }
@@ -46,16 +47,18 @@ var _ store.Store = (*PostgresStore)(nil)
 
 func NewStore(db *gorm.DB) store.Store {
 	return &PostgresStore{
-		db:          db,
-		semesters:   NewSemesterRepository(db),
-		memberships: NewMembershipRepository(db),
-		members:     NewMemberRepository(db),
-		structures:  NewStructureRepository(db),
-		events:      NewEventRepository(db),
-		entries:     NewEntryRepository(db),
-		rankings:    NewRankingRepository(db),
-		logins:      NewLoginRepository(db),
-		sessions:    NewSessionRepository(db),
+		db:                 db,
+		semesters:          NewSemesterRepository(db),
+		memberships:        NewMembershipRepository(db),
+		members:            NewMemberRepository(db),
+		structures:         NewStructureRepository(db),
+		events:             NewEventRepository(db),
+		entries:            NewEntryRepository(db),
+		rankings:           NewRankingRepository(db),
+		logins:             NewLoginRepository(db),
+		sessions:           NewSessionRepository(db),
+		accountActivations: NewAccountActivationRepository(db),
+		officerTransitions: NewOfficerTransitionRepository(db),
 		eventClocks: NewEventClockRepository(db),
 	}
 }
@@ -96,6 +99,13 @@ func (s *PostgresStore) Sessions() store.SessionRepository {
 	return s.sessions
 }
 
+func (s *PostgresStore) AccountActivations() store.AccountActivationRepository {
+	return s.accountActivations
+}
+func (s *PostgresStore) OfficerTransitions() store.OfficerTransitionRepository {
+	return s.officerTransitions
+}
+
 func (s *PostgresStore) EventClocks() store.EventClockRepository {
 	return s.eventClocks
 }
@@ -107,16 +117,18 @@ func (s *PostgresStore) BeginTx() (store.Store, error) {
 	}
 
 	return &PostgresStore{
-		db:          tx,
-		semesters:   NewSemesterRepository(tx),
-		memberships: NewMembershipRepository(tx),
-		members:     NewMemberRepository(tx),
-		structures:  NewStructureRepository(tx),
-		events:      NewEventRepository(tx),
-		entries:     NewEntryRepository(tx),
-		rankings:    NewRankingRepository(tx),
-		logins:      NewLoginRepository(tx),
-		sessions:    NewSessionRepository(tx),
+		db:                 tx,
+		semesters:          NewSemesterRepository(tx),
+		memberships:        NewMembershipRepository(tx),
+		members:            NewMemberRepository(tx),
+		structures:         NewStructureRepository(tx),
+		events:             NewEventRepository(tx),
+		entries:            NewEntryRepository(tx),
+		rankings:           NewRankingRepository(tx),
+		logins:             NewLoginRepository(tx),
+		sessions:           NewSessionRepository(tx),
+		accountActivations: NewAccountActivationRepository(tx),
+		officerTransitions: NewOfficerTransitionRepository(tx),
 		eventClocks: NewEventClockRepository(tx),
 	}, nil
 }

@@ -1,7 +1,5 @@
-import { Link } from "react-router-dom";
 import { discordLine, instagramLine, facebookLine, emailLine } from "../../../assets";
 import styles from "./SocialsList.module.css";
-import { Icon } from "../../../components";
 
 export function SocialsList() {
   return (
@@ -26,14 +24,6 @@ export function SocialsList() {
                   VOTE FOR THE SPRING 2024 EXCUTIVE TEAM
                 </Link>
               </li> */}
-              <li className={styles.important}>
-                <Link className={styles.textLink} to="/election">
-                  <span className="me-4">
-                    <Icon iconType="ballot" scale={2} />
-                  </span>
-                  SPRING 2024 EXECUTIVE ELECTION RESULTS
-                </Link>
-              </li>
               <li>
                 <a className={styles.textLink} href="https://discord.gg/2k4h9sM" target="_blank" rel="noreferrer">
                   <img src={discordLine} className="me-4" alt="" />

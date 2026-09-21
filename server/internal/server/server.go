@@ -30,6 +30,9 @@ func NewAPIServer(db *gorm.DB) *apiServer {
 
 	// Initialize a gin router without any middleware
 	r := gin.New()
+	if err := r.SetTrustedProxies(middleware.CloudRunTrustedProxies); err != nil {
+		panic(fmt.Sprintf("configure trusted proxies: %v", err))
+	}
 
 	// Use the default gin logger
 	r.Use(gin.Logger())
@@ -81,6 +84,8 @@ func (s *apiServer) SetupV2Routes(db *gorm.DB) {
 	controllers := []controller.Controller{
 		controller.NewHealthController(),
 		controller.NewAuthenticationController(s.store),
+		controller.NewAccountActivationsController(s.store),
+		controller.NewOfficerTransitionsController(s.store),
 		controller.NewSemestersController(s.store),
 		controller.NewEventsController(s.store),
 		controller.NewEntriesController(s.store),

@@ -1,23 +1,23 @@
 package authorization
 
-type role int
+type Role int
 
 // Role represents the role of a user in the system.
 // The roles are ordered from lowest to highest privilege.
 const (
-	ROLE_BOT                 role = iota
-	ROLE_EXECUTIVE           role = iota
-	ROLE_TOURNAMENT_DIRECTOR role = iota
-	ROLE_SECRETARY           role = iota
-	ROLE_TREASURER           role = iota
-	ROLE_VICE_PRESIDENT      role = iota
-	ROLE_PRESIDENT           role = iota
-	ROLE_WEBMASTER           role = iota
+	ROLE_BOT                 Role = iota
+	ROLE_EXECUTIVE           Role = iota
+	ROLE_TOURNAMENT_DIRECTOR Role = iota
+	ROLE_SECRETARY           Role = iota
+	ROLE_TREASURER           Role = iota
+	ROLE_VICE_PRESIDENT      Role = iota
+	ROLE_PRESIDENT           Role = iota
+	ROLE_WEBMASTER           Role = iota
 )
 
 // ToString converts a role to a string.
 // This is used for storing the role in the database.
-func (r role) ToString() string {
+func (r Role) ToString() string {
 	switch r {
 	case ROLE_BOT:
 		return "bot"
@@ -41,7 +41,7 @@ func (r role) ToString() string {
 
 // ToRole converts a string to a role.
 // This is used for converting the role from the database to a role.
-func stringToRole(r string) role {
+func ToRole(r string) Role {
 	switch r {
 	case ROLE_BOT.ToString():
 		return ROLE_BOT
@@ -64,11 +64,11 @@ func stringToRole(r string) role {
 }
 
 // HasRole checks if the user has the given role.
-func HasRole(r role, userRole string) bool {
-	return r == stringToRole(userRole)
+func HasRole(r Role, userRole string) bool {
+	return r == ToRole(userRole)
 }
 
 // HasAtleastRole checks if the user has at least the given role.
-func HasAtleastRole(r role, userRole string) bool {
-	return r <= stringToRole(userRole)
+func HasAtleastRole(r Role, userRole string) bool {
+	return r <= ToRole(userRole)
 }

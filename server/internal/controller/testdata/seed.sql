@@ -2,7 +2,7 @@
 INSERT INTO logins (username, password, role) VALUES ('e2e_user', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'webmaster') ON CONFLICT (username) DO NOTHING;
 
 -- Seed additional logins for testing logins management
--- Password for all test logins is 'password123' (bcrypt hash)
+-- Password for all test logins is 'password' (bcrypt hash)
 INSERT INTO logins (username, password, role) VALUES
   ('test_president', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'president'),
   ('test_executive', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive'),

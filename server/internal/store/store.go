@@ -11,6 +11,8 @@ type Store interface {
 	Structures() StructureRepository
 	Logins() LoginRepository
 	Sessions() SessionRepository
+	AccountActivations() AccountActivationRepository
+	OfficerTransitions() OfficerTransitionRepository
 	EventClocks() EventClockRepository
 
 	BeginTx() (Store, error)

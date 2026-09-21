@@ -68,6 +68,10 @@ export function LoginsList() {
           aValue = a.role.toLowerCase();
           bValue = b.role.toLowerCase();
           break;
+        case "status":
+          aValue = a.status;
+          bValue = b.status;
+          break;
         case "linkedMember":
           aValue = a.linkedMember ? `${a.linkedMember.firstName} ${a.linkedMember.lastName}`.toLowerCase() : "";
           bValue = b.linkedMember ? `${b.linkedMember.firstName} ${b.linkedMember.lastName}`.toLowerCase() : "";
@@ -122,6 +126,15 @@ export function LoginsList() {
     return <span className={`${styles.roleBadge} ${styles[roleClass]}`}>{displayRole}</span>;
   };
 
+  const renderStatusBadge = (status: LoginResponse["status"]) => {
+    const statusClass = `status-${status.replace("_", "-")}`;
+    const displayStatus = status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+    return <span className={`${styles.statusBadge} ${styles[statusClass]}`}>{displayStatus}</span>;
+  };
+
   // Render linked member
   const renderLinkedMember = (linkedMember: LoginResponse["linkedMember"]) => {
     if (!linkedMember) {
@@ -154,6 +167,16 @@ export function LoginsList() {
       render: (_value, row) => renderRoleBadge(row.role),
       headerProps: { "data-qa": "sort-role-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
       cellProps: (row) => ({ "data-qa": `login-role-${row.username}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      accessor: "status",
+      sortable: true,
+      render: (_value, row) => renderStatusBadge(row.status),
+      headerProps: { "data-qa": "sort-status-header" } as React.ThHTMLAttributes<HTMLTableCellElement>,
+      cellProps: (row) =>
+        ({ "data-qa": `login-status-${row.username}` }) as React.TdHTMLAttributes<HTMLTableCellElement>,
     },
     {
       key: "linkedMember",

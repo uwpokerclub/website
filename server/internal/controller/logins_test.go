@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -468,6 +469,30 @@ func TestUpdateLogin(t *testing.T) {
 			},
 		},
 		{
+			name:     "disabling login invalidates its sessions",
+			username: "alice",
+			setupLogin: func() {
+				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
+				require.NoError(t, db.Create(&models.Session{
+					Username:  "alice",
+					Role:      authorization.ROLE_EXECUTIVE.ToString(),
+					StartedAt: time.Now(),
+					ExpiresAt: time.Now().Add(time.Hour),
+				}).Error)
+			},
+			requestBody:    map[string]any{"status": models.LoginStatusDisabled},
+			expectedStatus: http.StatusNoContent,
+			verify: func(t *testing.T) {
+				var login models.Login
+				require.NoError(t, db.Where("username = ?", "alice").First(&login).Error)
+				require.Equal(t, models.LoginStatusDisabled, login.Status)
+
+				var sessionCount int64
+				require.NoError(t, db.Model(&models.Session{}).Where("username = ?", "alice").Count(&sessionCount).Error)
+				require.Zero(t, sessionCount)
+			},
+		},
+		{
 			name:     "successful password and role change",
 			username: "alice",
 			setupLogin: func() {
@@ -521,6 +546,17 @@ func TestUpdateLogin(t *testing.T) {
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
 			expectedErrorMessage: "Key: 'UpdateLoginRequest.Role' Error:Field validation for 'Role' failed on the 'oneof' tag",
+		},
+		{
+			name:     "invalid status",
+			username: "alice",
+			setupLogin: func() {
+				db.Create(&models.Login{Username: "alice", Password: "oldhash", Role: "executive"})
+			},
+			requestBody:          map[string]any{"status": "locked"},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "Key: 'UpdateLoginRequest.Status' Error:Field validation for 'Status' failed on the 'oneof' tag",
 		},
 	}
 

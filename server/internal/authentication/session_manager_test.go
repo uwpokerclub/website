@@ -17,7 +17,7 @@ import (
 
 func CreateTestSession(db *gorm.DB, username, password string, start time.Time) (*models.Session, error) {
 	// Create test user
-	err := CreateTestLogin(db, "testuser", "password")
+	err := CreateTestLogin(db, "testuser", "password", models.LoginStatusActive)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func TestSessionManager(t *testing.T) {
 	t.Run("Create", func(t *testing.T) {
 		t.Cleanup(resetDB)
 
-		err := CreateTestLogin(db, "testuser", "password")
+		err := CreateTestLogin(db, "testuser", "password", models.LoginStatusActive)
 		assert.NoError(t, err)
 
 		id, err := sessManager.Create("testuser", "executive")

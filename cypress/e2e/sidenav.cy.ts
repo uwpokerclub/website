@@ -102,10 +102,10 @@ describe("SideNav", () => {
       cy.getByData("create-semester-btn").should("exist");
     });
 
-    it("should open create semester modal when option clicked", () => {
+    it("should open semester setup wizard when option clicked", () => {
       cy.getByData("semester-dropdown").click();
       cy.getByData("create-semester-btn").click();
-      cy.getByData("create-semester-modal").should("exist");
+      cy.getByData("semester-setup-wizard").should("exist");
     });
   });
 

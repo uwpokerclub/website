@@ -13,7 +13,7 @@ export const sessionKeys = {
  * in apiClient would cause an infinite loop on the login page. Instead, the
  * error is surfaced as a query error and RequireAuth handles the redirect.
  */
-async function fetchSession(): Promise<UserSession> {
+export async function fetchSession(): Promise<UserSession> {
   const res = await fetch(`${import.meta.env.VITE_API_URL}/v2/session`, {
     credentials: "include",
   });

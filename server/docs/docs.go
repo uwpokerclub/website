@@ -369,6 +369,12 @@ const docTemplate = `{
                         "description": "Filter by Member Faculty",
                         "name": "faculty",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by exact Quest ID",
+                        "name": "questId",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3424,6 +3430,9 @@ const docTemplate = `{
                 "role": {
                     "type": "string"
                 },
+                "status": {
+                    "type": "string"
+                },
                 "username": {
                     "type": "string"
                 }
@@ -3742,6 +3751,14 @@ const docTemplate = `{
                         "vice_president",
                         "president",
                         "webmaster"
+                    ]
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "pending_activation",
+                        "disabled"
                     ]
                 }
             }

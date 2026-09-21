@@ -44,6 +44,8 @@ Key environment variables for local development:
 DATABASE_URL=postgres://docker:password@localhost:5432/uwpokerclub_development
 PORT=5000
 ENVIRONMENT=development
+# Per-client, per-instance limit for protected unauthenticated routes (default: 10)
+RATE_LIMIT_REQUESTS_PER_MINUTE=10
 ```
 
 ## Database Migrations
@@ -75,4 +77,3 @@ For complete environment setup and database management, see the main [README.md]
 ## License
 
 Licensed under the Apache 2.0 License - see the [LICENSE](../LICENSE) file for details.
-

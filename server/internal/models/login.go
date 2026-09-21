@@ -1,10 +1,24 @@
 package models
 
+import "github.com/google/uuid"
+
+const (
+	LoginStatusActive            = "active"
+	LoginStatusPendingActivation = "pending_activation"
+	LoginStatusDisabled          = "disabled"
+)
+
 type Login struct {
-	Username string    `json:"username" binding:"required" gorm:"primaryKey"`
-	Password string    `json:"password" binding:"required" gorm:"not null"`
-	Role     string    `json:"role" binding:"oneof=bot executive tournament_director secretary treasurer vice_president president" gorm:"size:20;not null;default:executive"`
+	Username string `json:"username" binding:"required" gorm:"primaryKey"`
+	Password string `json:"password" binding:"required" gorm:"not null"`
+	Role     string `json:"role" binding:"oneof=bot executive tournament_director secretary treasurer vice_president president" gorm:"size:20;not null;default:executive"`
+	// Any path that changes Status to disabled must delete this login's sessions in the same transaction.
+	Status   string    `json:"status" binding:"oneof=active pending_activation disabled" gorm:"size:20;not null;default:active"`
 	Sessions []Session `json:"-" gorm:"foreignKey:Username;references:Username;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	// StagedTransitionID is set only for a login first created while staging an
+	// officer transition. It lets cancellation remove only accounts it owns.
+	StagedTransitionID *uuid.UUID         `json:"-" gorm:"type:uuid"`
+	StagedTransition   *OfficerTransition `json:"-" gorm:"foreignKey:StagedTransitionID;references:ID;constraint:OnDelete:SET NULL"`
 } //@name Login
 
 type NewSessionRequest struct {
@@ -23,14 +37,16 @@ type LinkedMemberInfo struct {
 type LoginWithMember struct {
 	Username     string            `json:"username"`
 	Role         string            `json:"role"`
+	Status       string            `json:"status"`
 	LinkedMember *LinkedMemberInfo `json:"linkedMember"`
 } //@name LoginWithMember
 
 // UpdateLoginRequest represents the request body for updating a login.
-// At least one of password or role must be provided.
+// At least one field must be provided.
 type UpdateLoginRequest struct {
 	Password *string `json:"password,omitempty" binding:"omitempty,min=8"`
 	Role     *string `json:"role,omitempty" binding:"omitempty,oneof=bot executive tournament_director secretary treasurer vice_president president webmaster"`
+	Status   *string `json:"status,omitempty" binding:"omitempty,oneof=active pending_activation disabled"`
 } //@name UpdateLoginRequest
 
 // CreateLoginRequest represents the request body for creating a new login

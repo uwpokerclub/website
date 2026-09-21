@@ -223,7 +223,7 @@ func (c *loginsController) updateLogin(ctx *gin.Context) {
 	}
 
 	svc := services.NewLoginService(c.store)
-	err := svc.UpdateLogin(username, req.Password, req.Role)
+	err := svc.UpdateLogin(username, req.Password, req.Role, req.Status)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrLoginNotFound):

@@ -36,10 +36,11 @@ describe("Logins Management", () => {
       cy.getByData("logins-table").should("exist");
     });
 
-    it("should display table with correct headers, logins, and role badges", () => {
+    it("should display table with correct headers, logins, role badges, and status badges", () => {
       // Column headers
       cy.getByData("sort-username-header").should("be.visible");
       cy.getByData("sort-role-header").should("be.visible");
+      cy.getByData("sort-status-header").should("be.visible");
       cy.getByData("sort-linkedMember-header").should("be.visible");
 
       // All seeded logins
@@ -48,6 +49,7 @@ describe("Logins Management", () => {
       // Role badges
       LOGINS.forEach((login) => {
         cy.getByData(`login-role-${login.username}`).should("exist");
+        cy.getByData(`login-status-${login.username}`).should("contain", "Active");
       });
     });
 
@@ -89,11 +91,13 @@ describe("Logins Management", () => {
     it("should have clickable sort headers", () => {
       cy.getByData("sort-username-header").should("exist");
       cy.getByData("sort-role-header").should("exist");
+      cy.getByData("sort-status-header").should("exist");
       cy.getByData("sort-linkedMember-header").should("exist");
 
       // Verify clicking headers doesn't cause errors
       cy.getByData("sort-username-header").click();
       cy.getByData("sort-role-header").click();
+      cy.getByData("sort-status-header").click();
       cy.getByData("sort-linkedMember-header").click();
 
       // Table should still be visible

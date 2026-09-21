@@ -1,5 +1,7 @@
 import { Role } from "@/types/roles";
 
+export type LoginStatus = "active" | "pending_activation" | "disabled";
+
 /**
  * Linked member information for display
  */
@@ -15,6 +17,7 @@ export interface LinkedMember {
 export interface LoginResponse {
   username: string;
   role: Role;
+  status: LoginStatus;
   linkedMember: LinkedMember | null;
 }
 
@@ -33,4 +36,5 @@ export interface CreateLoginRequest {
 export interface UpdateLoginRequest {
   password?: string;
   role?: Role;
+  status?: LoginStatus;
 }

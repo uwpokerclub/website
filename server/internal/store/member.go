@@ -9,6 +9,7 @@ type MemberRepository interface {
 
 	// FindByID finds a member by their ID. It returns the member or error encountered.
 	FindByID(id uint64) (models.User, error)
+	FindByQuestID(questID string) ([]models.User, error)
 
 	// List returns a list of all members in the data store matching the given filter. It returns the list of members or error encountered.
 	List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error)

@@ -36,3 +36,7 @@ func (r *inMemoryDashboardRepository) MembershipStats(semesterID uuid.UUID) (sto
 func (r *inMemoryDashboardRepository) EngagementStats(semesterID uuid.UUID) (store.EngagementStats, error) {
 	return store.EngagementStats{}, store.ErrNotImplemented
 }
+
+func (r *inMemoryDashboardRepository) EventActivity(semesterID uuid.UUID) (store.EventActivityStats, []store.EventSeriesPoint, error) {
+	return store.EventActivityStats{}, nil, store.ErrNotImplemented
+}

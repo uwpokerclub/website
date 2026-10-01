@@ -886,3 +886,175 @@ func TestDashboardSpotlight(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
+
+func TestDashboardEventActivity(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+	semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+	require.NoError(t, err)
+
+	get := func(t *testing.T, semesterID string) *httptest.ResponseRecorder {
+		sessionID, err := testutils.CreateTestSession(db, "event-activity-"+uuid.NewString(), "executive")
+		require.NoError(t, err)
+		req, err := testutils.MakeJSONRequest("GET", fmt.Sprintf("/api/v2/semesters/%s/dashboard/events", semesterID), nil)
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, sessionID)
+		w := httptest.NewRecorder()
+		apiServer.ServeHTTP(w, req)
+		return w
+	}
+	newUserID := func() uint64 { return uint64(time.Now().UnixNano()) }
+
+	t.Run("requires executive authorization", func(t *testing.T) {
+		testutils.TestInvalidAuthForEndpoint(t, container, apiServer, "GET", fmt.Sprintf("/api/v2/semesters/%s/dashboard/events", semester.ID), []string{"bot"})
+	})
+
+	t.Run("counts ended events and entries while excluding started events", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		full, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Full", models.EventStateEnded, time.Date(2025, 9, 5, 18, 0, 0, 0, time.UTC), 0)
+		require.NoError(t, err)
+		empty, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Empty", models.EventStateEnded, time.Date(2025, 9, 12, 18, 0, 0, 0, time.UTC), 0)
+		require.NoError(t, err)
+		scheduled, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Scheduled", models.EventStateStarted, time.Date(2025, 9, 19, 18, 0, 0, 0, time.UTC), 0)
+		require.NoError(t, err)
+		user, err := testutils.CreateTestUser(db, newUserID(), "Event", "Player", "event-player@uwaterloo.ca", models.FacultyMath, "event-player")
+		require.NoError(t, err)
+		membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+		require.NoError(t, err)
+		secondUser, err := testutils.CreateTestUser(db, newUserID(), "Second", "Player", "second-event-player@uwaterloo.ca", models.FacultyMath, "second-event-player")
+		require.NoError(t, err)
+		secondMembership, err := createDashboardTestMembership(db, secondUser.ID, semester.ID, true, false, false)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, membership.ID, full.ID)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, secondMembership.ID, full.ID)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, membership.ID, scheduled.ID)
+		require.NoError(t, err)
+
+		w := get(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 2, body.Current.EventsRun)
+		require.EqualValues(t, 1, body.Current.EventsScheduled)
+		require.EqualValues(t, 2, body.Current.TotalEntries)
+		require.Equal(t, 1.0, body.Current.AverageFieldSize)
+		require.Equal(t, []int32{full.ID, empty.ID}, []int32{body.Current.Series[0].ID, body.Current.Series[1].ID})
+		require.EqualValues(t, 0, body.Current.Series[1].Entries)
+	})
+
+	t.Run("a restarted event is scheduled again", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Restarted", models.EventStateEnded, time.Now().UTC(), 0)
+		require.NoError(t, err)
+		require.NoError(t, db.Model(event).Update("state", models.EventStateStarted).Error)
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(get(t, semester.ID.String()).Body.Bytes(), &body))
+		require.Zero(t, body.Current.EventsRun)
+		require.EqualValues(t, 1, body.Current.EventsScheduled)
+		require.NotNil(t, body.Current.Series)
+		require.Empty(t, body.Current.Series)
+	})
+
+	t.Run("counts an entry whose membership was deleted", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Ended", models.EventStateEnded, time.Now().UTC(), 0)
+		require.NoError(t, err)
+		user, err := testutils.CreateTestUser(db, newUserID(), "Orphan", "Entry", "orphan-event@uwaterloo.ca", models.FacultyMath, "orphan-event")
+		require.NoError(t, err)
+		membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, membership.ID, event.ID)
+		require.NoError(t, err)
+		require.NoError(t, db.Unscoped().Delete(&models.Membership{}, "id = ?", membership.ID).Error)
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(get(t, semester.ID.String()).Body.Bytes(), &body))
+		require.EqualValues(t, 1, body.Current.TotalEntries)
+	})
+
+	t.Run("orders equal start dates by id", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		date := time.Date(2025, 9, 5, 18, 0, 0, 0, time.UTC)
+		first, err := createDashboardTestEvent(db, semester.ID, structure.ID, "First", models.EventStateEnded, date, 0)
+		require.NoError(t, err)
+		second, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Second", models.EventStateEnded, date, 0)
+		require.NoError(t, err)
+		later, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Later", models.EventStateEnded, date.AddDate(0, 0, 7), 0)
+		require.NoError(t, err)
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(get(t, semester.ID.String()).Body.Bytes(), &body))
+		require.Equal(t, []int32{first.ID, second.ID, later.ID}, []int32{body.Current.Series[0].ID, body.Current.Series[1].ID, body.Current.Series[2].ID})
+	})
+
+	t.Run("returns zeroes, an empty series, and null comparison without data", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+		require.NoError(t, err)
+		w := get(t, semester.ID.String())
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.Equal(t, controller.EventActivityCurrent{EventActivityStats: store.EventActivityStats{}, Series: []store.EventSeriesPoint{}}, body.Current)
+		require.Nil(t, body.Comparison)
+		require.Contains(t, w.Body.String(), "\"comparison\":null")
+	})
+
+	t.Run("returns only the comparison average and semester reference", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		prior, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		current, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		event, err := createDashboardTestEvent(db, prior.ID, structure.ID, "Prior", models.EventStateEnded, time.Now().UTC(), 0)
+		require.NoError(t, err)
+		user, err := testutils.CreateTestUser(db, newUserID(), "Prior", "Player", "prior-player@uwaterloo.ca", models.FacultyMath, "prior-player")
+		require.NoError(t, err)
+		membership, err := createDashboardTestMembership(db, user.ID, prior.ID, true, false, false)
+		require.NoError(t, err)
+		_, err = testutils.CreateTestParticipant(db, membership.ID, event.ID)
+		require.NoError(t, err)
+		w := get(t, current.ID.String())
+		var raw map[string]any
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+		comparison := raw["comparison"].(map[string]any)
+		require.Equal(t, map[string]any{"semester": comparison["semester"], "averageFieldSize": comparison["averageFieldSize"]}, comparison)
+		require.Equal(t, prior.ID.String(), comparison["semester"].(map[string]any)["id"])
+		require.Equal(t, 1.0, comparison["averageFieldSize"])
+	})
+
+	t.Run("returns 400 for malformed and 404 for unknown semester ids", func(t *testing.T) {
+		require.Equal(t, http.StatusBadRequest, get(t, "not-a-uuid").Code)
+		require.Equal(t, http.StatusNotFound, get(t, "00000000-0000-0000-0000-000000000000").Code)
+	})
+}

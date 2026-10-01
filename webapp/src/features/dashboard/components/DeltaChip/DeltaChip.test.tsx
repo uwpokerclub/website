@@ -93,6 +93,38 @@ describe("DeltaChip", () => {
     expect(chip).not.toHaveTextContent("0%");
   });
 
+  it("renders share changes as signed percentage points, not relative percentages", () => {
+    render(
+      <DeltaChip
+        current={0.337}
+        comparison={0.333}
+        comparisonLabel="Fall 2025"
+        sentiment="negative-is-good"
+        mode="percentage-points"
+      />,
+    );
+
+    const chip = chipFor("Up 0.4 percentage points from Fall 2025");
+    expect(chip).toHaveTextContent("▲ +0.4 pp vs Fall 2025");
+    expect(chip).not.toHaveTextContent("%");
+    expect(chip).toHaveAttribute("data-tone", "negative");
+  });
+
+  it("keeps a real sub-tenth percentage-point change visible", () => {
+    render(
+      <DeltaChip
+        current={0.3334}
+        comparison={0.333}
+        comparisonLabel="Fall 2025"
+        sentiment="negative-is-good"
+        mode="percentage-points"
+      />,
+    );
+
+    const chip = chipFor("Up <0.1 percentage points from Fall 2025");
+    expect(chip).toHaveTextContent("▲ +<0.1 pp vs Fall 2025");
+  });
+
   it("does not expose role=status, so a card with many chips does not become a wall of live-region announcements", () => {
     render(<DeltaChip current={142} comparison={100} comparisonLabel="Fall 2025" sentiment="positive-is-good" />);
 

@@ -1,6 +1,7 @@
 import styles from "./DeltaChip.module.css";
 
 export type DeltaSentiment = "positive-is-good" | "negative-is-good" | "neutral";
+export type DeltaChipMode = "count" | "percentage-points";
 
 type DeltaChipProps = {
   current: number;
@@ -8,6 +9,7 @@ type DeltaChipProps = {
   comparisonLabel: string;
   sentiment: DeltaSentiment;
   compact?: boolean;
+  mode?: DeltaChipMode;
 };
 
 type Direction = "up" | "down" | "none";
@@ -41,34 +43,61 @@ function percentSpoken(current: number, comparison: number): string {
   return rounded === 0 ? "less than 1%" : `${rounded}%`;
 }
 
-function formatVisible(current: number, comparison: number, direction: Direction): string {
+function formatPercentagePoints(value: number): string {
+  const percentagePoints = Math.abs(value) * 100;
+
+  if (percentagePoints > 0 && percentagePoints < 0.1) return "<0.1";
+
+  return new Intl.NumberFormat("en-CA", { maximumFractionDigits: 1 }).format(percentagePoints);
+}
+
+function formatVisible(current: number, comparison: number, direction: Direction, mode: DeltaChipMode): string {
   if (direction === "none") return "No change";
 
   const arrow = direction === "up" ? "▲" : "▼";
   const sign = direction === "up" ? "+" : "−";
   const delta = Math.abs(current - comparison);
 
+  if (mode === "percentage-points") return `${arrow} ${sign}${formatPercentagePoints(delta)} pp`;
+
   if (comparison === 0) return `${arrow} ${sign}${delta}`;
 
   return `${arrow} ${sign}${delta} (${sign}${percentDisplay(current, comparison)})`;
 }
 
-function formatAriaLabel(current: number, comparison: number, direction: Direction, comparisonLabel: string): string {
+function formatAriaLabel(
+  current: number,
+  comparison: number,
+  direction: Direction,
+  comparisonLabel: string,
+  mode: DeltaChipMode,
+): string {
   if (direction === "none") return `No change from ${comparisonLabel}`;
 
   const verb = direction === "up" ? "Up" : "Down";
   const delta = Math.abs(current - comparison);
+
+  if (mode === "percentage-points") {
+    return `${verb} ${formatPercentagePoints(delta)} percentage points from ${comparisonLabel}`;
+  }
 
   if (comparison === 0) return `${verb} ${delta} from ${comparisonLabel}`;
 
   return `${verb} ${delta} (${percentSpoken(current, comparison)}) from ${comparisonLabel}`;
 }
 
-export function DeltaChip({ current, comparison, comparisonLabel, sentiment, compact = false }: DeltaChipProps) {
+export function DeltaChip({
+  current,
+  comparison,
+  comparisonLabel,
+  sentiment,
+  compact = false,
+  mode = "count",
+}: DeltaChipProps) {
   const direction = resolveDirection(current, comparison);
   const tone = resolveTone(direction, sentiment);
-  const visible = formatVisible(current, comparison, direction);
-  const ariaLabel = formatAriaLabel(current, comparison, direction, comparisonLabel);
+  const visible = formatVisible(current, comparison, direction, mode);
+  const ariaLabel = formatAriaLabel(current, comparison, direction, comparisonLabel, mode);
   const visibleText = compact ? visible : `${visible} vs ${comparisonLabel}`;
 
   return (

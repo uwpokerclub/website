@@ -861,6 +861,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/semesters/{semesterId}/dashboard/events": {
+            "get": {
+                "description": "Get events run vs scheduled, total entries, average field size, and per-event attendance for a semester, plus the comparison semester and its average field size, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard event activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/EventActivityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/dashboard/memberships": {
             "get": {
                 "description": "Get membership counts by paid/unpaid/discounted/executive and the new-vs-returning split for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
@@ -3304,6 +3363,17 @@ const docTemplate = `{
                 }
             }
         },
+        "ComparisonEventActivity": {
+            "type": "object",
+            "properties": {
+                "averageFieldSize": {
+                    "type": "number"
+                },
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                }
+            }
+        },
         "ComparisonMembershipStats": {
             "type": "object",
             "properties": {
@@ -3599,6 +3669,57 @@ const docTemplate = `{
                 },
                 "structureId": {
                     "type": "integer"
+                }
+            }
+        },
+        "EventActivityCurrent": {
+            "type": "object",
+            "properties": {
+                "averageFieldSize": {
+                    "type": "number"
+                },
+                "eventsRun": {
+                    "type": "integer"
+                },
+                "eventsScheduled": {
+                    "type": "integer"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/EventSeriesPoint"
+                    }
+                },
+                "totalEntries": {
+                    "type": "integer"
+                }
+            }
+        },
+        "EventActivityResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonEventActivity"
+                },
+                "current": {
+                    "$ref": "#/definitions/EventActivityCurrent"
+                }
+            }
+        },
+        "EventSeriesPoint": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "startDate": {
+                    "type": "string"
                 }
             }
         },

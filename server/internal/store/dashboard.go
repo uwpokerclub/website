@@ -47,6 +47,24 @@ type MembershipStats struct {
 	Returning  int64 `json:"returning"`
 } //@name MembershipStats
 
+// EventActivityStats is the Event Activity card's scalar figures for a semester.
+// TotalEntries and AverageFieldSize cover ended events only. AverageFieldSize is
+// calculated in Go so a semester with no ended events never divides by zero.
+type EventActivityStats struct {
+	EventsRun        int64   `json:"eventsRun"`
+	EventsScheduled  int64   `json:"eventsScheduled"`
+	TotalEntries     int64   `json:"totalEntries"`
+	AverageFieldSize float64 `json:"averageFieldSize"`
+} //@name EventActivityStats
+
+// EventSeriesPoint is one ended event's attendance for the Event Activity chart.
+type EventSeriesPoint struct {
+	ID        int32     `json:"id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"startDate"`
+	Entries   int64     `json:"entries"`
+} //@name EventSeriesPoint
+
 // EngagementStats is the Engagement & Retention card's figures for a single semester:
 // distinct players, median events attended, the played-once cohort, and the 10+
 // cohort.
@@ -90,4 +108,9 @@ type DashboardRepository interface {
 	// semester. A semester with no qualifying participant rows returns a zero-valued
 	// EngagementStats, not an error.
 	EngagementStats(semesterID uuid.UUID) (EngagementStats, error)
+
+	// EventActivity returns Event Activity scalar stats and an ascending start-date
+	// series for ended events. A semester with no ended events returns zero stats and
+	// an empty, non-nil series.
+	EventActivity(semesterID uuid.UUID) (EventActivityStats, []EventSeriesPoint, error)
 }

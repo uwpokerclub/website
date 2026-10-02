@@ -160,12 +160,13 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 // SignupTimeline implements store.DashboardRepository. Both memberships.created_at
 // and events.start_date are timestamp columns whose calendar date is meaningful to
 // the UI, so this query returns formatted date strings instead of timestamps.
-func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID) (store.SignupTimeline, error) {
+func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID, now time.Time) (store.SignupTimeline, error) {
 	timeline := store.SignupTimeline{Series: []store.SignupTimelinePoint{}, EventDates: []string{}}
 
 	err := r.db.Raw(`
 		WITH bounds AS (
-			SELECT start_date::date AS start_date, LEAST(end_date::date, CURRENT_DATE) AS end_date
+			SELECT start_date::date AS start_date,
+				LEAST(end_date::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
 			FROM semesters
 			WHERE id = ?
 		), daily AS (
@@ -190,7 +191,7 @@ func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID) (stor
 		CROSS JOIN LATERAL generate_series(b.start_date, b.end_date, INTERVAL '1 day') AS days(date)
 		LEFT JOIN daily d ON d.date = days.date
 		ORDER BY days.date
-	`, semesterID, semesterID).Scan(&timeline.Series).Error
+	`, now, semesterID, semesterID).Scan(&timeline.Series).Error
 	if err != nil {
 		return store.SignupTimeline{}, err
 	}
@@ -201,7 +202,8 @@ func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID) (stor
 	}
 	err = r.db.Raw(`
 		WITH bounds AS (
-			SELECT start_date::date AS start_date, LEAST(end_date::date, CURRENT_DATE) AS end_date
+			SELECT start_date::date AS start_date,
+				LEAST(end_date::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
 			FROM semesters
 			WHERE id = ?
 		)
@@ -213,7 +215,7 @@ func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID) (stor
 		WHERE m.semester_id = ?
 			AND m.created_at IS NOT NULL
 			AND m.created_at::date BETWEEN b.start_date AND b.end_date
-	`, semesterID, semesterID).Scan(&summary).Error
+	`, now, semesterID, semesterID).Scan(&summary).Error
 	if err != nil {
 		return store.SignupTimeline{}, err
 	}

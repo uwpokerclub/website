@@ -11,6 +11,7 @@ const mocked = useTrialConversion as jest.Mock;
 const conversion: ConversionResponse = {
   current: { players: 824, paid: 712, trialSpent: 78, trialOpen: 14, executive: 20 },
   freeTrialLimit: 4,
+  comparison: null,
 };
 
 describe("TrialConversionCard", () => {

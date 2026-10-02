@@ -927,7 +927,7 @@ func TestDashboardTrialConversion(t *testing.T) {
 		return body
 	}
 
-	t.Run("returns zeroes for a term with no entries", func(t *testing.T) {
+	t.Run("returns zeroes and no comparison when no eligible prior term exists", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db := container.GetDB()
 		semester, err := createDashboardTestSemester(db, "Empty", time.Now().UTC())
@@ -938,6 +938,53 @@ func TestDashboardTrialConversion(t *testing.T) {
 		body := decode(t, getConversion(t, semester.ID.String()))
 		require.EqualValues(t, 3, body.FreeTrialLimit)
 		require.Equal(t, store.TrialConversionStats{}, body.Current)
+		require.Nil(t, body.Comparison)
+	})
+
+	t.Run("calculates comparison status using the comparison term limit", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		comparison, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		current, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		setFreeTrialLimit(t, db, comparison.ID, 2)
+		setFreeTrialLimit(t, db, current.ID, 3)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		comparisonE1, err := createDashboardTestEvent(db, comparison.ID, structure.ID, "Prior 1", models.EventStateEnded, comparison.StartDate, 0)
+		require.NoError(t, err)
+		comparisonE2, err := createDashboardTestEvent(db, comparison.ID, structure.ID, "Prior 2", models.EventStateEnded, comparison.StartDate.AddDate(0, 0, 7), 0)
+		require.NoError(t, err)
+		currentE1, err := createDashboardTestEvent(db, current.ID, structure.ID, "Current 1", models.EventStateEnded, current.StartDate, 0)
+		require.NoError(t, err)
+		currentE2, err := createDashboardTestEvent(db, current.ID, structure.ID, "Current 2", models.EventStateEnded, current.StartDate.AddDate(0, 0, 7), 0)
+		require.NoError(t, err)
+
+		priorPlayer := createPlayer(t, db, comparison.ID, "prior", false, false)
+		currentPlayer := createPlayer(t, db, current.ID, "current", false, false)
+		for _, entry := range []struct {
+			membershipID uuid.UUID
+			eventID      int32
+		}{
+			{priorPlayer.ID, comparisonE1.ID},
+			{priorPlayer.ID, comparisonE2.ID},
+			{currentPlayer.ID, currentE1.ID},
+			{currentPlayer.ID, currentE2.ID},
+		} {
+			_, err = testutils.CreateTestParticipant(db, entry.membershipID, entry.eventID)
+			require.NoError(t, err)
+		}
+
+		body := decode(t, getConversion(t, current.ID.String()))
+		require.EqualValues(t, 3, body.FreeTrialLimit)
+		require.EqualValues(t, 1, body.Current.TrialOpen)
+		require.NotNil(t, body.Comparison)
+		require.Equal(t, comparison.ID, body.Comparison.Semester.ID)
+		require.Equal(t, comparison.Name, body.Comparison.Semester.Name)
+		require.EqualValues(t, 1, body.Comparison.Stats.Players)
+		require.EqualValues(t, 1, body.Comparison.Stats.TrialSpent)
+		require.EqualValues(t, 0, body.Comparison.Stats.TrialOpen)
 	})
 
 	t.Run("limit zero preserves the literal spent-trial partition", func(t *testing.T) {

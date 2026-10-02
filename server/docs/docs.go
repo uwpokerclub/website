@@ -804,7 +804,7 @@ const docTemplate = `{
         },
         "/semesters/{semesterId}/dashboard/conversion": {
             "get": {
-                "description": "Get the distinct-player paid, executive, and free-trial status breakdown for a semester",
+                "description": "Get the distinct-player paid, executive, and free-trial status breakdown for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
                 "produces": [
                     "application/json"
                 ],
@@ -3507,6 +3507,17 @@ const docTemplate = `{
                 }
             }
         },
+        "ComparisonTrialConversionStats": {
+            "type": "object",
+            "properties": {
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                },
+                "stats": {
+                    "$ref": "#/definitions/TrialConversionStats"
+                }
+            }
+        },
         "CreateEntryResult": {
             "type": "object",
             "properties": {
@@ -4286,6 +4297,9 @@ const docTemplate = `{
         "TrialConversionResponse": {
             "type": "object",
             "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonTrialConversionStats"
+                },
                 "current": {
                     "$ref": "#/definitions/TrialConversionStats"
                 },

@@ -32,16 +32,24 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("signups", middleware.UseAuthorization("semester.get"), c.getSignupTimeline)
 }
 
+// ComparisonTrialConversionStats pairs a resolved comparison semester with its
+// trial-conversion stats, calculated using that semester's own free-trial limit.
+type ComparisonTrialConversionStats struct {
+	Semester store.SemesterRef          `json:"semester"`
+	Stats    store.TrialConversionStats `json:"stats"`
+} //@name ComparisonTrialConversionStats
+
 // TrialConversionResponse is the dashboard's Trial Conversion response.
 type TrialConversionResponse struct {
 	Current        store.TrialConversionStats `json:"current"`
 	FreeTrialLimit uint8                      `json:"freeTrialLimit"`
+	Comparison     *ComparisonTrialConversionStats `json:"comparison"`
 } //@name TrialConversionResponse
 
 // getTrialConversion handles retrieving the dashboard's Trial Conversion card for a semester.
 //
 // @Summary Get dashboard trial conversion stats
-// @Description Get the distinct-player paid, executive, and free-trial status breakdown for a semester
+// @Description Get the distinct-player paid, executive, and free-trial status breakdown for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term
 // @Tags Dashboard
 // @Produce json
 // @Param semesterId path string true "Semester ID"
@@ -75,7 +83,27 @@ func (c *dashboardController) getTrialConversion(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, TrialConversionResponse{Current: stats, FreeTrialLimit: semester.FreeTrialLimit})
+	response := TrialConversionResponse{Current: stats, FreeTrialLimit: semester.FreeTrialLimit}
+
+	semesters, _, err := c.store.Semesters().List(&models.Pagination{})
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
+		comparisonStats, err := c.store.Dashboard().TrialConversionStats(comparison.ID, comparison.FreeTrialLimit)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+		response.Comparison = &ComparisonTrialConversionStats{
+			Semester: store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+			Stats:    comparisonStats,
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 // getSpotlight handles retrieving the dashboard's Event Spotlight card for a semester.

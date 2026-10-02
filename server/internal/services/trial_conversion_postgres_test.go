@@ -133,4 +133,47 @@ func TestMembershipService_UpdateMembershipSerializesAfterTrialStartAndPreserves
 	require.Equal(t, firstConvertedAt, *updated.ConvertedAt, "paid reversals must not replace the first conversion timestamp")
 }
 
+func TestMembershipService_UpdateMembershipRollbackKeepsConversionAndBudgetAtomic(t *testing.T) {
+	container, semester, _, membership := newTrialConversionPostgresFixture(t)
+	db := container.GetDB()
+	startedAt := time.Date(2026, 9, 20, 18, 0, 0, 0, time.UTC)
+	require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", membership.ID).Update("trial_started_at", startedAt).Error)
+
+	// Fail the final paid update, after the service has incremented the semester
+	// budget and stamped the first conversion. The transaction must roll both back.
+	require.NoError(t, db.Exec(`
+		CREATE FUNCTION reject_paid_membership_update() RETURNS trigger AS $$
+		BEGIN
+			IF NEW.paid AND NOT OLD.paid THEN
+				RAISE EXCEPTION 'forced paid membership update failure';
+			END IF;
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql;
+	`).Error)
+	require.NoError(t, db.Exec(`
+		CREATE TRIGGER reject_paid_membership_update
+		BEFORE UPDATE OF paid ON memberships
+		FOR EACH ROW EXECUTE FUNCTION reject_paid_membership_update();
+	`).Error)
+
+	initialBudget := semester.CurrentBudget
+	_, err := services.NewMembershipService(postgres.NewStore(db)).UpdateMembership(
+		membership.ID,
+		semester.ID,
+		&models.UpdateMembershipRequest{Paid: trialBoolPtr(true)},
+	)
+	require.Error(t, err)
+
+	stored, err := postgres.NewStore(db).Memberships().FindByID(membership.ID)
+	require.NoError(t, err)
+	require.False(t, stored.Paid)
+	require.NotNil(t, stored.TrialStartedAt)
+	require.Equal(t, startedAt, *stored.TrialStartedAt)
+	require.Nil(t, stored.ConvertedAt)
+	var budgetAfter float32
+	require.NoError(t, db.Model(&models.Semester{}).Select("current_budget").Where("id = ?", semester.ID).Scan(&budgetAfter).Error)
+	require.Equal(t, initialBudget, budgetAfter)
+}
+
 func trialBoolPtr(value bool) *bool { return &value }

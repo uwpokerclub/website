@@ -193,9 +193,18 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 		return nil, err
 	}
 
+	// The locking read intentionally loads only the membership row so PostgreSQL
+	// can lock it without locking nullable association joins. Reload associations
+	// after writes for the PATCH response, while the transaction still owns that
+	// row lock.
+	responseMembership, err := tx.Memberships().FindByIDAndSemesterID(id, semesterID)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	return &existingMembership, nil
+	return &responseMembership, nil
 }

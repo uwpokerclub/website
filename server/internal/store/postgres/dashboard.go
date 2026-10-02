@@ -157,6 +157,84 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 	return stats, series, nil
 }
 
+// SignupTimeline implements store.DashboardRepository. Both memberships.created_at
+// and events.start_date are timestamp columns whose calendar date is meaningful to
+// the UI, so this query returns formatted date strings instead of timestamps.
+func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID, now time.Time) (store.SignupTimeline, error) {
+	timeline := store.SignupTimeline{Series: []store.SignupTimelinePoint{}, EventDates: []string{}}
+
+	err := r.db.Raw(`
+		WITH bounds AS (
+			SELECT start_date::date AS start_date,
+				LEAST(end_date::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
+			FROM semesters
+			WHERE id = ?
+		), daily AS (
+			SELECT
+				m.created_at::date AS date,
+				COUNT(*) FILTER (WHERE m.source = 'admin') AS admin,
+				COUNT(*) FILTER (WHERE m.source = 'discord') AS discord,
+				COUNT(*) FILTER (WHERE m.source IS DISTINCT FROM 'admin' AND m.source IS DISTINCT FROM 'discord') AS unknown
+			FROM memberships m
+			CROSS JOIN bounds b
+			WHERE m.semester_id = ?
+				AND m.created_at IS NOT NULL
+				AND m.created_at::date BETWEEN b.start_date AND b.end_date
+			GROUP BY m.created_at::date
+		)
+		SELECT
+			TO_CHAR(days.date, 'YYYY-MM-DD') AS date,
+			COALESCE(d.admin, 0) AS admin,
+			COALESCE(d.discord, 0) AS discord,
+			COALESCE(d.unknown, 0) AS unknown
+		FROM bounds b
+		CROSS JOIN LATERAL generate_series(b.start_date, b.end_date, INTERVAL '1 day') AS days(date)
+		LEFT JOIN daily d ON d.date = days.date
+		ORDER BY days.date
+	`, now, semesterID, semesterID).Scan(&timeline.Series).Error
+	if err != nil {
+		return store.SignupTimeline{}, err
+	}
+
+	var summary struct {
+		DataStartsAt *string
+		Total        int64
+	}
+	err = r.db.Raw(`
+		WITH bounds AS (
+			SELECT start_date::date AS start_date,
+				LEAST(end_date::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
+			FROM semesters
+			WHERE id = ?
+		)
+		SELECT
+			TO_CHAR(MIN(m.created_at::date), 'YYYY-MM-DD') AS data_starts_at,
+			COUNT(*) AS total
+		FROM memberships m
+		CROSS JOIN bounds b
+		WHERE m.semester_id = ?
+			AND m.created_at IS NOT NULL
+			AND m.created_at::date BETWEEN b.start_date AND b.end_date
+	`, now, semesterID, semesterID).Scan(&summary).Error
+	if err != nil {
+		return store.SignupTimeline{}, err
+	}
+	timeline.DataStartsAt = summary.DataStartsAt
+	timeline.Total = summary.Total
+
+	err = r.db.Raw(`
+		SELECT TO_CHAR(start_date::date, 'YYYY-MM-DD')
+		FROM events
+		WHERE semester_id = ?
+		ORDER BY start_date ASC, id ASC
+	`, semesterID).Scan(&timeline.EventDates).Error
+	if err != nil {
+		return store.SignupTimeline{}, err
+	}
+
+	return timeline, nil
+}
+
 // minDatedShare is the proportion of a semester's memberships that must carry a
 // creation date before a point-in-time count means anything.
 //

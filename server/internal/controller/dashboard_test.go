@@ -4,6 +4,7 @@ import (
 	"api/internal/controller"
 	"api/internal/models"
 	"api/internal/store"
+	postgresstore "api/internal/store/postgres"
 	"api/internal/testutils"
 	"context"
 	"encoding/json"
@@ -1267,6 +1268,168 @@ func TestDashboardEventActivity(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 		require.EqualValues(t, 1, body.Current.EventsRun)
 		require.EqualValues(t, 1, body.Current.EventsScheduled)
+	})
+
+	t.Run("returns 400 for malformed and 404 for unknown semester ids", func(t *testing.T) {
+		require.Equal(t, http.StatusBadRequest, get(t, "not-a-uuid").Code)
+		require.Equal(t, http.StatusNotFound, get(t, "00000000-0000-0000-0000-000000000000").Code)
+	})
+}
+
+func TestDashboardSignupTimeline(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	apiServer := testutils.NewTestAPIServer(db)
+	semester, err := testutils.CreateTestSemester(db, "Fall 2025")
+	require.NoError(t, err)
+	toronto, err := time.LoadLocation("America/Toronto")
+	require.NoError(t, err)
+
+	get := func(t *testing.T, semesterID string) *httptest.ResponseRecorder {
+		sessionID, err := testutils.CreateTestSession(db, "signup-timeline-"+uuid.NewString(), "executive")
+		require.NoError(t, err)
+		req, err := testutils.MakeJSONRequest("GET", fmt.Sprintf("/api/v2/semesters/%s/dashboard/signups", semesterID), nil)
+		require.NoError(t, err)
+		testutils.SetAuthCookie(req, sessionID)
+		w := httptest.NewRecorder()
+		apiServer.ServeHTTP(w, req)
+		return w
+	}
+	newUserID := func() uint64 { return uint64(time.Now().UnixNano()) }
+
+	t.Run("requires executive authorization", func(t *testing.T) {
+		testutils.TestInvalidAuthForEndpoint(t, container, apiServer, "GET", fmt.Sprintf("/api/v2/semesters/%s/dashboard/signups", semester.ID), []string{"bot"})
+	})
+
+	t.Run("returns literal calendar dates, zero-filled source buckets, and matching total", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		today := time.Now().In(toronto)
+		day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, toronto)
+		semester, err := createDashboardTestSemester(db, "Current", day.AddDate(0, 0, -2))
+		require.NoError(t, err)
+
+		addMembership := func(source *models.MembershipSource, createdAt *time.Time) {
+			user, err := testutils.CreateTestUser(db, newUserID(), "Signup", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "signup")
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+			require.NoError(t, err)
+			require.NoError(t, db.Model(membership).Updates(map[string]any{"source": source, "created_at": createdAt}).Error)
+		}
+
+		admin := models.MembershipSourceAdmin
+		discord := models.MembershipSourceDiscord
+		malformed := models.MembershipSource("kiosk")
+		first := day.Add(9 * time.Hour)
+		last := day.AddDate(0, 0, 2).Add(20 * time.Hour)
+		addMembership(&admin, &first)
+		addMembership(&discord, &first)
+		addMembership(nil, &last)
+		addMembership(&malformed, &last)
+		addMembership(&admin, nil) // A never-participating historical membership remains undated.
+
+		structure, err := testutils.CreateTestStructure(db, "Signup timeline")
+		require.NoError(t, err)
+		_, err = createDashboardTestEvent(db, semester.ID, structure.ID, "In term", models.EventStateStarted, day.AddDate(0, 0, 1).Add(18*time.Hour), 0)
+		require.NoError(t, err)
+		other, err := createDashboardTestSemester(db, "Other", day)
+		require.NoError(t, err)
+		_, err = createDashboardTestEvent(db, other.ID, structure.ID, "Other term", models.EventStateStarted, day.Add(18*time.Hour), 0)
+		require.NoError(t, err)
+
+		w := get(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body store.SignupTimeline
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.Equal(t, []store.SignupTimelinePoint{
+			{Date: day.AddDate(0, 0, -2).Format("2006-01-02")},
+			{Date: day.AddDate(0, 0, -1).Format("2006-01-02")},
+			{Date: day.Format("2006-01-02"), Admin: 1, Discord: 1},
+		}, body.Series)
+		require.Equal(t, []string{day.AddDate(0, 0, 1).Format("2006-01-02")}, body.EventDates)
+		require.NotNil(t, body.DataStartsAt)
+		require.Equal(t, day.Format("2006-01-02"), *body.DataStartsAt)
+		require.EqualValues(t, 2, body.Total)
+		var bucketSum int64
+		for _, point := range body.Series {
+			bucketSum += point.Admin + point.Discord + point.Unknown
+			require.Len(t, point.Date, len("2006-01-02"))
+			require.NotContains(t, point.Date, "T")
+		}
+		require.Equal(t, body.Total, bucketSum)
+		require.Contains(t, w.Body.String(), `"dataStartsAt":"`+day.Format("2006-01-02")+`"`)
+	})
+
+	t.Run("uses unknown for null and malformed sources within the current bound", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		today := time.Now().In(toronto)
+		day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, toronto)
+		semester, err := createDashboardTestSemester(db, "Current", day)
+		require.NoError(t, err)
+		for _, source := range []*models.MembershipSource{nil, func() *models.MembershipSource { value := models.MembershipSource("future"); return &value }()} {
+			user, err := testutils.CreateTestUser(db, newUserID(), "Unknown", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "unknown")
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+			require.NoError(t, err)
+			require.NoError(t, db.Model(membership).Updates(map[string]any{"source": source, "created_at": day.Add(12 * time.Hour)}).Error)
+		}
+		var body store.SignupTimeline
+		require.NoError(t, json.Unmarshal(get(t, semester.ID.String()).Body.Bytes(), &body))
+		require.Len(t, body.Series, 1)
+		require.EqualValues(t, 2, body.Series[0].Unknown)
+		require.EqualValues(t, 2, body.Total)
+		require.Equal(t, body.Total, body.Series[0].Admin+body.Series[0].Discord+body.Series[0].Unknown)
+	})
+
+	t.Run("returns an empty non-nil series when the current bound precedes the semester", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		future := time.Now().In(toronto).AddDate(0, 0, 2)
+		semester, err := createDashboardTestSemester(db, "Future", future)
+		require.NoError(t, err)
+		var body store.SignupTimeline
+		w := get(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Series)
+		require.Empty(t, body.Series)
+		require.NotNil(t, body.EventDates)
+		require.Nil(t, body.DataStartsAt)
+		require.Zero(t, body.Total)
+	})
+
+	t.Run("uses the Toronto calendar date for the current bound", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Toronto boundary", time.Date(2025, 12, 30, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		user, err := testutils.CreateTestUser(db, newUserID(), "Toronto", "Boundary", "toronto-boundary@uwaterloo.ca", models.FacultyMath, "toronto")
+		require.NoError(t, err)
+		membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+		require.NoError(t, err)
+		createdAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+		require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
+
+		// 02:00 UTC on January 1 is still December 31 in Toronto. Passing this
+		// instant directly to the repository makes the SQL time-zone contract
+		// deterministic instead of depending on the test runner's clock.
+		timeline, err := postgresstore.NewDashboardRepository(db).SignupTimeline(
+			semester.ID, time.Date(2026, 1, 1, 2, 0, 0, 0, time.UTC),
+		)
+		require.NoError(t, err)
+		require.Equal(t, []store.SignupTimelinePoint{
+			{Date: "2025-12-30"},
+			{Date: "2025-12-31"},
+		}, timeline.Series)
+		require.Nil(t, timeline.DataStartsAt)
+		require.Zero(t, timeline.Total)
 	})
 
 	t.Run("returns 400 for malformed and 404 for unknown semester ids", func(t *testing.T) {

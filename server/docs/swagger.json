@@ -971,6 +971,65 @@
                 }
             }
         },
+        "/semesters/{semesterId}/dashboard/signups": {
+            "get": {
+                "description": "Get zero-filled daily membership creation counts by source, event dates, and the first dated signup for a semester",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard signup timeline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SignupTimeline"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/dashboard/spotlight": {
             "get": {
                 "description": "Get the live or next upcoming event for a semester, or null if neither exists",
@@ -4071,6 +4130,46 @@
                 "index": {
                     "type": "integer",
                     "minimum": 0
+                }
+            }
+        },
+        "SignupTimeline": {
+            "type": "object",
+            "properties": {
+                "dataStartsAt": {
+                    "type": "string"
+                },
+                "eventDates": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SignupTimelinePoint"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "SignupTimelinePoint": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "discord": {
+                    "type": "integer"
+                },
+                "unknown": {
+                    "type": "integer"
                 }
             }
         },

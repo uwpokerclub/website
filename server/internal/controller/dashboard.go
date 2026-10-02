@@ -28,6 +28,7 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("memberships", middleware.UseAuthorization("semester.get"), c.getMembershipStats)
 	group.GET("engagement", middleware.UseAuthorization("semester.get"), c.getEngagementStats)
 	group.GET("events", middleware.UseAuthorization("semester.get"), c.getEventActivity)
+	group.GET("signups", middleware.UseAuthorization("semester.get"), c.getSignupTimeline)
 }
 
 // getSpotlight handles retrieving the dashboard's Event Spotlight card for a semester.
@@ -322,4 +323,43 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+// getSignupTimeline handles retrieving daily membership creation counts for a semester.
+//
+// @Summary Get dashboard signup timeline
+// @Description Get zero-filled daily membership creation counts by source, event dates, and the first dated signup for a semester
+// @Tags Dashboard
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Success 200 {object} SignupTimeline
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/dashboard/signups [get]
+func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	if _, err := c.store.Semesters().FindByID(semesterID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, time.Now())
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, timeline)
 }

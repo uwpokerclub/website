@@ -65,6 +65,26 @@ type EventSeriesPoint struct {
 	Entries   int64     `json:"entries"`
 } //@name EventSeriesPoint
 
+// SignupTimelinePoint is one calendar day in a semester's signup timeline. Date
+// is deliberately a YYYY-MM-DD string rather than a timestamp: the dashboard
+// renders it as a calendar date and must not shift it across time zones.
+type SignupTimelinePoint struct {
+	Date    string `json:"date"`
+	Admin   int64  `json:"admin"`
+	Discord int64  `json:"discord"`
+	Unknown int64  `json:"unknown"`
+} //@name SignupTimelinePoint
+
+// SignupTimeline is the dashboard's daily membership-creation series for a
+// semester. EventDates and DataStartsAt are YYYY-MM-DD strings for the same
+// calendar-date reason as SignupTimelinePoint.Date.
+type SignupTimeline struct {
+	Series       []SignupTimelinePoint `json:"series"`
+	EventDates   []string              `json:"eventDates"`
+	DataStartsAt *string               `json:"dataStartsAt"`
+	Total        int64                 `json:"total"`
+} //@name SignupTimeline
+
 // EngagementStats is the Engagement & Retention card's figures for a single semester:
 // distinct players, median events attended, the played-once cohort, and the 10+
 // cohort.
@@ -121,6 +141,12 @@ type DashboardRepository interface {
 	// term's total is their sum, not EventsScheduled alone. EventsScheduled ignores
 	// asOf, since the events it counts are the future-dated ones.
 	EventActivity(semesterID uuid.UUID, asOf time.Time) (EventActivityStats, []EventSeriesPoint, error)
+
+	// SignupTimeline returns a zero-filled daily calendar-date series from the
+	// semester start through the earlier of its end date and now's America/Toronto
+	// calendar date. Memberships without a creation date are excluded; every other
+	// source besides admin and discord is reported as unknown.
+	SignupTimeline(semesterID uuid.UUID, now time.Time) (SignupTimeline, error)
 
 	// MembershipTotalAsOf returns how many of the semester's memberships had been
 	// created at or before asOf, or nil when the semester has no dated memberships at

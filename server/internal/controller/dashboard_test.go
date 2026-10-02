@@ -973,7 +973,7 @@ func TestDashboardTrialConversion(t *testing.T) {
 		e2, err := createDashboardTestEvent(db, semester.ID, structure.ID, "E2", models.EventStateEnded, time.Now().UTC(), 0)
 		require.NoError(t, err)
 
-		paidAfterTrial := createPlayer(t, db, semester.ID, "paid", true, false)
+		paidAfterTrial := createPlayer(t, db, semester.ID, "paid", false, false)
 		spent := createPlayer(t, db, semester.ID, "spent", false, false)
 		open := createPlayer(t, db, semester.ID, "open", false, false)
 		executive := createPlayer(t, db, semester.ID, "executive", false, true)
@@ -983,6 +983,10 @@ func TestDashboardTrialConversion(t *testing.T) {
 			_, err = testutils.CreateTestParticipant(db, membership.ID, e2.ID)
 			require.NoError(t, err)
 		}
+		membershipRepo := postgresstore.NewMembershipRepository(db)
+		require.NoError(t, membershipRepo.SetFreeTrialAvailable(paidAfterTrial.ID, false))
+		paidAfterTrial.Paid = true
+		require.NoError(t, membershipRepo.Update(paidAfterTrial))
 		_, err = testutils.CreateTestParticipant(db, open.ID, e1.ID)
 		require.NoError(t, err)
 		_, err = testutils.CreateTestParticipant(db, executive.ID, e1.ID)

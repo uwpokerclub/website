@@ -40,6 +40,10 @@ function cardTitleOrder() {
   return screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 }
 
+function titlesIn(testId: string) {
+  return Array.from(screen.getByTestId(testId).querySelectorAll("h3")).map((heading) => heading.textContent);
+}
+
 afterEach(() => {
   delete DASHBOARD_CARDS.spotlight;
 });
@@ -54,38 +58,49 @@ describe("Dashboard", () => {
     expect(screen.queryByText(/under construction/i)).not.toBeInTheDocument();
   });
 
-  it("renders cards in the Ops preset order for an executive", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
-    mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
-
-    render(<Dashboard />);
-
-    expect(cardTitleOrder()).toEqual([
-      "Event Spotlight",
-      "Quick Actions",
-      "Event Activity",
-      "Leaderboard",
-      "Memberships",
-      "Engagement & Retention",
-      "Signup Timeline",
-    ]);
-  });
-
-  it("renders cards in the Leadership preset order for a president", () => {
+  it("leads with the role's first preset card", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     render(<Dashboard />);
 
-    expect(cardTitleOrder()).toEqual([
-      "Engagement & Retention",
-      "Event Activity",
+    expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Engagement & retention");
+  });
+
+  it("routes chart cards to the wide lane and stat cards to the rail, preset order intact", () => {
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT } });
+    mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
+
+    render(<Dashboard />);
+
+    expect(titlesIn("dashboard-wide")).toEqual(["Event activity", "Signup timeline"]);
+    expect(titlesIn("dashboard-rail")).toEqual([
       "Memberships",
-      "Event Spotlight",
-      "Signup Timeline",
+      "Trial conversion",
+      "Event spotlight",
       "Leaderboard",
-      "Quick Actions",
+      "Quick actions",
     ]);
+  });
+
+  it("gives a different role a different lead card", () => {
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.TREASURER } });
+    mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
+
+    render(<Dashboard />);
+
+    expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Trial conversion");
+  });
+
+  it("renders all eight cards exactly once", () => {
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
+
+    render(<Dashboard />);
+
+    const titles = cardTitleOrder();
+    expect(titles).toHaveLength(8);
+    expect(new Set(titles).size).toBe(8);
   });
 
   it("falls back to the Ops preset when there is no user yet", () => {
@@ -94,7 +109,7 @@ describe("Dashboard", () => {
 
     render(<Dashboard />);
 
-    expect(cardTitleOrder()[0]).toBe("Event Spotlight");
+    expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Event spotlight");
   });
 
   it("shows a no-semester state instead of the grid when there is no current semester", () => {

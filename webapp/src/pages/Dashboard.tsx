@@ -1,6 +1,7 @@
 import { useAuth, useCurrentSemester } from "@/hooks";
 import { DashboardCard, DashboardGrid } from "@/features/dashboard/components";
-import { CARD_TITLES, resolveDashboardLayout } from "@/features/dashboard/dashboardLayout";
+import { CARD_TITLES, DashboardCardId, resolveDashboardLayout } from "@/features/dashboard/dashboardLayout";
+import { assignLanes } from "@/features/dashboard/lanes";
 import { DASHBOARD_CARDS } from "@/features/dashboard/dashboardCards";
 import styles from "./Dashboard.module.css";
 
@@ -21,7 +22,21 @@ export function Dashboard() {
     );
   }
 
-  const layout = resolveDashboardLayout(user?.role);
+  const { lead, wide, rail } = assignLanes(resolveDashboardLayout(user?.role));
+
+  const renderCard = (cardId: DashboardCardId) => {
+    const CardComponent = DASHBOARD_CARDS[cardId];
+
+    if (!CardComponent) {
+      return (
+        <DashboardCard key={cardId} title={CARD_TITLES[cardId]} status="ready" data-qa={`dashboard-card-${cardId}`}>
+          {() => <p className={styles.placeholder}>Coming soon.</p>}
+        </DashboardCard>
+      );
+    }
+
+    return <CardComponent key={cardId} semesterId={currentSemester.id} />;
+  };
 
   return (
     <div className={styles.page} data-qa="dashboard-page">
@@ -29,21 +44,12 @@ export function Dashboard() {
         <h1>Dashboard</h1>
         <p className={styles.subtitle}>{currentSemester.name}</p>
       </div>
-      <DashboardGrid data-qa="dashboard-grid">
-        {layout.map((cardId) => {
-          const CardComponent = DASHBOARD_CARDS[cardId];
-
-          if (CardComponent) {
-            return <CardComponent key={cardId} semesterId={currentSemester.id} />;
-          }
-
-          return (
-            <DashboardCard key={cardId} title={CARD_TITLES[cardId]} status="ready" data-qa={`dashboard-card-${cardId}`}>
-              {() => <p className={styles.placeholder}>Coming soon.</p>}
-            </DashboardCard>
-          );
-        })}
-      </DashboardGrid>
+      <DashboardGrid
+        data-qa="dashboard-grid"
+        lead={renderCard(lead)}
+        wide={wide.map((id) => renderCard(id))}
+        rail={rail.map((id) => renderCard(id))}
+      />
     </div>
   );
 }

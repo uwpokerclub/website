@@ -105,12 +105,26 @@ type DashboardRepository interface {
 	MembershipStats(semesterID uuid.UUID) (MembershipStats, error)
 
 	// EngagementStats returns the Engagement & Retention figures for the given
-	// semester. A semester with no qualifying participant rows returns a zero-valued
-	// EngagementStats, not an error.
-	EngagementStats(semesterID uuid.UUID) (EngagementStats, error)
+	// semester, counting only events that started at or before asOf. A semester with
+	// no qualifying participant rows returns a zero-valued EngagementStats, not an
+	// error.
+	//
+	// asOf exists so a term in progress is compared against the same point of the
+	// earlier term rather than its completed total; see services.ComparisonCutoff.
+	EngagementStats(semesterID uuid.UUID, asOf time.Time) (EngagementStats, error)
 
 	// EventActivity returns Event Activity scalar stats and an ascending start-date
-	// series for ended events. A semester with no ended events returns zero stats and
-	// an empty, non-nil series.
-	EventActivity(semesterID uuid.UUID) (EventActivityStats, []EventSeriesPoint, error)
+	// series for ended events, counting only events that started at or before asOf. A
+	// semester with no ended events returns zero stats and an empty, non-nil series.
+	//
+	// EventsRun and EventsScheduled are disjoint - ended and not-yet-ended - so a
+	// term's total is their sum, not EventsScheduled alone. EventsScheduled ignores
+	// asOf, since the events it counts are the future-dated ones.
+	EventActivity(semesterID uuid.UUID, asOf time.Time) (EventActivityStats, []EventSeriesPoint, error)
+
+	// MembershipTotalAsOf returns how many of the semester's memberships had been
+	// created at or before asOf, or nil when the semester has no dated memberships at
+	// all — every row predating the created_at migration carries NULL and cannot be
+	// reliably recovered. Callers must treat nil as "unknowable", never as zero.
+	MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error)
 }

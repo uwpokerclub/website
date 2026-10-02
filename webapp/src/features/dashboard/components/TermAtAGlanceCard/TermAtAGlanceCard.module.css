@@ -1,4 +1,5 @@
 .container {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -6,54 +7,60 @@
 
 .headline {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.375rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5625rem;
 }
 
 .total {
-  font-size: var(--font-size-3xl, 1.875rem);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-gray-900, #212121);
+  font-size: var(--card-figure-size, var(--font-size-3xl));
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
   line-height: 1.1;
 }
 
 .noComparisonNote {
   margin: 0;
-  font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-gray-700, #616161);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-700);
 }
 
-.divider {
-  border: none;
-  border-top: 1px solid var(--color-gray-200, #eeeeee);
-  margin: 0;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem 1rem;
-}
-
-.stat {
+.paceBlock {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-  min-width: 0;
+  gap: 0.375rem;
+  margin-top: -0.375rem;
 }
 
-.eyebrow {
-  font-size: var(--font-size-xs, 0.75rem);
-  font-weight: var(--font-weight-semibold, 600);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-gray-700, #616161);
+/*
+ * A full term's worth of memberships, with last year's position at this same point
+ * marked on it. The fill is the term so far; the marker is the thing to beat.
+ */
+.paceTrack {
+  position: relative;
+  height: 0.5rem;
+  background: var(--color-background-tertiary);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
 }
 
-.value {
-  font-size: var(--font-size-xl, 1.25rem);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-gray-900, #212121);
+.paceFill {
+  display: block;
+  height: 100%;
+  background: var(--dash-ord-2);
+  border-radius: var(--border-radius-full);
+}
+
+.paceMarker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gray-700);
+}
+
+.pace {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
 }

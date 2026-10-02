@@ -17,6 +17,7 @@ const REAL_DASHBOARD_ALIASES = [
   "engagement",
   "events",
   "signups",
+  "conversion",
   "rankings",
 ] as const;
 
@@ -60,11 +61,14 @@ function interceptRealDashboardRequests() {
   cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/dashboard\/engagement$/).as("engagement");
   cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/dashboard\/events$/).as("events");
   cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/dashboard\/signups$/).as("signups");
+  cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/dashboard\/conversion$/).as("conversion");
   cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/rankings\?limit=5$/).as("rankings");
 }
 
 function waitForRealDashboardRequests() {
-  cy.wait(REAL_DASHBOARD_ALIASES.map((alias) => `@${alias}`));
+  return cy.wait(REAL_DASHBOARD_ALIASES.map((alias) => `@${alias}`)).then((interceptions) => {
+    interceptions.forEach((interception) => expect(interception.response?.statusCode).to.equal(200));
+  });
 }
 
 function visitDashboard(username = "e2e_user") {
@@ -72,7 +76,7 @@ function visitDashboard(username = "e2e_user") {
   cy.login(username, "password");
   interceptRealDashboardRequests();
   cy.visit("/admin/dashboard");
-  waitForRealDashboardRequests();
+  return waitForRealDashboardRequests();
 }
 
 function expectCardOrder(containerQa: string, cards: readonly string[]) {
@@ -90,12 +94,26 @@ describe("Dashboard", () => {
         visitDashboard(layout.username);
 
         CARD_QAS.forEach((cardQa) => cy.getByData(cardQa).should("have.length", 1));
-        cy.getByData("trial-conversion-card").contains("Sample data").should("exist");
+        cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
+        cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
         cy.getByData("dashboard-lead").children().should("have.attr", "data-qa", layout.lead);
         expectCardOrder("dashboard-wide-stack", layout.wide);
         expectCardOrder("dashboard-rail-lane", layout.rail);
       });
     });
+  });
+
+  it("renders real conversion data without the sample fallback", () => {
+    visitDashboard();
+
+    cy.getByData("trial-conversion-card").scrollIntoView();
+    cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
+    cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
+    cy.get('[data-testid="trial-conversion-figure"]').should("have.text", "0");
+    cy.getByData("trial-conversion-card")
+      .contains("spent all 4 free entries and are currently unpaid")
+      .should("be.visible");
+    cy.getByData("trial-conversion-card").contains("No comparable term to compare against yet.").should("be.visible");
   });
 
   it("isolates an Event Activity endpoint failure to its card", () => {
@@ -117,6 +135,27 @@ describe("Dashboard", () => {
     });
   });
 
+  it("isolates a Trial Conversion endpoint failure to its card without using sample data", () => {
+    cy.resetDatabase();
+    cy.login("e2e_user", "password");
+    interceptRealDashboardRequests();
+    cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/dashboard\/conversion$/, {
+      statusCode: 500,
+      body: { error: "dashboard conversion failed" },
+    }).as("conversionFailure");
+    cy.visit("/admin/dashboard");
+    cy.wait("@conversionFailure");
+
+    cy.getByData("trial-conversion-card")
+      .scrollIntoView()
+      .find('[data-qa="dashboard-card-error"]', { timeout: 10_000 })
+      .should("be.visible");
+    cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
+    CARD_QAS.filter((cardQa) => cardQa !== "trial-conversion-card").forEach((cardQa) => {
+      cy.getByData(cardQa).should("exist").find('[data-qa="dashboard-card-error"]').should("not.exist");
+    });
+  });
+
   it("refetches each real card for the selected semester", () => {
     visitDashboard();
 
@@ -125,7 +164,7 @@ describe("Dashboard", () => {
 
     // Memberships is shared by Term at a Glance and Engagement, so this waits for
     // its one query rather than inventing a second request for the second consumer.
-    cy.wait(REAL_DASHBOARD_ALIASES.map((alias) => `@${alias}`)).then((interceptions) => {
+    waitForRealDashboardRequests().then((interceptions) => {
       interceptions.forEach((interception) => {
         expect(interception.request.url).to.contain(`/semesters/${SWITCHED_SEMESTER_ID}/`);
       });

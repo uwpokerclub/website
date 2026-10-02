@@ -143,10 +143,10 @@ type DashboardRepository interface {
 	EventActivity(semesterID uuid.UUID, asOf time.Time) (EventActivityStats, []EventSeriesPoint, error)
 
 	// SignupTimeline returns a zero-filled daily calendar-date series from the
-	// semester start through the earlier of its end date and today. Memberships
-	// without a creation date are excluded; every other source besides admin and
-	// discord is reported as unknown.
-	SignupTimeline(semesterID uuid.UUID) (SignupTimeline, error)
+	// semester start through the earlier of its end date and now's America/Toronto
+	// calendar date. Memberships without a creation date are excluded; every other
+	// source besides admin and discord is reported as unknown.
+	SignupTimeline(semesterID uuid.UUID, now time.Time) (SignupTimeline, error)
 
 	// MembershipTotalAsOf returns how many of the semester's memberships had been
 	// created at or before asOf, or nil when the semester has no dated memberships at

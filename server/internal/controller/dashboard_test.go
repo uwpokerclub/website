@@ -4,6 +4,7 @@ import (
 	"api/internal/controller"
 	"api/internal/models"
 	"api/internal/store"
+	postgresstore "api/internal/store/postgres"
 	"api/internal/testutils"
 	"context"
 	"encoding/json"
@@ -1287,6 +1288,8 @@ func TestDashboardSignupTimeline(t *testing.T) {
 	apiServer := testutils.NewTestAPIServer(db)
 	semester, err := testutils.CreateTestSemester(db, "Fall 2025")
 	require.NoError(t, err)
+	toronto, err := time.LoadLocation("America/Toronto")
+	require.NoError(t, err)
 
 	get := func(t *testing.T, semesterID string) *httptest.ResponseRecorder {
 		sessionID, err := testutils.CreateTestSession(db, "signup-timeline-"+uuid.NewString(), "executive")
@@ -1307,8 +1310,8 @@ func TestDashboardSignupTimeline(t *testing.T) {
 	t.Run("returns literal calendar dates, zero-filled source buckets, and matching total", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db = container.GetDB()
-		today := time.Now().UTC()
-		day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+		today := time.Now().In(toronto)
+		day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, toronto)
 		semester, err := createDashboardTestSemester(db, "Current", day.AddDate(0, 0, -2))
 		require.NoError(t, err)
 
@@ -1366,8 +1369,8 @@ func TestDashboardSignupTimeline(t *testing.T) {
 	t.Run("uses unknown for null and malformed sources within the current bound", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db = container.GetDB()
-		today := time.Now().UTC()
-		day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+		today := time.Now().In(toronto)
+		day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, toronto)
 		semester, err := createDashboardTestSemester(db, "Current", day)
 		require.NoError(t, err)
 		for _, source := range []*models.MembershipSource{nil, func() *models.MembershipSource { value := models.MembershipSource("future"); return &value }()} {
@@ -1388,7 +1391,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 	t.Run("returns an empty non-nil series when the current bound precedes the semester", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db = container.GetDB()
-		future := time.Now().UTC().AddDate(0, 0, 2)
+		future := time.Now().In(toronto).AddDate(0, 0, 2)
 		semester, err := createDashboardTestSemester(db, "Future", future)
 		require.NoError(t, err)
 		var body store.SignupTimeline
@@ -1400,6 +1403,33 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NotNil(t, body.EventDates)
 		require.Nil(t, body.DataStartsAt)
 		require.Zero(t, body.Total)
+	})
+
+	t.Run("uses the Toronto calendar date for the current bound", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Toronto boundary", time.Date(2025, 12, 30, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		user, err := testutils.CreateTestUser(db, newUserID(), "Toronto", "Boundary", "toronto-boundary@uwaterloo.ca", models.FacultyMath, "toronto")
+		require.NoError(t, err)
+		membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+		require.NoError(t, err)
+		createdAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+		require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
+
+		// 02:00 UTC on January 1 is still December 31 in Toronto. Passing this
+		// instant directly to the repository makes the SQL time-zone contract
+		// deterministic instead of depending on the test runner's clock.
+		timeline, err := postgresstore.NewDashboardRepository(db).SignupTimeline(
+			semester.ID, time.Date(2026, 1, 1, 2, 0, 0, 0, time.UTC),
+		)
+		require.NoError(t, err)
+		require.Equal(t, []store.SignupTimelinePoint{
+			{Date: "2025-12-30"},
+			{Date: "2025-12-31"},
+		}, timeline.Series)
+		require.Nil(t, timeline.DataStartsAt)
+		require.Zero(t, timeline.Total)
 	})
 
 	t.Run("returns 400 for malformed and 404 for unknown semester ids", func(t *testing.T) {

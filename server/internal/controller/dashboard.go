@@ -355,7 +355,7 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 		return
 	}
 
-	timeline, err := c.store.Dashboard().SignupTimeline(semesterID)
+	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, time.Now())
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return

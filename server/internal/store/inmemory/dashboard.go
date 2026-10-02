@@ -41,6 +41,10 @@ func (r *inMemoryDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 	return store.EventActivityStats{}, nil, store.ErrNotImplemented
 }
 
+func (r *inMemoryDashboardRepository) SignupTimeline(semesterID uuid.UUID, now time.Time) (store.SignupTimeline, error) {
+	return store.SignupTimeline{}, store.ErrNotImplemented
+}
+
 func (r *inMemoryDashboardRepository) MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error) {
 	return nil, store.ErrNotImplemented
 }

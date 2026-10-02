@@ -28,7 +28,17 @@
       "username": "clock_executive",
       "role": "executive",
       "linkedMember": null
+    },
+    {
+      "username": "dashboard_records",
+      "role": "secretary",
+      "linkedMember": null
+    },
+    {
+      "username": "dashboard_leadership",
+      "role": "president",
+      "linkedMember": null
     }
   ],
-  "total": 5
+  "total": 7
 }

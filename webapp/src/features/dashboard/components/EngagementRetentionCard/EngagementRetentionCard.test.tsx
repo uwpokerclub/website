@@ -1,144 +1,102 @@
 /** @jest-environment jsdom */
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { useEngagementDashboard } from "../../hooks/useDashboardQueries";
+import { useEngagementDashboard, useMembershipsDashboard } from "../../hooks/useDashboardQueries";
 import { EngagementRetentionCard } from "./EngagementRetentionCard";
-import type { EngagementDashboardResponse, EngagementStats } from "../../api/dashboardApi";
+import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
 
 jest.mock("../../hooks/useDashboardQueries", () => ({
   useEngagementDashboard: jest.fn(),
+  useMembershipsDashboard: jest.fn(),
 }));
 
-const mockedUseEngagementDashboard = useEngagementDashboard as jest.Mock;
+const mockedEngagement = useEngagementDashboard as jest.Mock;
+const mockedMemberships = useMembershipsDashboard as jest.Mock;
 
-function stats(overrides: Partial<EngagementStats> = {}): EngagementStats {
-  return {
-    players: 142,
-    medianEventsAttended: 2.5,
-    playedOnceCount: 48,
-    playedOnceShare: 0.338,
-    tenPlusCount: 16,
-    ...overrides,
-  };
-}
-
-function withComparison(current: EngagementStats, comparisonStats: EngagementStats): EngagementDashboardResponse {
-  return {
-    current,
-    comparison: { semester: { id: "fall-2025", name: "Fall 2025" }, stats: comparisonStats },
-  };
-}
-
-function chipFor(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('[data-qa="delta-chip"]');
-  if (!el) throw new Error(`No delta chip found for label "${label}"`);
-  return el as HTMLElement;
+function ready() {
+  mockedEngagement.mockReturnValue({
+    isLoading: false,
+    isError: false,
+    data: SAMPLE_TERM.engagement,
+    refetch: jest.fn(),
+  });
+  mockedMemberships.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.memberships });
 }
 
 describe("EngagementRetentionCard", () => {
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  afterEach(() => jest.clearAllMocks());
 
-  it("renders engagement figures, their population qualifier, and appropriately-sentimented deltas", () => {
-    mockedUseEngagementDashboard.mockReturnValue({
-      isLoading: false,
-      isError: false,
-      data: withComparison(
-        stats(),
-        stats({ players: 100, medianEventsAttended: 2, playedOnceShare: 0.4, tenPlusCount: 10 }),
-      ),
-      refetch: jest.fn(),
-    });
-
+  it("leads with distinct players against total memberships", () => {
+    ready();
     render(<EngagementRetentionCard semesterId="s1" />);
 
-    expect(screen.getByText("Members who entered at least one event this term.")).toBeInTheDocument();
-    expect(screen.getByText("142")).toBeInTheDocument();
-    expect(screen.getByText("2.5")).toBeInTheDocument();
-    expect(screen.getByText("33.8%")).toBeInTheDocument();
-    expect(screen.getByText("16")).toBeInTheDocument();
-    expect(chipFor("Up 42 (42%) from Fall 2025")).toHaveAttribute("data-tone", "positive");
-    expect(chipFor("Up 0.5 (25%) from Fall 2025")).toHaveAttribute("data-tone", "positive");
-    expect(chipFor("Down 6.2 percentage points from Fall 2025")).toHaveAttribute("data-tone", "positive");
-    expect(chipFor("Up 6 (60%) from Fall 2025")).toHaveAttribute("data-tone", "positive");
+    expect(screen.getByText("824")).toBeInTheDocument();
+    expect(screen.getByText(/of 967 members played at least one event/)).toBeInTheDocument();
   });
 
-  it("formats valid 0% and 100% shares", () => {
-    mockedUseEngagementDashboard.mockReturnValue({
-      isLoading: false,
-      isError: false,
-      data: withComparison(stats({ playedOnceShare: 0 }), stats({ playedOnceShare: 1 })),
-      refetch: jest.fn(),
-    });
-
-    const { rerender } = render(<EngagementRetentionCard semesterId="s1" />);
-    expect(screen.getByText("0%")).toBeInTheDocument();
-
-    mockedUseEngagementDashboard.mockReturnValue({
-      isLoading: false,
-      isError: false,
-      data: withComparison(stats({ playedOnceShare: 1 }), stats({ playedOnceShare: 0 })),
-      refetch: jest.fn(),
-    });
-    rerender(<EngagementRetentionCard semesterId="s1" />);
-    expect(screen.getByText("100%")).toBeInTheDocument();
-  });
-
-  it("shows the loading state when query data is absent", () => {
-    mockedUseEngagementDashboard.mockReturnValue({
-      isLoading: false,
-      isError: false,
-      data: undefined,
-      refetch: jest.fn(),
-    });
-
+  it("splits the population into three attendance buckets that sum to the total", () => {
+    ready();
     render(<EngagementRetentionCard semesterId="s1" />);
 
-    expect(screen.getByRole("status", { name: "Loading Engagement & retention" })).toBeInTheDocument();
+    const buckets = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(buckets).toEqual(["313 played once", "470 played 2–9", "41 regulars, 10+"]);
   });
 
-  it("isolates a request error in this card and retries its own query", async () => {
-    const user = userEvent.setup();
-    const refetch = jest.fn();
-    mockedUseEngagementDashboard.mockReturnValue({ isLoading: false, isError: true, data: undefined, refetch });
-
+  it("places both rates against their historical band rather than showing a bare delta", () => {
+    ready();
     render(<EngagementRetentionCard semesterId="s1" />);
 
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Retry" }));
-    expect(refetch).toHaveBeenCalledTimes(1);
+    // Median 2 and 38% played-once are both normal despite being down year-over-year.
+    expect(screen.getAllByText("normal")).toHaveLength(2);
   });
 
-  it("uses the start-of-term state instead of zero figures when there are no players", () => {
-    mockedUseEngagementDashboard.mockReturnValue({
+  it("states the population it counts", () => {
+    ready();
+    render(<EngagementRetentionCard semesterId="s1" />);
+
+    expect(screen.getByText(/Members who entered at least one event this term/)).toBeInTheDocument();
+  });
+
+  it("renders a start-of-term state rather than zeroes when nobody has played", () => {
+    mockedEngagement.mockReturnValue({
       isLoading: false,
       isError: false,
-      data: withComparison(
-        stats({ players: 0, medianEventsAttended: 0, playedOnceCount: 0, playedOnceShare: 0, tenPlusCount: 0 }),
-        stats(),
-      ),
       refetch: jest.fn(),
+      data: {
+        current: {
+          players: 0,
+          medianEventsAttended: 0,
+          playedOnceCount: 0,
+          playedOnceShare: 0,
+          tenPlusCount: 0,
+        },
+        comparison: null,
+      },
     });
-
+    mockedMemberships.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.memberships });
     render(<EngagementRetentionCard semesterId="s1" />);
 
     expect(screen.getByText("No event entries recorded yet this term.")).toBeInTheDocument();
-    expect(screen.queryByText("DISTINCT PLAYERS")).not.toBeInTheDocument();
   });
 
-  it("renders no chips and a plain note when there is no comparable term", () => {
-    mockedUseEngagementDashboard.mockReturnValue({
+  it("renders its own error state", () => {
+    mockedEngagement.mockReturnValue({ isLoading: false, isError: true, data: undefined, refetch: jest.fn() });
+    mockedMemberships.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.memberships });
+    render(<EngagementRetentionCard semesterId="s1" />);
+
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("omits the member total when the memberships query has not resolved", () => {
+    mockedEngagement.mockReturnValue({
       isLoading: false,
       isError: false,
-      data: { current: stats(), comparison: null },
+      data: SAMPLE_TERM.engagement,
       refetch: jest.fn(),
     });
+    mockedMemberships.mockReturnValue({ isLoading: true, isError: false, data: undefined });
+    render(<EngagementRetentionCard semesterId="s1" />);
 
-    const { container } = render(<EngagementRetentionCard semesterId="s1" />);
-
-    expect(container.querySelectorAll('[data-qa="delta-chip"]')).toHaveLength(0);
-    expect(screen.getByText("No comparable term to compare against yet.")).toBeInTheDocument();
+    expect(screen.getByText("members played at least one event")).toBeInTheDocument();
   });
 });

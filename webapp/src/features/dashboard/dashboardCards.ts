@@ -3,6 +3,9 @@ import { DashboardCardId } from "./dashboardLayout";
 import { TermAtAGlanceCard } from "./components/TermAtAGlanceCard";
 import { EngagementRetentionCard } from "./components/EngagementRetentionCard";
 import { TrialConversionCard } from "./components/TrialConversionCard";
+import { LeaderboardCard } from "./components/LeaderboardCard";
+import { QuickActionsCard } from "./components/QuickActionsCard";
+import { EventSpotlightCard } from "./components/EventSpotlightCard";
 
 type DashboardCardComponentProps = {
   semesterId: string;
@@ -17,4 +20,7 @@ export const DASHBOARD_CARDS: Partial<Record<DashboardCardId, ComponentType<Dash
   termAtAGlance: TermAtAGlanceCard,
   engagement: EngagementRetentionCard,
   trialConversion: TrialConversionCard,
+  leaderboard: LeaderboardCard,
+  quickActions: QuickActionsCard,
+  spotlight: EventSpotlightCard,
 };

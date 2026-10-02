@@ -1,0 +1,67 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5625rem;
+  padding: 0.375rem 0;
+}
+
+.rank {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-500);
+  width: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-900);
+  flex: 1 1 5.5rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar {
+  flex: 1 1 2rem;
+  height: 0.4375rem;
+  background: var(--color-gray-100);
+  border-radius: var(--border-radius-full);
+  min-width: 1.875rem;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--border-radius-full);
+  background: var(--color-gray-300);
+}
+
+.row[data-leader] .bar i {
+  background: var(--dash-ord-3);
+}
+
+.points {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  width: 2.125rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+@container (max-width: 15rem) {
+  .bar {
+    display: none;
+  }
+}

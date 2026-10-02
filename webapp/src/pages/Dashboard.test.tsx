@@ -65,7 +65,7 @@ afterEach(() => {
 
 describe("Dashboard", () => {
   it("no longer renders the ComingSoon placeholder", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -74,7 +74,7 @@ describe("Dashboard", () => {
   });
 
   it("leads with the role's first preset card", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -83,7 +83,7 @@ describe("Dashboard", () => {
   });
 
   it("routes chart cards to the wide lane and stat cards to the rail, preset order intact", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -99,7 +99,7 @@ describe("Dashboard", () => {
   });
 
   it("gives a different role a different lead card", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.TREASURER } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.TREASURER }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -108,7 +108,7 @@ describe("Dashboard", () => {
   });
 
   it("renders all eight cards exactly once", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -119,7 +119,7 @@ describe("Dashboard", () => {
   });
 
   it("falls back to the Ops preset when there is no user yet", () => {
-    mockedUseAuth.mockReturnValue({ user: null });
+    mockedUseAuth.mockReturnValue({ user: null, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -128,7 +128,7 @@ describe("Dashboard", () => {
   });
 
   it("shows a no-semester state instead of the grid when there is no current semester", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: null });
 
     const { container } = renderDashboard();
@@ -138,7 +138,7 @@ describe("Dashboard", () => {
   });
 
   it("shows the title but no subtitle when there is no current semester", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: null });
 
     renderDashboard();
@@ -148,7 +148,7 @@ describe("Dashboard", () => {
   });
 
   it("shows the current semester's name as the header subtitle", () => {
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
@@ -163,7 +163,7 @@ describe("Dashboard", () => {
     ));
     DASHBOARD_CARDS.spotlight = TestSpotlightCard;
 
-    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
+    mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();

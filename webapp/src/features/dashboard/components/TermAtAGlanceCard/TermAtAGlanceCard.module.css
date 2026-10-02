@@ -25,8 +25,42 @@
   color: var(--color-gray-700);
 }
 
+.paceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: -0.375rem;
+}
+
+/*
+ * A full term's worth of memberships, with last year's position at this same point
+ * marked on it. The fill is the term so far; the marker is the thing to beat.
+ */
+.paceTrack {
+  position: relative;
+  height: 0.5rem;
+  background: var(--color-background-tertiary);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+}
+
+.paceFill {
+  display: block;
+  height: 100%;
+  background: var(--dash-ord-2);
+  border-radius: var(--border-radius-full);
+}
+
+.paceMarker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gray-700);
+}
+
 .pace {
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-gray-700);
 }

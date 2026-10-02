@@ -1,3 +1,4 @@
+import { useCurrentSemester } from "@/hooks";
 import { DashboardCard } from "../DashboardCard";
 import { DeltaChip } from "../DeltaChip";
 import { StatBar } from "../StatBar";
@@ -45,6 +46,8 @@ function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
         <Comparison current={current.total} comparison={comparison} />
       </div>
 
+      <PaceTrack current={current.total} comparison={comparison} />
+
       <StatBar
         ariaLabel="Memberships by payment status"
         segments={[
@@ -88,13 +91,8 @@ function Comparison({
   }
 
   if (comparison.totalAsOf === null) {
-    const share = Math.round((current / Math.max(comparison.stats.total, 1)) * 100);
-
-    return (
-      <p className={styles.pace}>
-        {share}% of {comparison.semester.name}&apos;s final {comparison.stats.total.toLocaleString("en-CA")}
-      </p>
-    );
+    // Nothing honest to put in a delta chip; the track below carries the pace.
+    return null;
   }
 
   return (
@@ -105,4 +103,72 @@ function Comparison({
       sentiment="positive-is-good"
     />
   );
+}
+
+/**
+ * Progress toward a full term's worth of memberships, with a marker for where the
+ * comparison term stood at this same point.
+ *
+ * The delta chip answers "are we ahead or behind right now"; this answers "how much
+ * of a term is still to come", which is the question that makes a mid-term figure
+ * actionable. They are different questions, so both earn their place — unlike the
+ * engagement card's old pair, which stated one fact twice.
+ */
+function PaceTrack({
+  current,
+  comparison,
+}: {
+  current: number;
+  comparison: MembershipsDashboardResponse["comparison"];
+}) {
+  const { currentSemester } = useCurrentSemester();
+
+  if (!comparison) {
+    return null;
+  }
+
+  const target = Math.max(comparison.stats.total, 1);
+  const share = Math.round((current / target) * 100);
+  const fill = Math.min(share, 100);
+  const markerAt = comparison.totalAsOf === null ? null : Math.min((comparison.totalAsOf / target) * 100, 100);
+
+  const label =
+    `${current.toLocaleString("en-CA")} of ${comparison.stats.total.toLocaleString("en-CA")} ` +
+    `— ${share}% of ${comparison.semester.name}'s final total` +
+    (comparison.totalAsOf === null
+      ? "."
+      : `, against ${comparison.totalAsOf.toLocaleString("en-CA")} at this point last year.`);
+
+  return (
+    <div className={styles.paceBlock}>
+      <div className={styles.paceTrack} role="img" aria-label={`Progress toward a full term: ${label}`}>
+        <i className={styles.paceFill} style={{ width: `${fill}%` }} />
+        {markerAt !== null && (
+          <i className={styles.paceMarker} data-qa="pace-marker" style={{ left: `${markerAt}%` }} />
+        )}
+      </div>
+      <p className={styles.pace}>
+        {share}% of {comparison.semester.name}&apos;s final {comparison.stats.total.toLocaleString("en-CA")}
+        {termProgress(currentSemester) && <> · {termProgress(currentSemester)}</>}
+      </p>
+    </div>
+  );
+}
+
+/** "day 19 of 85", or null when the term's dates are unavailable. */
+function termProgress(semester: { startDate: string; endDate: string } | null | undefined) {
+  if (!semester) {
+    return null;
+  }
+
+  const day = 86_400_000;
+  const start = new Date(semester.startDate).getTime();
+  const total = Math.round((new Date(semester.endDate).getTime() - start) / day);
+  const elapsed = Math.round((Date.now() - start) / day);
+
+  if (!Number.isFinite(total) || total <= 0 || elapsed < 0) {
+    return null;
+  }
+
+  return `day ${Math.min(elapsed, total)} of ${total}`;
 }

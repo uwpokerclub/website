@@ -3,14 +3,27 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { useMembershipsDashboard } from "../../hooks/useDashboardQueries";
+import { useCurrentSemester } from "@/hooks";
 import { TermAtAGlanceCard } from "./TermAtAGlanceCard";
 import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
 
 jest.mock("../../hooks/useDashboardQueries", () => ({
   useMembershipsDashboard: jest.fn(),
 }));
+jest.mock("@/hooks", () => ({ useCurrentSemester: jest.fn() }));
 
 const mockedUseMembershipsDashboard = useMembershipsDashboard as jest.Mock;
+const mockedUseCurrentSemester = useCurrentSemester as jest.Mock;
+
+// Fall 2026: 85-day term, 19 days elapsed — the real shape of the current term.
+const TERM = { startDate: "2026-09-13T00:00:00Z", endDate: "2026-12-07T00:00:00Z" };
+
+beforeEach(() => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-10-02T00:00:00Z"));
+  mockedUseCurrentSemester.mockReturnValue({ currentSemester: TERM });
+});
+
+afterEach(() => jest.useRealTimers());
 
 describe("TermAtAGlanceCard", () => {
   afterEach(() => jest.clearAllMocks());
@@ -93,12 +106,56 @@ describe("TermAtAGlanceCard", () => {
   });
 
   it("renders its own error state and retries", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const refetch = jest.fn();
     mockedUseMembershipsDashboard.mockReturnValue({ isLoading: false, isError: true, data: undefined, refetch });
     render(<TermAtAGlanceCard semesterId="s1" />);
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("tracks progress toward a full term's worth, marking where last year stood", () => {
+    mockedUseMembershipsDashboard.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: SAMPLE_TERM.memberships,
+      refetch: jest.fn(),
+    });
+    render(<TermAtAGlanceCard semesterId="s1" />);
+
+    const track = screen.getByRole("img", { name: /progress toward/i });
+    // 967 of Fall 2025's final 891 — already past a full term's worth.
+    expect(track).toHaveAccessibleName(/967 of 891/);
+    expect(screen.getByText(/109% of Fall 2025's final 891/)).toBeInTheDocument();
+    expect(screen.getByText(/day 19 of 85/)).toBeInTheDocument();
+  });
+
+  it("marks last year's position on the track only when that figure is known", () => {
+    mockedUseMembershipsDashboard.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+      data: {
+        ...SAMPLE_TERM.memberships,
+        comparison: { ...SAMPLE_TERM.memberships.comparison!, totalAsOf: null },
+      },
+    });
+    const { container } = render(<TermAtAGlanceCard semesterId="s1" />);
+
+    expect(container.querySelector('[data-qa="pace-marker"]')).toBeNull();
+    expect(screen.getByText(/109% of Fall 2025's final 891/)).toBeInTheDocument();
+  });
+
+  it("shows no track when there is no comparable term", () => {
+    mockedUseMembershipsDashboard.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { ...SAMPLE_TERM.memberships, comparison: null },
+      refetch: jest.fn(),
+    });
+    render(<TermAtAGlanceCard semesterId="s1" />);
+
+    expect(screen.queryByRole("img", { name: /progress toward/i })).not.toBeInTheDocument();
   });
 });

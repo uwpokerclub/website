@@ -2,6 +2,7 @@ import { ComponentType } from "react";
 import { DashboardCardId } from "./dashboardLayout";
 import { TermAtAGlanceCard } from "./components/TermAtAGlanceCard";
 import { EngagementRetentionCard } from "./components/EngagementRetentionCard";
+import { TrialConversionCard } from "./components/TrialConversionCard";
 
 type DashboardCardComponentProps = {
   semesterId: string;
@@ -15,4 +16,5 @@ type DashboardCardComponentProps = {
 export const DASHBOARD_CARDS: Partial<Record<DashboardCardId, ComponentType<DashboardCardComponentProps>>> = {
   termAtAGlance: TermAtAGlanceCard,
   engagement: EngagementRetentionCard,
+  trialConversion: TrialConversionCard,
 };

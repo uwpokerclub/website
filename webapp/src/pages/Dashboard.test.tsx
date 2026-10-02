@@ -1,5 +1,6 @@
 /** @jest-environment jsdom */
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import { ROLES } from "@/types/roles";
 import { Semester } from "@/types/semester";
@@ -10,9 +11,15 @@ jest.mock("@/hooks/useCurrentSemester", () => ({ useCurrentSemester: jest.fn() }
 // dashboardApi.ts imports the real apiClient, which reads `import.meta.env` —
 // not valid under Jest's CommonJS transform (see useClockQueries.test.ts).
 // This suite only cares about card titles/order, not card data.
+const pending = () => ({ isLoading: true, isError: false, data: undefined, refetch: jest.fn() });
 jest.mock("@/features/dashboard/hooks/useDashboardQueries", () => ({
-  useMembershipsDashboard: jest.fn(() => ({ isLoading: true, isError: false, data: undefined, refetch: jest.fn() })),
-  useEngagementDashboard: jest.fn(() => ({ isLoading: true, isError: false, data: undefined, refetch: jest.fn() })),
+  useMembershipsDashboard: jest.fn(() => pending()),
+  useEngagementDashboard: jest.fn(() => pending()),
+  useSpotlight: jest.fn(() => pending()),
+  useEventActivity: jest.fn(() => pending()),
+  useSignups: jest.fn(() => pending()),
+  useTrialConversion: jest.fn(() => pending()),
+  useTopRankings: jest.fn(() => pending()),
 }));
 
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +43,14 @@ const semester: Semester = {
   freeTrialLimit: 0,
 };
 
+function renderDashboard() {
+  return render(
+    <MemoryRouter>
+      <Dashboard />
+    </MemoryRouter>,
+  );
+}
+
 function cardTitleOrder() {
   return screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 }
@@ -53,7 +68,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.queryByText(/under construction/i)).not.toBeInTheDocument();
   });
@@ -62,7 +77,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Engagement & retention");
   });
@@ -71,7 +86,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(titlesIn("dashboard-wide")).toEqual(["Event activity", "Signup timeline"]);
     expect(titlesIn("dashboard-rail")).toEqual([
@@ -87,7 +102,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.TREASURER } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Trial conversion");
   });
@@ -96,7 +111,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     const titles = cardTitleOrder();
     expect(titles).toHaveLength(8);
@@ -107,7 +122,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: null });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Event spotlight");
   });
@@ -116,7 +131,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: null });
 
-    const { container } = render(<Dashboard />);
+    const { container } = renderDashboard();
 
     expect(screen.getByText("Please select a semester to view the dashboard.")).toBeInTheDocument();
     expect(container.querySelector('[data-qa="dashboard-grid"]')).not.toBeInTheDocument();
@@ -126,7 +141,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: null });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByRole("heading", { level: 1, name: "Dashboard" })).toBeInTheDocument();
     expect(screen.queryByText(semester.name)).not.toBeInTheDocument();
@@ -136,7 +151,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(screen.getByRole("heading", { level: 1, name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Fall 2026")).toBeInTheDocument();
@@ -151,7 +166,7 @@ describe("Dashboard", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE } });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(TestSpotlightCard).toHaveBeenCalledWith({ semesterId: "sem-1" }, undefined);
     expect(screen.getByText("sem-1")).toBeInTheDocument();

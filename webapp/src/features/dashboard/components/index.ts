@@ -6,3 +6,4 @@ export * from "./TermAtAGlanceCard";
 export * from "./EngagementRetentionCard";
 export * from "./StatBar";
 export * from "./RangeTrack";
+export * from "./TrialConversionCard";

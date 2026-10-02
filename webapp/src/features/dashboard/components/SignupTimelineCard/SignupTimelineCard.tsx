@@ -14,19 +14,8 @@ import { CardActionLink } from "../CardActionLink";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useSignups } from "../../hooks/useDashboardQueries";
 import { AXIS_PROPS, CHART_COLORS, GRID_PROPS, TOOLTIP_STYLE } from "../../charts/chartTheme";
-import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
 import type { SignupsResponse } from "../../api/dashboardApi";
 import styles from "./SignupTimelineCard.module.css";
-
-/**
- * GET …/dashboard/signups (#433) does not exist yet, so a failed request falls back
- * to the sample term behind a visible marker.
- *
- * Gated on isError, not on absent data: substituting fixtures whenever data is
- * missing would flash a fabricated 967-signup chart during every normal load.
- * Delete this and its branch when #433 ships.
- */
-const FALL_BACK_TO_SAMPLE = true;
 
 /**
  * `dataStartsAt` is a calendar date, not an instant: "2026-09-01" parses as UTC
@@ -40,16 +29,14 @@ type Props = { semesterId: string };
 
 export function SignupTimelineCard({ semesterId }: Props) {
   const { data, isPending, isError, refetch } = useSignups(semesterId);
-  const usingSample = FALL_BACK_TO_SAMPLE && isError;
-  const resolved = data ?? (usingSample ? SAMPLE_TERM.signups : undefined);
 
   const status = isPending
     ? "loading"
-    : isError && !usingSample
+    : isError
       ? "error"
-      : !resolved
+      : !data
         ? "loading"
-        : resolved.series.length === 0
+        : data.series.length === 0
           ? "empty"
           : "ready";
 
@@ -57,13 +44,12 @@ export function SignupTimelineCard({ semesterId }: Props) {
     <DashboardCard
       title={CARD_TITLES.signupTimeline}
       status={status}
-      sampleData={usingSample}
       onRetry={() => refetch()}
-      emptyMessage={emptyMessageFor(resolved)}
+      emptyMessage={emptyMessageFor(data)}
       action={<CardActionLink to="/admin/members">Memberships</CardActionLink>}
       data-qa="signup-timeline-card"
     >
-      {() => <Body data={resolved as SignupsResponse} />}
+      {() => <Body data={data as SignupsResponse} />}
     </DashboardCard>
   );
 }
@@ -81,7 +67,7 @@ function emptyMessageFor(data?: SignupsResponse) {
 }
 
 function Body({ data }: { data: SignupsResponse }) {
-  const busiest = data.series.reduce((max, point) => Math.max(max, point.admin + point.discord), 0);
+  const busiest = data.series.reduce((max, point) => Math.max(max, point.admin + point.discord + point.unknown), 0);
 
   return (
     <div className={styles.container}>
@@ -119,6 +105,16 @@ function Body({ data }: { data: SignupsResponse }) {
               name="Discord"
               stroke={CHART_COLORS.slot2}
               fill={CHART_COLORS.slot2}
+              fillOpacity={0.3}
+              strokeWidth={2}
+            />
+            <Area
+              type="monotone"
+              dataKey="unknown"
+              stackId="1"
+              name="Unknown"
+              stroke={CHART_COLORS.slot3}
+              fill={CHART_COLORS.slot3}
               fillOpacity={0.3}
               strokeWidth={2}
             />

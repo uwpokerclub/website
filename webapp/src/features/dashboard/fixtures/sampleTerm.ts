@@ -4,7 +4,6 @@ import type {
   EventActivityResponse,
   MembershipsDashboardResponse,
   RankingEntry,
-  SignupsResponse,
   SpotlightEvent,
 } from "../api/dashboardApi";
 
@@ -84,25 +83,6 @@ export const SAMPLE_TERM = {
     },
     comparison: { semester: FALL_2025, averageFieldSize: 49.1 },
   } satisfies EventActivityResponse,
-
-  signups: {
-    total: 967,
-    dataStartsAt: "2026-09-01",
-    eventDates: ["2026-09-12", "2026-10-03", "2026-10-17", "2026-11-07", "2026-11-21"],
-    series: [
-      { date: "2026-09-01", admin: 4, discord: 2 },
-      { date: "2026-09-05", admin: 61, discord: 20 },
-      { date: "2026-09-12", admin: 38, discord: 31 },
-      { date: "2026-09-19", admin: 22, discord: 18 },
-      { date: "2026-09-26", admin: 14, discord: 11 },
-      { date: "2026-10-03", admin: 29, discord: 24 },
-      { date: "2026-10-10", admin: 12, discord: 9 },
-      { date: "2026-10-17", admin: 19, discord: 16 },
-      { date: "2026-10-24", admin: 8, discord: 6 },
-      { date: "2026-11-07", admin: 15, discord: 12 },
-      { date: "2026-11-21", admin: 6, discord: 4 },
-    ],
-  } satisfies SignupsResponse,
 
   rankings: [
     { id: 1, firstName: "Robin", lastName: "Chen", points: 412, position: 1 },

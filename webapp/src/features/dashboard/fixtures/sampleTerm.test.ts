@@ -27,10 +27,4 @@ describe("SAMPLE_TERM", () => {
     expect(paid + unpaid + discounted + executive).toBe(total);
     expect(isNew + returning).toBe(total);
   });
-
-  it("agrees with itself on the signup total", () => {
-    const seriesTotal = SAMPLE_TERM.signups.series.reduce((sum, point) => sum + point.admin + point.discord, 0);
-
-    expect(seriesTotal).toBeLessThanOrEqual(SAMPLE_TERM.signups.total);
-  });
 });

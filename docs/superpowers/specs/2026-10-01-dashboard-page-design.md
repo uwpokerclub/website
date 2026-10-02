@@ -135,6 +135,18 @@ toggle. Do not invent dark steps.
 **Mark specs.** 2px gap between stacked segments, 4px rounded data-ends, 2px lines,
 recessive grid and axes, selective direct labels — never a number on every point.
 
+### Charts
+
+Two cards carry a true chart: Signup Timeline (area) and Event Activity (columns with a
+reference line). Both use **Recharts**, per epic decision 10 — the cost is amortised across
+Finances and Events 3.0 rather than borne by this page, and that decision is not reopened
+here. This is the work of #439, which also owns the shared theme module: the palette above,
+recessive axes, no gridline on the category axis, and a tooltip on every chart.
+
+The composition bars (Memberships, Engagement, Trial Conversion) are **not** charts and use
+no library. They are flex layouts with percentage-flex segments — fluid by construction, and
+a dependency would buy nothing. The normal-range tracks are likewise plain CSS.
+
 ## The cards
 
 Eight cards. Each entry gives the data's job, the form that job selects, and the states.
@@ -178,9 +190,10 @@ chips so the bar stays readable.
 
 ### 4. Signup Timeline — *a spiky annotated series*
 
-**Job:** change over time, with annotations. **Form:** area chart, one series, with event
-days ticked on the axis in gold — because the spikes *are* the event days, and the chart is
-unreadable without that.
+**Job:** change over time, with annotations. **Form:** stacked area, two series (admin and
+discord, categorical slots 1–2 per epic card 4's "split by source"), with event days ticked
+on the axis in gold — because the spikes *are* the event days, and the chart is unreadable
+without that.
 
 **Lane:** wide. **States:** terms predating #429 return an empty series permanently. The
 card says so using the `dataStartsAt` value the endpoint returns for exactly this purpose —
@@ -306,9 +319,11 @@ specific failure this redesign exists to fix.
 
 Every card ships with a fixture module exporting a realistic populated response, so the five
 unbuilt cards are fully designed and visible before their endpoints exist, and so later work
-has a reference render rather than a blank slate. Fixtures live beside each card as
-`<Card>.fixtures.ts` and are used by Jest, by Storybook-less visual inspection, and as the
-`placeholderData` for cards whose endpoint is not yet implemented.
+has a reference render rather than a blank slate. They live in a single module,
+`features/dashboard/fixtures/sampleTerm.ts`, rather than one file per card — cross-card
+consistency is a stated requirement below, and one module is the only way to guarantee it
+rather than hope for it. Jest uses the same module, so tests and the rendered page can never
+disagree about the sample term.
 
 Fixtures are internally consistent across cards — 967 memberships, 824 of whom played, 712
 paid — so the page reads as one coherent term rather than eight unrelated samples. A card

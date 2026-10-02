@@ -23,6 +23,7 @@ describe("EventActivityCard", () => {
     mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.eventActivity, refetch: jest.fn() });
     renderCard();
 
+    // eventsRun and eventsScheduled are disjoint, so the term total is their sum.
     expect(screen.getByText("11")).toBeInTheDocument();
     expect(screen.getByText(/of 14 events run this term/)).toBeInTheDocument();
   });
@@ -56,5 +57,22 @@ describe("EventActivityCard", () => {
     renderCard();
 
     expect(screen.getByText(/counts as run once it has ended/)).toBeInTheDocument();
+  });
+
+  it("never reports more events run than the term holds", () => {
+    mocked.mockReturnValue({
+      isPending: false,
+      isError: false,
+      refetch: jest.fn(),
+      data: {
+        current: { eventsRun: 3, eventsScheduled: 2, totalEntries: 90, averageFieldSize: 30, series: [] },
+        comparison: null,
+      },
+    });
+    renderCard();
+
+    // Previously rendered "3 of 2 events run this term" with 0 still scheduled.
+    expect(screen.getByText(/of 5 events run this term/)).toBeInTheDocument();
+    expect(screen.getByText(/2 still scheduled/)).toBeInTheDocument();
   });
 });

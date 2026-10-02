@@ -65,7 +65,7 @@ export const SAMPLE_TERM = {
   eventActivity: {
     current: {
       eventsRun: 11,
-      eventsScheduled: 14,
+      eventsScheduled: 3,
       totalEntries: 486,
       averageFieldSize: 44.2,
       series: [

@@ -3374,6 +3374,10 @@
                 },
                 "stats": {
                     "$ref": "#/definitions/MembershipStats"
+                },
+                "totalAsOf": {
+                    "description": "TotalAsOf is the comparison term's membership count at the same elapsed point\nthis term has reached, or null when that term has no dated memberships. Null\nmeans unknowable, never zero.",
+                    "type": "integer"
                 }
             }
         },

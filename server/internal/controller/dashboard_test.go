@@ -399,6 +399,46 @@ func TestDashboardMembershipStats(t *testing.T) {
 		require.EqualValues(t, 1, body.Comparison.Stats.Total)
 	})
 
+	t.Run("withholds totalAsOf when most of the comparison term is undated", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+
+		now := time.Now().UTC()
+		currentStart := now.AddDate(0, 0, -20)
+		comparisonStart := currentStart.AddDate(-1, 0, 0)
+
+		comparisonSemester, err := createDashboardTestSemester(db, "Prior", comparisonStart)
+		require.NoError(t, err)
+		currentSemester, err := createDashboardTestSemester(db, "Current", currentStart)
+		require.NoError(t, err)
+
+		// The shape of the term that straddled the migration: one dated row among many.
+		for i := 0; i < 10; i++ {
+			user, err := testutils.CreateTestUser(db, nextUserID(), "Member", fmt.Sprintf("%d", i),
+				fmt.Sprintf("s%d@uwaterloo.ca", i), models.FacultyMath, fmt.Sprintf("s%d", i))
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, comparisonSemester.ID, true, false, false)
+			require.NoError(t, err)
+
+			value := any(nil)
+			if i == 0 {
+				value = comparisonStart.AddDate(0, 0, 1)
+			}
+			require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", membership.ID).
+				Update("created_at", value).Error)
+		}
+
+		w := getMembershipStats(t, currentSemester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.MembershipStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison)
+		// A baseline of 1 would have made any current term look like a triumph.
+		require.Nil(t, body.Comparison.TotalAsOf)
+		require.EqualValues(t, 10, body.Comparison.Stats.Total)
+	})
+
 	t.Run("counts only comparison memberships created by the same elapsed point", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db := container.GetDB()
@@ -1199,6 +1239,34 @@ func TestDashboardEventActivity(t *testing.T) {
 		require.Equal(t, map[string]any{"semester": comparison["semester"], "averageFieldSize": comparison["averageFieldSize"]}, comparison)
 		require.Equal(t, prior.ID.String(), comparison["semester"].(map[string]any)["id"])
 		require.Equal(t, 1.0, comparison["averageFieldSize"])
+	})
+
+	t.Run("counts future-dated events as scheduled rather than clipping them away", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+
+		now := time.Now().UTC()
+		semester, err := createDashboardTestSemester(db, "Current", now.AddDate(0, 0, -20))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+
+		_, err = createDashboardTestEvent(db, semester.ID, structure.ID, "Ran",
+			models.EventStateEnded, now.AddDate(0, 0, -7), 0)
+		require.NoError(t, err)
+		// Next week's event. A scheduled event is future-dated by definition, so the
+		// asOf cutoff must not reach it.
+		_, err = createDashboardTestEvent(db, semester.ID, structure.ID, "Upcoming",
+			models.EventStateStarted, now.AddDate(0, 0, 7), 0)
+		require.NoError(t, err)
+
+		w := get(t, semester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.EqualValues(t, 1, body.Current.EventsRun)
+		require.EqualValues(t, 1, body.Current.EventsScheduled)
 	})
 
 	t.Run("returns 400 for malformed and 404 for unknown semester ids", func(t *testing.T) {

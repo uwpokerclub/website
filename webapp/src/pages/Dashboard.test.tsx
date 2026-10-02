@@ -4,7 +4,6 @@ import { MemoryRouter } from "react-router-dom";
 import "@testing-library/jest-dom";
 import { ROLES } from "@/types/roles";
 import { Semester } from "@/types/semester";
-import { DASHBOARD_CARDS } from "@/features/dashboard/dashboardCards";
 
 jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
 jest.mock("@/hooks/useCurrentSemester", () => ({ useCurrentSemester: jest.fn() }));
@@ -58,10 +57,6 @@ function cardTitleOrder() {
 function titlesIn(testId: string) {
   return Array.from(screen.getByTestId(testId).querySelectorAll("h3")).map((heading) => heading.textContent);
 }
-
-afterEach(() => {
-  delete DASHBOARD_CARDS.spotlight;
-});
 
 describe("Dashboard", () => {
   it("no longer renders the ComingSoon placeholder", () => {
@@ -157,18 +152,13 @@ describe("Dashboard", () => {
     expect(screen.getByText("Fall 2026")).toBeInTheDocument();
   });
 
-  it("renders a registered card component instead of the placeholder and passes semesterId", () => {
-    const TestSpotlightCard = jest.fn(({ semesterId }: { semesterId: string }) => (
-      <div data-qa="test-spotlight-card">{semesterId}</div>
-    ));
-    DASHBOARD_CARDS.spotlight = TestSpotlightCard;
-
+  it("renders every card's own component, not a placeholder", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
 
-    expect(TestSpotlightCard).toHaveBeenCalledWith({ semesterId: "sem-1" }, undefined);
-    expect(screen.getByText("sem-1")).toBeInTheDocument();
+    expect(screen.queryByText("Coming soon.")).not.toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Event spotlight");
   });
 });

@@ -10,3 +10,5 @@ export * from "./TrialConversionCard";
 export * from "./LeaderboardCard";
 export * from "./QuickActionsCard";
 export * from "./EventSpotlightCard";
+export * from "./EventActivityCard";
+export * from "./SignupTimelineCard";

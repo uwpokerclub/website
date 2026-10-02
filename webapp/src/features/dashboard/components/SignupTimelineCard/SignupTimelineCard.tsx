@@ -69,14 +69,15 @@ export function SignupTimelineCard({ semesterId }: Props) {
 }
 
 /**
- * Terms predating the created_at migration return an empty series permanently, not
- * temporarily. The message names the start date so it reads as a fact about the data
- * rather than as a wait that will eventually end.
+ * An empty series is a fact about the term, not a wait that will end — but it is no
+ * longer the normal state for historical terms. The created_at backfill dates 96-100%
+ * of every recent term from first participation, so a term reaching this message has
+ * genuinely recorded nothing rather than simply predating signup tracking.
  */
 function emptyMessageFor(data?: SignupsResponse) {
   return data?.dataStartsAt
-    ? `Signup tracking began ${formatMonth(data.dataStartsAt)}. Earlier terms have no creation dates and stay empty.`
-    : "Signup tracking had not begun in this term.";
+    ? `No signups recorded for this term. Dated signups begin ${formatMonth(data.dataStartsAt)}.`
+    : "No signups recorded for this term.";
 }
 
 function Body({ data }: { data: SignupsResponse }) {
@@ -126,8 +127,8 @@ function Body({ data }: { data: SignupsResponse }) {
       </div>
 
       <p className={styles.foot}>
-        Gold lines mark event days. Signup tracking began {formatMonth(data.dataStartsAt ?? data.series[0].date)};
-        earlier terms have no creation dates and stay empty.
+        Gold lines mark event days. Memberships from before signup tracking are dated from the member&apos;s first
+        event, so members who never played are not counted.
       </p>
     </div>
   );

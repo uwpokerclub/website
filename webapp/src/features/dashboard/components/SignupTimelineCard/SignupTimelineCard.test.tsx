@@ -27,15 +27,17 @@ describe("SignupTimelineCard", () => {
     expect(screen.getByText(/81 on the busiest day/)).toBeInTheDocument();
   });
 
-  it("names when tracking began rather than implying a wait that never ends", () => {
+  it("explains that older memberships are dated from first participation", () => {
     mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
     renderCard();
 
-    expect(screen.getByText(/Signup tracking began/)).toBeInTheDocument();
+    expect(screen.getByText(/dated from the member's first event/)).toBeInTheDocument();
+    // The backfill means historical terms are no longer permanently empty.
+    expect(screen.queryByText(/stay empty/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/collecting data since/i)).not.toBeInTheDocument();
   });
 
-  it("explains a permanently empty series for a term predating the migration", () => {
+  it("treats an empty series as a fact about the term, not a wait", () => {
     mocked.mockReturnValue({
       isPending: false,
       isError: false,
@@ -44,8 +46,8 @@ describe("SignupTimelineCard", () => {
     });
     renderCard();
 
-    expect(screen.getByText(/Signup tracking began September 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/Earlier terms have no creation dates/)).toBeInTheDocument();
+    expect(screen.getByText(/No signups recorded for this term/)).toBeInTheDocument();
+    expect(screen.getByText(/Dated signups begin September 2026/)).toBeInTheDocument();
   });
 
   it("marks itself as sample data while the endpoint returns nothing", () => {

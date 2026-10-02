@@ -100,10 +100,25 @@ export interface ConversionStats {
   executive: number;
 }
 
+export interface TrialConversionCohortStats {
+  numerator: number;
+  denominator: number;
+  /** Fraction in [0, 1], or null until at least one trial start is observed. */
+  rate: number | null;
+  /** Entry-holding memberships without a trial stamp; includes upfront buyers and legacy unknowns. */
+  untrackedEntrants: number;
+}
+
 export interface ConversionResponse {
   current: ConversionStats;
+  conversion: TrialConversionCohortStats;
   freeTrialLimit: number;
-  comparison: { semester: { id: string; name: string }; stats: ConversionStats; freeTrialLimit: number } | null;
+  comparison: {
+    semester: { id: string; name: string };
+    stats: ConversionStats;
+    conversion: TrialConversionCohortStats;
+    freeTrialLimit: number;
+  } | null;
 }
 
 export interface RankingEntry {

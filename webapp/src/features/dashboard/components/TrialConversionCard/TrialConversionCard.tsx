@@ -6,29 +6,21 @@ import type { ConversionResponse } from "../../api/dashboardApi";
 import styles from "./TrialConversionCard.module.css";
 
 /**
- * The endpoint returns the current term's status snapshot. Loading, errors, and
- * empty results remain card-local states rather than substituting fabricated data.
+ * The endpoint pairs the current status snapshot with a separately tracked
+ * observed trial cohort. Empty snapshots can still have retained cohort history.
  */
 type Props = { semesterId: string };
 
 export function TrialConversionCard({ semesterId }: Props) {
   const { data, isPending, isError, refetch } = useTrialConversion(semesterId);
-  const status = isPending
-    ? "loading"
-    : isError
-      ? "error"
-      : !data
-        ? "loading"
-        : data.current.players === 0
-          ? "empty"
-          : "ready";
+  const status = isPending ? "loading" : isError ? "error" : !data ? "loading" : "ready";
 
   return (
     <DashboardCard
       title={CARD_TITLES.trialConversion}
       status={status}
       onRetry={() => refetch()}
-      emptyMessage="No event entries recorded yet this term."
+      emptyMessage="No trial conversion data recorded yet."
       data-qa="trial-conversion-card"
     >
       {() => <Body data={data as ConversionResponse} />}
@@ -37,7 +29,7 @@ export function TrialConversionCard({ semesterId }: Props) {
 }
 
 function Body({ data }: { data: ConversionResponse }) {
-  const { current, freeTrialLimit, comparison } = data;
+  const { current, conversion, freeTrialLimit, comparison } = data;
 
   // free_trial_limit defaults to 0, which disables the trial entirely. A term with no
   // trial has no funnel, and four zeroes would read as a catastrophic one.
@@ -45,6 +37,8 @@ function Body({ data }: { data: ConversionResponse }) {
     <div className={styles.container}>
       {freeTrialLimit === 0 ? (
         <p className={styles.disabled}>Free trial is not enabled this term.</p>
+      ) : current.players === 0 ? (
+        <p className={styles.disabled}>No current event entries to show in the status snapshot.</p>
       ) : (
         <>
           <p className={styles.lead}>
@@ -58,11 +52,14 @@ function Body({ data }: { data: ConversionResponse }) {
         </>
       )}
 
+      <ConversionSummary conversion={conversion} />
+
       <Comparison comparison={comparison} />
 
       <p className={styles.foot}>
-        A snapshot of where players stand now, not a conversion rate — a membership that converts loses the record that
-        it ever trialled.
+        Status is a current snapshot. The observed-ever conversion rate covers only trial starts tracked from rollout;
+        untracked entrants include upfront buyers and legacy unknowns, so this is not a whole-term rate. Paid status is
+        the purchase proxy; later refunds or status reversals do not erase a recorded conversion.
       </p>
     </div>
   );
@@ -73,7 +70,7 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
     return <p className={styles.noComparison}>No comparable term to compare against yet.</p>;
   }
 
-  const { semester, stats, freeTrialLimit } = comparison;
+  const { semester, stats, conversion, freeTrialLimit } = comparison;
   const trialDisabled = freeTrialLimit === 0;
 
   return (
@@ -101,6 +98,28 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
             : trialSegments(stats)
         }
       />
+      <ConversionSummary conversion={conversion} />
+    </div>
+  );
+}
+
+function ConversionSummary({ conversion }: { conversion: ConversionResponse["conversion"] }) {
+  const rate =
+    conversion.rate === null
+      ? "Not yet measurable"
+      : new Intl.NumberFormat("en-CA", { style: "percent", maximumFractionDigits: 1 }).format(conversion.rate);
+
+  return (
+    <div className={styles.conversion} data-qa="trial-conversion-rate">
+      <p className={styles.conversionRate} data-testid="trial-conversion-rate-value">
+        {rate}
+      </p>
+      <p className={styles.comparisonContext}>
+        Observed-ever conversion: {conversion.numerator} of {conversion.denominator} tracked trial starters
+      </p>
+      <p className={styles.comparisonContext}>
+        {conversion.untrackedEntrants} untracked entrants (upfront buyers and legacy unknowns; not in the rate)
+      </p>
     </div>
   );
 }

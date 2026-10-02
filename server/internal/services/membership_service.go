@@ -4,6 +4,7 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -71,7 +72,15 @@ func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.
 }
 
 func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
-	existingMembership, err := ms.store.Memberships().FindByIDAndSemesterID(id, semesterID)
+	tx, err := ms.store.BeginTx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Serialize status transitions with trial entry creation and use the locked
+	// row as the source of truth for both eligibility and budget deltas.
+	existingMembership, err := tx.Memberships().LockByIDAndSemesterID(id, semesterID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, nil
@@ -108,12 +117,6 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 
 	originalPaid := existingMembership.Paid
 	originalDiscounted := existingMembership.Discounted
-
-	tx, err := ms.store.BeginTx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
 
 	semester, err := tx.Semesters().FindByID(existingMembership.SemesterID)
 	if err != nil {
@@ -153,6 +156,16 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 
 	if originalPaid != finalPaid {
 		if finalPaid {
+			// Paid transitions are the product's purchase proxy. Stamp only a
+			// membership whose trial start was observed, preserving first conversion.
+			if existingMembership.TrialStartedAt != nil && existingMembership.ConvertedAt == nil {
+				convertedAt := time.Now().UTC()
+				if err := tx.Memberships().SetConvertedAtIfNull(existingMembership.ID, convertedAt); err != nil {
+					return nil, err
+				}
+				existingMembership.ConvertedAt = &convertedAt
+			}
+
 			// A paid membership is never subject to the free-trial restriction, so a cached
 			// false from before this transition is stale the moment it happens.
 			if !existingMembership.FreeTrialAvailable {

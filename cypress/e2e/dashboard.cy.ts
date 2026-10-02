@@ -114,6 +114,9 @@ describe("Dashboard", () => {
       .contains("spent all 4 free entries and are currently unpaid")
       .should("be.visible");
     cy.getByData("trial-conversion-card").contains("No comparable term to compare against yet.").should("be.visible");
+    cy.getByData("trial-conversion-card").contains("Not yet measurable").should("be.visible");
+    cy.getByData("trial-conversion-rate").contains("0 of 0 tracked trial starters").should("be.visible");
+    cy.getByData("trial-conversion-rate").contains("untracked entrants").should("be.visible");
   });
 
   it("isolates an Event Activity endpoint failure to its card", () => {

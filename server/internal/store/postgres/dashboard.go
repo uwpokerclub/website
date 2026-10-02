@@ -121,6 +121,34 @@ func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID, asOf
 	return stats, nil
 }
 
+// TrialConversionStats implements store.DashboardRepository.
+func (r *postgresDashboardRepository) TrialConversionStats(semesterID uuid.UUID, freeTrialLimit uint8) (store.TrialConversionStats, error) {
+	var stats store.TrialConversionStats
+
+	err := r.db.Raw(`
+		WITH per_member AS (
+			SELECT m.user_id, COUNT(DISTINCT p.event_id) AS entries, m.paid, m.executive
+			FROM participants p
+			JOIN events e ON e.id = p.event_id
+			JOIN memberships m ON m.id = p.membership_id AND m.semester_id = ?
+			WHERE e.semester_id = ?
+			GROUP BY m.user_id, m.paid, m.executive
+		)
+		SELECT
+			COUNT(*) AS players,
+			COUNT(*) FILTER (WHERE executive) AS executive,
+			COUNT(*) FILTER (WHERE NOT executive AND paid) AS paid,
+			COUNT(*) FILTER (WHERE NOT executive AND NOT paid AND entries >= ?) AS trial_spent,
+			COUNT(*) FILTER (WHERE NOT executive AND NOT paid AND entries < ?) AS trial_open
+		FROM per_member
+	`, semesterID, semesterID, freeTrialLimit, freeTrialLimit).Scan(&stats).Error
+	if err != nil {
+		return store.TrialConversionStats{}, err
+	}
+
+	return stats, nil
+}
+
 // EventActivity implements store.DashboardRepository.
 func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf time.Time) (store.EventActivityStats, []store.EventSeriesPoint, error) {
 	series := []store.EventSeriesPoint{}

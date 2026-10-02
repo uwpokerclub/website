@@ -802,6 +802,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/semesters/{semesterId}/dashboard/conversion": {
+            "get": {
+                "description": "Get the distinct-player paid, executive, and free-trial status breakdown for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard trial conversion stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/TrialConversionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/dashboard/engagement": {
             "get": {
                 "description": "Get distinct players, median events attended, played-once share, and the 10+ cohort size for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
@@ -3448,6 +3507,20 @@ const docTemplate = `{
                 }
             }
         },
+        "ComparisonTrialConversionStats": {
+            "type": "object",
+            "properties": {
+                "freeTrialLimit": {
+                    "type": "integer"
+                },
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                },
+                "stats": {
+                    "$ref": "#/definitions/TrialConversionStats"
+                }
+            }
+        },
         "CreateEntryResult": {
             "type": "object",
             "properties": {
@@ -4221,6 +4294,40 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "TrialConversionResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonTrialConversionStats"
+                },
+                "current": {
+                    "$ref": "#/definitions/TrialConversionStats"
+                },
+                "freeTrialLimit": {
+                    "type": "integer"
+                }
+            }
+        },
+        "TrialConversionStats": {
+            "type": "object",
+            "properties": {
+                "executive": {
+                    "type": "integer"
+                },
+                "paid": {
+                    "type": "integer"
+                },
+                "players": {
+                    "type": "integer"
+                },
+                "trialOpen": {
+                    "type": "integer"
+                },
+                "trialSpent": {
+                    "type": "integer"
                 }
             }
         },

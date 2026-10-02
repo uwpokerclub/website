@@ -102,6 +102,16 @@ type EngagementStats struct {
 	TenPlusCount         int64   `json:"tenPlusCount"`
 } //@name EngagementStats
 
+// TrialConversionStats is the trial-status breakdown for distinct players in a
+// semester. The buckets form an exclusive partition of Players.
+type TrialConversionStats struct {
+	Players    int64 `json:"players"`
+	Paid       int64 `json:"paid"`
+	TrialSpent int64 `json:"trialSpent"`
+	TrialOpen  int64 `json:"trialOpen"`
+	Executive  int64 `json:"executive"`
+} //@name TrialConversionStats
+
 // DashboardRepository is the interface for the dashboard's read-only aggregate
 // queries. These span memberships, participants, and events, so they are kept here
 // rather than smeared as Stats() methods across those repositories.
@@ -132,6 +142,14 @@ type DashboardRepository interface {
 	// asOf exists so a term in progress is compared against the same point of the
 	// earlier term rather than its completed total; see services.ComparisonCutoff.
 	EngagementStats(semesterID uuid.UUID, asOf time.Time) (EngagementStats, error)
+
+	// TrialConversionStats returns the current paid, executive, and free-trial
+	// status of distinct players with entries in the semester. Only entries whose
+	// memberships also belong to semesterID qualify; this excludes malformed
+	// cross-semester participant rows. FreeTrialLimit is supplied by the caller
+	// from the resolved semester, and a zero limit deliberately places every
+	// unpaid, non-executive player in TrialSpent.
+	TrialConversionStats(semesterID uuid.UUID, freeTrialLimit uint8) (TrialConversionStats, error)
 
 	// EventActivity returns Event Activity scalar stats and an ascending start-date
 	// series for ended events, counting only events that started at or before asOf. A

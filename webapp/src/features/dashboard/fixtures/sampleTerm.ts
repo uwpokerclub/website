@@ -1,5 +1,4 @@
 import type {
-  ConversionResponse,
   EngagementDashboardResponse,
   EventActivityResponse,
   MembershipsDashboardResponse,
@@ -51,15 +50,6 @@ export const SAMPLE_TERM = {
       stats: { players: 891, medianEventsAttended: 3, playedOnceCount: 303, playedOnceShare: 0.34, tenPlusCount: 54 },
     },
   } satisfies EngagementDashboardResponse,
-
-  conversion: {
-    current: { players: 824, paid: 712, trialSpent: 78, trialOpen: 14, executive: 20 },
-    freeTrialLimit: 4,
-    comparison: {
-      semester: FALL_2025,
-      stats: { players: 891, paid: 788, trialSpent: 69, trialOpen: 11, executive: 23 },
-    },
-  } satisfies ConversionResponse,
 
   eventActivity: {
     current: {

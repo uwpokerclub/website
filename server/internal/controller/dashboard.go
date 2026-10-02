@@ -27,8 +27,85 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("spotlight", middleware.UseAuthorization("semester.get"), c.getSpotlight)
 	group.GET("memberships", middleware.UseAuthorization("semester.get"), c.getMembershipStats)
 	group.GET("engagement", middleware.UseAuthorization("semester.get"), c.getEngagementStats)
+	group.GET("conversion", middleware.UseAuthorization("semester.get"), c.getTrialConversion)
 	group.GET("events", middleware.UseAuthorization("semester.get"), c.getEventActivity)
 	group.GET("signups", middleware.UseAuthorization("semester.get"), c.getSignupTimeline)
+}
+
+// ComparisonTrialConversionStats pairs a resolved comparison semester with its
+// trial-conversion stats, calculated using that semester's own free-trial limit.
+type ComparisonTrialConversionStats struct {
+	Semester       store.SemesterRef          `json:"semester"`
+	Stats          store.TrialConversionStats `json:"stats"`
+	FreeTrialLimit uint8                      `json:"freeTrialLimit"`
+} //@name ComparisonTrialConversionStats
+
+// TrialConversionResponse is the dashboard's Trial Conversion response.
+type TrialConversionResponse struct {
+	Current        store.TrialConversionStats      `json:"current"`
+	FreeTrialLimit uint8                           `json:"freeTrialLimit"`
+	Comparison     *ComparisonTrialConversionStats `json:"comparison"`
+} //@name TrialConversionResponse
+
+// getTrialConversion handles retrieving the dashboard's Trial Conversion card for a semester.
+//
+// @Summary Get dashboard trial conversion stats
+// @Description Get the distinct-player paid, executive, and free-trial status breakdown for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term
+// @Tags Dashboard
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Success 200 {object} TrialConversionResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/dashboard/conversion [get]
+func (c *dashboardController) getTrialConversion(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	semester, err := c.store.Semesters().FindByID(semesterID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	stats, err := c.store.Dashboard().TrialConversionStats(semesterID, semester.FreeTrialLimit)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	response := TrialConversionResponse{Current: stats, FreeTrialLimit: semester.FreeTrialLimit}
+
+	semesters, _, err := c.store.Semesters().List(&models.Pagination{})
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
+		comparisonStats, err := c.store.Dashboard().TrialConversionStats(comparison.ID, comparison.FreeTrialLimit)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+		response.Comparison = &ComparisonTrialConversionStats{
+			Semester:       store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+			Stats:          comparisonStats,
+			FreeTrialLimit: comparison.FreeTrialLimit,
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 // getSpotlight handles retrieving the dashboard's Event Spotlight card for a semester.

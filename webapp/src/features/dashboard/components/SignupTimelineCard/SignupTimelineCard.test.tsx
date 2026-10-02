@@ -1,0 +1,57 @@
+/** @jest-environment jsdom */
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import "@testing-library/jest-dom";
+import { useSignups } from "../../hooks/useDashboardQueries";
+import { SignupTimelineCard } from "./SignupTimelineCard";
+import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
+
+jest.mock("../../hooks/useDashboardQueries", () => ({ useSignups: jest.fn() }));
+const renderCard = () =>
+  render(
+    <MemoryRouter>
+      <SignupTimelineCard semesterId="s1" />
+    </MemoryRouter>,
+  );
+
+const mocked = useSignups as jest.Mock;
+
+describe("SignupTimelineCard", () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it("leads with the term total and the busiest day", () => {
+    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
+    renderCard();
+
+    expect(screen.getByText("967")).toBeInTheDocument();
+    expect(screen.getByText(/81 on the busiest day/)).toBeInTheDocument();
+  });
+
+  it("names when tracking began rather than implying a wait that never ends", () => {
+    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
+    renderCard();
+
+    expect(screen.getByText(/Signup tracking began/)).toBeInTheDocument();
+    expect(screen.queryByText(/collecting data since/i)).not.toBeInTheDocument();
+  });
+
+  it("explains a permanently empty series for a term predating the migration", () => {
+    mocked.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+      data: { series: [], eventDates: [], dataStartsAt: "2026-09-01", total: 0 },
+    });
+    renderCard();
+
+    expect(screen.getByText(/Signup tracking began September 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Earlier terms have no creation dates/)).toBeInTheDocument();
+  });
+
+  it("marks itself as sample data while the endpoint returns nothing", () => {
+    mocked.mockReturnValue({ isLoading: false, isError: true, data: undefined, refetch: jest.fn() });
+    renderCard();
+
+    expect(screen.getByText("Sample data")).toBeInTheDocument();
+  });
+});

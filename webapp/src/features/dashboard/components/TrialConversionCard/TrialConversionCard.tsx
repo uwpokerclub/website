@@ -36,30 +36,31 @@ function Body({ data }: { data: ConversionResponse }) {
   return (
     <div className={styles.container}>
       {freeTrialLimit === 0 ? (
-        <p className={styles.disabled}>Free trial is not enabled this term.</p>
+        <p className={styles.disabled}>Free trials were not offered this term.</p>
       ) : current.players === 0 ? (
         <p className={styles.disabled}>No current event entries to show in the status snapshot.</p>
       ) : (
         <>
           <p className={styles.lead}>
             <span className={styles.figure} data-testid="trial-conversion-figure">
-              {current.trialSpent.toLocaleString("en-CA")}
+              {current.trialSpent.toLocaleString("en-CA")} {current.trialSpent === 1 ? "player" : "players"}
             </span>
           </p>
-          <p className={styles.caption}>spent all {freeTrialLimit} free entries and are currently unpaid</p>
+          <p className={styles.caption}>
+            used all {freeTrialLimit} free {freeTrialLimit === 1 ? "entry" : "entries"} and{" "}
+            {current.trialSpent === 1 ? "is" : "are"} still unpaid
+          </p>
 
           <StatBar ariaLabel="Players by membership status" segments={trialSegments(current)} />
         </>
       )}
 
-      <ConversionSummary conversion={conversion} />
+      <ConversionSummary conversion={conversion} noRateMessage="No tracked trial players yet" />
 
       <Comparison comparison={comparison} />
 
       <p className={styles.foot}>
-        Status is a current snapshot. The observed-ever conversion rate covers only trial starts tracked from rollout;
-        untracked entrants include upfront buyers and legacy unknowns, so this is not a whole-term rate. Paid status is
-        the purchase proxy; later refunds or status reversals do not erase a recorded conversion.
+        Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.
       </p>
     </div>
   );
@@ -78,8 +79,8 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
       <p className={styles.comparisonTitle}>{semester.name}</p>
       <p className={styles.comparisonContext}>
         {trialDisabled
-          ? "Free trial was not enabled; unpaid players are not shown as having exhausted a trial."
-          : `Free trial limit: ${freeTrialLimit} entries.`}
+          ? "Free trials were not offered this term."
+          : `Free trial limit: ${freeTrialLimit} ${freeTrialLimit === 1 ? "entry" : "entries"}.`}
       </p>
       <StatBar
         ariaLabel={`Players by membership status in ${semester.name}`}
@@ -98,15 +99,21 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
             : trialSegments(stats)
         }
       />
-      <ConversionSummary conversion={conversion} />
+      <ConversionSummary conversion={conversion} noRateMessage="Conversion history unavailable" />
     </div>
   );
 }
 
-function ConversionSummary({ conversion }: { conversion: ConversionResponse["conversion"] }) {
+function ConversionSummary({
+  conversion,
+  noRateMessage,
+}: {
+  conversion: ConversionResponse["conversion"];
+  noRateMessage: string;
+}) {
   const rate =
     conversion.rate === null
-      ? "Not yet measurable"
+      ? noRateMessage
       : new Intl.NumberFormat("en-CA", { style: "percent", maximumFractionDigits: 1 }).format(conversion.rate);
 
   return (
@@ -114,12 +121,14 @@ function ConversionSummary({ conversion }: { conversion: ConversionResponse["con
       <p className={styles.conversionRate} data-testid="trial-conversion-rate-value">
         {rate}
       </p>
-      <p className={styles.comparisonContext}>
-        Observed-ever conversion: {conversion.numerator} of {conversion.denominator} tracked trial starters
-      </p>
-      <p className={styles.comparisonContext}>
-        {conversion.untrackedEntrants} untracked entrants (upfront buyers and legacy unknowns; not in the rate)
-      </p>
+      {conversion.rate !== null && (
+        <>
+          <p className={styles.comparisonContext}>bought a membership after using a free trial</p>
+          <p className={styles.comparisonContext}>
+            {conversion.numerator} of {conversion.denominator} tracked trial players became paid members
+          </p>
+        </>
+      )}
     </div>
   );
 }

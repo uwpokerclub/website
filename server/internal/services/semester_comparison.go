@@ -54,3 +54,40 @@ func ResolveComparisonSemester(target models.Semester, semesters []models.Semest
 
 	return best
 }
+
+// ComparisonCutoff returns the instant in comparison that corresponds to how far
+// now has progressed through target, so a term in progress is compared against the
+// same point of the earlier term rather than against its completed total.
+//
+// Without this, every accumulating figure — memberships sold, distinct players,
+// entries — reads as a collapse for most of a term: a month in, the current term is
+// being measured against four months of the previous one.
+//
+// Elapsed time is measured in days from each term's own start rather than as a
+// fraction of its length. Signups and attendance cluster by calendar — orientation
+// week, the first event — so day 14 is comparable to day 14 even when the two terms
+// differ in length.
+//
+// Once the current term has run longer than the comparison term did, the comparison
+// is simply its complete self and the returned cutoff clips nothing. It deliberately
+// does not clamp to the comparison term's end_date: an event is not guaranteed to
+// fall inside its semester's declared range, and clamping would silently drop any
+// that lie outside rather than counting a term that has already finished in full.
+func ComparisonCutoff(target, comparison models.Semester, now time.Time) time.Time {
+	start := comparison.StartDate.UTC()
+
+	elapsed := now.UTC().Sub(target.StartDate.UTC())
+	if elapsed < 0 {
+		return start
+	}
+
+	if elapsed >= comparison.EndDate.UTC().Sub(start) {
+		return noCutoff
+	}
+
+	return start.Add(elapsed)
+}
+
+// noCutoff is a cutoff far enough in the future to clip nothing, used when the
+// comparison term has fully elapsed.
+var noCutoff = time.Date(9999, time.December, 31, 23, 59, 59, 0, time.UTC)

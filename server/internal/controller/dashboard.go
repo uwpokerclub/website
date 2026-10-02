@@ -74,6 +74,11 @@ func (c *dashboardController) getSpotlight(ctx *gin.Context) {
 type ComparisonMembershipStats struct {
 	Semester store.SemesterRef     `json:"semester"`
 	Stats    store.MembershipStats `json:"stats"`
+
+	// TotalAsOf is the comparison term's membership count at the same elapsed point
+	// this term has reached, or null when that term has no dated memberships. Null
+	// means unknowable, never zero.
+	TotalAsOf *int64 `json:"totalAsOf"`
 } //@name ComparisonMembershipStats
 
 // MembershipStatsResponse is the dashboard's Term at a Glance response: the current
@@ -136,9 +141,22 @@ func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 			return
 		}
+
+		// Memberships cannot be clipped the way events can: rows predating the
+		// created_at migration carry NULL and their dates are unrecoverable. TotalAsOf
+		// is nil for those terms, and the UI shows pace against the final total rather
+		// than a delta against a figure it cannot compute.
+		cutoff := services.ComparisonCutoff(semester, *comparison, time.Now())
+		totalAsOf, err := c.store.Dashboard().MembershipTotalAsOf(comparison.ID, cutoff)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+
 		response.Comparison = &ComparisonMembershipStats{
-			Semester: store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
-			Stats:    comparisonStats,
+			Semester:  store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+			Stats:     comparisonStats,
+			TotalAsOf: totalAsOf,
 		}
 	}
 
@@ -198,7 +216,9 @@ func (c *dashboardController) getEngagementStats(ctx *gin.Context) {
 		return
 	}
 
-	current, err := c.store.Dashboard().EngagementStats(semesterID)
+	now := time.Now()
+
+	current, err := c.store.Dashboard().EngagementStats(semesterID, now)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
@@ -207,7 +227,10 @@ func (c *dashboardController) getEngagementStats(ctx *gin.Context) {
 	response := EngagementStatsResponse{Current: current}
 
 	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
-		comparisonStats, err := c.store.Dashboard().EngagementStats(comparison.ID)
+		// Clipped to the same elapsed point, so a term a month in is not measured
+		// against four completed months of the previous one.
+		cutoff := services.ComparisonCutoff(semester, *comparison, now)
+		comparisonStats, err := c.store.Dashboard().EngagementStats(comparison.ID, cutoff)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 			return
@@ -276,7 +299,9 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 		return
 	}
 
-	stats, series, err := c.store.Dashboard().EventActivity(semesterID)
+	now := time.Now()
+
+	stats, series, err := c.store.Dashboard().EventActivity(semesterID, now)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
@@ -284,7 +309,8 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 
 	response := EventActivityResponse{Current: EventActivityCurrent{EventActivityStats: stats, Series: series}}
 	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
-		comparisonStats, _, err := c.store.Dashboard().EventActivity(comparison.ID)
+		cutoff := services.ComparisonCutoff(semester, *comparison, now)
+		comparisonStats, _, err := c.store.Dashboard().EventActivity(comparison.ID, cutoff)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 			return

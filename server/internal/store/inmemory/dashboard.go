@@ -33,10 +33,14 @@ func (r *inMemoryDashboardRepository) MembershipStats(semesterID uuid.UUID) (sto
 	return store.MembershipStats{}, store.ErrNotImplemented
 }
 
-func (r *inMemoryDashboardRepository) EngagementStats(semesterID uuid.UUID) (store.EngagementStats, error) {
+func (r *inMemoryDashboardRepository) EngagementStats(semesterID uuid.UUID, asOf time.Time) (store.EngagementStats, error) {
 	return store.EngagementStats{}, store.ErrNotImplemented
 }
 
-func (r *inMemoryDashboardRepository) EventActivity(semesterID uuid.UUID) (store.EventActivityStats, []store.EventSeriesPoint, error) {
+func (r *inMemoryDashboardRepository) EventActivity(semesterID uuid.UUID, asOf time.Time) (store.EventActivityStats, []store.EventSeriesPoint, error) {
 	return store.EventActivityStats{}, nil, store.ErrNotImplemented
+}
+
+func (r *inMemoryDashboardRepository) MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error) {
+	return nil, store.ErrNotImplemented
 }

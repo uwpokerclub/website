@@ -144,8 +144,11 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 		stats.AverageFieldSize = float64(stats.TotalEntries) / float64(stats.EventsRun)
 	}
 
+	// Deliberately not clipped to asOf: a scheduled event is one that has not ended,
+	// which for the current term usually means it is future-dated. Applying the cutoff
+	// here would filter out precisely the events this count exists to report.
 	err = r.db.Model(&models.Event{}).
-		Where("semester_id = ? AND state = ? AND start_date <= ?", semesterID, models.EventStateStarted, asOf).
+		Where("semester_id = ? AND state = ?", semesterID, models.EventStateStarted).
 		Count(&stats.EventsScheduled).Error
 	if err != nil {
 		return store.EventActivityStats{}, nil, err
@@ -154,24 +157,41 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 	return stats, series, nil
 }
 
-// MembershipTotalAsOf returns how many of semesterID's memberships had been created
-// at or before asOf, or nil when that cannot be known.
+// minDatedShare is the proportion of a semester's memberships that must carry a
+// creation date before a point-in-time count means anything.
 //
-// Memberships created before the created_at migration carry NULL, and there is no
-// reliable way to recover those dates — users.created_at dates the user rather than
-// the membership, and first participation only bounds it from above while silently
-// excluding members who never played. Rather than report a confidently wrong figure,
-// a semester with no dated memberships at all returns nil and the UI shows pace
-// against the final total instead of a delta against a fabricated one.
+// The figure is a baseline the current term is judged against, so a baseline drawn
+// from a minority of the term understates it and flatters the present. The term that
+// straddled the created_at migration is the motivating case: 352 memberships, one of
+// them dated. Counting that one row would have reported a near-zero baseline and made
+// any current term look like a runaway success.
+//
+// Terms are either almost entirely dated (96-100% once backfilled) or not dated at
+// all, so this sits in the empty space between those two populations rather than
+// trying to draw a fine line.
+const minDatedShare = 0.8
+
+// MembershipTotalAsOf returns how many of semesterID's memberships had been created
+// at or before asOf, or nil when that cannot be known reliably.
+//
+// Memberships predating the created_at migration carry NULL. The backfill recovers
+// most of them from first participation, but members who never entered an event keep
+// a NULL date and are invisible to this count — so it is reported only when the dated
+// rows are a large enough majority to stand in for the term. Callers must treat nil
+// as "unknowable" and show pace against the final total instead, never as zero.
 func (r *postgresDashboardRepository) MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error) {
-	var dated int64
+	var counts struct {
+		Dated int64
+		Total int64
+	}
 	err := r.db.Model(&models.Membership{}).
-		Where("semester_id = ? AND created_at IS NOT NULL", semesterID).
-		Count(&dated).Error
+		Select("COUNT(*) FILTER (WHERE created_at IS NOT NULL) AS dated, COUNT(*) AS total").
+		Where("semester_id = ?", semesterID).
+		Scan(&counts).Error
 	if err != nil {
 		return nil, err
 	}
-	if dated == 0 {
+	if counts.Total == 0 || float64(counts.Dated)/float64(counts.Total) < minDatedShare {
 		return nil, nil
 	}
 

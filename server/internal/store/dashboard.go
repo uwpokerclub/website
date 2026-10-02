@@ -116,6 +116,10 @@ type DashboardRepository interface {
 	// EventActivity returns Event Activity scalar stats and an ascending start-date
 	// series for ended events, counting only events that started at or before asOf. A
 	// semester with no ended events returns zero stats and an empty, non-nil series.
+	//
+	// EventsRun and EventsScheduled are disjoint - ended and not-yet-ended - so a
+	// term's total is their sum, not EventsScheduled alone. EventsScheduled ignores
+	// asOf, since the events it counts are the future-dated ones.
 	EventActivity(semesterID uuid.UUID, asOf time.Time) (EventActivityStats, []EventSeriesPoint, error)
 
 	// MembershipTotalAsOf returns how many of the semester's memberships had been

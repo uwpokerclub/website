@@ -43,22 +43,25 @@ export function EventActivityCard({ semesterId }: Props) {
  */
 function Body({ data }: { data: EventActivityResponse }) {
   const { eventsRun, eventsScheduled, totalEntries, averageFieldSize, series } = data.current;
-  const remaining = Math.max(0, eventsScheduled - eventsRun);
+
+  // The two counts are disjoint — ended and not-yet-ended — so the term's total is
+  // their sum. Reading eventsScheduled as the total rendered "3 of 2 events run".
+  const totalEvents = eventsRun + eventsScheduled;
   const average = Math.round(averageFieldSize * 10) / 10;
 
   return (
     <div className={styles.container}>
       <p className={styles.lead}>
         <span className={styles.figure}>{eventsRun}</span>
-        <span className={styles.caption}>of {eventsScheduled} events run this term</span>
+        <span className={styles.caption}>of {totalEvents} events run this term</span>
       </p>
 
       <div className={styles.meter} aria-hidden="true">
         <i style={{ flexGrow: eventsRun }} />
-        {remaining > 0 && <u style={{ flexGrow: remaining }} />}
+        {eventsScheduled > 0 && <u style={{ flexGrow: eventsScheduled }} />}
       </div>
       <p className={styles.meta}>
-        {remaining} still scheduled · {totalEntries.toLocaleString("en-CA")} entries · average field {average}
+        {eventsScheduled} still scheduled · {totalEntries.toLocaleString("en-CA")} entries · average field {average}
       </p>
 
       <div className={styles.chart}>

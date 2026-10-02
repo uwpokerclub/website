@@ -1,0 +1,37 @@
+.container {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lead {
+  margin: 0;
+}
+
+.figure {
+  font-size: var(--card-figure-size, var(--font-size-4xl));
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.caption {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-700);
+}
+
+.disabled,
+.foot {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
+  line-height: 1.5;
+}
+
+.foot {
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-gray-200);
+}

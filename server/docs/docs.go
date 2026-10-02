@@ -3510,6 +3510,9 @@ const docTemplate = `{
         "ComparisonTrialConversionStats": {
             "type": "object",
             "properties": {
+                "conversion": {
+                    "$ref": "#/definitions/TrialConversionCohortStats"
+                },
                 "freeTrialLimit": {
                     "type": "integer"
                 },
@@ -4297,11 +4300,31 @@ const docTemplate = `{
                 }
             }
         },
+        "TrialConversionCohortStats": {
+            "type": "object",
+            "properties": {
+                "denominator": {
+                    "type": "integer"
+                },
+                "numerator": {
+                    "type": "integer"
+                },
+                "rate": {
+                    "type": "number"
+                },
+                "untrackedEntrants": {
+                    "type": "integer"
+                }
+            }
+        },
         "TrialConversionResponse": {
             "type": "object",
             "properties": {
                 "comparison": {
                     "$ref": "#/definitions/ComparisonTrialConversionStats"
+                },
+                "conversion": {
+                    "$ref": "#/definitions/TrialConversionCohortStats"
                 },
                 "current": {
                     "$ref": "#/definitions/TrialConversionStats"

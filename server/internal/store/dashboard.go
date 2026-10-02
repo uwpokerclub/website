@@ -112,6 +112,17 @@ type TrialConversionStats struct {
 	Executive  int64 `json:"executive"`
 } //@name TrialConversionStats
 
+// TrialConversionCohortStats reports conversions among memberships whose trial
+// start was observed. Rate is a nullable fraction in [0,1]; it is nil when no
+// starters are observed. UntrackedEntrants is contextual only and is not the
+// denominator: it can include upfront buyers and historical unknowns.
+type TrialConversionCohortStats struct {
+	Numerator         int64    `json:"numerator"`
+	Denominator       int64    `json:"denominator"`
+	Rate              *float64 `json:"rate"`
+	UntrackedEntrants int64    `json:"untrackedEntrants"`
+} //@name TrialConversionCohortStats
+
 // DashboardRepository is the interface for the dashboard's read-only aggregate
 // queries. These span memberships, participants, and events, so they are kept here
 // rather than smeared as Stats() methods across those repositories.
@@ -150,6 +161,10 @@ type DashboardRepository interface {
 	// from the resolved semester, and a zero limit deliberately places every
 	// unpaid, non-executive player in TrialSpent.
 	TrialConversionStats(semesterID uuid.UUID, freeTrialLimit uint8) (TrialConversionStats, error)
+
+	// TrialConversionCohortStats returns first-ever paid transitions over observed
+	// trial starters, independently of current participant rows and membership status.
+	TrialConversionCohortStats(semesterID uuid.UUID) (TrialConversionCohortStats, error)
 
 	// EventActivity returns Event Activity scalar stats and an ascending start-date
 	// series for ended events, counting only events that started at or before asOf. A

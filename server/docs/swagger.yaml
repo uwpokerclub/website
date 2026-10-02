@@ -59,6 +59,8 @@ definitions:
     type: object
   ComparisonTrialConversionStats:
     properties:
+      conversion:
+        $ref: '#/definitions/TrialConversionCohortStats'
       freeTrialLimit:
         type: integer
       semester:
@@ -601,10 +603,23 @@ definitions:
       name:
         type: string
     type: object
+  TrialConversionCohortStats:
+    properties:
+      denominator:
+        type: integer
+      numerator:
+        type: integer
+      rate:
+        type: number
+      untrackedEntrants:
+        type: integer
+    type: object
   TrialConversionResponse:
     properties:
       comparison:
         $ref: '#/definitions/ComparisonTrialConversionStats'
+      conversion:
+        $ref: '#/definitions/TrialConversionCohortStats'
       current:
         $ref: '#/definitions/TrialConversionStats'
       freeTrialLimit:

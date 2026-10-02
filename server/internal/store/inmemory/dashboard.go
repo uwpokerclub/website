@@ -41,6 +41,10 @@ func (r *inMemoryDashboardRepository) TrialConversionStats(semesterID uuid.UUID,
 	return store.TrialConversionStats{}, store.ErrNotImplemented
 }
 
+func (r *inMemoryDashboardRepository) TrialConversionCohortStats(semesterID uuid.UUID) (store.TrialConversionCohortStats, error) {
+	return store.TrialConversionCohortStats{}, store.ErrNotImplemented
+}
+
 func (r *inMemoryDashboardRepository) EventActivity(semesterID uuid.UUID, asOf time.Time) (store.EventActivityStats, []store.EventSeriesPoint, error) {
 	return store.EventActivityStats{}, nil, store.ErrNotImplemented
 }

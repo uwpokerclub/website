@@ -109,11 +109,16 @@ describe("Dashboard", () => {
     cy.getByData("trial-conversion-card").scrollIntoView();
     cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
     cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
-    cy.get('[data-testid="trial-conversion-figure"]').should("have.text", "0");
+    cy.get('[data-testid="trial-conversion-figure"]').should("have.text", "0 players");
     cy.getByData("trial-conversion-card")
-      .contains("spent all 4 free entries and are currently unpaid")
+      .contains("used all 4 free entries and are still unpaid")
       .should("be.visible");
     cy.getByData("trial-conversion-card").contains("No comparable term to compare against yet.").should("be.visible");
+    cy.getByData("trial-conversion-rate").contains("No tracked trial players yet").should("be.visible");
+    cy.getByData("trial-conversion-card")
+      .contains("Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.")
+      .should("be.visible");
+    cy.getByData("trial-conversion-card").contains(/untracked|observed-ever|purchase proxy/i).should("not.exist");
   });
 
   it("isolates an Event Activity endpoint failure to its card", () => {

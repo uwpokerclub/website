@@ -59,6 +59,11 @@ type Membership struct {
 	// distinguished historically, so filling "admin" would invent a clean all-admin
 	// past. Readers must treat nil as "unknown" rather than assuming either value.
 	Source *MembershipSource `json:"-" gorm:"type:text"`
+
+	// TrialStartedAt and ConvertedAt preserve the observed trial cohort and its
+	// first paid transition. They are internal analytics state, not API fields.
+	TrialStartedAt *time.Time `json:"-" gorm:"type:timestamp"`
+	ConvertedAt    *time.Time `json:"-" gorm:"type:timestamp"`
 } //@name Membership
 
 // EligibleForFreeTrial reports whether the free-trial limit applies to this

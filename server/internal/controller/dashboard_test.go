@@ -938,6 +938,9 @@ func TestDashboardTrialConversion(t *testing.T) {
 		body := decode(t, getConversion(t, semester.ID.String()))
 		require.EqualValues(t, 3, body.FreeTrialLimit)
 		require.Equal(t, store.TrialConversionStats{}, body.Current)
+		require.EqualValues(t, 0, body.Conversion.Numerator)
+		require.EqualValues(t, 0, body.Conversion.Denominator)
+		require.Nil(t, body.Conversion.Rate)
 		require.Nil(t, body.Comparison)
 	})
 
@@ -1096,6 +1099,58 @@ func TestDashboardTrialConversion(t *testing.T) {
 
 		body := decode(t, getConversion(t, current.ID.String()))
 		require.Equal(t, store.TrialConversionStats{}, body.Current)
+	})
+
+	t.Run("reports observed cohorts separately from upfront, legacy, and comped entrants for both terms", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		comparison, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		current, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		setFreeTrialLimit(t, db, comparison.ID, 4)
+		setFreeTrialLimit(t, db, current.ID, 4)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		priorEvent, err := createDashboardTestEvent(db, comparison.ID, structure.ID, "Prior", models.EventStateEnded, comparison.StartDate, 0)
+		require.NoError(t, err)
+		currentEvent, err := createDashboardTestEvent(db, current.ID, structure.ID, "Current", models.EventStateEnded, current.StartDate, 0)
+		require.NoError(t, err)
+
+		priorConverted := createPlayer(t, db, comparison.ID, "prior-converted", true, false)
+		priorOpen := createPlayer(t, db, comparison.ID, "prior-open", false, false)
+		priorUpfront := createPlayer(t, db, comparison.ID, "prior-upfront", true, false)
+		priorUnknown := createPlayer(t, db, comparison.ID, "prior-legacy", false, false)
+		priorExecutive := createPlayer(t, db, comparison.ID, "prior-exec", false, true)
+		for _, membership := range []*models.Membership{priorConverted, priorOpen, priorUpfront, priorUnknown, priorExecutive} {
+			_, err = testutils.CreateTestParticipant(db, membership.ID, priorEvent.ID)
+			require.NoError(t, err)
+		}
+		startedAt := time.Date(2025, 9, 10, 18, 0, 0, 0, time.UTC)
+		convertedAt := time.Date(2025, 9, 20, 18, 0, 0, 0, time.UTC)
+		require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", priorConverted.ID).Updates(map[string]any{
+			"trial_started_at": startedAt, "converted_at": convertedAt,
+		}).Error)
+		require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", priorOpen.ID).Update("trial_started_at", startedAt).Error)
+
+		currentStarter := createPlayer(t, db, current.ID, "current-starter", false, false)
+		_, err = testutils.CreateTestParticipant(db, currentStarter.ID, currentEvent.ID)
+		require.NoError(t, err)
+		require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", currentStarter.ID).Update("trial_started_at", startedAt).Error)
+		// Deleting the live participant row must not erase the recorded trial cohort.
+		require.NoError(t, postgresstore.NewEntryRepository(db).Delete(currentStarter.ID, currentEvent.ID))
+
+		body := decode(t, getConversion(t, current.ID.String()))
+		require.EqualValues(t, 0, body.Current.Players)
+		require.EqualValues(t, 0, body.Conversion.Numerator)
+		require.EqualValues(t, 1, body.Conversion.Denominator)
+		require.NotNil(t, body.Conversion.Rate)
+		require.InDelta(t, 0.0, *body.Conversion.Rate, 0.0001)
+		require.NotNil(t, body.Comparison)
+		require.EqualValues(t, 1, body.Comparison.Conversion.Numerator)
+		require.EqualValues(t, 2, body.Comparison.Conversion.Denominator)
+		require.InDelta(t, 0.5, *body.Comparison.Conversion.Rate, 0.0001)
+		require.EqualValues(t, 2, body.Comparison.Conversion.UntrackedEntrants, "upfront buyer and historical unknown are context, not cohort members")
 	})
 
 	t.Run("returns 404 for an unknown semester and 400 for a malformed id", func(t *testing.T) {

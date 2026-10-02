@@ -6,29 +6,21 @@ import type { ConversionResponse } from "../../api/dashboardApi";
 import styles from "./TrialConversionCard.module.css";
 
 /**
- * The endpoint returns the current term's status snapshot. Loading, errors, and
- * empty results remain card-local states rather than substituting fabricated data.
+ * The endpoint pairs the current status snapshot with a separately tracked
+ * observed trial cohort. Empty snapshots can still have retained cohort history.
  */
 type Props = { semesterId: string };
 
 export function TrialConversionCard({ semesterId }: Props) {
   const { data, isPending, isError, refetch } = useTrialConversion(semesterId);
-  const status = isPending
-    ? "loading"
-    : isError
-      ? "error"
-      : !data
-        ? "loading"
-        : data.current.players === 0
-          ? "empty"
-          : "ready";
+  const status = isPending ? "loading" : isError ? "error" : !data ? "loading" : "ready";
 
   return (
     <DashboardCard
       title={CARD_TITLES.trialConversion}
       status={status}
       onRetry={() => refetch()}
-      emptyMessage="No event entries recorded yet this term."
+      emptyMessage="No trial conversion data recorded yet."
       data-qa="trial-conversion-card"
     >
       {() => <Body data={data as ConversionResponse} />}
@@ -37,32 +29,38 @@ export function TrialConversionCard({ semesterId }: Props) {
 }
 
 function Body({ data }: { data: ConversionResponse }) {
-  const { current, freeTrialLimit, comparison } = data;
+  const { current, conversion, freeTrialLimit, comparison } = data;
 
   // free_trial_limit defaults to 0, which disables the trial entirely. A term with no
   // trial has no funnel, and four zeroes would read as a catastrophic one.
   return (
     <div className={styles.container}>
       {freeTrialLimit === 0 ? (
-        <p className={styles.disabled}>Free trial is not enabled this term.</p>
+        <p className={styles.disabled}>Free trials were not offered this term.</p>
+      ) : current.players === 0 ? (
+        <p className={styles.disabled}>No current event entries to show in the status snapshot.</p>
       ) : (
         <>
           <p className={styles.lead}>
             <span className={styles.figure} data-testid="trial-conversion-figure">
-              {current.trialSpent.toLocaleString("en-CA")}
+              {current.trialSpent.toLocaleString("en-CA")} {current.trialSpent === 1 ? "player" : "players"}
             </span>
           </p>
-          <p className={styles.caption}>spent all {freeTrialLimit} free entries and are currently unpaid</p>
+          <p className={styles.caption}>
+            used all {freeTrialLimit} free {freeTrialLimit === 1 ? "entry" : "entries"} and{" "}
+            {current.trialSpent === 1 ? "is" : "are"} still unpaid
+          </p>
 
           <StatBar ariaLabel="Players by membership status" segments={trialSegments(current)} />
         </>
       )}
 
+      <ConversionSummary conversion={conversion} noRateMessage="No tracked trial players yet" />
+
       <Comparison comparison={comparison} />
 
       <p className={styles.foot}>
-        A snapshot of where players stand now, not a conversion rate — a membership that converts loses the record that
-        it ever trialled.
+        Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.
       </p>
     </div>
   );
@@ -73,7 +71,7 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
     return <p className={styles.noComparison}>No comparable term to compare against yet.</p>;
   }
 
-  const { semester, stats, freeTrialLimit } = comparison;
+  const { semester, stats, conversion, freeTrialLimit } = comparison;
   const trialDisabled = freeTrialLimit === 0;
 
   return (
@@ -81,8 +79,8 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
       <p className={styles.comparisonTitle}>{semester.name}</p>
       <p className={styles.comparisonContext}>
         {trialDisabled
-          ? "Free trial was not enabled; unpaid players are not shown as having exhausted a trial."
-          : `Free trial limit: ${freeTrialLimit} entries.`}
+          ? "Free trials were not offered this term."
+          : `Free trial limit: ${freeTrialLimit} ${freeTrialLimit === 1 ? "entry" : "entries"}.`}
       </p>
       <StatBar
         ariaLabel={`Players by membership status in ${semester.name}`}
@@ -101,6 +99,36 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
             : trialSegments(stats)
         }
       />
+      <ConversionSummary conversion={conversion} noRateMessage="Conversion history unavailable" />
+    </div>
+  );
+}
+
+function ConversionSummary({
+  conversion,
+  noRateMessage,
+}: {
+  conversion: ConversionResponse["conversion"];
+  noRateMessage: string;
+}) {
+  const rate =
+    conversion.rate === null
+      ? noRateMessage
+      : new Intl.NumberFormat("en-CA", { style: "percent", maximumFractionDigits: 1 }).format(conversion.rate);
+
+  return (
+    <div className={styles.conversion} data-qa="trial-conversion-rate">
+      <p className={styles.conversionRate} data-testid="trial-conversion-rate-value">
+        {rate}
+      </p>
+      {conversion.rate !== null && (
+        <>
+          <p className={styles.comparisonContext}>bought a membership after using a free trial</p>
+          <p className={styles.comparisonContext}>
+            {conversion.numerator} of {conversion.denominator} tracked trial players became paid members
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"testing"
+	"time"
 
 	"api/internal/errors"
 	"api/internal/models"
@@ -62,11 +63,13 @@ func TestMembershipService_CreateMembership_Paid(t *testing.T) {
 	require.NoError(t, st.Semesters().Create(semester))
 
 	svc := NewMembershipService(st)
-	_, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	created, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
 		UserID: 1,
 		Paid:   true,
 	}, models.MembershipSourceAdmin)
 	require.NoError(t, err)
+	require.Nil(t, created.TrialStartedAt, "upfront paid memberships never enter the observed trial cohort")
+	require.Nil(t, created.ConvertedAt)
 
 	found, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
@@ -218,6 +221,8 @@ func TestMembershipService_UpdateMembership_MarkPaid_ResetsStaleFreeTrialFlag(t 
 	// Simulate a membership that already exhausted its free trial while unpaid.
 	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: false}
 	require.NoError(t, st.Memberships().Create(membership))
+	trialStartedAt := time.Date(2026, 9, 10, 20, 0, 0, 0, time.UTC)
+	require.NoError(t, st.Memberships().SetTrialStartedAtIfNull(membership.ID, trialStartedAt))
 	require.NoError(t, st.Memberships().SetFreeTrialAvailable(membership.ID, false))
 
 	svc := NewMembershipService(st)
@@ -229,6 +234,49 @@ func TestMembershipService_UpdateMembership_MarkPaid_ResetsStaleFreeTrialFlag(t 
 	stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
 	require.NoError(t, err)
 	require.True(t, stored.FreeTrialAvailable)
+	require.NotNil(t, stored.ConvertedAt)
+	require.Equal(t, trialStartedAt, *stored.TrialStartedAt)
+	firstConversion := *stored.ConvertedAt
+
+	paid = false
+	_, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	require.NoError(t, err)
+	paid = true
+	_, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	require.NoError(t, err)
+	stored, err = st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+	require.NoError(t, err)
+	require.Equal(t, firstConversion, *stored.ConvertedAt, "later paid transitions must preserve the first conversion")
+}
+
+func TestMembershipService_UpdateMembership_ExecutiveCompPreservesTrialWithoutConverting(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+	membership := &models.Membership{UserID: 1, SemesterID: semester.ID}
+	require.NoError(t, st.Memberships().Create(membership))
+	startedAt := time.Date(2026, 9, 12, 20, 0, 0, 0, time.UTC)
+	require.NoError(t, st.Memberships().SetTrialStartedAtIfNull(membership.ID, startedAt))
+
+	svc := NewMembershipService(st)
+	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
+	require.NoError(t, err)
+	require.True(t, updated.Executive)
+	require.Nil(t, updated.ConvertedAt, "becoming an executive is a comp, not a paid conversion")
+	require.Equal(t, startedAt, *updated.TrialStartedAt, "comp transitions preserve the observed trial cohort")
+
+	updated, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
+	require.NoError(t, err)
+	require.False(t, updated.Executive)
+	require.Equal(t, startedAt, *updated.TrialStartedAt)
+	require.Nil(t, updated.ConvertedAt)
+
+	updated, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: boolPtr(true)})
+	require.NoError(t, err)
+	require.NotNil(t, updated.ConvertedAt)
+	require.Equal(t, startedAt, *updated.TrialStartedAt)
 }
 
 func TestMembershipService_UpdateMembership_UnmarkPaid_RecomputesFreeTrialFlag(t *testing.T) {

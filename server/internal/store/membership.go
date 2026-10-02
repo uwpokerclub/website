@@ -2,6 +2,7 @@ package store
 
 import (
 	"api/internal/models"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +19,9 @@ type MembershipRepository interface {
 	// FindByIDAndSemesterID retrieves a membership from the data store by its ID, scoped to a
 	// specific semester, preloaded with its User and Semester.
 	FindByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error)
+
+	// LockByIDAndSemesterID rereads and locks a membership inside the caller's transaction.
+	LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error)
 
 	// List retrieves memberships matching filter (SemesterID, UserID, Paid, Discounted, and the
 	// joined-user filters Search/Name/Email/Faculty/StudentID), each with its computed
@@ -37,4 +41,10 @@ type MembershipRepository interface {
 	// Paid/Discounted (mirrors SemesterRepository.IncrementBudget). Returns store.ErrNotFound if
 	// no membership exists for the given ID.
 	SetFreeTrialAvailable(id uuid.UUID, available bool) error
+
+	// SetTrialStartedAtIfNull records the first observed eligible entry time.
+	SetTrialStartedAtIfNull(id uuid.UUID, at time.Time) error
+
+	// SetConvertedAtIfNull records the first paid transition after an observed trial start.
+	SetConvertedAtIfNull(id uuid.UUID, at time.Time) error
 }

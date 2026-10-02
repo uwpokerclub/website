@@ -4,9 +4,11 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type postgresMembershipRepository struct {
@@ -46,6 +48,19 @@ func (r *postgresMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semes
 		return models.Membership{}, err
 	}
 
+	return membership, nil
+}
+
+func (r *postgresMembershipRepository) LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error) {
+	var membership models.Membership
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		First(&membership, "id = ? AND semester_id = ?", id, semesterID).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Membership{}, store.ErrNotFound
+		}
+		return models.Membership{}, err
+	}
 	return membership, nil
 }
 
@@ -173,6 +188,18 @@ func (r *postgresMembershipRepository) SetFreeTrialAvailable(id uuid.UUID, avail
 	}
 
 	return nil
+}
+
+func (r *postgresMembershipRepository) SetTrialStartedAtIfNull(id uuid.UUID, at time.Time) error {
+	return r.db.Model(&models.Membership{}).
+		Where("id = ? AND trial_started_at IS NULL AND paid = FALSE AND executive = FALSE", id).
+		Update("trial_started_at", at).Error
+}
+
+func (r *postgresMembershipRepository) SetConvertedAtIfNull(id uuid.UUID, at time.Time) error {
+	return r.db.Model(&models.Membership{}).
+		Where("id = ? AND converted_at IS NULL AND trial_started_at IS NOT NULL", id).
+		Update("converted_at", at).Error
 }
 
 func (r *postgresMembershipRepository) Delete(id uuid.UUID, semesterID uuid.UUID) error {

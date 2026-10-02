@@ -10,6 +10,7 @@ const mocked = useTrialConversion as jest.Mock;
 
 const conversion: ConversionResponse = {
   current: { players: 824, paid: 712, trialSpent: 78, trialOpen: 14, executive: 20 },
+  conversion: { numerator: 3, denominator: 4, rate: 0.75, untrackedEntrants: 5 },
   freeTrialLimit: 4,
   comparison: null,
 };
@@ -17,12 +18,12 @@ const conversion: ConversionResponse = {
 describe("TrialConversionCard", () => {
   afterEach(() => jest.clearAllMocks());
 
-  it("leads with the number who spent the trial and are currently unpaid", () => {
+  it("labels how many players used all trial entries and remain unpaid", () => {
     mocked.mockReturnValue({ isPending: false, isError: false, data: conversion, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
-    expect(screen.getByTestId("trial-conversion-figure")).toHaveTextContent("78");
-    expect(screen.getByText(/spent all 4 free entries and are currently unpaid/)).toBeInTheDocument();
+    expect(screen.getByTestId("trial-conversion-figure")).toHaveTextContent("78 players");
+    expect(screen.getByText(/used all 4 free entries and are still unpaid/)).toBeInTheDocument();
   });
 
   it("breaks the player population into four commitment buckets", () => {
@@ -42,15 +43,39 @@ describe("TrialConversionCard", () => {
     });
     render(<TrialConversionCard semesterId="s1" />);
 
-    expect(screen.getByText("Free trial is not enabled this term.")).toBeInTheDocument();
+    expect(screen.getByText("Free trials were not offered this term.")).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("is explicit that it shows a snapshot and not a conversion rate", () => {
+  it("explains what the conversion rate represents", () => {
     mocked.mockReturnValue({ isPending: false, isError: false, data: conversion, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
-    expect(screen.getByText(/not a conversion rate/)).toBeInTheDocument();
+    expect(screen.getByTestId("trial-conversion-rate-value")).toHaveTextContent("75%");
+    expect(screen.getByText("bought a membership after using a free trial")).toBeInTheDocument();
+    expect(screen.getByText("3 of 4 tracked trial players became paid members")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/untracked|observed-ever|purchase proxy/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the null-rate state even when the current status snapshot is empty", () => {
+    mocked.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        ...conversion,
+        current: { players: 0, paid: 0, trialSpent: 0, trialOpen: 0, executive: 0 },
+        conversion: { numerator: 0, denominator: 0, rate: null, untrackedEntrants: 0 },
+      },
+      refetch: jest.fn(),
+    });
+    render(<TrialConversionCard semesterId="s1" />);
+
+    expect(screen.getByTestId("trial-conversion-rate-value")).toHaveTextContent("No tracked trial players yet");
   });
 
   it("shows an endpoint error without a sample-data fallback", () => {
@@ -80,6 +105,7 @@ describe("TrialConversionCard", () => {
           semester: { id: "fall-2025", name: "Fall 2025" },
           freeTrialLimit: 2,
           stats: { players: 10, paid: 4, trialSpent: 3, trialOpen: 2, executive: 1 },
+          conversion: { numerator: 2, denominator: 4, rate: 0.5, untrackedEntrants: 3 },
         },
       },
     });
@@ -90,6 +116,7 @@ describe("TrialConversionCard", () => {
     expect(screen.getByLabelText("Players by membership status in Fall 2025")).toHaveTextContent(
       "4 paid3 trial spent, unpaid2 trial still open1 executive, comped",
     );
+    expect(screen.getByText("50%", { selector: "p" })).toBeInTheDocument();
   });
 
   it("shows prior disabled-trial players as unpaid rather than trial spent", () => {
@@ -104,12 +131,14 @@ describe("TrialConversionCard", () => {
           semester: { id: "fall-2025", name: "Fall 2025" },
           freeTrialLimit: 0,
           stats: { players: 10, paid: 4, trialSpent: 5, trialOpen: 0, executive: 1 },
+          conversion: { numerator: 0, denominator: 0, rate: null, untrackedEntrants: 4 },
         },
       },
     });
     render(<TrialConversionCard semesterId="s1" />);
 
-    expect(screen.getByText(/Free trial was not enabled/)).toBeInTheDocument();
+    expect(screen.getByText("Free trials were not offered this term.")).toBeInTheDocument();
+    expect(screen.getByText("Conversion history unavailable")).toBeInTheDocument();
     expect(screen.getByLabelText("Players by membership status in Fall 2025")).toHaveTextContent("5 unpaid, no trial");
   });
 
@@ -119,6 +148,24 @@ describe("TrialConversionCard", () => {
 
     expect(screen.getByText("No comparable term to compare against yet.")).toBeInTheDocument();
   });
+
+  it("uses singular player and entry labels", () => {
+    mocked.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        ...conversion,
+        current: { ...conversion.current, trialSpent: 1 },
+        freeTrialLimit: 1,
+      },
+      refetch: jest.fn(),
+    });
+    render(<TrialConversionCard semesterId="s1" />);
+
+    expect(screen.getByTestId("trial-conversion-figure")).toHaveTextContent("1 player");
+    expect(screen.getByText("used all 1 free entry and is still unpaid")).toBeInTheDocument();
+  });
+
   it("shows the loading state rather than fabricated figures while the request is in flight", () => {
     mocked.mockReturnValue({ isPending: true, isError: false, data: undefined, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);

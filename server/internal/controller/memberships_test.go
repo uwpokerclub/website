@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -768,6 +769,46 @@ func TestUpdateMembership(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPatchMembershipReturnsHydratedAssociationsAndHidesTrialTimestamps(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+	apiServer := testutils.NewTestAPIServer(db)
+
+	membership := testutils.TEST_MEMBERSHIPS[2]
+	startedAt := time.Date(2026, 9, 20, 18, 0, 0, 0, time.UTC)
+	require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", membership.ID).Updates(map[string]any{
+		"paid":             false,
+		"executive":        false,
+		"trial_started_at": startedAt,
+	}).Error)
+	sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+	require.NoError(t, err)
+	req, err := testutils.MakeJSONRequest(
+		"PATCH",
+		fmt.Sprintf("/api/v2/semesters/%s/memberships/%s", membership.SemesterID, membership.ID),
+		map[string]any{"paid": true},
+	)
+	require.NoError(t, err)
+	testutils.SetAuthCookie(req, sessionID)
+	w := httptest.NewRecorder()
+	apiServer.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code, "Response: %s", w.Body.String())
+
+	var response models.Membership
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	require.True(t, response.Paid)
+	require.NotNil(t, response.User)
+	require.Equal(t, testutils.TEST_USERS[2].ID, response.User.ID)
+	require.NotNil(t, response.Semester)
+	require.Equal(t, membership.SemesterID, response.Semester.ID)
+	require.NotContains(t, w.Body.String(), "trialStartedAt")
+	require.NotContains(t, w.Body.String(), "convertedAt")
 }
 
 func TestUpdateMembershipBudgetUpdates(t *testing.T) {

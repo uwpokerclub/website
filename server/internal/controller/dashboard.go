@@ -27,8 +27,55 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("spotlight", middleware.UseAuthorization("semester.get"), c.getSpotlight)
 	group.GET("memberships", middleware.UseAuthorization("semester.get"), c.getMembershipStats)
 	group.GET("engagement", middleware.UseAuthorization("semester.get"), c.getEngagementStats)
+	group.GET("conversion", middleware.UseAuthorization("semester.get"), c.getTrialConversion)
 	group.GET("events", middleware.UseAuthorization("semester.get"), c.getEventActivity)
 	group.GET("signups", middleware.UseAuthorization("semester.get"), c.getSignupTimeline)
+}
+
+// TrialConversionResponse is the dashboard's Trial Conversion response.
+type TrialConversionResponse struct {
+	Current        store.TrialConversionStats `json:"current"`
+	FreeTrialLimit uint8                      `json:"freeTrialLimit"`
+} //@name TrialConversionResponse
+
+// getTrialConversion handles retrieving the dashboard's Trial Conversion card for a semester.
+//
+// @Summary Get dashboard trial conversion stats
+// @Description Get the distinct-player paid, executive, and free-trial status breakdown for a semester
+// @Tags Dashboard
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Success 200 {object} TrialConversionResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/dashboard/conversion [get]
+func (c *dashboardController) getTrialConversion(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	semester, err := c.store.Semesters().FindByID(semesterID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+			return
+		}
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	stats, err := c.store.Dashboard().TrialConversionStats(semesterID, semester.FreeTrialLimit)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, TrialConversionResponse{Current: stats, FreeTrialLimit: semester.FreeTrialLimit})
 }
 
 // getSpotlight handles retrieving the dashboard's Event Spotlight card for a semester.

@@ -2,17 +2,9 @@ import { SAMPLE_TERM } from "./sampleTerm";
 
 describe("SAMPLE_TERM", () => {
   it("reads as one coherent term across every card", () => {
-    const { memberships, engagement, conversion } = SAMPLE_TERM;
+    const { memberships, engagement } = SAMPLE_TERM;
 
     expect(engagement.current.players).toBeLessThanOrEqual(memberships.current.total);
-    expect(conversion.current.players).toBe(engagement.current.players);
-
-    const buckets =
-      conversion.current.paid +
-      conversion.current.trialSpent +
-      conversion.current.trialOpen +
-      conversion.current.executive;
-    expect(buckets).toBe(conversion.current.players);
   });
 
   it("keeps the engagement buckets within the player total", () => {

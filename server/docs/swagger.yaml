@@ -592,6 +592,26 @@ definitions:
       name:
         type: string
     type: object
+  TrialConversionResponse:
+    properties:
+      current:
+        $ref: '#/definitions/TrialConversionStats'
+      freeTrialLimit:
+        type: integer
+    type: object
+  TrialConversionStats:
+    properties:
+      executive:
+        type: integer
+      paid:
+        type: integer
+      players:
+        type: integer
+      trialOpen:
+        type: integer
+      trialSpent:
+        type: integer
+    type: object
   UpdateEventRequest:
     properties:
       format:
@@ -1220,6 +1240,46 @@ paths:
       summary: Get Semester
       tags:
       - Semesters
+  /semesters/{semesterId}/dashboard/conversion:
+    get:
+      description: Get the distinct-player paid, executive, and free-trial status
+        breakdown for a semester
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/TrialConversionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get dashboard trial conversion stats
+      tags:
+      - Dashboard
   /semesters/{semesterId}/dashboard/engagement:
     get:
       description: Get distinct players, median events attended, played-once share,

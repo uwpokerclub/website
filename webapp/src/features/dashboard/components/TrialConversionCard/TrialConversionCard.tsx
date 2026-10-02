@@ -2,36 +2,24 @@ import { DashboardCard } from "../DashboardCard";
 import { StatBar } from "../StatBar";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useTrialConversion } from "../../hooks/useDashboardQueries";
-import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
 import type { ConversionResponse } from "../../api/dashboardApi";
 import styles from "./TrialConversionCard.module.css";
 
 /**
- * GET …/dashboard/conversion does not exist yet, so a failed request falls back to
- * the sample term behind a visible marker rather than showing a permanent error —
- * the page is designed and reviewable before its endpoint lands.
- *
- * Gated on isError, not on absent data: a card that substituted fixtures whenever
- * data was missing would flash fabricated figures during every normal load, and
- * would keep showing them after a transient failure once the endpoint is real.
- * Loading still looks like loading. Delete this and its branch when #4xx ships.
+ * The endpoint returns the current term's status snapshot. Loading, errors, and
+ * empty results remain card-local states rather than substituting fabricated data.
  */
-const FALL_BACK_TO_SAMPLE = true;
-
 type Props = { semesterId: string };
 
 export function TrialConversionCard({ semesterId }: Props) {
   const { data, isPending, isError, refetch } = useTrialConversion(semesterId);
-  const usingSample = FALL_BACK_TO_SAMPLE && isError;
-  const resolved = data ?? (usingSample ? SAMPLE_TERM.conversion : undefined);
-
   const status = isPending
     ? "loading"
-    : isError && !usingSample
+    : isError
       ? "error"
-      : !resolved
+      : !data
         ? "loading"
-        : resolved.current.players === 0
+        : data.current.players === 0
           ? "empty"
           : "ready";
 
@@ -39,12 +27,11 @@ export function TrialConversionCard({ semesterId }: Props) {
     <DashboardCard
       title={CARD_TITLES.trialConversion}
       status={status}
-      sampleData={usingSample}
       onRetry={() => refetch()}
       emptyMessage="No event entries recorded yet this term."
       data-qa="trial-conversion-card"
     >
-      {() => <Body data={resolved as ConversionResponse} />}
+      {() => <Body data={data as ConversionResponse} />}
     </DashboardCard>
   );
 }

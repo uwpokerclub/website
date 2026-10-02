@@ -1,33 +1,14 @@
 import { DashboardCard } from "../DashboardCard";
-import { DeltaChip, type DeltaSentiment } from "../DeltaChip";
+import { DeltaChip } from "../DeltaChip";
+import { StatBar } from "../StatBar";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useMembershipsDashboard } from "../../hooks/useDashboardQueries";
-import type { MembershipStats, MembershipsDashboardResponse } from "../../api/dashboardApi";
+import type { MembershipsDashboardResponse } from "../../api/dashboardApi";
 import styles from "./TermAtAGlanceCard.module.css";
 
 type TermAtAGlanceCardProps = {
   semesterId: string;
 };
-
-type MiniStatKey = "paid" | "unpaid" | "discounted" | "executive" | "new" | "returning";
-
-type MiniStatConfig = {
-  key: MiniStatKey;
-  label: string;
-  sentiment: DeltaSentiment;
-};
-
-const BUCKET_STATS: MiniStatConfig[] = [
-  { key: "paid", label: "Paid", sentiment: "positive-is-good" },
-  { key: "unpaid", label: "Unpaid", sentiment: "negative-is-good" },
-  { key: "discounted", label: "Discounted", sentiment: "neutral" },
-  { key: "executive", label: "Executive", sentiment: "neutral" },
-];
-
-const RETENTION_STATS: MiniStatConfig[] = [
-  { key: "new", label: "New", sentiment: "positive-is-good" },
-  { key: "returning", label: "Returning", sentiment: "positive-is-good" },
-];
 
 export function TermAtAGlanceCard({ semesterId }: TermAtAGlanceCardProps) {
   const { data, isLoading, isError, refetch } = useMembershipsDashboard(semesterId);
@@ -49,14 +30,18 @@ export function TermAtAGlanceCard({ semesterId }: TermAtAGlanceCardProps) {
   );
 }
 
+/**
+ * Two part-to-whole bars rather than a grid of independent numbers. The buckets are
+ * an exclusive partition of one total — a 2x2 of bare figures cannot say that, and
+ * reading four numbers to work out the paid/unpaid balance is work the bar does.
+ */
 function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
   const { current, comparison } = data;
 
   return (
     <div className={styles.container}>
       <div className={styles.headline}>
-        <span className={styles.eyebrow}>TOTAL</span>
-        <span className={styles.total}>{current.total}</span>
+        <span className={styles.total}>{current.total.toLocaleString("en-CA")}</span>
         {comparison ? (
           <DeltaChip
             current={current.total}
@@ -69,59 +54,23 @@ function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
         )}
       </div>
 
-      <hr className={styles.divider} />
-      <div className={styles.grid}>
-        {BUCKET_STATS.map((stat) => (
-          <MiniStat
-            key={stat.key}
-            config={stat}
-            current={current}
-            comparisonStats={comparison?.stats}
-            comparisonLabel={comparison?.semester.name}
-          />
-        ))}
-      </div>
+      <StatBar
+        ariaLabel="Memberships by payment status"
+        segments={[
+          { key: "paid", label: "paid", value: current.paid, color: "var(--dash-cat-1)" },
+          { key: "unpaid", label: "unpaid", value: current.unpaid, color: "var(--dash-cat-2)" },
+          { key: "discounted", label: "discounted", value: current.discounted, color: "var(--dash-cat-3)" },
+          { key: "executive", label: "exec", value: current.executive, color: "var(--dash-cat-4)" },
+        ]}
+      />
 
-      <hr className={styles.divider} />
-      <div className={styles.grid}>
-        {RETENTION_STATS.map((stat) => (
-          <MiniStat
-            key={stat.key}
-            config={stat}
-            current={current}
-            comparisonStats={comparison?.stats}
-            comparisonLabel={comparison?.semester.name}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({
-  config,
-  current,
-  comparisonStats,
-  comparisonLabel,
-}: {
-  config: MiniStatConfig;
-  current: MembershipStats;
-  comparisonStats?: MembershipStats;
-  comparisonLabel?: string;
-}) {
-  return (
-    <div className={styles.stat}>
-      <span className={styles.eyebrow}>{config.label}</span>
-      <span className={styles.value}>{current[config.key]}</span>
-      {comparisonStats && comparisonLabel && (
-        <DeltaChip
-          current={current[config.key]}
-          comparison={comparisonStats[config.key]}
-          comparisonLabel={comparisonLabel}
-          sentiment={config.sentiment}
-          compact
-        />
-      )}
+      <StatBar
+        ariaLabel="Memberships by prior membership"
+        segments={[
+          { key: "new", label: "first-ever term", value: current.new, color: "var(--dash-ord-3)" },
+          { key: "returning", label: "returning", value: current.returning, color: "var(--dash-ord-1)" },
+        ]}
+      />
     </div>
   );
 }

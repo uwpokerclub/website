@@ -411,4 +411,12 @@ export const LOGINS: Login[] = [
     username: "clock_executive",
     role: "executive",
   },
+  {
+    username: "dashboard_records",
+    role: "secretary",
+  },
+  {
+    username: "dashboard_leadership",
+    role: "president"
+  },
 ];

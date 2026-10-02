@@ -81,6 +81,8 @@ export interface SignupPoint {
   date: string;
   admin: number;
   discord: number;
+  /** Null, legacy, and unrecognized membership sources are grouped here by the API. */
+  unknown: number;
 }
 
 export interface SignupsResponse {

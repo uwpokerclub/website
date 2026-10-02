@@ -96,7 +96,7 @@ describe("EngagementRetentionCard", () => {
 
     render(<EngagementRetentionCard semesterId="s1" />);
 
-    expect(screen.getByRole("status", { name: "Loading Engagement & Retention" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading Engagement & retention" })).toBeInTheDocument();
   });
 
   it("isolates a request error in this card and retries its own query", async () => {

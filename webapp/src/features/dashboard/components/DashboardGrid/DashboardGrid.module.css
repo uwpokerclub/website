@@ -1,11 +1,38 @@
+/*
+ * The grid is a container, not a media-query consumer. The dashboard sits in a flex
+ * lane beside the admin sidenav, so viewport width systematically overstates the room
+ * actually available; container width does not.
+ */
 .grid {
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1.5rem;
+  align-items: start;
 }
 
-@media screen and (max-width: 768px) {
+.wideLane,
+.rail,
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+/*
+ * Every card's lead figure is sized from --card-figure-size. Only this wrapper
+ * overrides it, so promotion to lead is a single cascade step and a card never needs
+ * to know which lane it landed in.
+ */
+.lead {
+  --card-figure-size: var(--font-size-5xl);
+
+  min-width: 0;
+}
+
+@container (min-width: 64rem) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 2fr 1fr;
   }
 }

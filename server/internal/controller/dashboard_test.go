@@ -982,9 +982,34 @@ func TestDashboardTrialConversion(t *testing.T) {
 		require.NotNil(t, body.Comparison)
 		require.Equal(t, comparison.ID, body.Comparison.Semester.ID)
 		require.Equal(t, comparison.Name, body.Comparison.Semester.Name)
+		require.EqualValues(t, 2, body.Comparison.FreeTrialLimit)
 		require.EqualValues(t, 1, body.Comparison.Stats.Players)
 		require.EqualValues(t, 1, body.Comparison.Stats.TrialSpent)
 		require.EqualValues(t, 0, body.Comparison.Stats.TrialOpen)
+	})
+
+	t.Run("reports a disabled trial for the comparison term", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		comparison, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		current, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		setFreeTrialLimit(t, db, current.ID, 3)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		comparisonEvent, err := createDashboardTestEvent(db, comparison.ID, structure.ID, "Prior", models.EventStateEnded, comparison.StartDate, 0)
+		require.NoError(t, err)
+		priorPlayer := createPlayer(t, db, comparison.ID, "prior-disabled", false, false)
+		_, err = testutils.CreateTestParticipant(db, priorPlayer.ID, comparisonEvent.ID)
+		require.NoError(t, err)
+
+		body := decode(t, getConversion(t, current.ID.String()))
+		require.NotNil(t, body.Comparison)
+		require.EqualValues(t, 0, body.Comparison.FreeTrialLimit)
+		// The persisted partition remains literal (entries >= 0), while clients use
+		// the limit to present these unpaid players as not having had a trial.
+		require.EqualValues(t, 1, body.Comparison.Stats.TrialSpent)
 	})
 
 	t.Run("limit zero preserves the literal spent-trial partition", func(t *testing.T) {

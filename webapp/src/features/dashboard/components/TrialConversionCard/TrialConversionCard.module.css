@@ -24,7 +24,9 @@
 }
 
 .disabled,
-.foot {
+.foot,
+.comparisonContext,
+.noComparison {
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-gray-700);
@@ -34,4 +36,24 @@
 .foot {
   padding-top: 0.625rem;
   border-top: 1px solid var(--color-gray-200);
+}
+
+.comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.comparisonTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+}
+
+.comparisonContext,
+.noComparison {
+  margin: 0;
 }

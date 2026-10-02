@@ -103,7 +103,7 @@ export interface ConversionStats {
 export interface ConversionResponse {
   current: ConversionStats;
   freeTrialLimit: number;
-  comparison: { semester: { id: string; name: string }; stats: ConversionStats } | null;
+  comparison: { semester: { id: string; name: string }; stats: ConversionStats; freeTrialLimit: number } | null;
 }
 
 export interface RankingEntry {

@@ -3510,6 +3510,9 @@ const docTemplate = `{
         "ComparisonTrialConversionStats": {
             "type": "object",
             "properties": {
+                "freeTrialLimit": {
+                    "type": "integer"
+                },
                 "semester": {
                     "$ref": "#/definitions/SemesterRef"
                 },

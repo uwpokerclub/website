@@ -35,14 +35,15 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 // ComparisonTrialConversionStats pairs a resolved comparison semester with its
 // trial-conversion stats, calculated using that semester's own free-trial limit.
 type ComparisonTrialConversionStats struct {
-	Semester store.SemesterRef          `json:"semester"`
-	Stats    store.TrialConversionStats `json:"stats"`
+	Semester       store.SemesterRef          `json:"semester"`
+	Stats          store.TrialConversionStats `json:"stats"`
+	FreeTrialLimit uint8                      `json:"freeTrialLimit"`
 } //@name ComparisonTrialConversionStats
 
 // TrialConversionResponse is the dashboard's Trial Conversion response.
 type TrialConversionResponse struct {
-	Current        store.TrialConversionStats `json:"current"`
-	FreeTrialLimit uint8                      `json:"freeTrialLimit"`
+	Current        store.TrialConversionStats      `json:"current"`
+	FreeTrialLimit uint8                           `json:"freeTrialLimit"`
 	Comparison     *ComparisonTrialConversionStats `json:"comparison"`
 } //@name TrialConversionResponse
 
@@ -98,8 +99,9 @@ func (c *dashboardController) getTrialConversion(ctx *gin.Context) {
 			return
 		}
 		response.Comparison = &ComparisonTrialConversionStats{
-			Semester: store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
-			Stats:    comparisonStats,
+			Semester:       store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+			Stats:          comparisonStats,
+			FreeTrialLimit: comparison.FreeTrialLimit,
 		}
 	}
 

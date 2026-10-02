@@ -59,6 +59,8 @@ definitions:
     type: object
   ComparisonTrialConversionStats:
     properties:
+      freeTrialLimit:
+        type: integer
       semester:
         $ref: '#/definitions/SemesterRef'
       stats:

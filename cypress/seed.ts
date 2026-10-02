@@ -411,4 +411,14 @@ export const LOGINS: Login[] = [
     username: "clock_executive",
     role: "executive",
   },
+  // Dedicated to dashboard.cy.ts role-specific card coverage. Also mirrored in
+  // cypress/fixtures/logins.json.
+  {
+    username: "dashboard_records",
+    role: "secretary",
+  },
+  {
+    username: "dashboard_leadership",
+    role: "president",
+  },
 ];

@@ -2,10 +2,12 @@
 INSERT INTO logins (username, password, role) VALUES ('e2e_user', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'webmaster') ON CONFLICT (username) DO NOTHING;
 
 -- Seed additional logins for testing logins management
--- Password for all test logins is 'password123' (bcrypt hash)
+-- Password for all test logins is 'password' (bcrypt hash)
 INSERT INTO logins (username, password, role) VALUES
   ('test_president', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'president'),
   ('test_executive', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive'),
+  ('dashboard_records', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'secretary'),
+  ('dashboard_leadership', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'president'),
   ('hdrust0', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive')
 ON CONFLICT (username) DO NOTHING;
 
@@ -21,6 +23,11 @@ ON CONFLICT (username) DO NOTHING;
 INSERT INTO semesters 
   (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta, free_trial_limit) 
   VALUES ('84f026be-53e0-4759-ab89-131c4a66d649', 'Winter 2025', '2025-01-01', '2024-04-30', 100, 100, 10, 7, 2, 'Seed Semester', 4);
+
+-- A prior term gives dashboard E2E coverage a real second semester to select.
+INSERT INTO semesters
+  (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta, free_trial_limit)
+  VALUES ('1f536973-5fb8-4c52-95fe-14cc479af31c', 'Fall 2024', '2024-09-01', '2024-12-15', 80, 80, 10, 7, 2, 'Dashboard switch seed', 4);
 
 -- Seed a initial event structure
 INSERT INTO structures (id, name) VALUES (1, 'Structure A');

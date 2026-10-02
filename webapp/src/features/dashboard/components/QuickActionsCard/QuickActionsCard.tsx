@@ -57,12 +57,14 @@ export function QuickActionsCard() {
       data-qa="quick-actions-card"
     >
       {() => (
-        <div className={styles.grid}>
-          {available.map((item) => (
-            <Link key={item.key} to={item.to} className={styles.action}>
-              {item.label}
-            </Link>
-          ))}
+        <div className={styles.container}>
+          <div className={styles.grid}>
+            {available.map((item) => (
+              <Link key={item.key} to={item.to} className={styles.action}>
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </DashboardCard>

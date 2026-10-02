@@ -1,10 +1,17 @@
 /*
- * The grid is a container, not a media-query consumer. The dashboard sits in a flex
- * lane beside the admin sidenav, so viewport width systematically overstates the room
- * actually available; container width does not.
+ * Two elements, not one, and deliberately so: an element is never its own query
+ * container. `.container` establishes the containment context and `.grid` — its
+ * child — is what the @container rule below can actually match.
+ *
+ * It is a container rather than a media query because the dashboard sits in a flex
+ * lane beside the admin sidenav, so viewport width systematically overstates the
+ * room actually available.
  */
-.grid {
+.container {
   container-type: inline-size;
+}
+
+.grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;

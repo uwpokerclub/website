@@ -19,9 +19,12 @@ import type { SignupsResponse } from "../../api/dashboardApi";
 import styles from "./SignupTimelineCard.module.css";
 
 /**
- * GET …/dashboard/signups (#433) does not exist yet, so the card falls back to the
- * sample term behind a visible marker. Real data wins whenever it is present, so
- * nothing needs flipping when the endpoint ships.
+ * GET …/dashboard/signups (#433) does not exist yet, so a failed request falls back
+ * to the sample term behind a visible marker.
+ *
+ * Gated on isError, not on absent data: substituting fixtures whenever data is
+ * missing would flash a fabricated 967-signup chart during every normal load.
+ * Delete this and its branch when #433 ships.
  */
 const FALL_BACK_TO_SAMPLE = true;
 
@@ -36,14 +39,15 @@ const formatMonth = (iso: string) =>
 type Props = { semesterId: string };
 
 export function SignupTimelineCard({ semesterId }: Props) {
-  const { data, isLoading, isError, refetch } = useSignups(semesterId);
-  const usingSample = FALL_BACK_TO_SAMPLE && !data;
-  const resolved = data ?? (FALL_BACK_TO_SAMPLE ? SAMPLE_TERM.signups : undefined);
+  const { data, isPending, isError, refetch } = useSignups(semesterId);
+  const usingSample = FALL_BACK_TO_SAMPLE && isError;
+  const resolved = data ?? (usingSample ? SAMPLE_TERM.signups : undefined);
 
-  const status =
-    isError && !usingSample
+  const status = isPending
+    ? "loading"
+    : isError && !usingSample
       ? "error"
-      : (isLoading && !usingSample) || !resolved
+      : !resolved
         ? "loading"
         : resolved.series.length === 0
           ? "empty"

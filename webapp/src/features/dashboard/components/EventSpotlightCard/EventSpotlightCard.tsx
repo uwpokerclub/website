@@ -11,8 +11,12 @@ const EVENT_STATE_STARTED = 0;
 type Props = { semesterId: string };
 
 export function EventSpotlightCard({ semesterId }: Props) {
-  const { data, isLoading, isError, refetch } = useSpotlight(semesterId);
-  const status = isError ? "error" : isLoading ? "loading" : !data ? "empty" : "ready";
+  // null is a legitimate response here — "no event scheduled" — so absent data
+  // cannot stand in for "still loading". Between a failed attempt and its retry,
+  // isLoading is false and isError is not yet true; isPending covers that window,
+  // which is what stops the card briefly claiming there are no events.
+  const { data, isPending, isError, refetch } = useSpotlight(semesterId);
+  const status = isPending ? "loading" : isError ? "error" : !data ? "empty" : "ready";
 
   return (
     <DashboardCard

@@ -123,5 +123,11 @@ export async function fetchTrialConversion(semesterId: string): Promise<Conversi
 }
 
 export async function fetchTopRankings(semesterId: string): Promise<RankingEntry[]> {
-  return apiClient<RankingEntry[]>(`v2/semesters/${semesterId}/rankings?limit=5`);
+  // The rankings endpoint returns models.ListResponse — { data, total } — not a bare
+  // array. Unwrap here so the card never has to know, matching RankingsPage.
+  const response = await apiClient<{ data: RankingEntry[]; total: number }>(
+    `v2/semesters/${semesterId}/rankings?limit=5`,
+  );
+
+  return response.data ?? [];
 }

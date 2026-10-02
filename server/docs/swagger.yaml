@@ -538,6 +538,32 @@ definitions:
     required:
     - index
     type: object
+  SignupTimeline:
+    properties:
+      dataStartsAt:
+        type: string
+      eventDates:
+        items:
+          type: string
+        type: array
+      series:
+        items:
+          $ref: '#/definitions/SignupTimelinePoint'
+        type: array
+      total:
+        type: integer
+    type: object
+  SignupTimelinePoint:
+    properties:
+      admin:
+        type: integer
+      date:
+        type: string
+      discord:
+        type: integer
+      unknown:
+        type: integer
+    type: object
   SpotlightEvent:
     properties:
       entries:
@@ -1315,6 +1341,46 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Get dashboard membership stats
+      tags:
+      - Dashboard
+  /semesters/{semesterId}/dashboard/signups:
+    get:
+      description: Get zero-filled daily membership creation counts by source, event
+        dates, and the first dated signup for a semester
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SignupTimeline'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get dashboard signup timeline
       tags:
       - Dashboard
   /semesters/{semesterId}/dashboard/spotlight:

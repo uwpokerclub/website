@@ -1,33 +1,15 @@
+import { useCurrentSemester } from "@/hooks";
 import { DashboardCard } from "../DashboardCard";
-import { DeltaChip, type DeltaSentiment } from "../DeltaChip";
+import { DeltaChip } from "../DeltaChip";
+import { StatBar } from "../StatBar";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useMembershipsDashboard } from "../../hooks/useDashboardQueries";
-import type { MembershipStats, MembershipsDashboardResponse } from "../../api/dashboardApi";
+import type { MembershipsDashboardResponse } from "../../api/dashboardApi";
 import styles from "./TermAtAGlanceCard.module.css";
 
 type TermAtAGlanceCardProps = {
   semesterId: string;
 };
-
-type MiniStatKey = "paid" | "unpaid" | "discounted" | "executive" | "new" | "returning";
-
-type MiniStatConfig = {
-  key: MiniStatKey;
-  label: string;
-  sentiment: DeltaSentiment;
-};
-
-const BUCKET_STATS: MiniStatConfig[] = [
-  { key: "paid", label: "Paid", sentiment: "positive-is-good" },
-  { key: "unpaid", label: "Unpaid", sentiment: "negative-is-good" },
-  { key: "discounted", label: "Discounted", sentiment: "neutral" },
-  { key: "executive", label: "Executive", sentiment: "neutral" },
-];
-
-const RETENTION_STATS: MiniStatConfig[] = [
-  { key: "new", label: "New", sentiment: "positive-is-good" },
-  { key: "returning", label: "Returning", sentiment: "positive-is-good" },
-];
 
 export function TermAtAGlanceCard({ semesterId }: TermAtAGlanceCardProps) {
   const { data, isLoading, isError, refetch } = useMembershipsDashboard(semesterId);
@@ -49,79 +31,144 @@ export function TermAtAGlanceCard({ semesterId }: TermAtAGlanceCardProps) {
   );
 }
 
+/**
+ * Two part-to-whole bars rather than a grid of independent numbers. The buckets are
+ * an exclusive partition of one total — a 2x2 of bare figures cannot say that, and
+ * reading four numbers to work out the paid/unpaid balance is work the bar does.
+ */
 function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
   const { current, comparison } = data;
 
   return (
     <div className={styles.container}>
       <div className={styles.headline}>
-        <span className={styles.eyebrow}>TOTAL</span>
-        <span className={styles.total}>{current.total}</span>
-        {comparison ? (
-          <DeltaChip
-            current={current.total}
-            comparison={comparison.stats.total}
-            comparisonLabel={comparison.semester.name}
-            sentiment="positive-is-good"
-          />
-        ) : (
-          <p className={styles.noComparisonNote}>No comparable term to compare against yet.</p>
-        )}
+        <span className={styles.total}>{current.total.toLocaleString("en-CA")}</span>
+        <Comparison current={current.total} comparison={comparison} />
       </div>
 
-      <hr className={styles.divider} />
-      <div className={styles.grid}>
-        {BUCKET_STATS.map((stat) => (
-          <MiniStat
-            key={stat.key}
-            config={stat}
-            current={current}
-            comparisonStats={comparison?.stats}
-            comparisonLabel={comparison?.semester.name}
-          />
-        ))}
-      </div>
+      <PaceTrack current={current.total} comparison={comparison} />
 
-      <hr className={styles.divider} />
-      <div className={styles.grid}>
-        {RETENTION_STATS.map((stat) => (
-          <MiniStat
-            key={stat.key}
-            config={stat}
-            current={current}
-            comparisonStats={comparison?.stats}
-            comparisonLabel={comparison?.semester.name}
-          />
-        ))}
-      </div>
+      <StatBar
+        ariaLabel="Memberships by payment status"
+        segments={[
+          { key: "paid", label: "paid", value: current.paid, color: "var(--dash-cat-1)" },
+          { key: "unpaid", label: "unpaid", value: current.unpaid, color: "var(--dash-cat-2)" },
+          { key: "discounted", label: "discounted", value: current.discounted, color: "var(--dash-cat-3)" },
+          { key: "executive", label: "exec", value: current.executive, color: "var(--dash-cat-4)" },
+        ]}
+      />
+
+      <StatBar
+        ariaLabel="Memberships by prior membership"
+        segments={[
+          { key: "new", label: "first-ever term", value: current.new, color: "var(--dash-ord-3)" },
+          { key: "returning", label: "returning", value: current.returning, color: "var(--dash-ord-1)" },
+        ]}
+      />
     </div>
   );
 }
 
-function MiniStat({
-  config,
+/**
+ * A membership total only means something against the same point of the earlier
+ * term. Comparing a term three weeks old against a finished one reads as a collapse
+ * every single time, which is what this card used to do.
+ *
+ * totalAsOf carries that like-for-like figure, and is null for terms whose
+ * memberships predate created_at. In that case the card shows pace toward the final
+ * total instead — honest about being a different question — rather than a delta it
+ * cannot compute. Once those terms are dated, the delta appears on its own.
+ */
+function Comparison({
   current,
-  comparisonStats,
-  comparisonLabel,
+  comparison,
 }: {
-  config: MiniStatConfig;
-  current: MembershipStats;
-  comparisonStats?: MembershipStats;
-  comparisonLabel?: string;
+  current: number;
+  comparison: MembershipsDashboardResponse["comparison"];
 }) {
+  if (!comparison) {
+    return <p className={styles.noComparisonNote}>No comparable term to compare against yet.</p>;
+  }
+
+  if (comparison.totalAsOf === null) {
+    // Nothing honest to put in a delta chip; the track below carries the pace.
+    return null;
+  }
+
   return (
-    <div className={styles.stat}>
-      <span className={styles.eyebrow}>{config.label}</span>
-      <span className={styles.value}>{current[config.key]}</span>
-      {comparisonStats && comparisonLabel && (
-        <DeltaChip
-          current={current[config.key]}
-          comparison={comparisonStats[config.key]}
-          comparisonLabel={comparisonLabel}
-          sentiment={config.sentiment}
-          compact
-        />
-      )}
+    <DeltaChip
+      current={current}
+      comparison={comparison.totalAsOf}
+      comparisonLabel={`this point in ${comparison.semester.name}`}
+      sentiment="positive-is-good"
+    />
+  );
+}
+
+/**
+ * Progress toward a full term's worth of memberships, with a marker for where the
+ * comparison term stood at this same point.
+ *
+ * The delta chip answers "are we ahead or behind right now"; this answers "how much
+ * of a term is still to come", which is the question that makes a mid-term figure
+ * actionable. They are different questions, so both earn their place — unlike the
+ * engagement card's old pair, which stated one fact twice.
+ */
+function PaceTrack({
+  current,
+  comparison,
+}: {
+  current: number;
+  comparison: MembershipsDashboardResponse["comparison"];
+}) {
+  const { currentSemester } = useCurrentSemester();
+
+  if (!comparison) {
+    return null;
+  }
+
+  const target = Math.max(comparison.stats.total, 1);
+  const share = Math.round((current / target) * 100);
+  const fill = Math.min(share, 100);
+  const markerAt = comparison.totalAsOf === null ? null : Math.min((comparison.totalAsOf / target) * 100, 100);
+
+  const label =
+    `${current.toLocaleString("en-CA")} of ${comparison.stats.total.toLocaleString("en-CA")} ` +
+    `— ${share}% of ${comparison.semester.name}'s final total` +
+    (comparison.totalAsOf === null
+      ? "."
+      : `, against ${comparison.totalAsOf.toLocaleString("en-CA")} at this point last year.`);
+
+  return (
+    <div className={styles.paceBlock}>
+      <div className={styles.paceTrack} role="img" aria-label={`Progress toward a full term: ${label}`}>
+        <i className={styles.paceFill} style={{ width: `${fill}%` }} />
+        {markerAt !== null && (
+          <i className={styles.paceMarker} data-qa="pace-marker" style={{ left: `${markerAt}%` }} />
+        )}
+      </div>
+      <p className={styles.pace}>
+        {share}% of {comparison.semester.name}&apos;s final {comparison.stats.total.toLocaleString("en-CA")}
+        {termProgress(currentSemester) && <> · {termProgress(currentSemester)}</>}
+      </p>
     </div>
   );
+}
+
+/** "day 19 of 85", or null when the term's dates are unavailable. */
+function termProgress(semester: { startDate: string; endDate: string } | null | undefined) {
+  if (!semester) {
+    return null;
+  }
+
+  const day = 86_400_000;
+  const start = new Date(semester.startDate).getTime();
+  const total = Math.round((new Date(semester.endDate).getTime() - start) / day);
+  const elapsed = Math.round((Date.now() - start) / day);
+
+  if (!Number.isFinite(total) || total <= 0 || elapsed < 0) {
+    return null;
+  }
+
+  return `day ${Math.min(elapsed, total)} of ${total}`;
 }

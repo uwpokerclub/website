@@ -1,11 +1,28 @@
 .page {
+  /*
+   * Validated data palette — see docs/superpowers/specs/2026-10-01-dashboard-page-design.md.
+   * The brand hexes themselves fail the lightness band (#4b2e83 at L .385, #f4b80f at
+   * L .816), so these are those two colours stepped into the passing band, plus blue
+   * and rose. Red and green are reserved for DeltaChip and never appear here.
+   */
+  --dash-cat-1: #6f4fae;
+  --dash-cat-2: #c98f00;
+  --dash-cat-3: #2a78d6;
+  --dash-cat-4: #d5578a;
+  --dash-ord-1: #ab97d2;
+  --dash-ord-2: #7c5eb6;
+  --dash-ord-3: #4b2e83;
+  --dash-band: #e3dcf0;
+  --dash-muted: #d5d5d5;
+  --dash-muted-soft: #ebebeb;
+
   display: flex;
   flex-direction: column;
   flex: 1;
   gap: 1.5rem;
   margin: -1.5rem;
   padding: 1.5rem;
-  background: var(--color-background-secondary, #f8f9fa);
+  background: var(--color-background-secondary);
 }
 
 @media screen and (max-width: 768px) {
@@ -17,21 +34,21 @@
 
 .header {
   padding: 1.5rem 2rem 1rem;
-  border-bottom: 1px solid var(--color-gray-200, #eeeeee);
-  background-color: var(--color-background, #ffffff);
+  border-bottom: 1px solid var(--color-gray-200);
+  background-color: var(--color-background);
 }
 
 .header h1 {
   margin: 0 0 0.5rem;
   font-size: 1.75rem;
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-gray-900, #212121);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
 }
 
 .subtitle {
   margin: 0;
-  font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-gray-600, #757575);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
 }
 
 @media screen and (max-width: 768px) {
@@ -40,11 +57,11 @@
   }
 
   .header h1 {
-    font-size: var(--font-size-2xl, 1.5rem);
+    font-size: var(--font-size-2xl);
   }
 
   .subtitle {
-    font-size: var(--font-size-sm, 0.875rem);
+    font-size: var(--font-size-sm);
   }
 }
 
@@ -54,11 +71,6 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  color: var(--color-gray-700, #616161);
+  color: var(--color-gray-700);
 }
 
-.placeholder {
-  margin: 0;
-  font-size: var(--font-size-sm, 0.875rem);
-  color: var(--color-gray-700, #616161);
-}

@@ -20,7 +20,7 @@ describe("EventSpotlightCard", () => {
   afterEach(() => jest.clearAllMocks());
 
   it("leads with the event's name, not a count", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.spotlight, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.spotlight, refetch: jest.fn() });
     renderCard();
 
     expect(screen.getByRole("heading", { name: "Thursday Night NLH" })).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("EventSpotlightCard", () => {
   });
 
   it("links to the event it is featuring", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.spotlight, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.spotlight, refetch: jest.fn() });
     renderCard();
 
     expect(screen.getByRole("link", { name: "Open event" })).toHaveAttribute("href", "/admin/events/412");
@@ -37,7 +37,7 @@ describe("EventSpotlightCard", () => {
 
   it("counts down to an event that has not started instead of claiming it is live", () => {
     mocked.mockReturnValue({
-      isLoading: false,
+      isPending: false,
       isError: false,
       refetch: jest.fn(),
       data: { ...SAMPLE_TERM.spotlight, startDate: "2099-01-08T23:00:00Z" },
@@ -49,9 +49,16 @@ describe("EventSpotlightCard", () => {
   });
 
   it("says nothing is scheduled when there is no event", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: null, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: null, refetch: jest.fn() });
     renderCard();
 
     expect(screen.getByText("No events scheduled this term.")).toBeInTheDocument();
+  });
+  it("does not claim there are no events while the request is still settling", () => {
+    mocked.mockReturnValue({ isPending: true, isError: false, data: undefined, refetch: jest.fn() });
+    renderCard();
+
+    expect(screen.queryByText("No events scheduled this term.")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 });

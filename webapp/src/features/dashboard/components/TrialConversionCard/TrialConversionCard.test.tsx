@@ -12,7 +12,7 @@ describe("TrialConversionCard", () => {
   afterEach(() => jest.clearAllMocks());
 
   it("leads with the number who spent the trial and never paid", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
     expect(screen.getByTestId("trial-conversion-figure")).toHaveTextContent("78");
@@ -20,7 +20,7 @@ describe("TrialConversionCard", () => {
   });
 
   it("breaks the player population into four commitment buckets", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
     const buckets = screen.getAllByRole("listitem").map((item) => item.textContent);
@@ -29,7 +29,7 @@ describe("TrialConversionCard", () => {
 
   it("says the trial is off rather than drawing a bar of zeroes", () => {
     mocked.mockReturnValue({
-      isLoading: false,
+      isPending: false,
       isError: false,
       refetch: jest.fn(),
       data: { ...SAMPLE_TERM.conversion, freeTrialLimit: 0 },
@@ -41,14 +41,14 @@ describe("TrialConversionCard", () => {
   });
 
   it("is explicit that it shows a snapshot and not a conversion rate", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
     expect(screen.getByText(/not a conversion rate/)).toBeInTheDocument();
   });
 
   it("marks itself as sample data while the endpoint returns nothing", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: true, data: undefined, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: true, data: undefined, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
     expect(screen.getByText("Sample data")).toBeInTheDocument();
@@ -56,9 +56,17 @@ describe("TrialConversionCard", () => {
   });
 
   it("drops the sample marker as soon as the endpoint returns real data", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.conversion, refetch: jest.fn() });
     render(<TrialConversionCard semesterId="s1" />);
 
     expect(screen.queryByText("Sample data")).not.toBeInTheDocument();
+  });
+  it("shows the loading state rather than fabricated figures while the request is in flight", () => {
+    mocked.mockReturnValue({ isPending: true, isError: false, data: undefined, refetch: jest.fn() });
+    render(<TrialConversionCard semesterId="s1" />);
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByText("Sample data")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("trial-conversion-figure")).not.toBeInTheDocument();
   });
 });

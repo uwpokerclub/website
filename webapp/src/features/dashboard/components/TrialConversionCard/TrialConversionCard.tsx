@@ -7,28 +7,29 @@ import type { ConversionResponse } from "../../api/dashboardApi";
 import styles from "./TrialConversionCard.module.css";
 
 /**
- * GET …/dashboard/conversion does not exist yet, so the card falls back to the sample
- * term behind a visible marker rather than showing a permanent error — the page is
- * designed and reviewable before its endpoint lands.
+ * GET …/dashboard/conversion does not exist yet, so a failed request falls back to
+ * the sample term behind a visible marker rather than showing a permanent error —
+ * the page is designed and reviewable before its endpoint lands.
  *
- * Real data always wins when it is present, so this needs no flipping when the
- * endpoint ships: the response arrives, the fallback stops being used and the marker
- * disappears on its own. Set to false to see the real loading and error states.
+ * Gated on isError, not on absent data: a card that substituted fixtures whenever
+ * data was missing would flash fabricated figures during every normal load, and
+ * would keep showing them after a transient failure once the endpoint is real.
+ * Loading still looks like loading. Delete this and its branch when #4xx ships.
  */
 const FALL_BACK_TO_SAMPLE = true;
 
 type Props = { semesterId: string };
 
 export function TrialConversionCard({ semesterId }: Props) {
-  const { data, isLoading, isError, refetch } = useTrialConversion(semesterId);
-  const usingSample = FALL_BACK_TO_SAMPLE && !data;
-  const resolved = data ?? (FALL_BACK_TO_SAMPLE ? SAMPLE_TERM.conversion : undefined);
+  const { data, isPending, isError, refetch } = useTrialConversion(semesterId);
+  const usingSample = FALL_BACK_TO_SAMPLE && isError;
+  const resolved = data ?? (usingSample ? SAMPLE_TERM.conversion : undefined);
 
-  const status = usingSample
-    ? "ready"
-    : isError
+  const status = isPending
+    ? "loading"
+    : isError && !usingSample
       ? "error"
-      : isLoading || !resolved
+      : !resolved
         ? "loading"
         : resolved.current.players === 0
           ? "empty"

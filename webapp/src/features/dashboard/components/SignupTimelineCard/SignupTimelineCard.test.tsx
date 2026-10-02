@@ -20,7 +20,7 @@ describe("SignupTimelineCard", () => {
   afterEach(() => jest.clearAllMocks());
 
   it("leads with the term total and the busiest day", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
     renderCard();
 
     expect(screen.getByText("967")).toBeInTheDocument();
@@ -28,7 +28,7 @@ describe("SignupTimelineCard", () => {
   });
 
   it("names when tracking began rather than implying a wait that never ends", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.signups, refetch: jest.fn() });
     renderCard();
 
     expect(screen.getByText(/Signup tracking began/)).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("SignupTimelineCard", () => {
 
   it("explains a permanently empty series for a term predating the migration", () => {
     mocked.mockReturnValue({
-      isLoading: false,
+      isPending: false,
       isError: false,
       refetch: jest.fn(),
       data: { series: [], eventDates: [], dataStartsAt: "2026-09-01", total: 0 },
@@ -49,9 +49,16 @@ describe("SignupTimelineCard", () => {
   });
 
   it("marks itself as sample data while the endpoint returns nothing", () => {
-    mocked.mockReturnValue({ isLoading: false, isError: true, data: undefined, refetch: jest.fn() });
+    mocked.mockReturnValue({ isPending: false, isError: true, data: undefined, refetch: jest.fn() });
     renderCard();
 
     expect(screen.getByText("Sample data")).toBeInTheDocument();
+  });
+  it("shows the loading state rather than a fabricated chart while the request is in flight", () => {
+    mocked.mockReturnValue({ isPending: true, isError: false, data: undefined, refetch: jest.fn() });
+    renderCard();
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByText("967")).not.toBeInTheDocument();
   });
 });

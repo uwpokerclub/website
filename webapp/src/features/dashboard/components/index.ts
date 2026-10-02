@@ -4,3 +4,5 @@ export * from "./DashboardGrid";
 export * from "./DeltaChip";
 export * from "./TermAtAGlanceCard";
 export * from "./EngagementRetentionCard";
+export * from "./StatBar";
+export * from "./RangeTrack";

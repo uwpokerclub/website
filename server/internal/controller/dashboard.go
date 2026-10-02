@@ -353,6 +353,27 @@ type EventActivityResponse struct {
 	Comparison *ComparisonEventActivity `json:"comparison"`
 } //@name EventActivityResponse
 
+// SignupTimelineComparisonPoint is the comparison semester's daily signup total
+// at an elapsed calendar-day offset from its own start date.
+type SignupTimelineComparisonPoint struct {
+	ElapsedDay int   `json:"elapsedDay"`
+	Total      int64 `json:"total"`
+} //@name SignupTimelineComparisonPoint
+
+// SignupTimelineComparison contains the resolved previous same-season semester
+// and its dated daily signup totals. Missing offsets are outside term coverage.
+type SignupTimelineComparison struct {
+	Semester    store.SemesterRef               `json:"semester"`
+	DailyTotals []SignupTimelineComparisonPoint `json:"dailyTotals"`
+} //@name SignupTimelineComparison
+
+// SignupTimelineResponse is the current signup timeline plus an optional prior
+// same-season daily-total trend.
+type SignupTimelineResponse struct {
+	store.SignupTimeline
+	Comparison *SignupTimelineComparison `json:"comparison"`
+} //@name SignupTimelineResponse
+
 // getEventActivity handles retrieving the dashboard's Event Activity card for a semester.
 //
 // @Summary Get dashboard event activity
@@ -418,11 +439,11 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 // getSignupTimeline handles retrieving daily membership creation counts for a semester.
 //
 // @Summary Get dashboard signup timeline
-// @Description Get zero-filled daily membership creation counts by source, event dates, and the first dated signup for a semester
+// @Description Get zero-filled daily membership creation counts by source and event dates, plus an optional prior same-season daily-total trend aligned by elapsed calendar day
 // @Tags Dashboard
 // @Produce json
 // @Param semesterId path string true "Semester ID"
-// @Success 200 {object} SignupTimeline
+// @Success 200 {object} SignupTimelineResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -436,7 +457,8 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 		return
 	}
 
-	if _, err := c.store.Semesters().FindByID(semesterID); err != nil {
+	semester, err := c.store.Semesters().FindByID(semesterID)
+	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
 			return
@@ -445,11 +467,105 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 		return
 	}
 
-	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, time.Now())
+	now := time.Now()
+	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, now)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, timeline)
+	response := SignupTimelineResponse{SignupTimeline: timeline}
+	if len(timeline.Series) > 0 {
+		semesters, _, err := c.store.Semesters().List(&models.Pagination{})
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			return
+		}
+		if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
+			comparisonNow, ok := signupComparisonCutoff(semester, *comparison, timeline.Series)
+			if ok {
+				// A full-term read distinguishes a genuinely dated zero-signup span
+				// from legacy memberships whose creation dates are unknowable.
+				fullComparison, err := c.store.Dashboard().SignupTimeline(comparison.ID, time.Date(9999, 12, 31, 12, 0, 0, 0, time.UTC))
+				if err != nil {
+					ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+					return
+				}
+				if fullComparison.DataStartsAt != nil {
+					comparisonTimeline, err := c.store.Dashboard().SignupTimeline(comparison.ID, comparisonNow)
+					if err != nil {
+						ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+						return
+					}
+					if len(comparisonTimeline.Series) == 0 {
+						response.Comparison = &SignupTimelineComparison{
+							Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+							DailyTotals: []SignupTimelineComparisonPoint{},
+						}
+					} else {
+						startDate, err := time.Parse("2006-01-02", comparisonTimeline.Series[0].Date)
+						if err != nil {
+							ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+							return
+						}
+						points := make([]SignupTimelineComparisonPoint, 0, len(comparisonTimeline.Series))
+						for _, point := range comparisonTimeline.Series {
+							date, err := time.Parse("2006-01-02", point.Date)
+							if err != nil {
+								ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+								return
+							}
+							points = append(points, SignupTimelineComparisonPoint{
+								ElapsedDay: int(date.Sub(startDate).Hours() / 24),
+								Total:      point.Admin + point.Discord + point.Unknown,
+							})
+						}
+						response.Comparison = &SignupTimelineComparison{
+							Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+							DailyTotals: points,
+						}
+					}
+				}
+			}
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+// signupComparisonCutoff converts the last displayed current calendar date into
+// the corresponding comparison calendar date. ComparisonCutoff supplies the
+// existing elapsed-time bound; date-only UTC arithmetic then avoids 23/25-hour
+// DST days and noon in Toronto ensures the repository's Toronto-date cast keeps
+// the selected date unchanged.
+func signupComparisonCutoff(current, comparison models.Semester, currentSeries []store.SignupTimelinePoint) (time.Time, bool) {
+	if len(currentSeries) == 0 {
+		return time.Time{}, false
+	}
+	currentStart, err := time.Parse("2006-01-02", currentSeries[0].Date)
+	if err != nil {
+		return time.Time{}, false
+	}
+	lastDate, err := time.Parse("2006-01-02", currentSeries[len(currentSeries)-1].Date)
+	if err != nil {
+		return time.Time{}, false
+	}
+	dayOffset := int(lastDate.Sub(currentStart).Hours() / 24)
+	if dayOffset < 0 {
+		return time.Time{}, false
+	}
+
+	// Preserve the target start instant's time component so ComparisonCutoff
+	// receives an exact whole-calendar-day span, irrespective of DST.
+	selectedCurrentDay := current.StartDate.UTC().AddDate(0, 0, dayOffset)
+	cutoff := services.ComparisonCutoff(current, comparison, selectedCurrentDay)
+	comparisonDate := comparison.StartDate.UTC().AddDate(0, 0, dayOffset)
+	if cutoff.Year() == 9999 {
+		comparisonDate = comparison.EndDate.UTC()
+	}
+	toronto, err := time.LoadLocation("America/Toronto")
+	if err != nil {
+		return time.Time{}, false
+	}
+	return time.Date(comparisonDate.Year(), comparisonDate.Month(), comparisonDate.Day(), 12, 0, 0, 0, toronto), true
 }

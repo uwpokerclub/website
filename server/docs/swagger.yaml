@@ -549,18 +549,19 @@ definitions:
     required:
     - index
     type: object
-  SignupTimeline:
+  SignupTimelineComparison:
     properties:
-      dataStartsAt:
-        type: string
-      eventDates:
+      dailyTotals:
         items:
-          type: string
+          $ref: '#/definitions/SignupTimelineComparisonPoint'
         type: array
-      series:
-        items:
-          $ref: '#/definitions/SignupTimelinePoint'
-        type: array
+      semester:
+        $ref: '#/definitions/SemesterRef'
+    type: object
+  SignupTimelineComparisonPoint:
+    properties:
+      elapsedDay:
+        type: integer
       total:
         type: integer
     type: object
@@ -573,6 +574,23 @@ definitions:
       discord:
         type: integer
       unknown:
+        type: integer
+    type: object
+  SignupTimelineResponse:
+    properties:
+      comparison:
+        $ref: '#/definitions/SignupTimelineComparison'
+      dataStartsAt:
+        type: string
+      eventDates:
+        items:
+          type: string
+        type: array
+      series:
+        items:
+          $ref: '#/definitions/SignupTimelinePoint'
+        type: array
+      total:
         type: integer
     type: object
   SpotlightEvent:
@@ -1432,8 +1450,9 @@ paths:
       - Dashboard
   /semesters/{semesterId}/dashboard/signups:
     get:
-      description: Get zero-filled daily membership creation counts by source, event
-        dates, and the first dated signup for a semester
+      description: Get zero-filled daily membership creation counts by source and
+        event dates, plus an optional prior same-season daily-total trend aligned
+        by elapsed calendar day
       parameters:
       - description: Semester ID
         in: path
@@ -1446,7 +1465,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/SignupTimeline'
+            $ref: '#/definitions/SignupTimelineResponse'
         "400":
           description: Bad Request
           schema:

@@ -1722,6 +1722,76 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.Zero(t, timeline.Total)
 	})
 
+	t.Run("returns previous same-season daily totals aligned by calendar-day offset and clipped to term coverage", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		today := time.Now().In(toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-4, 0, 0, 0, 0, toronto)
+		current, err := createDashboardTestSemester(db, "Fall current", currentStart)
+		require.NoError(t, err)
+		comparisonStart := time.Date(currentStart.Year()-1, time.September, 3, 0, 0, 0, 0, toronto)
+		comparison, err := createDashboardTestSemester(db, "Fall prior", comparisonStart)
+		require.NoError(t, err)
+		require.NoError(t, db.Model(comparison).Update("end_date", comparisonStart.AddDate(0, 0, 2).Add(12*time.Hour)).Error)
+
+		addDated := func(semesterID uuid.UUID, createdAt *time.Time, source *models.MembershipSource) {
+			user, err := testutils.CreateTestUser(db, newUserID(), "Comparison", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "comparison")
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, semesterID, true, false, false)
+			require.NoError(t, err)
+			require.NoError(t, db.Model(membership).Updates(map[string]any{"created_at": createdAt, "source": source}).Error)
+		}
+		admin := models.MembershipSourceAdmin
+		discord := models.MembershipSourceDiscord
+		firstDay := comparisonStart.Add(10 * time.Hour)
+		thirdDay := comparisonStart.AddDate(0, 0, 2).Add(10 * time.Hour)
+		addDated(comparison.ID, &firstDay, &admin)
+		addDated(comparison.ID, &firstDay, &discord)
+		addDated(comparison.ID, &thirdDay, &admin)
+
+		w := get(t, current.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.SignupTimelineResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison)
+		require.Equal(t, comparison.ID, body.Comparison.Semester.ID)
+		require.Equal(t, "Fall prior", body.Comparison.Semester.Name)
+		require.Equal(t, []controller.SignupTimelineComparisonPoint{
+			{ElapsedDay: 0, Total: 2},
+			{ElapsedDay: 1, Total: 0},
+			{ElapsedDay: 2, Total: 1},
+		}, body.Comparison.DailyTotals)
+	})
+
+	t.Run("does not invent comparison zeros when prior memberships have no dated records", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		today := time.Now().In(toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-2, 0, 0, 0, 0, toronto)
+		current, err := createDashboardTestSemester(db, "Fall current", currentStart)
+		require.NoError(t, err)
+		priorStart := time.Date(currentStart.Year()-1, time.September, 3, 0, 0, 0, 0, toronto)
+		prior, err := createDashboardTestSemester(db, "Fall prior undated", priorStart)
+		require.NoError(t, err)
+		user, err := testutils.CreateTestUser(db, newUserID(), "Undated", "Prior", uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "undated")
+		require.NoError(t, err)
+		_, err = createDashboardTestMembership(db, user.ID, prior.ID, true, false, false)
+		require.NoError(t, err)
+		currentUser, err := testutils.CreateTestUser(db, newUserID(), "Current", "Dated", uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "dated")
+		require.NoError(t, err)
+		currentMembership, err := createDashboardTestMembership(db, currentUser.ID, current.ID, true, false, false)
+		require.NoError(t, err)
+		createdAt := currentStart.Add(time.Hour)
+		require.NoError(t, db.Model(currentMembership).Update("created_at", createdAt).Error)
+
+		w := get(t, current.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.SignupTimelineResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.Nil(t, body.Comparison)
+		require.Len(t, body.Series, 3)
+	})
+
 	t.Run("returns 400 for malformed and 404 for unknown semester ids", func(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, get(t, "not-a-uuid").Code)
 		require.Equal(t, http.StatusNotFound, get(t, "00000000-0000-0000-0000-000000000000").Code)

@@ -90,6 +90,11 @@ export interface SignupsResponse {
   eventDates: string[];
   dataStartsAt: string | null;
   total: number;
+  comparison: {
+    semester: { id: string; name: string };
+    /** Only dates covered by the comparison semester are present. */
+    dailyTotals: { elapsedDay: number; total: number }[];
+  } | null;
 }
 
 export interface ConversionStats {

@@ -12,7 +12,12 @@ jest.mock("recharts", () => {
 
   return {
     Area: ({ name }: { name: string }) => <span data-series={name}>{name}</span>,
-    AreaChart: Container,
+    ComposedChart: ({ children, data }: { children: ReactNode; data: { comparisonTotal?: number }[] }) => (
+      <div data-chart-values={data.map((point) => point.comparisonTotal ?? "null").join(",")}>{children}</div>
+    ),
+    Line: ({ name, connectNulls }: { name: string; connectNulls: boolean }) => (
+      <span data-comparison-line={name} data-connect-nulls={connectNulls} />
+    ),
     CartesianGrid: () => null,
     Legend: () => null,
     ReferenceLine: ({ x }: { x: string }) => <span data-event-date={x} />,
@@ -30,8 +35,10 @@ const response: SignupsResponse = {
   eventDates: ["2026-09-12", "2026-09-19"],
   series: [
     { date: "2026-09-01", admin: 0, discord: 0, unknown: 0 },
+    { date: "2026-09-02", admin: 1, discord: 0, unknown: 0 },
     { date: "2026-09-12", admin: 2, discord: 3, unknown: 5 },
   ],
+  comparison: null,
 };
 
 const renderCard = () =>
@@ -66,8 +73,39 @@ describe("SignupTimelineCard", () => {
     expect(screen.queryByText(/collecting data since/i)).not.toBeInTheDocument();
   });
 
+  it("aligns the single prior daily-total line by elapsed calendar day and leaves uncovered days null", () => {
+    const { container } = renderCardWithData({
+      ...response,
+      comparison: {
+        semester: { id: "fall-2025", name: "Fall 2025" },
+        dailyTotals: [
+          { elapsedDay: 0, total: 3 },
+          { elapsedDay: 1, total: 0 },
+        ],
+      },
+    });
+
+    expect(container.querySelector("[data-comparison-line='Fall 2025 daily total']")).toHaveAttribute(
+      "data-connect-nulls",
+      "false",
+    );
+    expect(container.querySelector("[data-chart-values]")).toHaveAttribute("data-chart-values", "3,0,null");
+    expect(container.querySelectorAll("[data-event-date]")).toHaveLength(response.eventDates.length);
+  });
+
+  it("shows the current series only when the comparison is unavailable or empty", () => {
+    renderCardWithData({
+      ...response,
+      comparison: { semester: { id: "fall-2025", name: "Fall 2025" }, dailyTotals: [] },
+    });
+    expect(document.querySelector("[data-comparison-line]")).not.toBeInTheDocument();
+
+    renderCardWithData(response);
+    expect(document.querySelector("[data-comparison-line]")).not.toBeInTheDocument();
+  });
+
   it("treats an empty series as a fact about the term, not a wait", () => {
-    renderCardWithData({ series: [], eventDates: [], dataStartsAt: "2026-09-01", total: 0 });
+    renderCardWithData({ series: [], eventDates: [], dataStartsAt: "2026-09-01", total: 0, comparison: null });
 
     expect(screen.getByText(/No signups recorded for this term/)).toBeInTheDocument();
     expect(screen.getByText(/Dated signups begin September 2026/)).toBeInTheDocument();

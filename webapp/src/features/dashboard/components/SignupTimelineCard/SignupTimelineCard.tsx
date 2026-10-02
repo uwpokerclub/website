@@ -1,8 +1,9 @@
 import {
   Area,
-  AreaChart,
+  ComposedChart,
   CartesianGrid,
   Legend,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -68,6 +69,19 @@ function emptyMessageFor(data?: SignupsResponse) {
 
 function Body({ data }: { data: SignupsResponse }) {
   const busiest = data.series.reduce((max, point) => Math.max(max, point.admin + point.discord + point.unknown), 0);
+  const comparisonByDay = new Map(data.comparison?.dailyTotals.map((point) => [point.elapsedDay, point.total]) ?? []);
+  const firstDate = data.series[0]?.date;
+  const chartData = data.series.map((point) => {
+    const elapsedDay = firstDate
+      ? (Date.parse(`${point.date}T00:00:00Z`) - Date.parse(`${firstDate}T00:00:00Z`)) / 86_400_000
+      : -1;
+
+    return {
+      ...point,
+      comparisonTotal: comparisonByDay.has(elapsedDay) ? comparisonByDay.get(elapsedDay) : undefined,
+    };
+  });
+  const hasComparison = Boolean(data.comparison && data.comparison.dailyTotals.length > 0);
 
   return (
     <div className={styles.container}>
@@ -78,7 +92,7 @@ function Body({ data }: { data: SignupsResponse }) {
 
       <div className={styles.chart}>
         <ResponsiveContainer width="100%" height={170}>
-          <AreaChart data={data.series} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
             <CartesianGrid {...GRID_PROPS} />
             <XAxis dataKey="date" {...AXIS_PROPS} interval="preserveStartEnd" />
             <YAxis {...AXIS_PROPS} width={34} />
@@ -118,13 +132,25 @@ function Body({ data }: { data: SignupsResponse }) {
               fillOpacity={0.3}
               strokeWidth={2}
             />
-          </AreaChart>
+            {hasComparison && data.comparison && (
+              <Line
+                type="monotone"
+                dataKey="comparisonTotal"
+                name={`${data.comparison.semester.name} daily total`}
+                stroke={CHART_COLORS.slot4}
+                strokeWidth={2}
+                dot={false}
+                connectNulls={false}
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
       <p className={styles.foot}>
         Gold lines mark event days. Memberships from before signup tracking are dated from the member&apos;s first
-        event, so members who never played are not counted.
+        event, so members who never played are not counted. Historical comparison dates may be reconstructed from first
+        participation.
       </p>
     </div>
   );

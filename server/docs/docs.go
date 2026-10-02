@@ -1040,7 +1040,7 @@ const docTemplate = `{
         },
         "/semesters/{semesterId}/dashboard/signups": {
             "get": {
-                "description": "Get zero-filled daily membership creation counts by source, event dates, and the first dated signup for a semester",
+                "description": "Get zero-filled daily membership creation counts by source and event dates, plus an optional prior same-season daily-total trend aligned by elapsed calendar day",
                 "produces": [
                     "application/json"
                 ],
@@ -1061,7 +1061,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/SignupTimeline"
+                            "$ref": "#/definitions/SignupTimelineResponse"
                         }
                     },
                     "400": {
@@ -4217,23 +4217,25 @@ const docTemplate = `{
                 }
             }
         },
-        "SignupTimeline": {
+        "SignupTimelineComparison": {
             "type": "object",
             "properties": {
-                "dataStartsAt": {
-                    "type": "string"
-                },
-                "eventDates": {
+                "dailyTotals": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/SignupTimelineComparisonPoint"
                     }
                 },
-                "series": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/SignupTimelinePoint"
-                    }
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                }
+            }
+        },
+        "SignupTimelineComparisonPoint": {
+            "type": "object",
+            "properties": {
+                "elapsedDay": {
+                    "type": "integer"
                 },
                 "total": {
                     "type": "integer"
@@ -4253,6 +4255,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "unknown": {
+                    "type": "integer"
+                }
+            }
+        },
+        "SignupTimelineResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/SignupTimelineComparison"
+                },
+                "dataStartsAt": {
+                    "type": "string"
+                },
+                "eventDates": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SignupTimelinePoint"
+                    }
+                },
+                "total": {
                     "type": "integer"
                 }
             }

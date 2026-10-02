@@ -15,6 +15,12 @@ export interface MembershipsDashboardResponse {
   comparison: {
     semester: { id: string; name: string };
     stats: MembershipStats;
+    /**
+     * The comparison term's membership count at the same elapsed point this term has
+     * reached, or null when that term has no dated memberships. Null means
+     * unknowable, never zero — see the backend's MembershipTotalAsOf.
+     */
+    totalAsOf: number | null;
   } | null;
 }
 

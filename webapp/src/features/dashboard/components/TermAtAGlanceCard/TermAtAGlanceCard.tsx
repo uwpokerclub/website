@@ -42,16 +42,7 @@ function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
     <div className={styles.container}>
       <div className={styles.headline}>
         <span className={styles.total}>{current.total.toLocaleString("en-CA")}</span>
-        {comparison ? (
-          <DeltaChip
-            current={current.total}
-            comparison={comparison.stats.total}
-            comparisonLabel={comparison.semester.name}
-            sentiment="positive-is-good"
-          />
-        ) : (
-          <p className={styles.noComparisonNote}>No comparable term to compare against yet.</p>
-        )}
+        <Comparison current={current.total} comparison={comparison} />
       </div>
 
       <StatBar
@@ -72,5 +63,46 @@ function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
         ]}
       />
     </div>
+  );
+}
+
+/**
+ * A membership total only means something against the same point of the earlier
+ * term. Comparing a term three weeks old against a finished one reads as a collapse
+ * every single time, which is what this card used to do.
+ *
+ * totalAsOf carries that like-for-like figure, and is null for terms whose
+ * memberships predate created_at. In that case the card shows pace toward the final
+ * total instead — honest about being a different question — rather than a delta it
+ * cannot compute. Once those terms are dated, the delta appears on its own.
+ */
+function Comparison({
+  current,
+  comparison,
+}: {
+  current: number;
+  comparison: MembershipsDashboardResponse["comparison"];
+}) {
+  if (!comparison) {
+    return <p className={styles.noComparisonNote}>No comparable term to compare against yet.</p>;
+  }
+
+  if (comparison.totalAsOf === null) {
+    const share = Math.round((current / Math.max(comparison.stats.total, 1)) * 100);
+
+    return (
+      <p className={styles.pace}>
+        {share}% of {comparison.semester.name}&apos;s final {comparison.stats.total.toLocaleString("en-CA")}
+      </p>
+    );
+  }
+
+  return (
+    <DeltaChip
+      current={current}
+      comparison={comparison.totalAsOf}
+      comparisonLabel={`this point in ${comparison.semester.name}`}
+      sentiment="positive-is-good"
+    />
   );
 }

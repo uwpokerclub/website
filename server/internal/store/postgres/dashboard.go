@@ -91,7 +91,7 @@ func (r *postgresDashboardRepository) MembershipStats(semesterID uuid.UUID) (sto
 }
 
 // EngagementStats implements store.DashboardRepository.
-func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID) (store.EngagementStats, error) {
+func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID, asOf time.Time) (store.EngagementStats, error) {
 	var stats store.EngagementStats
 
 	err := r.db.Raw(`
@@ -100,7 +100,7 @@ func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID) (sto
 			FROM participants p
 			JOIN events e ON e.id = p.event_id
 			JOIN memberships m ON m.id = p.membership_id
-			WHERE e.semester_id = ?
+			WHERE e.semester_id = ? AND e.start_date <= ?
 			GROUP BY m.user_id
 		)
 		SELECT
@@ -109,7 +109,7 @@ func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID) (sto
 			COUNT(*) FILTER (WHERE events = 1) AS played_once_count,
 			COUNT(*) FILTER (WHERE events >= 10) AS ten_plus_count
 		FROM per_member
-	`, semesterID).Scan(&stats).Error
+	`, semesterID, asOf).Scan(&stats).Error
 	if err != nil {
 		return store.EngagementStats{}, err
 	}
@@ -122,13 +122,13 @@ func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID) (sto
 }
 
 // EventActivity implements store.DashboardRepository.
-func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID) (store.EventActivityStats, []store.EventSeriesPoint, error) {
+func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf time.Time) (store.EventActivityStats, []store.EventSeriesPoint, error) {
 	series := []store.EventSeriesPoint{}
 
 	err := r.db.Table("events e").
 		Select("e.id, e.name, e.start_date, COUNT(p.id) AS entries").
 		Joins("LEFT JOIN participants p ON p.event_id = e.id").
-		Where("e.semester_id = ? AND e.state = ?", semesterID, models.EventStateEnded).
+		Where("e.semester_id = ? AND e.state = ? AND e.start_date <= ?", semesterID, models.EventStateEnded, asOf).
 		Group("e.id").
 		Order("e.start_date ASC, e.id ASC").
 		Scan(&series).Error
@@ -145,11 +145,43 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID) (store
 	}
 
 	err = r.db.Model(&models.Event{}).
-		Where("semester_id = ? AND state = ?", semesterID, models.EventStateStarted).
+		Where("semester_id = ? AND state = ? AND start_date <= ?", semesterID, models.EventStateStarted, asOf).
 		Count(&stats.EventsScheduled).Error
 	if err != nil {
 		return store.EventActivityStats{}, nil, err
 	}
 
 	return stats, series, nil
+}
+
+// MembershipTotalAsOf returns how many of semesterID's memberships had been created
+// at or before asOf, or nil when that cannot be known.
+//
+// Memberships created before the created_at migration carry NULL, and there is no
+// reliable way to recover those dates — users.created_at dates the user rather than
+// the membership, and first participation only bounds it from above while silently
+// excluding members who never played. Rather than report a confidently wrong figure,
+// a semester with no dated memberships at all returns nil and the UI shows pace
+// against the final total instead of a delta against a fabricated one.
+func (r *postgresDashboardRepository) MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error) {
+	var dated int64
+	err := r.db.Model(&models.Membership{}).
+		Where("semester_id = ? AND created_at IS NOT NULL", semesterID).
+		Count(&dated).Error
+	if err != nil {
+		return nil, err
+	}
+	if dated == 0 {
+		return nil, nil
+	}
+
+	var total int64
+	err = r.db.Model(&models.Membership{}).
+		Where("semester_id = ? AND created_at IS NOT NULL AND created_at <= ?", semesterID, asOf).
+		Count(&total).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &total, nil
 }

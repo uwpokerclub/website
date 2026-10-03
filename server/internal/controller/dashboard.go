@@ -482,48 +482,19 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 			return
 		}
 		if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
-			comparisonNow, ok := signupComparisonCutoff(semester, *comparison, timeline.Series)
-			if ok {
-				// A full-term read distinguishes a genuinely dated zero-signup span
-				// from legacy memberships whose creation dates are unknowable.
-				fullComparison, err := c.store.Dashboard().SignupTimeline(comparison.ID, time.Date(9999, 12, 31, 12, 0, 0, 0, time.UTC))
-				if err != nil {
-					ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-					return
-				}
-				if fullComparison.DataStartsAt != nil {
-					comparisonTimeline, err := c.store.Dashboard().SignupTimeline(comparison.ID, comparisonNow)
-					if err != nil {
-						ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-						return
-					}
-					if len(comparisonTimeline.Series) == 0 {
-						response.Comparison = &SignupTimelineComparison{
-							Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
-							DailyTotals: []SignupTimelineComparisonPoint{},
-						}
-					} else {
-						startDate, err := time.Parse("2006-01-02", comparisonTimeline.Series[0].Date)
-						if err != nil {
-							ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-							return
-						}
-						points := make([]SignupTimelineComparisonPoint, 0, len(comparisonTimeline.Series))
-						for _, point := range comparisonTimeline.Series {
-							date, err := time.Parse("2006-01-02", point.Date)
-							if err != nil {
-								ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-								return
-							}
-							points = append(points, SignupTimelineComparisonPoint{
-								ElapsedDay: int(date.Sub(startDate).Hours() / 24),
-								Total:      point.Admin + point.Discord + point.Unknown,
-							})
-						}
-						response.Comparison = &SignupTimelineComparison{
-							Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
-							DailyTotals: points,
-						}
+			// The repository's date-only series is the source of truth for both
+			// semester bounds; do not reinterpret a start timestamp in Toronto.
+			fullComparison, err := c.store.Dashboard().SignupTimeline(comparison.ID, time.Date(9999, 12, 31, 12, 0, 0, 0, time.UTC))
+			if err != nil {
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+				return
+			}
+			if fullComparison.DataStartsAt != nil && len(fullComparison.Series) > 0 {
+				points, ok := signupComparisonDailyTotals(timeline.Series, fullComparison.Series)
+				if ok {
+					response.Comparison = &SignupTimelineComparison{
+						Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+						DailyTotals: points,
 					}
 				}
 			}
@@ -533,39 +504,50 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
-// signupComparisonCutoff converts the last displayed current calendar date into
-// the corresponding comparison calendar date. ComparisonCutoff supplies the
-// existing elapsed-time bound; date-only UTC arithmetic then avoids 23/25-hour
-// DST days and noon in Toronto ensures the repository's Toronto-date cast keeps
-// the selected date unchanged.
-func signupComparisonCutoff(current, comparison models.Semester, currentSeries []store.SignupTimelinePoint) (time.Time, bool) {
-	if len(currentSeries) == 0 {
-		return time.Time{}, false
+// signupComparisonDailyTotals aligns the full prior-term series to the visible
+// current calendar-day span. Both starts come from the repository's YYYY-MM-DD
+// rows, so database-session date casts remain authoritative; parsing those
+// date-only values in UTC makes subtraction immune to DST day lengths.
+func signupComparisonDailyTotals(
+	currentSeries, comparisonSeries []store.SignupTimelinePoint,
+) ([]SignupTimelineComparisonPoint, bool) {
+	if len(currentSeries) == 0 || len(comparisonSeries) == 0 {
+		return nil, false
 	}
 	currentStart, err := time.Parse("2006-01-02", currentSeries[0].Date)
 	if err != nil {
-		return time.Time{}, false
+		return nil, false
 	}
-	lastDate, err := time.Parse("2006-01-02", currentSeries[len(currentSeries)-1].Date)
+	currentEnd, err := time.Parse("2006-01-02", currentSeries[len(currentSeries)-1].Date)
 	if err != nil {
-		return time.Time{}, false
+		return nil, false
 	}
-	dayOffset := int(lastDate.Sub(currentStart).Hours() / 24)
-	if dayOffset < 0 {
-		return time.Time{}, false
+	currentSpan := int(currentEnd.Sub(currentStart).Hours() / 24)
+	if currentSpan < 0 {
+		return nil, false
 	}
 
-	// Preserve the target start instant's time component so ComparisonCutoff
-	// receives an exact whole-calendar-day span, irrespective of DST.
-	selectedCurrentDay := current.StartDate.UTC().AddDate(0, 0, dayOffset)
-	cutoff := services.ComparisonCutoff(current, comparison, selectedCurrentDay)
-	comparisonDate := comparison.StartDate.UTC().AddDate(0, 0, dayOffset)
-	if cutoff.Year() == 9999 {
-		comparisonDate = comparison.EndDate.UTC()
-	}
-	toronto, err := time.LoadLocation("America/Toronto")
+	comparisonStart, err := time.Parse("2006-01-02", comparisonSeries[0].Date)
 	if err != nil {
-		return time.Time{}, false
+		return nil, false
 	}
-	return time.Date(comparisonDate.Year(), comparisonDate.Month(), comparisonDate.Day(), 12, 0, 0, 0, toronto), true
+	points := make([]SignupTimelineComparisonPoint, 0, len(comparisonSeries))
+	for _, point := range comparisonSeries {
+		date, err := time.Parse("2006-01-02", point.Date)
+		if err != nil {
+			return nil, false
+		}
+		elapsedDay := int(date.Sub(comparisonStart).Hours() / 24)
+		if elapsedDay > currentSpan {
+			break
+		}
+		if elapsedDay < 0 {
+			continue
+		}
+		points = append(points, SignupTimelineComparisonPoint{
+			ElapsedDay: elapsedDay,
+			Total:      point.Admin + point.Discord + point.Unknown,
+		})
+	}
+	return points, true
 }

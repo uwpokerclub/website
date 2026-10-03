@@ -1,61 +1,54 @@
 package controller
 
 import (
-	"api/internal/models"
 	"api/internal/store"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestSignupComparisonCutoffUsesCalendarDaysAcrossDST(t *testing.T) {
-	toronto, err := time.LoadLocation("America/Toronto")
-	require.NoError(t, err)
-
-	current := models.Semester{
-		StartDate: time.Date(2026, time.March, 7, 5, 0, 0, 0, time.UTC),
-		EndDate:   time.Date(2026, time.June, 30, 3, 59, 59, 0, time.UTC),
-	}
-	comparison := models.Semester{
-		StartDate: time.Date(2025, time.March, 9, 4, 0, 0, 0, time.UTC),
-		EndDate:   time.Date(2025, time.June, 30, 3, 59, 59, 0, time.UTC),
-	}
-	series := []store.SignupTimelinePoint{
+func TestSignupComparisonDailyTotalsUsesCalendarOffsetsAcrossDST(t *testing.T) {
+	current := []store.SignupTimelinePoint{
 		{Date: "2026-03-07"},
 		{Date: "2026-03-08"},
 		{Date: "2026-03-09"},
 		{Date: "2026-03-10"},
 	}
+	comparison := []store.SignupTimelinePoint{
+		{Date: "2025-03-09", Admin: 2},
+		{Date: "2025-03-10"},
+		{Date: "2025-03-11", Discord: 1},
+		{Date: "2025-03-12", Unknown: 3},
+		{Date: "2025-03-13", Admin: 9},
+	}
 
-	cutoff, ok := signupComparisonCutoff(current, comparison, series)
+	points, ok := signupComparisonDailyTotals(current, comparison)
 	require.True(t, ok)
-	require.Equal(t, "2025-03-12", cutoff.In(toronto).Format("2006-01-02"))
-	require.Equal(t, 12, cutoff.In(toronto).Day())
+	require.Equal(t, []SignupTimelineComparisonPoint{
+		{ElapsedDay: 0, Total: 2},
+		{ElapsedDay: 1, Total: 0},
+		{ElapsedDay: 2, Total: 1},
+		{ElapsedDay: 3, Total: 3},
+	}, points)
 }
 
-func TestSignupComparisonCutoffClipsAtComparisonEndDate(t *testing.T) {
-	current := models.Semester{
-		StartDate: time.Date(2026, time.September, 1, 4, 0, 0, 0, time.UTC),
-		EndDate:   time.Date(2026, time.December, 31, 4, 59, 59, 0, time.UTC),
+func TestSignupComparisonDailyTotalsKeepsDifferentStartDatesAndTermCoverage(t *testing.T) {
+	current := []store.SignupTimelinePoint{
+		{Date: "2026-09-12"},
+		{Date: "2026-09-13"},
+		{Date: "2026-09-14"},
 	}
-	comparison := models.Semester{
-		StartDate: time.Date(2025, time.September, 3, 4, 0, 0, 0, time.UTC),
-		EndDate:   time.Date(2025, time.September, 5, 4, 0, 0, 0, time.UTC),
-	}
-	series := []store.SignupTimelinePoint{
-		{Date: "2026-09-01"},
-		{Date: "2026-09-10"},
+	comparison := []store.SignupTimelinePoint{
+		{Date: "2025-09-02", Admin: 1},
+		{Date: "2025-09-03"},
+		{Date: "2025-09-04", Discord: 2},
 	}
 
-	cutoff, ok := signupComparisonCutoff(current, comparison, series)
+	points, ok := signupComparisonDailyTotals(current, comparison)
 	require.True(t, ok)
-	require.Equal(t, "2025-09-05", cutoff.In(mustToronto(t)).Format("2006-01-02"))
-}
-
-func mustToronto(t *testing.T) *time.Location {
-	t.Helper()
-	location, err := time.LoadLocation("America/Toronto")
-	require.NoError(t, err)
-	return location
+	require.Equal(t, []SignupTimelineComparisonPoint{
+		{ElapsedDay: 0, Total: 1},
+		{ElapsedDay: 1, Total: 0},
+		{ElapsedDay: 2, Total: 2},
+	}, points)
 }

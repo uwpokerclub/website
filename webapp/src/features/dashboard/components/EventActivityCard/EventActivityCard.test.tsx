@@ -1,10 +1,40 @@
 /** @jest-environment jsdom */
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import type { ReactNode } from "react";
 import "@testing-library/jest-dom";
 import { useEventActivity } from "../../hooks/useDashboardQueries";
 import { EventActivityCard } from "./EventActivityCard";
 import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
+
+jest.mock("recharts", () => {
+  const Container = ({ children }: { children: ReactNode }) => <div>{children}</div>;
+
+  return {
+    BarChart: ({ children, margin }: { children: ReactNode; margin: { left: number } }) => (
+      <div data-chart-margin-left={margin.left}>{children}</div>
+    ),
+    Bar: () => null,
+    CartesianGrid: () => null,
+    ReferenceLine: ({ y, ifOverflow, strokeDasharray }: { y: number; ifOverflow: string; strokeDasharray: string }) => (
+      <span data-reference-y={y} data-if-overflow={ifOverflow} data-line-style={strokeDasharray} />
+    ),
+    ResponsiveContainer: Container,
+    Tooltip: () => null,
+    XAxis: () => null,
+    YAxis: ({
+      width,
+      allowDecimals,
+      tickFormatter,
+    }: {
+      width: number;
+      allowDecimals: boolean;
+      tickFormatter: (value: number) => string;
+    }) => (
+      <span data-y-axis-width={width} data-allow-decimals={allowDecimals} data-formatted-tick={tickFormatter(154)} />
+    ),
+  };
+});
 
 jest.mock("../../hooks/useDashboardQueries", () => ({ useEventActivity: jest.fn() }));
 const renderCard = () =>
@@ -35,6 +65,45 @@ describe("EventActivityCard", () => {
     expect(screen.getByText(/3 still scheduled/)).toBeInTheDocument();
     expect(screen.getByText(/486 entries/)).toBeInTheDocument();
     expect(screen.getByText(/average field 44.2/)).toBeInTheDocument();
+  });
+
+  it("labels and extends the prior average reference line on the count axis", () => {
+    const data = {
+      ...SAMPLE_TERM.eventActivity,
+      current: {
+        ...SAMPLE_TERM.eventActivity.current,
+        averageFieldSize: 42.6,
+        series: SAMPLE_TERM.eventActivity.current.series.map((point) => ({
+          ...point,
+          entries: Math.min(point.entries, 30),
+        })),
+      },
+      comparison: { semester: { id: "fall-2025", name: "Fall 2025" }, averageFieldSize: 154.2 },
+    };
+    mocked.mockReturnValue({ isLoading: false, isError: false, data, refetch: jest.fn() });
+    const { container } = renderCard();
+
+    expect(screen.getByText("Current average: 42.6 players per completed event")).toBeInTheDocument();
+    expect(
+      screen.getByText("Fall 2025: 154.2 players per completed event at the same elapsed-term span"),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-reference-y]")).toHaveLength(2);
+    expect(container.querySelector("[data-reference-y='42.6']")).toHaveAttribute("data-if-overflow", "extendDomain");
+    expect(container.querySelector("[data-reference-y='154.2']")).toHaveAttribute("data-if-overflow", "extendDomain");
+    expect(container.querySelector("[data-reference-y='42.6']")).toHaveAttribute("data-line-style", "4 4");
+    expect(container.querySelector("[data-reference-y='154.2']")).toHaveAttribute("data-line-style", "2 3");
+    expect(data.comparison.averageFieldSize).toBeGreaterThan(
+      Math.max(...data.current.series.map((point) => point.entries)),
+    );
+  });
+
+  it("reserves a left gutter wide enough for integer count ticks in the existing chart", () => {
+    const { container } = renderCardWithSample();
+
+    expect(container.querySelector("[data-chart-margin-left]")).toHaveAttribute("data-chart-margin-left", "0");
+    expect(container.querySelector("[data-y-axis-width]")).toHaveAttribute("data-y-axis-width", "48");
+    expect(container.querySelector("[data-y-axis-width]")).toHaveAttribute("data-allow-decimals", "false");
+    expect(container.querySelector("[data-y-axis-width]")).toHaveAttribute("data-formatted-tick", "154");
   });
 
   it("shows a start-of-term state rather than a meter at zero", () => {
@@ -74,5 +143,37 @@ describe("EventActivityCard", () => {
     // Previously rendered "3 of 2 events run this term" with 0 still scheduled.
     expect(screen.getByText(/of 5 events run this term/)).toBeInTheDocument();
     expect(screen.getByText(/2 still scheduled/)).toBeInTheDocument();
+    expect(screen.queryByText(/players per completed event at the same elapsed-term span/)).not.toBeInTheDocument();
+    expect(document.querySelectorAll("[data-reference-y]")).toHaveLength(1);
+  });
+
+  it("shows zero current and prior averages as real values", () => {
+    mocked.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+      data: {
+        current: {
+          eventsRun: 1,
+          eventsScheduled: 0,
+          totalEntries: 0,
+          averageFieldSize: 0,
+          series: [{ id: 1, name: "Empty event", startDate: "2026-09-01", entries: 0 }],
+        },
+        comparison: { semester: { id: "fall-2025", name: "Fall 2025" }, averageFieldSize: 0 },
+      },
+    });
+    renderCard();
+
+    expect(screen.getByText("Current average: 0.0 players per completed event")).toBeInTheDocument();
+    expect(
+      screen.getByText("Fall 2025: 0.0 players per completed event at the same elapsed-term span"),
+    ).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-reference-y='0']")).toHaveLength(2);
   });
 });
+
+function renderCardWithSample() {
+  mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.eventActivity, refetch: jest.fn() });
+  return renderCard();
+}

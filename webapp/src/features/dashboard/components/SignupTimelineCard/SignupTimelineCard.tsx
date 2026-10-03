@@ -92,10 +92,15 @@ function Body({ data }: { data: SignupsResponse }) {
 
       <div className={styles.chart}>
         <ResponsiveContainer width="100%" height={170}>
-          <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+          <ComposedChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid {...GRID_PROPS} />
             <XAxis dataKey="date" {...AXIS_PROPS} interval="preserveStartEnd" />
-            <YAxis {...AXIS_PROPS} width={34} />
+            <YAxis
+              {...AXIS_PROPS}
+              width={48}
+              allowDecimals={false}
+              tickFormatter={(value: number) => Math.round(value).toLocaleString("en-CA")}
+            />
             <Tooltip {...TOOLTIP_STYLE} />
             <Legend wrapperStyle={{ fontSize: 11, fontFamily: "Montserrat, sans-serif" }} />
             {/* The spikes are the event days; without them the series is unreadable. */}

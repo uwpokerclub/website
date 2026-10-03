@@ -37,7 +37,7 @@ export function EventActivityCard({ semesterId }: Props) {
 /**
  * A ratio against a limit, then a series — so: a meter, then columns.
  *
- * Average field size is drawn as a reference line rather than a second series. Two
+ * Average field sizes are reference lines rather than a second event series. Two
  * measures on one chart would need two y-scales, and a dual-axis chart is the single
  * most misread form there is.
  */
@@ -48,6 +48,8 @@ function Body({ data }: { data: EventActivityResponse }) {
   // their sum. Reading eventsScheduled as the total rendered "3 of 2 events run".
   const totalEvents = eventsRun + eventsScheduled;
   const average = Math.round(averageFieldSize * 10) / 10;
+  const comparison = data.comparison;
+  const comparisonAverage = comparison ? Math.round(comparison.averageFieldSize * 10) / 10 : null;
 
   return (
     <div className={styles.container}>
@@ -64,20 +66,50 @@ function Body({ data }: { data: EventActivityResponse }) {
         {eventsScheduled} still scheduled · {totalEntries.toLocaleString("en-CA")} entries · average field {average}
       </p>
 
+      <div className={styles.averageKey} role="group" aria-label="Average field size reference lines">
+        <p className={styles.averageItem}>
+          <i className={styles.currentAverageSwatch} aria-hidden="true" />
+          <span>Current average: {average.toFixed(1)} players per completed event</span>
+        </p>
+        {comparison && comparisonAverage !== null && (
+          <p className={styles.averageItem}>
+            <i className={styles.comparisonAverageSwatch} aria-hidden="true" />
+            <span>
+              {comparison.semester.name}: {comparisonAverage.toFixed(1)} players per completed event at the same
+              elapsed-term span
+            </span>
+          </p>
+        )}
+      </div>
+
       <div className={styles.chart}>
         <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+          <BarChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid {...GRID_PROPS} />
             <XAxis dataKey="name" {...AXIS_PROPS} interval="preserveStartEnd" />
-            <YAxis {...AXIS_PROPS} width={34} />
+            <YAxis
+              {...AXIS_PROPS}
+              width={48}
+              allowDecimals={false}
+              tickFormatter={(value: number) => Math.round(value).toLocaleString("en-CA")}
+            />
             <Tooltip {...TOOLTIP_STYLE} />
             <ReferenceLine
               y={average}
               stroke={CHART_COLORS.slot4}
               strokeDasharray="4 4"
               strokeWidth={2}
-              label={{ value: `avg ${average}`, position: "right", fontSize: 10, fill: CHART_COLORS.slot4 }}
+              ifOverflow="extendDomain"
             />
+            {comparisonAverage !== null && comparison && (
+              <ReferenceLine
+                y={comparisonAverage}
+                stroke={CHART_COLORS.slot2}
+                strokeDasharray="2 3"
+                strokeWidth={2}
+                ifOverflow="extendDomain"
+              />
+            )}
             <Bar dataKey="entries" name="Entries" fill={CHART_COLORS.slot1} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

@@ -12,8 +12,21 @@ jest.mock("recharts", () => {
 
   return {
     Area: ({ name }: { name: string }) => <span data-series={name}>{name}</span>,
-    ComposedChart: ({ children, data }: { children: ReactNode; data: { comparisonTotal?: number }[] }) => (
-      <div data-chart-values={data.map((point) => point.comparisonTotal ?? "null").join(",")}>{children}</div>
+    ComposedChart: ({
+      children,
+      data,
+      margin,
+    }: {
+      children: ReactNode;
+      data: { comparisonTotal?: number }[];
+      margin: { left: number };
+    }) => (
+      <div
+        data-chart-values={data.map((point) => point.comparisonTotal ?? "null").join(",")}
+        data-chart-margin-left={margin.left}
+      >
+        {children}
+      </div>
     ),
     Line: ({ name, connectNulls }: { name: string; connectNulls: boolean }) => (
       <span data-comparison-line={name} data-connect-nulls={connectNulls} />
@@ -24,7 +37,17 @@ jest.mock("recharts", () => {
     ResponsiveContainer: Container,
     Tooltip: () => null,
     XAxis: () => null,
-    YAxis: () => null,
+    YAxis: ({
+      width,
+      allowDecimals,
+      tickFormatter,
+    }: {
+      width: number;
+      allowDecimals: boolean;
+      tickFormatter: (value: number) => string;
+    }) => (
+      <span data-y-axis-width={width} data-allow-decimals={allowDecimals} data-formatted-tick={tickFormatter(141)} />
+    ),
   };
 });
 
@@ -91,6 +114,15 @@ describe("SignupTimelineCard", () => {
     );
     expect(container.querySelector("[data-chart-values]")).toHaveAttribute("data-chart-values", "3,0,null");
     expect(container.querySelectorAll("[data-event-date]")).toHaveLength(response.eventDates.length);
+  });
+
+  it("reserves a left gutter wide enough for integer signup count ticks", () => {
+    const { container } = renderCardWithData(response);
+
+    expect(container.querySelector("[data-chart-margin-left]")).toHaveAttribute("data-chart-margin-left", "0");
+    expect(container.querySelector("[data-y-axis-width]")).toHaveAttribute("data-y-axis-width", "48");
+    expect(container.querySelector("[data-y-axis-width]")).toHaveAttribute("data-allow-decimals", "false");
+    expect(container.querySelector("[data-y-axis-width]")).toHaveAttribute("data-formatted-tick", "141");
   });
 
   it("shows the current series only when the comparison is unavailable or empty", () => {

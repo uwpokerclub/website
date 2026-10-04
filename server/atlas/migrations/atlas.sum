@@ -1,4 +1,4 @@
-h1:pPY5F5fjtvQo1SX6fvoBytYMQjGYZsnBmGFf/Iks71U=
+h1:lB7S2k0LLU/t4dleYgqVGz4GpN3e0IU4OnBaM3yy+cA=
 20250726011345.sql h1:4dL9LFflDQg37iMgIkc+JUOX/z480+aElFRGbuoV3EU=
 20250817202601.sql h1:gdsNY4AamlxHbsdTWRaa3grcW4SyT8RsiQtI/kDLUtk=
 20250817202602.sql h1:MD7NWzakA9fmNWSMrVwMFNud82zrzCyYsYwJWPHn79w=
@@ -22,5 +22,5 @@ h1:pPY5F5fjtvQo1SX6fvoBytYMQjGYZsnBmGFf/Iks71U=
 20260906000001.sql h1:FeI3BfmMF0QoPbTqvmfMZA05+7HUoGUQguuqXo0LA+E=
 20260907000000_officer_transitions.sql h1:Np4dbU1+AK3nZiLNWndc+laLLEXgGeBDFCvTkZy2lkQ=
 20260911060155.sql h1:oZmkf14+v3XDvZK12mW30nhzZD2EujKNrco3bNoEkeA=
-20261002013751_backfill_membership_created_at.sql h1:rFS9iFp8x9Z2JWufv1Tvd7G6DBffFpIMU/rqFby9jDg=
-20261002040000_track_trial_conversion.sql h1:lItUvLq/zXiHMhA5nsc69k4ILWXPpP7Jjq9LuFpe6Lw=
+20261004184143_backfill_membership_created_at.sql h1:5+DxpHsxmt1UWtXOLvI3phgfSB2dSQEXqGhfgl2la4Q=
+20261004184144_track_trial_conversion.sql h1:0IEAm+RnNS6QACBVDxsDAhONNp0E+IBmqXZZJrbi7LU=

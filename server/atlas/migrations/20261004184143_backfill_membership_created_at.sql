@@ -17,6 +17,10 @@
 --   a fabricated all-admin history in the signup timeline's source split. A NULL
 --   source reads as "unknown", which is what it is.
 --
+-- Event starts are timestamptz instants; convert them to UTC before storing in the
+-- timestamp-without-time-zone created_at column so the result is independent of the
+-- PostgreSQL session TimeZone.
+--
 -- Note that this makes created_at mean two things: the row's creation time for
 -- memberships created from 2026-09-06 onward, and the member's first event before
 -- that. For anyone registered at an event those coincide. They diverge for a member
@@ -25,9 +29,11 @@
 UPDATE "memberships" m
 SET "created_at" = sub.first_event
 FROM (
-  SELECT p."membership_id", MIN(e."start_date") AS first_event
+  SELECT p."membership_id", MIN(e."start_date" AT TIME ZONE 'UTC') AS first_event
   FROM "participants" p
+  JOIN "memberships" participant_membership ON participant_membership."id" = p."membership_id"
   JOIN "events" e ON e."id" = p."event_id"
+    AND e."semester_id" = participant_membership."semester_id"
   GROUP BY p."membership_id"
 ) sub
 WHERE m."id" = sub."membership_id"

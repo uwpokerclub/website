@@ -53,8 +53,9 @@ definitions:
       totalAsOf:
         description: |-
           TotalAsOf is the comparison term's membership count at the same elapsed point
-          this term has reached, or null when that term has no dated memberships. Null
-          means unknowable, never zero.
+          this term has reached, or its exact final total when the comparison period is
+          complete. It is null when a partial historical count cannot be trusted because
+          too few memberships have dates. Null means unknowable, never zero.
         type: integer
     type: object
   ComparisonTrialConversionStats:

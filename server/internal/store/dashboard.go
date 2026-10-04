@@ -181,9 +181,9 @@ type DashboardRepository interface {
 	// source besides admin and discord is reported as unknown.
 	SignupTimeline(semesterID uuid.UUID, now time.Time) (SignupTimeline, error)
 
-	// MembershipTotalAsOf returns how many of the semester's memberships had been
-	// created at or before asOf, or nil when the semester has no dated memberships at
-	// all — every row predating the created_at migration carries NULL and cannot be
-	// reliably recovered. Callers must treat nil as "unknowable", never as zero.
+	// MembershipTotalAsOf returns how many of the semester's dated memberships had
+	// been created at or before asOf, or nil when the dated share is below the
+	// repository's reliability threshold. Callers must treat nil as "unknowable",
+	// never as zero. Completed comparisons use the exact MembershipStats.Total instead.
 	MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error)
 }

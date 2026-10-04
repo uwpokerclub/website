@@ -167,8 +167,9 @@ type ComparisonMembershipStats struct {
 	Stats    store.MembershipStats `json:"stats"`
 
 	// TotalAsOf is the comparison term's membership count at the same elapsed point
-	// this term has reached, or null when that term has no dated memberships. Null
-	// means unknowable, never zero.
+	// this term has reached, or its exact final total when the comparison period is
+	// complete. It is null when a partial historical count cannot be trusted because
+	// too few memberships have dates. Null means unknowable, never zero.
 	TotalAsOf *int64 `json:"totalAsOf"`
 } //@name ComparisonMembershipStats
 
@@ -234,14 +235,21 @@ func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
 		}
 
 		// Memberships cannot be clipped the way events can: rows predating the
-		// created_at migration carry NULL and their dates are unrecoverable. TotalAsOf
-		// is nil for those terms, and the UI shows pace against the final total rather
-		// than a delta against a figure it cannot compute.
+		// created_at migration carry NULL and their dates are unrecoverable. For a
+		// partial comparison, only return a dated count when the store's reliability
+		// threshold is met. Once the comparison period is complete, its exact final
+		// total is known from MembershipStats and includes undated rows.
 		cutoff := services.ComparisonCutoff(semester, *comparison, time.Now())
-		totalAsOf, err := c.store.Dashboard().MembershipTotalAsOf(comparison.ID, cutoff)
-		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-			return
+		var totalAsOf *int64
+		if !cutoff.Before(comparison.EndDate.UTC()) {
+			total := comparisonStats.Total
+			totalAsOf = &total
+		} else {
+			totalAsOf, err = c.store.Dashboard().MembershipTotalAsOf(comparison.ID, cutoff)
+			if err != nil {
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+				return
+			}
 		}
 
 		response.Comparison = &ComparisonMembershipStats{

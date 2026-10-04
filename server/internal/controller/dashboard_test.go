@@ -77,15 +77,19 @@ func previousSameSeasonStart(start time.Time) time.Time {
 	if day > 27 {
 		day = 26
 	}
-	return time.Date(start.Year()-1, start.Month(), day, 20, 0, 0, 0, start.Location())
+	return time.Date(start.Year()-1, start.Month(), day, 0, 0, 0, 0, time.UTC)
 }
 
 func useTorontoDatabaseTimezone(t *testing.T, db *gorm.DB) {
+	useDatabaseTimezone(t, db, "America/Toronto")
+}
+
+func useDatabaseTimezone(t *testing.T, db *gorm.DB, timezone string) {
 	t.Helper()
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)
-	require.NoError(t, db.Exec("SET TIME ZONE 'America/Toronto'").Error)
+	require.NoError(t, db.Exec("SET TIME ZONE '"+timezone+"'").Error)
 }
 
 // createDashboardTestMembership creates a membership with custom paid/discounted/
@@ -388,6 +392,41 @@ func TestDashboardMembershipStats(t *testing.T) {
 		require.EqualValues(t, 1, body.Comparison.Stats.Executive)
 		require.EqualValues(t, 1, body.Comparison.Stats.Paid)
 		require.EqualValues(t, 0, body.Current.Total)
+	})
+
+	t.Run("uses exact final total for a completed comparison with 85 dated of 100 memberships", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		comparisonStart := time.Date(2025, time.January, 15, 0, 0, 0, 0, time.UTC)
+		comparisonSemester, err := createDashboardTestSemester(db, "Winter 2025", comparisonStart)
+		require.NoError(t, err)
+		require.NoError(t, db.Model(comparisonSemester).Update("end_date", time.Date(2025, time.April, 30, 0, 0, 0, 0, time.UTC)).Error)
+		currentSemester, err := createDashboardTestSemester(db, "Winter 2026", time.Date(2026, time.January, 15, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		require.NoError(t, db.Model(currentSemester).Update("end_date", time.Date(2026, time.April, 30, 0, 0, 0, 0, time.UTC)).Error)
+
+		for i := 0; i < 100; i++ {
+			user, err := testutils.CreateTestUser(db, nextUserID(), "Historical", fmt.Sprint(i),
+				fmt.Sprintf("historical-%d@uwaterloo.ca", i), models.FacultyMath, fmt.Sprintf("historical-%d", i))
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, comparisonSemester.ID, true, false, false)
+			require.NoError(t, err)
+			if i < 85 {
+				createdAt := comparisonStart.Add(16*time.Hour + time.Duration(i)*time.Minute)
+				require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
+			} else {
+				require.NoError(t, db.Model(membership).Update("created_at", nil).Error)
+			}
+		}
+
+		w := getMembershipStats(t, currentSemester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.MembershipStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison)
+		require.EqualValues(t, 100, body.Comparison.Stats.Total)
+		require.NotNil(t, body.Comparison.TotalAsOf)
+		require.EqualValues(t, 100, *body.Comparison.TotalAsOf, "a completed comparison must use its exact total, not only its dated rows")
 	})
 
 	t.Run("reports totalAsOf null when the comparison term has no dated memberships", func(t *testing.T) {
@@ -1740,18 +1779,82 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.Zero(t, timeline.Total)
 	})
 
+	t.Run("buckets UTC membership wall times and event instants by Toronto date across DST in either DB timezone", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		toronto, err := time.LoadLocation("America/Toronto")
+		require.NoError(t, err)
+		semester, err := createDashboardTestSemester(
+			db,
+			"DST bucket regression",
+			time.Date(2025, time.October, 31, 0, 0, 0, 0, time.UTC),
+		)
+		require.NoError(t, err)
+		require.NoError(t, db.Model(semester).Update("end_date", time.Date(2025, time.November, 3, 0, 0, 0, 0, time.UTC)).Error)
+
+		admin := models.MembershipSourceAdmin
+		for i, createdAt := range []time.Time{
+			// 23:30 EDT on Oct 31 is stored as this UTC wall-clock on Nov 1.
+			time.Date(2025, time.November, 1, 3, 30, 0, 0, time.UTC),
+			// 23:30 EST on Nov 2 is stored as this UTC wall-clock on Nov 3.
+			time.Date(2025, time.November, 3, 4, 30, 0, 0, time.UTC),
+		} {
+			user, err := testutils.CreateTestUser(db, newUserID(), "Late", fmt.Sprint(i), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "late")
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
+			require.NoError(t, err)
+			require.NoError(t, db.Model(membership).Updates(map[string]any{"created_at": createdAt, "source": &admin}).Error)
+		}
+
+		structure, err := testutils.CreateTestStructure(db, "DST signup markers")
+		require.NoError(t, err)
+		for _, eventStart := range []time.Time{
+			time.Date(2025, time.October, 31, 23, 0, 0, 0, toronto),
+			time.Date(2025, time.November, 2, 23, 0, 0, 0, toronto),
+		} {
+			_, err := createDashboardTestEvent(db, semester.ID, structure.ID, "Late event", models.EventStateStarted, eventStart, 0)
+			require.NoError(t, err)
+		}
+
+		var referenceTimeline store.SignupTimeline
+		for _, timezone := range []string{"UTC", "America/Toronto"} {
+			useDatabaseTimezone(t, db, timezone)
+			timeline, err := postgresstore.NewDashboardRepository(db).SignupTimeline(
+				semester.ID,
+				time.Date(2025, time.November, 4, 12, 0, 0, 0, time.UTC),
+			)
+			require.NoError(t, err)
+			require.Equal(t, []store.SignupTimelinePoint{
+				{Date: "2025-10-31", Admin: 1},
+				{Date: "2025-11-01"},
+				{Date: "2025-11-02", Admin: 1},
+				{Date: "2025-11-03"},
+			}, timeline.Series)
+			require.Equal(t, []string{"2025-10-31", "2025-11-02"}, timeline.EventDates)
+			require.Equal(t, []string{"2025-10-31", "2025-11-02"}, []string{timeline.Series[0].Date, timeline.Series[2].Date})
+			require.EqualValues(t, 2, timeline.Total)
+			require.NotNil(t, timeline.DataStartsAt)
+			require.Equal(t, "2025-10-31", *timeline.DataStartsAt)
+			if referenceTimeline.Series == nil {
+				referenceTimeline = timeline
+			} else {
+				require.Equal(t, referenceTimeline, timeline, "signup and event dates must not depend on PostgreSQL TimeZone")
+			}
+		}
+	})
+
 	t.Run("returns previous same-season daily totals aligned by calendar-day offset and clipped to term coverage", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db = container.GetDB()
 		useTorontoDatabaseTimezone(t, db)
 		today := time.Now().In(toronto)
-		currentStart := time.Date(today.Year(), today.Month(), today.Day()-4, 20, 0, 0, 0, toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-4, 0, 0, 0, 0, time.UTC)
 		current, err := createDashboardTestSemester(db, "Current term", currentStart)
 		require.NoError(t, err)
 		comparisonStart := previousSameSeasonStart(currentStart)
 		comparison, err := createDashboardTestSemester(db, "Prior term", comparisonStart)
 		require.NoError(t, err)
-		comparisonEnd := time.Date(comparisonStart.Year(), comparisonStart.Month(), comparisonStart.Day()+2, 12, 0, 0, 0, toronto)
+		comparisonEnd := comparisonStart.AddDate(0, 0, 2)
 		require.NoError(t, db.Model(comparison).Update("end_date", comparisonEnd).Error)
 
 		addDated := func(semesterID uuid.UUID, createdAt *time.Time, source *models.MembershipSource) {
@@ -1763,24 +1866,34 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		}
 		admin := models.MembershipSourceAdmin
 		discord := models.MembershipSourceDiscord
-		firstDay := comparisonStart.Add(2 * time.Hour)
-		thirdDay := comparisonStart.AddDate(0, 0, 2).Add(2 * time.Hour)
+		firstDay := comparisonStart.Add(16 * time.Hour)
+		thirdDay := comparisonStart.AddDate(0, 0, 2).Add(16 * time.Hour)
 		addDated(comparison.ID, &firstDay, &admin)
 		addDated(comparison.ID, &firstDay, &discord)
 		addDated(comparison.ID, &thirdDay, &admin)
 
-		w := get(t, current.ID.String())
-		require.Equal(t, http.StatusOK, w.Code)
-		var body controller.SignupTimelineResponse
-		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-		require.NotNil(t, body.Comparison)
-		require.Equal(t, comparison.ID, body.Comparison.Semester.ID)
-		require.Equal(t, "Prior term", body.Comparison.Semester.Name)
-		require.Equal(t, []controller.SignupTimelineComparisonPoint{
-			{ElapsedDay: 0, Total: 2},
-			{ElapsedDay: 1, Total: 0},
-			{ElapsedDay: 2, Total: 1},
-		}, body.Comparison.DailyTotals)
+		var referenceBody controller.SignupTimelineResponse
+		for _, timezone := range []string{"UTC", "America/Toronto"} {
+			useDatabaseTimezone(t, db, timezone)
+			w := get(t, current.ID.String())
+			require.Equal(t, http.StatusOK, w.Code)
+			var body controller.SignupTimelineResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+			require.NotNil(t, body.Comparison)
+			require.Equal(t, comparison.ID, body.Comparison.Semester.ID)
+			require.Equal(t, "Prior term", body.Comparison.Semester.Name)
+			require.Equal(t, []controller.SignupTimelineComparisonPoint{
+				{ElapsedDay: 0, Total: 2},
+				{ElapsedDay: 1, Total: 0},
+				{ElapsedDay: 2, Total: 1},
+			}, body.Comparison.DailyTotals)
+			require.Less(t, len(body.Comparison.DailyTotals), len(body.Series), "prior overlay must stop at the comparison term's end")
+			if referenceBody.Comparison == nil {
+				referenceBody = body
+			} else {
+				require.Equal(t, referenceBody, body, "date bounds and overlay alignment must ignore database session timezone")
+			}
+		}
 	})
 
 	t.Run("does not invent comparison zeros when prior memberships have no dated records", func(t *testing.T) {
@@ -1788,7 +1901,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		db = container.GetDB()
 		useTorontoDatabaseTimezone(t, db)
 		today := time.Now().In(toronto)
-		currentStart := time.Date(today.Year(), today.Month(), today.Day()-2, 20, 0, 0, 0, toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-2, 0, 0, 0, 0, time.UTC)
 		current, err := createDashboardTestSemester(db, "Current term", currentStart)
 		require.NoError(t, err)
 		priorStart := previousSameSeasonStart(currentStart)
@@ -1802,7 +1915,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NoError(t, err)
 		currentMembership, err := createDashboardTestMembership(db, currentUser.ID, current.ID, true, false, false)
 		require.NoError(t, err)
-		createdAt := currentStart.Add(2 * time.Hour)
+		createdAt := currentStart.Add(16 * time.Hour)
 		require.NoError(t, db.Model(currentMembership).Update("created_at", createdAt).Error)
 
 		w := get(t, current.ID.String())
@@ -1813,13 +1926,13 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.Len(t, body.Series, 3)
 	})
 
-	t.Run("maps the comparison to PostgreSQL Toronto calendar dates at UTC-midnight starts", func(t *testing.T) {
+	t.Run("uses date-only semester bounds under a Toronto PostgreSQL session timezone", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db = container.GetDB()
 		useTorontoDatabaseTimezone(t, db)
 
 		today := time.Now().In(toronto)
-		currentStart := time.Date(today.Year(), today.Month(), today.Day()-4, 20, 0, 0, 0, toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-4, 0, 0, 0, 0, time.UTC)
 		current, err := createDashboardTestSemester(db, "Current near UTC midnight", currentStart)
 		require.NoError(t, err)
 		priorStart := previousSameSeasonStart(currentStart)
@@ -1829,7 +1942,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NoError(t, err)
 		membership, err := createDashboardTestMembership(db, user.ID, prior.ID, true, false, false)
 		require.NoError(t, err)
-		createdAt := priorStart.Add(2 * time.Hour)
+		createdAt := priorStart.Add(16 * time.Hour)
 		require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
 
 		w := get(t, current.ID.String())
@@ -1837,8 +1950,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		var body controller.SignupTimelineResponse
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 		require.NotEmpty(t, body.Series)
-		require.Equal(t, currentStart.Format("2006-01-02"), body.Series[0].Date)
-		require.NotEqual(t, currentStart.UTC().Format("2006-01-02"), body.Series[0].Date)
+		require.Equal(t, currentStart.UTC().Format("2006-01-02"), body.Series[0].Date)
 		require.NotNil(t, body.Comparison)
 		require.Len(t, body.Comparison.DailyTotals, len(body.Series))
 		require.Equal(t, 0, body.Comparison.DailyTotals[0].ElapsedDay)

@@ -3508,7 +3508,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/MembershipStats"
                 },
                 "totalAsOf": {
-                    "description": "TotalAsOf is the comparison term's membership count at the same elapsed point\nthis term has reached, or null when that term has no dated memberships. Null\nmeans unknowable, never zero.",
+                    "description": "TotalAsOf is the comparison term's membership count at the same elapsed point\nthis term has reached, or its exact final total when the comparison period is\ncomplete. It is null when a partial historical count cannot be trusted because\ntoo few memberships have dates. Null means unknowable, never zero.",
                     "type": "integer"
                 }
             }

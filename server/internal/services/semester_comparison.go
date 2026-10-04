@@ -68,13 +68,16 @@ func ResolveComparisonSemester(target models.Semester, semesters []models.Semest
 // week, the first event — so day 14 is comparable to day 14 even when the two terms
 // differ in length.
 //
-// Once the current term has run longer than the comparison term did, the comparison
-// is simply its complete self and the returned cutoff clips nothing. It deliberately
-// does not clamp to the comparison term's end_date: an event is not guaranteed to
-// fall inside its semester's declared range, and clamping would silently drop any
-// that lie outside rather than counting a term that has already finished in full.
+// Once the target term has ended, or has run at least as long as the comparison term,
+// the comparison is its complete self and the returned cutoff clips nothing. It
+// deliberately does not clamp to the comparison term's end_date: an event is not
+// guaranteed to fall inside its semester's declared range, and clamping would
+// silently drop any that lie outside rather than counting a term that has finished.
 func ComparisonCutoff(target, comparison models.Semester, now time.Time) time.Time {
 	start := comparison.StartDate.UTC()
+	if !now.UTC().Before(target.EndDate.UTC()) {
+		return noCutoff
+	}
 
 	elapsed := now.UTC().Sub(target.StartDate.UTC())
 	if elapsed < 0 {

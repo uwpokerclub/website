@@ -5,6 +5,7 @@ import "@testing-library/jest-dom";
 import { useMembershipsDashboard } from "../../hooks/useDashboardQueries";
 import { useCurrentSemester } from "@/hooks";
 import { TermAtAGlanceCard } from "./TermAtAGlanceCard";
+import { termProgress } from "./termProgress";
 import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
 
 jest.mock("../../hooks/useDashboardQueries", () => ({
@@ -15,7 +16,7 @@ jest.mock("@/hooks", () => ({ useCurrentSemester: jest.fn() }));
 const mockedUseMembershipsDashboard = useMembershipsDashboard as jest.Mock;
 const mockedUseCurrentSemester = useCurrentSemester as jest.Mock;
 
-// Fall 2026: 85-day term, 19 days elapsed — the real shape of the current term.
+// Fall 2026: 86 inclusive calendar days, 19 days elapsed in Toronto.
 const TERM = { startDate: "2026-09-13T00:00:00Z", endDate: "2026-12-07T00:00:00Z" };
 
 beforeEach(() => {
@@ -44,7 +45,7 @@ describe("TermAtAGlanceCard", () => {
     expect(screen.getByText("561")).toBeInTheDocument();
   });
 
-  it("compares against the same point last term, not its finished total", () => {
+  it("compares against the same point in the named prior term", () => {
     mockedUseMembershipsDashboard.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -128,7 +129,33 @@ describe("TermAtAGlanceCard", () => {
     // 967 of Fall 2025's final 891 — already past a full term's worth.
     expect(track).toHaveAccessibleName(/967 of 891/);
     expect(screen.getByText(/109% of Fall 2025's final 891/)).toBeInTheDocument();
-    expect(screen.getByText(/day 19 of 85/)).toBeInTheDocument();
+    expect(screen.getByText(/day 19 of 86/)).toBeInTheDocument();
+  });
+
+  it("uses inclusive Toronto calendar days across midnight and DST", () => {
+    const term = { startDate: "2026-03-08T00:00:00Z", endDate: "2026-03-10T00:00:00Z" };
+    expect(termProgress(term, new Date("2026-03-08T04:59:00Z"))).toBeNull();
+    expect(termProgress(term, new Date("2026-03-08T05:01:00Z"))).toBe("day 1 of 3");
+    expect(termProgress(term, new Date("2026-03-09T04:00:00Z"))).toBe("day 2 of 3");
+  });
+
+  it("does not invent a percentage when the completed comparison term has zero members", () => {
+    mockedUseMembershipsDashboard.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+      data: {
+        ...SAMPLE_TERM.memberships,
+        comparison: {
+          ...SAMPLE_TERM.memberships.comparison!,
+          stats: { ...SAMPLE_TERM.memberships.comparison!.stats, total: 0 },
+          totalAsOf: 0,
+        },
+      },
+    });
+    render(<TermAtAGlanceCard semesterId="s1" />);
+    expect(screen.getByText(/No membership baseline is available for Fall 2025/)).toBeInTheDocument();
+    expect(screen.queryByText(/% of Fall 2025's final 0/)).not.toBeInTheDocument();
   });
 
   it("marks last year's position on the track only when that figure is known", () => {

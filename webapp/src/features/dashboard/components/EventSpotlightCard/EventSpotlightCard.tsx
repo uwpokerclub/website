@@ -55,17 +55,17 @@ function Body({ event }: { event: SpotlightEvent }) {
           <>Scheduled · {start.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })}</>
         )}
       </p>
-      <h4 className={styles.name}>{event.name}</h4>
+      <h3 className={styles.name}>{event.name}</h3>
       <p className={styles.format}>{event.format}</p>
 
       <dl className={styles.stats}>
         <div>
-          <dd>{event.entries}</dd>
           <dt>entries</dt>
+          <dd>{event.entries}</dd>
         </div>
         <div>
-          <dd>{event.rebuys}</dd>
           <dt>rebuys</dt>
+          <dd>{event.rebuys}</dd>
         </div>
       </dl>
 

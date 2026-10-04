@@ -74,8 +74,10 @@
 
 .stats dt {
   font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
+  color: var(--color-gray-700);
 }
+
+.stats div { display: flex; flex-direction: column-reverse; }
 
 .cta {
   display: block;

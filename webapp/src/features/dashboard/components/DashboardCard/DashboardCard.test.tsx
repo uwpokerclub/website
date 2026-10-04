@@ -13,6 +13,8 @@ describe("DashboardCard", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Event Spotlight" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Event Spotlight" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Event Spotlight" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View all" })).toBeInTheDocument();
   });
 

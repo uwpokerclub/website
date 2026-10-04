@@ -82,6 +82,7 @@ function Body({ data }: { data: SignupsResponse }) {
     };
   });
   const hasComparison = Boolean(data.comparison && data.comparison.dailyTotals.length > 0);
+  const eventDates = new Set(data.eventDates);
 
   return (
     <div className={styles.container}>
@@ -107,8 +108,8 @@ function Body({ data }: { data: SignupsResponse }) {
             <Tooltip {...TOOLTIP_STYLE} />
             <Legend wrapperStyle={{ fontSize: 11, fontFamily: "Montserrat, sans-serif" }} />
             {/* The spikes are the event days; without them the series is unreadable. */}
-            {data.eventDates.map((date) => (
-              <ReferenceLine key={date} x={date} stroke={CHART_COLORS.slot2} strokeWidth={2} />
+            {[...eventDates].map((date) => (
+              <ReferenceLine key={date} x={date} stroke="#616161" strokeDasharray="4 3" strokeWidth={2} />
             ))}
             <Area
               type="monotone"
@@ -119,6 +120,7 @@ function Body({ data }: { data: SignupsResponse }) {
               fill={CHART_COLORS.slot1}
               fillOpacity={0.3}
               strokeWidth={2}
+              isAnimationActive={false}
             />
             <Area
               type="monotone"
@@ -129,6 +131,7 @@ function Body({ data }: { data: SignupsResponse }) {
               fill={CHART_COLORS.slot2}
               fillOpacity={0.3}
               strokeWidth={2}
+              isAnimationActive={false}
             />
             <Area
               type="monotone"
@@ -139,6 +142,7 @@ function Body({ data }: { data: SignupsResponse }) {
               fill={CHART_COLORS.slot3}
               fillOpacity={0.3}
               strokeWidth={2}
+              isAnimationActive={false}
             />
             {hasComparison && data.comparison && (
               <Line
@@ -149,16 +153,49 @@ function Body({ data }: { data: SignupsResponse }) {
                 strokeWidth={2}
                 dot={false}
                 connectNulls={false}
+                isAnimationActive={false}
               />
             )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
+      <details className={styles.dataDetails}>
+        <summary>View daily signup data</summary>
+        <table>
+          <caption>
+            Daily memberships created by source
+            {data.comparison ? ` and ${data.comparison.semester.name} comparison` : ""}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Admin</th>
+              <th scope="col">Discord</th>
+              <th scope="col">Unknown</th>
+              <th scope="col">Event day</th>
+              {data.comparison && <th scope="col">{data.comparison.semester.name}</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {chartData.map((point) => (
+              <tr key={point.date}>
+                <th scope="row">{point.date}</th>
+                <td>{point.admin}</td>
+                <td>{point.discord}</td>
+                <td>{point.unknown}</td>
+                <td>{eventDates.has(point.date) ? "Yes" : "No"}</td>
+                {data.comparison && <td>{point.comparisonTotal ?? "—"}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+
       <p className={styles.foot}>
-        Gold lines mark event days. Memberships from before signup tracking are dated from the member&apos;s first
-        event, so members who never played are not counted. Historical comparison dates may be reconstructed from first
-        participation.
+        Dashed grey lines mark event days. Memberships from before signup tracking are dated from the member&apos;s
+        first event, so members who never played are not counted. Historical comparison dates may be reconstructed from
+        first participation.
       </p>
     </div>
   );

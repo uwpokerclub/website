@@ -114,10 +114,39 @@ function Body({ data }: { data: EventActivityResponse }) {
                 ifOverflow="extendDomain"
               />
             )}
-            <Bar dataKey="entries" name="Entries" fill={CHART_COLORS.slot1} radius={[4, 4, 0, 0]} />
+            <Bar
+              dataKey="entries"
+              name="Entries"
+              fill={CHART_COLORS.slot1}
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      <details className={styles.dataDetails}>
+        <summary>View event entry data</summary>
+        <table>
+          <caption>Event entries for {data.current.series.length} events</caption>
+          <thead>
+            <tr>
+              <th scope="col">Event</th>
+              <th scope="col">Date</th>
+              <th scope="col">Entries</th>
+            </tr>
+          </thead>
+          <tbody>
+            {series.map((event) => (
+              <tr key={event.id}>
+                <th scope="row">{event.name}</th>
+                <td>{event.startDate}</td>
+                <td>{event.entries}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
 
       <p className={styles.foot}>
         An event counts as run once it has ended. Average field size covers run events only.

@@ -54,11 +54,11 @@ function renderDashboard() {
 }
 
 function cardTitleOrder() {
-  return screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
+  return screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
 }
 
 function titlesIn(testId: string) {
-  return Array.from(screen.getByTestId(testId).querySelectorAll("h3")).map((heading) => heading.textContent);
+  return Array.from(screen.getByTestId(testId).querySelectorAll("h2")).map((heading) => heading.textContent);
 }
 
 describe("Dashboard", () => {

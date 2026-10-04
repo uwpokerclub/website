@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useId } from "react";
 import { CardSkeleton } from "./CardSkeleton";
 import { CardErrorState } from "./CardErrorState";
 import { CardEmptyState } from "./CardEmptyState";
@@ -33,10 +33,13 @@ export function DashboardCard({
   "data-qa": dataQa,
   children,
 }: DashboardCardProps) {
+  const titleId = useId();
   return (
-    <section className={styles.container} data-qa={dataQa} data-dashboard-status={status}>
+    <section className={styles.container} aria-labelledby={titleId} data-qa={dataQa} data-dashboard-status={status}>
       <header className={styles.header}>
-        <h3 className={styles.title}>{title}</h3>
+        <h2 id={titleId} className={styles.title}>
+          {title}
+        </h2>
         {sampleData && <span className={styles.sample}>Sample data</span>}
         {action && <div className={styles.action}>{action}</div>}
       </header>

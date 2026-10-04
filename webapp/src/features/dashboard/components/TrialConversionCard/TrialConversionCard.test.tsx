@@ -43,7 +43,7 @@ describe("TrialConversionCard", () => {
     });
     render(<TrialConversionCard semesterId="s1" />);
 
-    expect(screen.getByText("Free trials were not offered this term.")).toBeInTheDocument();
+    expect(screen.getByText(/Free trials were not offered this term\./)).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
@@ -52,14 +52,14 @@ describe("TrialConversionCard", () => {
     render(<TrialConversionCard semesterId="s1" />);
 
     expect(screen.getByTestId("trial-conversion-rate-value")).toHaveTextContent("75%");
-    expect(screen.getByText("bought a membership after using a free trial")).toBeInTheDocument();
+    expect(
+      screen.getByText(/of the full-term observed trial cohort, paid in the current snapshot/),
+    ).toBeInTheDocument();
     expect(screen.getByText("3 of 4 tracked trial players became paid members")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.",
-      ),
+      screen.getByText(/Paid and executive counts reflect the current historical snapshot, including refunds/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/untracked|observed-ever|purchase proxy/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Earlier untracked trial and payment history is unavailable/)).toBeInTheDocument();
   });
 
   it("shows the null-rate state even when the current status snapshot is empty", () => {
@@ -112,7 +112,7 @@ describe("TrialConversionCard", () => {
     render(<TrialConversionCard semesterId="s1" />);
 
     expect(screen.getByText("Fall 2025")).toBeInTheDocument();
-    expect(screen.getByText("Free trial limit: 2 entries.")).toBeInTheDocument();
+    expect(screen.getByText(/Free trial limit: 2 entries\./)).toBeInTheDocument();
     expect(screen.getByLabelText("Players by membership status in Fall 2025")).toHaveTextContent(
       "4 paid3 trial spent, unpaid2 trial still open1 executive, comped",
     );
@@ -137,7 +137,7 @@ describe("TrialConversionCard", () => {
     });
     render(<TrialConversionCard semesterId="s1" />);
 
-    expect(screen.getByText("Free trials were not offered this term.")).toBeInTheDocument();
+    expect(screen.getByText(/Free trials were not offered this term\./)).toBeInTheDocument();
     expect(screen.getByText("Conversion history unavailable")).toBeInTheDocument();
     expect(screen.getByLabelText("Players by membership status in Fall 2025")).toHaveTextContent("5 unpaid, no trial");
   });

@@ -33,7 +33,9 @@ jest.mock("recharts", () => {
     ),
     CartesianGrid: () => null,
     Legend: () => null,
-    ReferenceLine: ({ x }: { x: string }) => <span data-event-date={x} />,
+    ReferenceLine: ({ x, stroke, strokeDasharray }: { x: string; stroke: string; strokeDasharray: string }) => (
+      <span data-event-date={x} data-marker-stroke={stroke} data-marker-dash={strokeDasharray} />
+    ),
     ResponsiveContainer: Container,
     Tooltip: () => null,
     XAxis: () => null,
@@ -55,7 +57,7 @@ jest.mock("../../hooks/useDashboardQueries", () => ({ useSignups: jest.fn() }));
 const response: SignupsResponse = {
   total: 10,
   dataStartsAt: "2026-09-01",
-  eventDates: ["2026-09-12", "2026-09-19"],
+  eventDates: ["2026-09-12", "2026-09-12", "2026-09-19"],
   series: [
     { date: "2026-09-01", admin: 0, discord: 0, unknown: 0 },
     { date: "2026-09-02", admin: 1, discord: 0, unknown: 0 },
@@ -81,10 +83,15 @@ describe("SignupTimelineCard", () => {
 
     expect(screen.getByText("10")).toBeInTheDocument();
     expect(screen.getByText(/10 on the busiest day/)).toBeInTheDocument();
-    expect(screen.getByText("Admin")).toBeInTheDocument();
-    expect(screen.getByText("Discord")).toBeInTheDocument();
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
-    expect(container.querySelectorAll("[data-event-date]")).toHaveLength(response.eventDates.length);
+    expect(screen.getAllByText("Admin").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Discord").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unknown").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("[data-event-date]")).toHaveLength(2);
+    expect(container.querySelector("[data-event-date]")).toHaveAttribute("data-marker-stroke", "#616161");
+    expect(container.querySelector("[data-event-date]")).toHaveAttribute("data-marker-dash", "4 3");
+    fireEvent.click(screen.getByText("View daily signup data"));
+    expect(screen.getByRole("table", { name: /Daily memberships created by source/ })).toBeInTheDocument();
+    expect(screen.getByText("View daily signup data")).toBeInTheDocument();
   });
 
   it("explains that older memberships are dated from first participation", () => {
@@ -113,7 +120,7 @@ describe("SignupTimelineCard", () => {
       "false",
     );
     expect(container.querySelector("[data-chart-values]")).toHaveAttribute("data-chart-values", "3,0,null");
-    expect(container.querySelectorAll("[data-event-date]")).toHaveLength(response.eventDates.length);
+    expect(container.querySelectorAll("[data-event-date]")).toHaveLength(2);
   });
 
   it("reserves a left gutter wide enough for integer signup count ticks", () => {

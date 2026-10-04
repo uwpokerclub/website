@@ -55,12 +55,17 @@ function Body({ data }: { data: ConversionResponse }) {
         </>
       )}
 
+      <p className={styles.comparisonContext}>
+        Full-term observed trial cohort · paid status in the current historical snapshot
+      </p>
       <ConversionSummary conversion={conversion} noRateMessage="No tracked trial players yet" />
 
       <Comparison comparison={comparison} />
 
       <p className={styles.foot}>
-        Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.
+        Conversion uses all trials observed since tracking began, including players who later changed membership status.
+        Paid and executive counts reflect the current historical snapshot, including refunds; they do not reconstruct
+        payment status at term end. Earlier untracked trial and payment history is unavailable.
       </p>
     </div>
   );
@@ -79,8 +84,8 @@ function Comparison({ comparison }: { comparison: ConversionResponse["comparison
       <p className={styles.comparisonTitle}>{semester.name}</p>
       <p className={styles.comparisonContext}>
         {trialDisabled
-          ? "Free trials were not offered this term."
-          : `Free trial limit: ${freeTrialLimit} ${freeTrialLimit === 1 ? "entry" : "entries"}.`}
+          ? "Full-term snapshot · Free trials were not offered this term."
+          : `Full-term snapshot · Free trial limit: ${freeTrialLimit} ${freeTrialLimit === 1 ? "entry" : "entries"}.`}
       </p>
       <StatBar
         ariaLabel={`Players by membership status in ${semester.name}`}
@@ -123,7 +128,9 @@ function ConversionSummary({
       </p>
       {conversion.rate !== null && (
         <>
-          <p className={styles.comparisonContext}>bought a membership after using a free trial</p>
+          <p className={styles.comparisonContext}>
+            of the full-term observed trial cohort, paid in the current snapshot
+          </p>
           <p className={styles.comparisonContext}>
             {conversion.numerator} of {conversion.denominator} tracked trial players became paid members
           </p>

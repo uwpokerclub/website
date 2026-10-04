@@ -19,7 +19,7 @@
 .rank {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-gray-500);
+  color: var(--color-gray-700);
   width: 0.8125rem;
   flex-shrink: 0;
 }

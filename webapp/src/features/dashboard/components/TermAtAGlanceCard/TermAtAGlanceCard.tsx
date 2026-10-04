@@ -5,6 +5,7 @@ import { StatBar } from "../StatBar";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useMembershipsDashboard } from "../../hooks/useDashboardQueries";
 import type { MembershipsDashboardResponse } from "../../api/dashboardApi";
+import { termProgress } from "./termProgress";
 import styles from "./TermAtAGlanceCard.module.css";
 
 type TermAtAGlanceCardProps = {
@@ -95,6 +96,12 @@ function Comparison({
     return null;
   }
 
+  if (comparison.stats.total === 0) {
+    return (
+      <p className={styles.noComparisonNote}>No membership baseline is available for {comparison.semester.name}.</p>
+    );
+  }
+
   return (
     <DeltaChip
       current={current}
@@ -127,7 +134,10 @@ function PaceTrack({
     return null;
   }
 
-  const target = Math.max(comparison.stats.total, 1);
+  if (comparison.stats.total === 0) {
+    return null;
+  }
+  const target = comparison.stats.total;
   const share = Math.round((current / target) * 100);
   const fill = Math.min(share, 100);
   const markerAt = comparison.totalAsOf === null ? null : Math.min((comparison.totalAsOf / target) * 100, 100);
@@ -137,7 +147,7 @@ function PaceTrack({
     `— ${share}% of ${comparison.semester.name}'s final total` +
     (comparison.totalAsOf === null
       ? "."
-      : `, against ${comparison.totalAsOf.toLocaleString("en-CA")} at this point last year.`);
+      : `, against ${comparison.totalAsOf.toLocaleString("en-CA")} at this point in ${comparison.semester.name}.`);
 
   return (
     <div className={styles.paceBlock}>
@@ -153,22 +163,4 @@ function PaceTrack({
       </p>
     </div>
   );
-}
-
-/** "day 19 of 85", or null when the term's dates are unavailable. */
-function termProgress(semester: { startDate: string; endDate: string } | null | undefined) {
-  if (!semester) {
-    return null;
-  }
-
-  const day = 86_400_000;
-  const start = new Date(semester.startDate).getTime();
-  const total = Math.round((new Date(semester.endDate).getTime() - start) / day);
-  const elapsed = Math.round((Date.now() - start) / day);
-
-  if (!Number.isFinite(total) || total <= 0 || elapsed < 0) {
-    return null;
-  }
-
-  return `day ${Math.min(elapsed, total)} of ${total}`;
 }

@@ -22,7 +22,7 @@ export const CHART_COLORS = {
 export const AXIS_PROPS = {
   tickLine: false,
   axisLine: false,
-  tick: { fontSize: 11, fill: "#9e9e9e", fontFamily: "Montserrat, sans-serif" },
+  tick: { fontSize: 11, fill: "#616161", fontFamily: "Montserrat, sans-serif" },
 } as const;
 
 export const GRID_PROPS = {

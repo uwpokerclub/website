@@ -1,5 +1,5 @@
 /** @jest-environment jsdom */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import "@testing-library/jest-dom";
@@ -59,6 +59,7 @@ describe("EventActivityCard", () => {
   it("leads with events run against events scheduled", () => {
     mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.eventActivity, refetch: jest.fn() });
     renderCard();
+    fireEvent.click(screen.getByText("View event entry data"));
 
     // eventsRun and eventsScheduled are disjoint, so the term total is their sum.
     expect(screen.getByText("11")).toBeInTheDocument();
@@ -134,6 +135,14 @@ describe("EventActivityCard", () => {
     renderCard();
 
     expect(screen.getByText(/counts as run once it has ended/)).toBeInTheDocument();
+  });
+
+  it("provides event entries in expandable table details", () => {
+    mocked.mockReturnValue({ isLoading: false, isError: false, data: SAMPLE_TERM.eventActivity, refetch: jest.fn() });
+    renderCard();
+    expect(screen.getByRole("table", { name: /Event entries for/ })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Entries" })).toBeInTheDocument();
+    expect(screen.getByText("View event entry data")).toBeInTheDocument();
   });
 
   it("never reports more events run than the term holds", () => {

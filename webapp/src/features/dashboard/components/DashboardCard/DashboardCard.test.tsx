@@ -76,23 +76,4 @@ describe("DashboardCard", () => {
     expect(children).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Spotlight body")).toBeInTheDocument();
   });
-  it("marks a card rendering fixture data so it cannot be mistaken for real figures", () => {
-    render(
-      <DashboardCard title="Trial conversion" status="ready" sampleData>
-        {() => <p>78</p>}
-      </DashboardCard>,
-    );
-
-    expect(screen.getByText("Sample data")).toBeInTheDocument();
-  });
-
-  it("shows no sample-data marker by default", () => {
-    render(
-      <DashboardCard title="Memberships" status="ready">
-        {() => <p>967</p>}
-      </DashboardCard>,
-    );
-
-    expect(screen.queryByText("Sample data")).not.toBeInTheDocument();
-  });
 });

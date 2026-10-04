@@ -13,8 +13,6 @@ type DashboardCardProps = {
   errorMessage?: string;
   onRetry?: () => void;
   emptyMessage?: ReactNode;
-  /** Renders a visible marker so fixture figures are never mistaken for real ones. */
-  sampleData?: boolean;
   "data-qa"?: string;
   /**
    * Renders the card body. Called only when status is "ready".
@@ -29,7 +27,6 @@ export function DashboardCard({
   errorMessage = "Something went wrong.",
   onRetry,
   emptyMessage = "Nothing to show yet.",
-  sampleData = false,
   "data-qa": dataQa,
   children,
 }: DashboardCardProps) {
@@ -40,7 +37,6 @@ export function DashboardCard({
         <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
-        {sampleData && <span className={styles.sample}>Sample data</span>}
         {action && <div className={styles.action}>{action}</div>}
       </header>
       <div className={styles.body}>

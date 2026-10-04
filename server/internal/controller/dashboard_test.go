@@ -874,7 +874,7 @@ func TestDashboardEngagementStats(t *testing.T) {
 		require.EqualValues(t, 1, body.Current.Players)
 	})
 
-	t.Run("a member entering via two different memberships in this semester's events counts once with combined events", func(t *testing.T) {
+	t.Run("excludes a cross-semester membership row while counting the valid membership", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db := container.GetDB()
 		priorSemester, err := createDashboardTestSemester(db, "Winter 2025", time.Date(2025, 1, 15, 0, 0, 0, 0, time.UTC))
@@ -884,11 +884,9 @@ func TestDashboardEngagementStats(t *testing.T) {
 		structure, err := testutils.CreateTestStructure(db, "Standard")
 		require.NoError(t, err)
 
-		// Both events belong to the current semester, but the entries are made
-		// through two different memberships for the same user - one from a prior
-		// semester, one from the current semester. Nothing in CreateParticipant
-		// stops an entry from referencing a membership whose semester differs from
-		// the event's semester.
+		// Both events belong to the current semester, but one participant row
+		// references this user's prior-term membership. Engagement must exclude that
+		// malformed cross-semester row just as trial conversion does.
 		e1, err := createDashboardTestEvent(db, currentSemester.ID, structure.ID, "E1", models.EventStateEnded, time.Now(), 0)
 		require.NoError(t, err)
 		e2, err := createDashboardTestEvent(db, currentSemester.ID, structure.ID, "E2", models.EventStateEnded, time.Now(), 0)
@@ -911,8 +909,9 @@ func TestDashboardEngagementStats(t *testing.T) {
 		var body controller.EngagementStatsResponse
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 		require.EqualValues(t, 1, body.Current.Players)
-		require.Equal(t, 2.0, body.Current.MedianEventsAttended)
-		require.EqualValues(t, 0, body.Current.PlayedOnceCount)
+		require.Equal(t, 1.0, body.Current.MedianEventsAttended)
+		require.EqualValues(t, 1, body.Current.PlayedOnceCount)
+		require.Equal(t, 1.0, body.Current.PlayedOnceShare)
 	})
 
 	t.Run("returns 404 for an unknown semester id", func(t *testing.T) {
@@ -1574,6 +1573,8 @@ func TestDashboardEventActivity(t *testing.T) {
 		// so the event must sit inside the term it belongs to.
 		event, err := createDashboardTestEvent(db, prior.ID, structure.ID, "Prior", models.EventStateEnded, prior.StartDate, 0)
 		require.NoError(t, err)
+		_, err = createDashboardTestEvent(db, prior.ID, structure.ID, "Prior empty", models.EventStateEnded, prior.StartDate.AddDate(0, 0, 7), 0)
+		require.NoError(t, err)
 		user, err := testutils.CreateTestUser(db, newUserID(), "Prior", "Player", "prior-player@uwaterloo.ca", models.FacultyMath, "prior-player")
 		require.NoError(t, err)
 		membership, err := createDashboardTestMembership(db, user.ID, prior.ID, true, false, false)
@@ -1586,7 +1587,7 @@ func TestDashboardEventActivity(t *testing.T) {
 		comparison := raw["comparison"].(map[string]any)
 		require.Equal(t, map[string]any{"semester": comparison["semester"], "averageFieldSize": comparison["averageFieldSize"]}, comparison)
 		require.Equal(t, prior.ID.String(), comparison["semester"].(map[string]any)["id"])
-		require.Equal(t, 1.0, comparison["averageFieldSize"])
+		require.Equal(t, 0.5, comparison["averageFieldSize"], "zero-entry ended events remain in the denominator")
 	})
 
 	t.Run("counts future-dated events as scheduled rather than clipping them away", func(t *testing.T) {
@@ -1690,10 +1691,9 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		_, err = createDashboardTestEvent(db, other.ID, structure.ID, "Other term", models.EventStateStarted, day.Add(18*time.Hour), 0)
 		require.NoError(t, err)
 
-		w := get(t, semester.ID.String())
-		require.Equal(t, http.StatusOK, w.Code)
-		var body store.SignupTimeline
-		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		fixedNow := day.Add(12 * time.Hour)
+		body, err := postgresstore.NewDashboardRepository(db).SignupTimeline(semester.ID, fixedNow)
+		require.NoError(t, err)
 		require.Equal(t, []store.SignupTimelinePoint{
 			{Date: day.AddDate(0, 0, -2).Format("2006-01-02")},
 			{Date: day.AddDate(0, 0, -1).Format("2006-01-02")},
@@ -1710,7 +1710,6 @@ func TestDashboardSignupTimeline(t *testing.T) {
 			require.NotContains(t, point.Date, "T")
 		}
 		require.Equal(t, body.Total, bucketSum)
-		require.Contains(t, w.Body.String(), `"dataStartsAt":"`+day.Format("2006-01-02")+`"`)
 	})
 
 	t.Run("uses unknown for null and malformed sources within the current bound", func(t *testing.T) {
@@ -1750,6 +1749,18 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NotNil(t, body.EventDates)
 		require.Nil(t, body.DataStartsAt)
 		require.Zero(t, body.Total)
+	})
+
+	t.Run("returns a clear error for legacy bounds beyond 366 inclusive calendar days", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		semester, err := createDashboardTestSemester(db, "Legacy long term", time.Date(2023, time.December, 31, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		require.NoError(t, db.Model(semester).Update("end_date", time.Date(2024, time.December, 31, 0, 0, 0, 0, time.UTC)).Error)
+
+		w := get(t, semester.ID.String())
+		require.Equal(t, http.StatusInternalServerError, w.Code)
+		require.Contains(t, w.Body.String(), "stored semester bounds exceed the 366 inclusive calendar day signup timeline limit")
 	})
 
 	t.Run("uses the Toronto calendar date for the current bound", func(t *testing.T) {

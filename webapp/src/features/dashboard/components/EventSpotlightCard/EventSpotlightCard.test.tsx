@@ -17,7 +17,10 @@ const renderCard = () =>
   );
 
 describe("EventSpotlightCard", () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+  });
 
   it("leads with the event's name, not a count", () => {
     mocked.mockReturnValue({ isPending: false, isError: false, data: SAMPLE_TERM.spotlight, refetch: jest.fn() });
@@ -46,6 +49,20 @@ describe("EventSpotlightCard", () => {
 
     expect(screen.queryByText(/Live/)).not.toBeInTheDocument();
     expect(screen.getByText(/Scheduled/)).toBeInTheDocument();
+  });
+
+  it("shows the actual Toronto start date for a live event that began the prior local day", () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-04T16:00:00Z"));
+    mocked.mockReturnValue({
+      isPending: false,
+      isError: false,
+      refetch: jest.fn(),
+      data: { ...SAMPLE_TERM.spotlight, startDate: "2026-10-03T23:00:00Z", state: 0 },
+    });
+
+    renderCard();
+
+    expect(screen.getByText(/Live · started Sat, Oct 3 at 7:00 p\.m\./)).toBeInTheDocument();
   });
 
   it("says nothing is scheduled when there is no event", () => {

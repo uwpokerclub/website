@@ -99,7 +99,7 @@ func (r *postgresDashboardRepository) EngagementStats(semesterID uuid.UUID, asOf
 			SELECT m.user_id, COUNT(DISTINCT p.event_id) AS events
 			FROM participants p
 			JOIN events e ON e.id = p.event_id
-			JOIN memberships m ON m.id = p.membership_id
+			JOIN memberships m ON m.id = p.membership_id AND m.semester_id = e.semester_id
 			WHERE e.semester_id = ? AND e.start_date <= ?
 			GROUP BY m.user_id
 		)
@@ -218,30 +218,58 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 	return stats, series, nil
 }
 
+func (r *postgresDashboardRepository) AverageFieldSize(semesterID uuid.UUID, asOf time.Time) (float64, error) {
+	var average float64
+	err := r.db.Raw(`
+		SELECT COALESCE(AVG(event_entries.entries), 0)
+		FROM (
+			SELECT e.id, COUNT(p.id) AS entries
+			FROM events e
+			LEFT JOIN participants p ON p.event_id = e.id
+			WHERE e.semester_id = ? AND e.state = ? AND e.start_date <= ?
+			GROUP BY e.id
+		) AS event_entries
+	`, semesterID, models.EventStateEnded, asOf).Scan(&average).Error
+	return average, err
+}
+
 // SignupTimeline implements store.DashboardRepository. Membership creation times
 // are UTC wall-clock values in a timestamp column, event starts are timestamptz
 // instants, and semester bounds encode date-only values at UTC midnight. Convert
 // each explicitly so output is independent of the PostgreSQL session timezone.
 func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID, now time.Time) (store.SignupTimeline, error) {
 	timeline := store.SignupTimeline{Series: []store.SignupTimelinePoint{}, EventDates: []string{}}
-
+	var bounds struct {
+		StartDate *time.Time
+		EndDate   *time.Time
+	}
 	err := r.db.Raw(`
-		WITH bounds AS (
-			SELECT (start_date AT TIME ZONE 'UTC')::date AS start_date,
-				LEAST((end_date AT TIME ZONE 'UTC')::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
-			FROM semesters
-			WHERE id = ?
-		), daily AS (
+		SELECT (start_date AT TIME ZONE 'UTC')::date AS start_date,
+			LEAST((end_date AT TIME ZONE 'UTC')::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
+		FROM semesters
+		WHERE id = ?
+	`, now, semesterID).Scan(&bounds).Error
+	if err != nil {
+		return store.SignupTimeline{}, err
+	}
+	if bounds.StartDate == nil || bounds.EndDate == nil {
+		return timeline, nil
+	}
+	if models.SemesterCalendarDays(*bounds.StartDate, *bounds.EndDate) > models.MaxSemesterCalendarDays {
+		return store.SignupTimeline{}, store.ErrSignupTimelineRange
+	}
+
+	err = r.db.Raw(`
+		WITH daily AS (
 			SELECT
 				(m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto')::date AS date,
 				COUNT(*) FILTER (WHERE m.source = 'admin') AS admin,
 				COUNT(*) FILTER (WHERE m.source = 'discord') AS discord,
 				COUNT(*) FILTER (WHERE m.source IS DISTINCT FROM 'admin' AND m.source IS DISTINCT FROM 'discord') AS unknown
 			FROM memberships m
-			CROSS JOIN bounds b
 			WHERE m.semester_id = ?
 				AND m.created_at IS NOT NULL
-				AND (m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto')::date BETWEEN b.start_date AND b.end_date
+				AND (m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto')::date BETWEEN ?::date AND ?::date
 			GROUP BY (m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto')::date
 		)
 		SELECT
@@ -249,40 +277,22 @@ func (r *postgresDashboardRepository) SignupTimeline(semesterID uuid.UUID, now t
 			COALESCE(d.admin, 0) AS admin,
 			COALESCE(d.discord, 0) AS discord,
 			COALESCE(d.unknown, 0) AS unknown
-		FROM bounds b
-		CROSS JOIN LATERAL generate_series(b.start_date, b.end_date, INTERVAL '1 day') AS days(date)
+		FROM generate_series(?::date, ?::date, INTERVAL '1 day') AS days(date)
 		LEFT JOIN daily d ON d.date = days.date
 		ORDER BY days.date
-	`, now, semesterID, semesterID).Scan(&timeline.Series).Error
+	`, semesterID, bounds.StartDate, bounds.EndDate, bounds.StartDate, bounds.EndDate).Scan(&timeline.Series).Error
 	if err != nil {
 		return store.SignupTimeline{}, err
 	}
 
-	var summary struct {
-		DataStartsAt *string
-		Total        int64
+	for _, point := range timeline.Series {
+		dayTotal := point.Admin + point.Discord + point.Unknown
+		timeline.Total += dayTotal
+		if dayTotal > 0 && timeline.DataStartsAt == nil {
+			date := point.Date
+			timeline.DataStartsAt = &date
+		}
 	}
-	err = r.db.Raw(`
-		WITH bounds AS (
-			SELECT (start_date AT TIME ZONE 'UTC')::date AS start_date,
-				LEAST((end_date AT TIME ZONE 'UTC')::date, (?::timestamptz AT TIME ZONE 'America/Toronto')::date) AS end_date
-			FROM semesters
-			WHERE id = ?
-		)
-		SELECT
-			TO_CHAR(MIN((m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto')::date), 'YYYY-MM-DD') AS data_starts_at,
-			COUNT(*) AS total
-		FROM memberships m
-		CROSS JOIN bounds b
-		WHERE m.semester_id = ?
-			AND m.created_at IS NOT NULL
-			AND (m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto')::date BETWEEN b.start_date AND b.end_date
-	`, now, semesterID, semesterID).Scan(&summary).Error
-	if err != nil {
-		return store.SignupTimeline{}, err
-	}
-	timeline.DataStartsAt = summary.DataStartsAt
-	timeline.Total = summary.Total
 
 	err = r.db.Raw(`
 		SELECT TO_CHAR((start_date AT TIME ZONE 'America/Toronto')::date, 'YYYY-MM-DD')

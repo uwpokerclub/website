@@ -42,9 +42,12 @@ type MembershipRepository interface {
 	// no membership exists for the given ID.
 	SetFreeTrialAvailable(id uuid.UUID, available bool) error
 
-	// SetTrialStartedAtIfNull records the first observed eligible entry time.
+	// SetTrialStartedAtIfNull records the first observed eligible entry time. It
+	// is a conditional no-op when the row is missing, ineligible, or already set.
 	SetTrialStartedAtIfNull(id uuid.UUID, at time.Time) error
 
-	// SetConvertedAtIfNull records the first paid transition after an observed trial start.
+	// SetConvertedAtIfNull records the first paid transition after an observed
+	// trial start. It is a conditional no-op when the row is missing, has no
+	// observed trial start, or is already set.
 	SetConvertedAtIfNull(id uuid.UUID, at time.Time) error
 }

@@ -41,7 +41,17 @@ export function EventSpotlightCard({ semesterId }: Props) {
  */
 function Body({ event }: { event: SpotlightEvent }) {
   const start = new Date(event.startDate);
-  const live = event.state === EVENT_STATE_STARTED && start <= new Date();
+  const now = new Date();
+  const live = event.state === EVENT_STATE_STARTED && start <= now;
+  const priorTorontoDay = live && torontoDateKey(start) < torontoDateKey(now);
+  const priorStartDate = priorTorontoDay
+    ? `${new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Toronto",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(start)} at `
+    : "";
 
   return (
     <div className={styles.container}>
@@ -49,7 +59,8 @@ function Body({ event }: { event: SpotlightEvent }) {
         {live ? (
           <>
             <span className={styles.pulse} aria-hidden="true" />
-            Live · started {start.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" })}
+            Live · started {priorStartDate}
+            {start.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" })}
           </>
         ) : (
           <>Scheduled · {start.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })}</>
@@ -74,4 +85,15 @@ function Body({ event }: { event: SpotlightEvent }) {
       </Link>
     </div>
   );
+}
+
+function torontoDateKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }

@@ -175,10 +175,16 @@ type DashboardRepository interface {
 	// asOf, since the events it counts are the future-dated ones.
 	EventActivity(semesterID uuid.UUID, asOf time.Time) (EventActivityStats, []EventSeriesPoint, error)
 
+	// AverageFieldSize returns the ended-event mean including events with zero entries.
+	// It is a narrow comparison query and does not compute the current card's other figures.
+	AverageFieldSize(semesterID uuid.UUID, asOf time.Time) (float64, error)
+
 	// SignupTimeline returns a zero-filled daily calendar-date series from the
 	// semester start through the earlier of its end date and now's America/Toronto
-	// calendar date. Memberships without a creation date are excluded; every other
-	// source besides admin and discord is reported as unknown.
+	// calendar date. The inclusive range is limited to 366 rows; larger stored
+	// ranges return ErrSignupTimelineRange without truncation. Memberships without
+	// a creation date are excluded; every other source besides admin and discord is
+	// reported as unknown. Total and DataStartsAt are derived from the daily series.
 	SignupTimeline(semesterID uuid.UUID, now time.Time) (SignupTimeline, error)
 
 	// MembershipTotalAsOf returns how many of the semester's dated memberships had

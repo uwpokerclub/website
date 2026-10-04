@@ -241,7 +241,7 @@ func (r *inMemoryMembershipRepository) SetTrialStartedAtIfNull(id uuid.UUID, at 
 	defer r.mu.Unlock()
 	membership, exists := r.memberships[id]
 	if !exists {
-		return store.ErrNotFound
+		return nil
 	}
 	if membership.TrialStartedAt == nil && !membership.Paid && !membership.Executive {
 		membership.TrialStartedAt = &at
@@ -254,7 +254,7 @@ func (r *inMemoryMembershipRepository) SetConvertedAtIfNull(id uuid.UUID, at tim
 	defer r.mu.Unlock()
 	membership, exists := r.memberships[id]
 	if !exists {
-		return store.ErrNotFound
+		return nil
 	}
 	if membership.ConvertedAt == nil && membership.TrialStartedAt != nil {
 		membership.ConvertedAt = &at

@@ -181,6 +181,21 @@ func TestCreateSemester(t *testing.T) {
 			expectedErrorMsg: "Key: 'CreateSemesterRequest.EndDate' Error:Field validation for 'EndDate' failed on the 'gtfield' tag",
 		},
 		{
+			name:     "invalid request exceeds 366 inclusive calendar days",
+			userRole: authorization.ROLE_PRESIDENT.ToString(),
+			requestBody: map[string]interface{}{
+				"name":                  "Long term",
+				"startDate":             "2023-12-31T00:00:00Z",
+				"endDate":               "2024-12-31T00:00:00Z",
+				"membershipFee":         10,
+				"membershipDiscountFee": 5,
+				"rebuyFee":              2,
+			},
+			expectedStatus:   http.StatusBadRequest,
+			expectError:      true,
+			expectedErrorMsg: "semester date range must contain at most 366 inclusive UTC calendar days",
+		},
+		{
 			name:     "invalid request negative starting budget",
 			userRole: authorization.ROLE_PRESIDENT.ToString(),
 			requestBody: map[string]interface{}{

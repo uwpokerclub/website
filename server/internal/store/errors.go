@@ -11,6 +11,10 @@ var ErrTransactionConflict = errors.New("transaction conflict")
 
 var ErrAlreadyExists = errors.New("record already exists")
 
+// ErrSignupTimelineRange indicates stored semester bounds exceed the maximum
+// zero-filled signup timeline size and were rejected rather than truncated.
+var ErrSignupTimelineRange = errors.New("signup timeline exceeds 366 inclusive calendar days")
+
 // ErrNotImplemented is returned by InMemoryStore repository methods whose logic lives
 // entirely in hand-written SQL (dashboard aggregates). Reimplementing that SQL in Go
 // would only test itself, not the shipped query, so those methods are not implemented

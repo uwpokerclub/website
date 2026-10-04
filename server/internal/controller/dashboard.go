@@ -430,14 +430,14 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 	response := EventActivityResponse{Current: EventActivityCurrent{EventActivityStats: stats, Series: series}}
 	if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
 		cutoff := services.ComparisonCutoff(semester, *comparison, now)
-		comparisonStats, _, err := c.store.Dashboard().EventActivity(comparison.ID, cutoff)
+		comparisonAverage, err := c.store.Dashboard().AverageFieldSize(comparison.ID, cutoff)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 			return
 		}
 		response.Comparison = &ComparisonEventActivity{
 			Semester:         store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
-			AverageFieldSize: comparisonStats.AverageFieldSize,
+			AverageFieldSize: comparisonAverage,
 		}
 	}
 
@@ -478,6 +478,12 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 	now := time.Now()
 	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, now)
 	if err != nil {
+		if errors.Is(err, store.ErrSignupTimelineRange) {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(
+				"stored semester bounds exceed the 366 inclusive calendar day signup timeline limit",
+			))
+			return
+		}
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}

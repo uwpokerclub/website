@@ -20,7 +20,6 @@ export function TrialConversionCard({ semesterId }: Props) {
       title={CARD_TITLES.trialConversion}
       status={status}
       onRetry={() => refetch()}
-      emptyMessage="No trial conversion data recorded yet."
       data-qa="trial-conversion-card"
     >
       {() => <Body data={data as ConversionResponse} />}

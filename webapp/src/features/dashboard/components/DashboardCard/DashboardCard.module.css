@@ -24,16 +24,6 @@
   color: var(--color-gray-900);
 }
 
-.sample {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-warning-dark);
-  background: var(--color-warning-light);
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--border-radius-full);
-  margin-right: auto;
-}
-
 .action {
   flex-shrink: 0;
 }

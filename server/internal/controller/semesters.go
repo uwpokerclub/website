@@ -48,6 +48,10 @@ func (s *semestersController) createSemester(ctx *gin.Context) {
 	if !BindJSON(ctx, &req) {
 		return
 	}
+	if err := models.ValidateSemesterDateRange(req.StartDate, req.EndDate); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
 
 	semester := models.Semester{
 		Name:                  req.Name,

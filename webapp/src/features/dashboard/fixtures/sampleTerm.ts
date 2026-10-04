@@ -6,20 +6,7 @@ import type {
   SpotlightEvent,
 } from "../api/dashboardApi";
 
-/**
- * One internally-consistent sample term, used as placeholder data for cards whose
- * endpoint does not exist yet and as the shared fixture for card tests. The figures
- * agree across cards on purpose — 967 memberships, 824 of whom played, 712 of those
- * paid — so a page rendered entirely from fixtures still reads as one real term
- * rather than eight unrelated samples.
- *
- * The engagement figures are deliberately a term that is *down year-over-year but
- * entirely normal*: median 2 events and 38% played-once both sit inside the ranges
- * observed across all six analysed terms. That is the case the old comparison-table
- * card got wrong, so it is the case the fixtures exercise.
- *
- * Every card rendering this data must pass `sampleData` to DashboardCard.
- */
+/** Shared, internally consistent sample responses for dashboard component tests. */
 const FALL_2025 = { id: "0f2d6a4e-0000-4000-8000-000000000001", name: "Fall 2025" };
 
 export const SAMPLE_TERM = {

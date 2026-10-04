@@ -2,15 +2,19 @@ package services_test
 
 import (
 	"context"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	apierrors "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
 	"api/internal/store/postgres"
 	"api/internal/testutils"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func newTrialConversionPostgresFixture(t *testing.T) (*testutils.PostgresTestContainer, *models.Semester, *models.Event, *models.Membership) {
@@ -76,6 +80,73 @@ func TestParticipantsService_CreateParticipantSerializesWithPaidTransition(t *te
 	require.True(t, stored.Paid)
 	require.Nil(t, stored.TrialStartedAt, "entry must reread paid status after acquiring the lock")
 	require.Nil(t, stored.ConvertedAt)
+}
+
+func TestParticipantsService_CreateParticipantSerializesFreeTrialLimitAtLimitMinusOne(t *testing.T) {
+	container, semester, existingEvent, membership := newTrialConversionPostgresFixture(t)
+	db := container.GetDB()
+	var lockQueries atomic.Int64
+	callbackName := "test:observe_membership_no_key_update"
+	queryCallbacks := db.Callback().Query().After("gorm:query")
+	require.NoError(t, queryCallbacks.Register(callbackName, func(tx *gorm.DB) {
+		if strings.Contains(strings.ToUpper(tx.Statement.SQL.String()), "FOR NO KEY UPDATE") {
+			lockQueries.Add(1)
+		}
+	}))
+	t.Cleanup(func() { queryCallbacks.Remove(callbackName) })
+	require.NoError(t, db.Model(&models.Semester{}).Where("id = ?", semester.ID).Update("free_trial_limit", 3).Error)
+
+	structure, err := testutils.CreateTestStructure(db, "Concurrent trial entries")
+	require.NoError(t, err)
+	secondExistingEvent, err := testutils.CreateTestEvent(db, semester.ID, structure.ID, "Already entered")
+	require.NoError(t, err)
+	firstRaceEvent, err := testutils.CreateTestEvent(db, semester.ID, structure.ID, "Concurrent A")
+	require.NoError(t, err)
+	secondRaceEvent, err := testutils.CreateTestEvent(db, semester.ID, structure.ID, "Concurrent B")
+	require.NoError(t, err)
+	for _, event := range []*models.Event{existingEvent, secondExistingEvent} {
+		_, err := testutils.CreateTestParticipant(db, membership.ID, event.ID)
+		require.NoError(t, err)
+	}
+
+	start := make(chan struct{})
+	ready := make(chan struct{}, 2)
+	results := make(chan error, 2)
+	for _, event := range []*models.Event{firstRaceEvent, secondRaceEvent} {
+		eventID := event.ID
+		go func() {
+			ready <- struct{}{}
+			<-start
+			_, err := services.NewParticipantsService(postgres.NewStore(db)).CreateParticipant(&models.CreateParticipantRequest{
+				MembershipID: membership.ID,
+				EventID:      eventID,
+			})
+			results <- err
+		}()
+	}
+	<-ready
+	<-ready
+	close(start)
+
+	successes, rejections := 0, 0
+	for range 2 {
+		err := <-results
+		if err == nil {
+			successes++
+			continue
+		}
+		apiErr, ok := err.(apierrors.APIErrorResponse)
+		require.True(t, ok, "unexpected participant error: %v", err)
+		require.Equal(t, 403, apiErr.Code)
+		rejections++
+	}
+	require.Equal(t, 1, successes)
+	require.Equal(t, 1, rejections)
+	require.GreaterOrEqual(t, lockQueries.Load(), int64(2), "each service call must serialize through the explicit membership lock")
+
+	count, err := postgres.NewStore(db).Entries().CountByMembershipID(membership.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, 3, count)
 }
 
 func TestMembershipService_UpdateMembershipSerializesAfterTrialStartAndPreservesFirstConversion(t *testing.T) {

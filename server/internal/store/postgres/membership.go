@@ -53,7 +53,7 @@ func (r *postgresMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semes
 
 func (r *postgresMembershipRepository) LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error) {
 	var membership models.Membership
-	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+	err := r.db.Clauses(clause.Locking{Strength: "NO KEY UPDATE"}).
 		First(&membership, "id = ? AND semester_id = ?", id, semesterID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

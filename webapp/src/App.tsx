@@ -1,7 +1,13 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "@uwpokerclub/components";
-import { Activate, Admin, Index, Login } from "./pages";
+import { Activate } from "./pages/Activate";
+import { Index } from "./pages/Index";
+import { Login } from "./pages/Login";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { AuthProvider, RequireAuth, SemesterProvider } from "@/components";
+
+const Admin = lazy(() => import("./pages/Admin").then(({ Admin: page }) => ({ default: page })));
 
 function App() {
   return (
@@ -17,7 +23,9 @@ function App() {
               element={
                 <RequireAuth>
                   <SemesterProvider>
-                    <Admin />
+                    <Suspense fallback={<LoadingScreen />}>
+                      <Admin />
+                    </Suspense>
                   </SemesterProvider>
                 </RequireAuth>
               }

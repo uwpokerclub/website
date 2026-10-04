@@ -7,6 +7,9 @@ import { Semester } from "@/types/semester";
 
 jest.mock("@/hooks/useAuth", () => ({ useAuth: jest.fn() }));
 jest.mock("@/hooks/useCurrentSemester", () => ({ useCurrentSemester: jest.fn() }));
+// Dashboard only needs the prompt's layout slot here; loading the semester barrel
+// also imports its Vite apiClient, which Jest cannot parse (`import.meta.env`).
+jest.mock("@/features/semesters", () => ({ SemesterSetupPrompt: () => null }));
 // dashboardApi.ts imports the real apiClient, which reads `import.meta.env` —
 // not valid under Jest's CommonJS transform (see useClockQueries.test.ts).
 // This suite only cares about card titles/order, not card data.
@@ -152,13 +155,22 @@ describe("Dashboard", () => {
     expect(screen.getByText("Fall 2026")).toBeInTheDocument();
   });
 
-  it("renders every card's own component, not a placeholder", () => {
+  it("renders the dashboard's own card headings while requests are pending", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
 
-    expect(screen.queryByText("Coming soon.")).not.toBeInTheDocument();
     expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Event spotlight");
+    expect(cardTitleOrder()).toEqual([
+      "Event spotlight",
+      "Event activity",
+      "Engagement & retention",
+      "Signup timeline",
+      "Quick actions",
+      "Leaderboard",
+      "Memberships",
+      "Trial conversion",
+    ]);
   });
 });

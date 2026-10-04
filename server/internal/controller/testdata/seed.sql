@@ -4,6 +4,7 @@ INSERT INTO logins (username, password, role) VALUES ('e2e_user', '$2a$10$lzRaEL
 -- Seed additional logins for testing logins management
 -- Password for all test logins is 'password' (bcrypt hash)
 INSERT INTO logins (username, password, role) VALUES
+  ('dashboard_ops', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive'),
   ('test_president', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'president'),
   ('test_executive', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'executive'),
   ('dashboard_records', '$2a$10$lzRaELvZxS2JwGsI0jSQueJWvMGfx82iYBuu0nFDCxuwJMabOHoX.', 'secretary'),
@@ -22,7 +23,12 @@ ON CONFLICT (username) DO NOTHING;
 -- Seed a testing semester
 INSERT INTO semesters 
   (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta, free_trial_limit) 
-  VALUES ('84f026be-53e0-4759-ab89-131c4a66d649', 'Winter 2025', '2025-01-01', '2024-04-30', 100, 100, 10, 7, 2, 'Seed Semester', 4);
+  VALUES ('84f026be-53e0-4759-ab89-131c4a66d649', 'Winter 2025', '2025-01-01', '2025-04-30', 100, 100, 10, 7, 2, 'Seed Semester', 4);
+
+-- Same-season prior term with genuine dated membership history for dashboard comparisons.
+INSERT INTO semesters
+  (id, name, start_date, end_date, starting_budget, current_budget, membership_fee, membership_discount_fee, rebuy_fee, meta, free_trial_limit)
+  VALUES ('df4c1c55-738e-4caf-9f54-81e439290e15', 'Winter 2024', '2024-01-01', '2024-04-30', 90, 90, 10, 7, 2, 'Dashboard comparison seed', 4);
 
 -- A prior term gives dashboard E2E coverage a real second semester to select.
 INSERT INTO semesters
@@ -81,17 +87,19 @@ INSERT INTO users (id, first_name, last_name, email, faculty, quest_id, created_
   (22222222, 'Another', 'Unregistered', 'another.unreg@test.com', 'Science', 'unreg2', '2025-01-01');
 
 -- Seed members into the seed semester
-INSERT INTO memberships (id, user_id, semester_id, paid, discounted, free_trial_available) VALUES
-  ('5d312426-ad56-4231-bb12-241acbfb91e2', 62958169, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true),
-  ('c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d', 20141158, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false),
-  ('b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e', 85018940, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true),
-  ('d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8', 77679767, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, false),
-  ('65f65311-cc74-4c76-9cdf-29c5d674d40a', 70492884, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true),
-  ('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 39166759, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true),
-  ('b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 55686346, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true),
-  ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 81085720, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true),
-  ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 52873146, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false),
-  ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 75969632, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true);
+INSERT INTO memberships (id, user_id, semester_id, paid, discounted, free_trial_available, created_at, source) VALUES
+  ('5d312426-ad56-4231-bb12-241acbfb91e2', 62958169, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true, '2025-01-03 12:00:00', 'admin'),
+  ('c0f1b2a4-3d5e-4b8c-8f7d-6a9e0f3b1c5d', 20141158, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false, '2025-01-04 12:00:00', 'discord'),
+  ('b2a7e2b6-5c3f-4a1e-a0d5-8f3e1b2c3d4e', 85018940, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, true, '2025-01-04 12:00:00', 'admin'),
+  ('d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8', 77679767, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, false, '2025-01-09 12:00:00', 'admin'),
+  ('65f65311-cc74-4c76-9cdf-29c5d674d40a', 70492884, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true, '2025-01-10 12:00:00', 'admin'),
+  ('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d', 39166759, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true, '2025-01-11 12:00:00', 'admin'),
+  ('b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e', 55686346, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true, '2025-01-11 12:00:00', 'admin'),
+  ('c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f', 81085720, '84f026be-53e0-4759-ab89-131c4a66d649', true, true, true, '2025-01-12 12:00:00', 'admin'),
+  ('d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a', 52873146, '84f026be-53e0-4759-ab89-131c4a66d649', false, false, false, '2025-01-14 12:00:00', 'admin'),
+  ('e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b', 75969632, '84f026be-53e0-4759-ab89-131c4a66d649', true, false, true, '2025-01-15 12:00:00', 'admin'),
+  ('f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c', 62958169, 'df4c1c55-738e-4caf-9f54-81e439290e15', true, false, true, '2024-01-02 12:00:00', 'admin'),
+  ('a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d', 20141158, 'df4c1c55-738e-4caf-9f54-81e439290e15', true, false, true, '2024-01-05 12:00:00', 'admin');
 
 -- Seed an executive member: unpaid with an exhausted free trial, to verify the
 -- executive exemption from trial shading takes precedence over both flags.

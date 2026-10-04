@@ -143,6 +143,30 @@ describe("SignupTimelineCard", () => {
     expect(screen.getByText(/Dated signups begin September 2026/)).toBeInTheDocument();
   });
 
+  it("keeps historical comparison visible when the current term has only zero-count days", () => {
+    const zeroResponse: SignupsResponse = {
+      total: 0,
+      dataStartsAt: "2026-09-01",
+      eventDates: [],
+      series: [
+        { date: "2026-09-01", admin: 0, discord: 0, unknown: 0 },
+        { date: "2026-09-02", admin: 0, discord: 0, unknown: 0 },
+      ],
+      comparison: {
+        semester: { id: "fall-2025", name: "Fall 2025" },
+        dailyTotals: [
+          { elapsedDay: 0, total: 4 },
+          { elapsedDay: 1, total: 0 },
+        ],
+      },
+    };
+    renderCardWithData(zeroResponse);
+
+    expect(screen.getByRole("status")).toHaveTextContent("No signups recorded for this term");
+    expect(document.querySelector("[data-comparison-line='Fall 2025 daily total']")).toBeInTheDocument();
+    expect(document.querySelector("[data-chart-values]")).toHaveAttribute("data-chart-values", "4,0");
+  });
+
   it("keeps a failed request card-local and retries without showing sample data", () => {
     const refetch = jest.fn();
     mocked.mockReturnValue({ isPending: false, isError: true, data: undefined, refetch });

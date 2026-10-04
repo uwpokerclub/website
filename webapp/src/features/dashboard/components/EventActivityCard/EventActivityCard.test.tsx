@@ -26,12 +26,19 @@ jest.mock("recharts", () => {
       width,
       allowDecimals,
       tickFormatter,
+      domain,
     }: {
       width: number;
       allowDecimals: boolean;
       tickFormatter: (value: number) => string;
+      domain: [number, number];
     }) => (
-      <span data-y-axis-width={width} data-allow-decimals={allowDecimals} data-formatted-tick={tickFormatter(154)} />
+      <span
+        data-y-axis-width={width}
+        data-allow-decimals={allowDecimals}
+        data-formatted-tick={tickFormatter(154)}
+        data-y-axis-domain={domain.join(",")}
+      />
     ),
   };
 });
@@ -92,6 +99,7 @@ describe("EventActivityCard", () => {
     expect(container.querySelector("[data-reference-y='154.2']")).toHaveAttribute("data-if-overflow", "extendDomain");
     expect(container.querySelector("[data-reference-y='42.6']")).toHaveAttribute("data-line-style", "4 4");
     expect(container.querySelector("[data-reference-y='154.2']")).toHaveAttribute("data-line-style", "2 3");
+    expect(container.querySelector("[data-y-axis-domain]")).toHaveAttribute("data-y-axis-domain", "0,155");
     expect(data.comparison.averageFieldSize).toBeGreaterThan(
       Math.max(...data.current.series.map((point) => point.entries)),
     );

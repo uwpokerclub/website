@@ -30,7 +30,7 @@ type RoleLayout = {
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   Ops: {
-    username: "test_executive",
+    username: "dashboard_ops",
     lead: "event-spotlight-card",
     wide: ["event-activity-card", "engagement-retention-card", "signup-timeline-card"],
     rail: ["quick-actions-card", "leaderboard-card", "term-at-a-glance-card", "trial-conversion-card"],
@@ -71,6 +71,10 @@ function waitForRealDashboardRequests() {
   });
 }
 
+function waitForSiblingDashboardRequests(excluded: (typeof REAL_DASHBOARD_ALIASES)[number]) {
+  return cy.wait(REAL_DASHBOARD_ALIASES.filter((alias) => alias !== excluded).map((alias) => `@${alias}`));
+}
+
 function visitDashboard(username = "e2e_user") {
   cy.resetDatabase();
   cy.login(username, "password");
@@ -94,7 +98,7 @@ describe("Dashboard", () => {
         visitDashboard(layout.username);
 
         CARD_QAS.forEach((cardQa) => cy.getByData(cardQa).should("have.length", 1));
-        cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
+        CARD_QAS.forEach((cardQa) => cy.getByData(cardQa).should("have.attr", "data-dashboard-status", "ready"));
         cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
         cy.getByData("dashboard-lead").children().should("have.attr", "data-qa", layout.lead);
         expectCardOrder("dashboard-wide-stack", layout.wide);
@@ -107,18 +111,35 @@ describe("Dashboard", () => {
     visitDashboard();
 
     cy.getByData("trial-conversion-card").scrollIntoView();
-    cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
     cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
     cy.get('[data-testid="trial-conversion-figure"]').should("have.text", "0 players");
     cy.getByData("trial-conversion-card")
       .contains("used all 4 free entries and are still unpaid")
       .should("be.visible");
-    cy.getByData("trial-conversion-card").contains("No comparable term to compare against yet.").should("be.visible");
+    cy.getByData("trial-conversion-card").contains("Winter 2024").should("be.visible");
     cy.getByData("trial-conversion-rate").contains("No tracked trial players yet").should("be.visible");
+    cy.getByData("trial-conversion-card").contains("Conversion history unavailable").should("be.visible");
     cy.getByData("trial-conversion-card")
       .contains("Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.")
       .should("be.visible");
     cy.getByData("trial-conversion-card").contains(/untracked|observed-ever|purchase proxy/i).should("not.exist");
+  });
+
+  it("loads dated current and same-season comparison signups from the real API", () => {
+    visitDashboard().then((interceptions) => {
+      const signups = interceptions[REAL_DASHBOARD_ALIASES.indexOf("signups")].response?.body;
+      expect(signups.series).to.have.length.greaterThan(0);
+      expect(signups.total).to.be.greaterThan(0);
+      expect(signups.comparison.semester.name).to.equal("Winter 2024");
+      expect(signups.comparison.dailyTotals).to.have.length.greaterThan(0);
+    });
+
+    cy.getByData("signup-timeline-card")
+      .scrollIntoView()
+      .should("have.attr", "data-dashboard-status", "ready")
+      .contains("memberships created")
+      .should("be.visible");
+    cy.getByData("signup-timeline-card").contains("Winter 2024 daily total").should("be.visible");
   });
 
   it("isolates an Event Activity endpoint failure to its card", () => {
@@ -131,12 +152,16 @@ describe("Dashboard", () => {
     }).as("eventActivityFailure");
     cy.visit("/admin/dashboard");
     cy.wait("@eventActivityFailure");
+    waitForSiblingDashboardRequests("events");
 
     cy.getByData("event-activity-card")
       .find('[data-qa="dashboard-card-error"]', { timeout: 10_000 })
       .should("be.visible");
     CARD_QAS.filter((cardQa) => cardQa !== "event-activity-card").forEach((cardQa) => {
-      cy.getByData(cardQa).should("exist").find('[data-qa="dashboard-card-error"]').should("not.exist");
+      cy.getByData(cardQa)
+        .should("have.attr", "data-dashboard-status", "ready")
+        .find('[data-qa="dashboard-card-error"]')
+        .should("not.exist");
     });
   });
 
@@ -150,14 +175,17 @@ describe("Dashboard", () => {
     }).as("conversionFailure");
     cy.visit("/admin/dashboard");
     cy.wait("@conversionFailure");
+    waitForSiblingDashboardRequests("conversion");
 
     cy.getByData("trial-conversion-card")
       .scrollIntoView()
       .find('[data-qa="dashboard-card-error"]', { timeout: 10_000 })
       .should("be.visible");
-    cy.getByData("trial-conversion-card").contains("Sample data").should("not.exist");
     CARD_QAS.filter((cardQa) => cardQa !== "trial-conversion-card").forEach((cardQa) => {
-      cy.getByData(cardQa).should("exist").find('[data-qa="dashboard-card-error"]').should("not.exist");
+      cy.getByData(cardQa)
+        .should("have.attr", "data-dashboard-status", "ready")
+        .find('[data-qa="dashboard-card-error"]')
+        .should("not.exist");
     });
   });
 

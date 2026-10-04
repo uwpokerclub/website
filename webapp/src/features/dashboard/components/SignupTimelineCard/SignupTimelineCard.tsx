@@ -37,7 +37,7 @@ export function SignupTimelineCard({ semesterId }: Props) {
       ? "error"
       : !data
         ? "loading"
-        : data.series.length === 0
+        : data.series.length === 0 || (data.total === 0 && !data.comparison?.dailyTotals.length)
           ? "empty"
           : "ready";
 
@@ -85,6 +85,9 @@ function Body({ data }: { data: SignupsResponse }) {
 
   return (
     <div className={styles.container}>
+      {data.total === 0 && hasComparison && (
+        <p role="status">No signups recorded for this term; the prior-term comparison is shown below.</p>
+      )}
       <p className={styles.lead}>
         <span className={styles.figure}>{data.total.toLocaleString("en-CA")}</span>
         <span className={styles.caption}>memberships created, {busiest} on the busiest day</span>

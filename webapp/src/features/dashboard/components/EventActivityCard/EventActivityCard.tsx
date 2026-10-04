@@ -91,6 +91,10 @@ function Body({ data }: { data: EventActivityResponse }) {
               {...AXIS_PROPS}
               width={48}
               allowDecimals={false}
+              domain={[
+                0,
+                Math.ceil(Math.max(average, comparisonAverage ?? 0, ...series.map((point) => point.entries))),
+              ]}
               tickFormatter={(value: number) => Math.round(value).toLocaleString("en-CA")}
             />
             <Tooltip {...TOOLTIP_STYLE} />

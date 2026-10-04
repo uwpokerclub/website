@@ -34,7 +34,7 @@ export function DashboardCard({
   children,
 }: DashboardCardProps) {
   return (
-    <section className={styles.container} data-qa={dataQa}>
+    <section className={styles.container} data-qa={dataQa} data-dashboard-status={status}>
       <header className={styles.header}>
         <h3 className={styles.title}>{title}</h3>
         {sampleData && <span className={styles.sample}>Sample data</span>}

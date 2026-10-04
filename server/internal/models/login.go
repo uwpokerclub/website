@@ -13,8 +13,9 @@ type Login struct {
 	Password string `json:"password" binding:"required" gorm:"not null"`
 	Role     string `json:"role" binding:"oneof=bot executive tournament_director secretary treasurer vice_president president" gorm:"size:20;not null;default:executive"`
 	// Any path that changes Status to disabled must delete this login's sessions in the same transaction.
-	Status   string    `json:"status" binding:"oneof=active pending_activation disabled" gorm:"size:20;not null;default:active"`
-	Sessions []Session `json:"-" gorm:"foreignKey:Username;references:Username;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	Status             string              `json:"status" binding:"oneof=active pending_activation disabled" gorm:"size:20;not null;default:active"`
+	Sessions           []Session           `json:"-" gorm:"foreignKey:Username;references:Username;constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
+	AccountActivations []AccountActivation `json:"-" gorm:"foreignKey:Username;references:Username;constraint:fk_account_activations_username,OnDelete:CASCADE,OnUpdate:NO ACTION"`
 	// StagedTransitionID is set only for a login first created while staging an
 	// officer transition. It lets cancellation remove only accounts it owns.
 	StagedTransitionID *uuid.UUID         `json:"-" gorm:"type:uuid"`

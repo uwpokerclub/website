@@ -1,0 +1,35 @@
+.prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-primary, #0056b3);
+  border-radius: 0.5rem;
+  background: var(--color-surface, #fff);
+}
+
+.heading {
+  margin: 0;
+  color: var(--color-text, #1a1f36);
+  font-size: 1.25rem;
+}
+
+.copy {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted, #64748b);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  gap: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .prompt,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

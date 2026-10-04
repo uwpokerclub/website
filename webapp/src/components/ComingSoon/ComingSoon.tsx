@@ -1,7 +1,7 @@
 import { FaHardHat } from "react-icons/fa";
 import styles from "./ComingSoon.module.css";
 
-export function ComingSoon() {
+export function ComingSoon({ headingLevel: Heading = "h1" }: { headingLevel?: "h1" | "h2" | "h3" }) {
   return (
     <div className={styles.container} role="status" aria-live="polite">
       <div className={styles.card}>
@@ -11,7 +11,7 @@ export function ComingSoon() {
           <FaHardHat className={styles.icon} />
         </div>
 
-        <h1 className={styles.title}>Under Construction</h1>
+        <Heading className={styles.title}>Under Construction</Heading>
         <p className={styles.message}>This page is currently being developed.</p>
       </div>
     </div>

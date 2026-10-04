@@ -1,8 +1,9 @@
-import { useAuth, useCurrentSemester } from "@/hooks";
 import { DashboardGrid } from "@/features/dashboard/components";
+import { DASHBOARD_CARDS } from "@/features/dashboard/dashboardCards";
 import { DashboardCardId, resolveDashboardLayout } from "@/features/dashboard/dashboardLayout";
 import { assignLanes } from "@/features/dashboard/lanes";
-import { DASHBOARD_CARDS } from "@/features/dashboard/dashboardCards";
+import { SemesterSetupPrompt } from "@/features/semesters";
+import { useAuth, useCurrentSemester } from "@/hooks";
 import styles from "./Dashboard.module.css";
 
 export function Dashboard() {
@@ -11,14 +12,17 @@ export function Dashboard() {
 
   if (!currentSemester) {
     return (
-      <div className={styles.page} data-qa="dashboard-no-semester">
-        <div className={styles.header}>
-          <h1>Dashboard</h1>
+      <>
+        <SemesterSetupPrompt />
+        <div className={styles.page} data-qa="dashboard-no-semester">
+          <div className={styles.header}>
+            <h1>Dashboard</h1>
+          </div>
+          <div className={styles.noSemester}>
+            <p>Please select a semester to view the dashboard.</p>
+          </div>
         </div>
-        <div className={styles.noSemester}>
-          <p>Please select a semester to view the dashboard.</p>
-        </div>
-      </div>
+      </>
     );
   }
 
@@ -33,17 +37,20 @@ export function Dashboard() {
   };
 
   return (
-    <div className={styles.page} data-qa="dashboard-page">
-      <div className={styles.header}>
-        <h1>Dashboard</h1>
-        <p className={styles.subtitle}>{currentSemester.name}</p>
+    <>
+      <SemesterSetupPrompt />
+      <div className={styles.page} data-qa="dashboard-page">
+        <div className={styles.header}>
+          <h1>Dashboard</h1>
+          <p className={styles.subtitle}>{currentSemester.name}</p>
+        </div>
+        <DashboardGrid
+          data-qa="dashboard-grid"
+          lead={renderCard(lead)}
+          wide={wide.map((id) => renderCard(id))}
+          rail={rail.map((id) => renderCard(id))}
+        />
       </div>
-      <DashboardGrid
-        data-qa="dashboard-grid"
-        lead={renderCard(lead)}
-        wide={wide.map((id) => renderCard(id))}
-        rail={rail.map((id) => renderCard(id))}
-      />
-    </div>
+    </>
   );
 }

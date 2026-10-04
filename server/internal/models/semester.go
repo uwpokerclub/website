@@ -26,9 +26,9 @@ type CreateSemesterRequest struct {
 	StartDate             time.Time `json:"startDate" binding:"required" example:"2023-09-01T00:00:00Z"`
 	EndDate               time.Time `json:"endDate" binding:"required,gtfield=StartDate" example:"2023-12-31T23:59:59Z"`
 	StartingBudget        float32   `json:"startingBudget" binding:"omitempty,gte=0" example:"100.00"`
-	MembershipFee         uint8     `json:"membershipFee" binding:"required,gte=0" example:"10"`
-	MembershipDiscountFee uint8     `json:"membershipDiscountFee" binding:"required,gte=0" example:"5"`
-	RebuyFee              uint8     `json:"rebuyFee" binding:"required,gte=0" example:"2"`
+	MembershipFee         *uint8    `json:"membershipFee" binding:"required,gte=0" example:"10"`
+	MembershipDiscountFee *uint8    `json:"membershipDiscountFee" binding:"required,gte=0" example:"5"`
+	RebuyFee              *uint8    `json:"rebuyFee" binding:"required,gte=0" example:"2"`
 	FreeTrialLimit        uint8     `json:"freeTrialLimit" binding:"omitempty,gte=0" example:"4"`
 } //@name CreateSemesterRequest
 

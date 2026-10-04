@@ -39,8 +39,9 @@ func (c *testResetController) resetDatabase(ctx *gin.Context) {
 		return
 	}
 
-	truncateSQL := `TRUNCATE blinds, events, memberships, participants,
-		rankings, semesters, structures, transactions, users
+	truncateSQL := `TRUNCATE account_activations, officer_transitions, sessions,
+		logins, blinds, events, memberships, participants, rankings, semesters,
+		structures, transactions, users
 		RESTART IDENTITY CASCADE`
 
 	err := c.db.Transaction(func(tx *gorm.DB) error {

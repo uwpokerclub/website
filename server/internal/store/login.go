@@ -12,9 +12,22 @@ type LoginRepository interface {
 	// Returns store.ErrNotFound if no login exists for the given username.
 	FindByUsername(username string) (models.Login, error)
 
+	FindByUsernameForUpdate(username string) (models.Login, error)
+
 	// Update applies a partial update to a login using the given column/value map.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	Update(username string, values map[string]any) error
+
+	// Activate updates the password and activates a login unless it has been disabled.
+	// Returns ErrNotFound for an unknown or disabled login.
+	Activate(username, password string) (models.Login, error)
+
+	// ActivateWithRole updates password, status, and role for a transition president.
+	ActivateWithRole(username, password, role string) (models.Login, error)
+
+	// DisableExecutiveExcept disables the executive ladder outside usernames and
+	// returns the accounts whose status changed.
+	DisableExecutiveExcept(usernames []string) ([]string, error)
 
 	// Delete deletes a login from the data store by its username.
 	// Returns store.ErrNotFound if no login exists for the given username.

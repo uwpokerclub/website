@@ -43,4 +43,5 @@ type ListUsersFilter struct {
 	Name    *string
 	Email   *string
 	Faculty *string
+	QuestID *string
 }

@@ -56,9 +56,9 @@ func (s *semestersController) createSemester(ctx *gin.Context) {
 		EndDate:               req.EndDate,
 		StartingBudget:        req.StartingBudget,
 		CurrentBudget:         req.StartingBudget,
-		MembershipFee:         req.MembershipFee,
-		MembershipDiscountFee: req.MembershipDiscountFee,
-		RebuyFee:              req.RebuyFee,
+		MembershipFee:         *req.MembershipFee,
+		MembershipDiscountFee: *req.MembershipDiscountFee,
+		RebuyFee:              *req.RebuyFee,
 		FreeTrialLimit:        req.FreeTrialLimit,
 	}
 

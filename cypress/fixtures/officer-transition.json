@@ -1,0 +1,13 @@
+{
+  "transition": {
+    "id": "5e8a3a66-6b6f-4387-bf94-f9a23d01f47b",
+    "status": "pending",
+    "nominees": {
+      "president": { "firstName": "Heinrik", "lastName": "Drust" },
+      "vice_president": { "firstName": "Doretta", "lastName": "Housegoe" },
+      "secretary": { "firstName": "Elita", "lastName": "Aucock" },
+      "treasurer": { "firstName": "Khalil", "lastName": "Duckham" }
+    }
+  },
+  "activationTokens": { "president": "president-token" }
+}

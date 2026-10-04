@@ -47,6 +47,9 @@ func (r *inMemoryLoginRepository) Create(login *models.Login) error {
 	if _, exists := r.logins[login.Username]; exists {
 		return fmt.Errorf("login with username %q already exists", login.Username)
 	}
+	if login.Status == "" {
+		login.Status = models.LoginStatusActive
+	}
 
 	copy := *login
 	r.logins[login.Username] = &copy
@@ -66,6 +69,10 @@ func (r *inMemoryLoginRepository) FindByUsername(username string) (models.Login,
 	return *login, nil
 }
 
+func (r *inMemoryLoginRepository) FindByUsernameForUpdate(username string) (models.Login, error) {
+	return r.FindByUsername(username)
+}
+
 func (r *inMemoryLoginRepository) Update(username string, values map[string]any) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -81,8 +88,52 @@ func (r *inMemoryLoginRepository) Update(username string, values map[string]any)
 	if role, ok := values["role"]; ok {
 		login.Role = role.(string)
 	}
+	if status, ok := values["status"]; ok {
+		login.Status = status.(string)
+	}
 
 	return nil
+}
+
+func (r *inMemoryLoginRepository) Activate(username, password string) (models.Login, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	login, exists := r.logins[username]
+	if !exists || login.Status == models.LoginStatusDisabled {
+		return models.Login{}, store.ErrNotFound
+	}
+	login.Password = password
+	login.Status = models.LoginStatusActive
+	return *login, nil
+}
+
+func (r *inMemoryLoginRepository) ActivateWithRole(username, password, role string) (models.Login, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	login, exists := r.logins[username]
+	if !exists || login.Status == models.LoginStatusDisabled {
+		return models.Login{}, store.ErrNotFound
+	}
+	login.Password, login.Status, login.Role = password, models.LoginStatusActive, role
+	return *login, nil
+}
+
+func (r *inMemoryLoginRepository) DisableExecutiveExcept(usernames []string) ([]string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	except := map[string]bool{}
+	for _, username := range usernames {
+		except[username] = true
+	}
+	ladder := map[string]bool{"executive": true, "tournament_director": true, "secretary": true, "treasurer": true, "vice_president": true, "president": true}
+	var disabled []string
+	for username, login := range r.logins {
+		if !except[username] && ladder[login.Role] && login.Status != models.LoginStatusDisabled {
+			login.Status = models.LoginStatusDisabled
+			disabled = append(disabled, username)
+		}
+	}
+	return disabled, nil
 }
 
 func (r *inMemoryLoginRepository) Delete(username string) error {
@@ -134,7 +185,7 @@ func (r *inMemoryLoginRepository) List(pagination *models.Pagination, search str
 	results := make([]models.LoginWithMember, len(usernames))
 	for i, username := range usernames {
 		l := r.logins[username]
-		results[i] = models.LoginWithMember{Username: l.Username, Role: l.Role}
+		results[i] = models.LoginWithMember{Username: l.Username, Role: l.Role, Status: l.Status}
 	}
 
 	return results, total, nil
@@ -149,5 +200,5 @@ func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (mod
 		return models.LoginWithMember{}, store.ErrNotFound
 	}
 
-	return models.LoginWithMember{Username: login.Username, Role: login.Role}, nil
+	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
 }

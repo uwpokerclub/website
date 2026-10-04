@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal, Button, useToast, Input, Select } from "@uwpokerclub/components";
-import { editLoginSchema, type EditLoginFormData, LOGIN_ROLES } from "../../schemas/loginSchemas";
+import { editLoginSchema, type EditLoginFormData, LOGIN_ROLES, LOGIN_STATUSES } from "../../schemas/loginSchemas";
 import { useUpdateLogin } from "../../hooks/useLoginQueries";
 import { LoginResponse, UpdateLoginRequest } from "../../types";
 import styles from "./EditLoginModal.module.css";
@@ -30,6 +30,7 @@ export function EditLoginModal({ isOpen, login, onClose, onSuccess }: EditLoginM
     resolver: zodResolver(editLoginSchema),
     defaultValues: {
       role: login?.role ?? LOGIN_ROLES[0],
+      status: login?.status ?? "active",
       newPassword: "",
       confirmPassword: "",
     },
@@ -39,6 +40,7 @@ export function EditLoginModal({ isOpen, login, onClose, onSuccess }: EditLoginM
     if (isOpen && login) {
       form.reset({
         role: login.role,
+        status: login.status,
         newPassword: "",
         confirmPassword: "",
       });
@@ -64,9 +66,18 @@ export function EditLoginModal({ isOpen, login, onClose, onSuccess }: EditLoginM
     if (data.newPassword !== "") {
       payload.password = data.newPassword;
     }
+    if (data.status !== login.status) {
+      if (
+        data.status === "disabled" &&
+        !window.confirm(`Disable ${login.username}? They will be signed out immediately.`)
+      ) {
+        return;
+      }
+      payload.status = data.status;
+    }
 
-    if (payload.role === undefined && payload.password === undefined) {
-      setSubmitError("Change the role or enter a new password before saving.");
+    if (payload.role === undefined && payload.password === undefined && payload.status === undefined) {
+      setSubmitError("Change the role, status, or password before saving.");
       return;
     }
 
@@ -139,6 +150,24 @@ export function EditLoginModal({ isOpen, login, onClose, onSuccess }: EditLoginM
                 }))}
                 fullWidth
               />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="status" className={styles.label}>
+                Status
+              </label>
+              <Select
+                id="status"
+                data-qa="select-status"
+                {...form.register("status")}
+                error={!!form.formState.errors.status}
+                errorMessage={form.formState.errors.status?.message}
+                options={LOGIN_STATUSES.map((status) => ({ value: status, label: formatRole(status) }))}
+                fullWidth
+              />
+              {form.watch("status") === "disabled" && (
+                <p className={styles.warning}>Disabling this account signs the user out immediately.</p>
+              )}
             </div>
 
             <hr className={styles.sectionDivider} />

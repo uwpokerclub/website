@@ -22,6 +22,10 @@ const roleSchema = z.enum(LOGIN_ROLES, {
   error: () => "Please select a role",
 });
 
+export const LOGIN_STATUSES = ["active", "pending_activation", "disabled"] as const;
+
+const loginStatusSchema = z.enum(LOGIN_STATUSES);
+
 /**
  * Schema for creating a new login
  */
@@ -46,6 +50,7 @@ export type CreateLoginFormData = z.infer<typeof createLoginSchema>;
 export const editLoginSchema = z
   .object({
     role: roleSchema,
+    status: loginStatusSchema,
     newPassword: z
       .string()
       .max(128, "Password must not exceed 128 characters")

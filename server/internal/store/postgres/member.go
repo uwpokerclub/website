@@ -35,6 +35,12 @@ func (r *postgresMemberRepository) FindByID(id uint64) (models.User, error) {
 	return member, nil
 }
 
+func (r *postgresMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
+	var members []models.User
+	err := r.db.Where("LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", questID).Find(&members).Error
+	return members, err
+}
+
 func (r *postgresMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	var members []models.User
 	var total int64
@@ -52,6 +58,9 @@ func (r *postgresMemberRepository) List(filter *models.ListUsersFilter, paginati
 	}
 	if filter.Faculty != nil {
 		base = base.Where("faculty = ?", *filter.Faculty)
+	}
+	if filter.QuestID != nil {
+		base = base.Where("LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", *filter.QuestID)
 	}
 
 	if err := base.Count(&total).Error; err != nil {

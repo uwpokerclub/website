@@ -14,6 +14,10 @@ type inMemoryMemberRepository struct {
 	members map[uint64]*models.User
 }
 
+func normalizeQuestID(questID string) string {
+	return strings.ToLower(strings.TrimSpace(questID))
+}
+
 var _ store.MemberRepository = (*inMemoryMemberRepository)(nil)
 
 func newMemberRepository() *inMemoryMemberRepository {
@@ -66,6 +70,18 @@ func (r *inMemoryMemberRepository) FindByID(id uint64) (models.User, error) {
 	return *member, nil
 }
 
+func (r *inMemoryMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var result []models.User
+	for _, m := range r.members {
+		if normalizeQuestID(m.QuestID) == normalizeQuestID(questID) {
+			result = append(result, *m)
+		}
+	}
+	return result, nil
+}
+
 func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -85,6 +101,9 @@ func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, paginati
 			continue
 		}
 		if filter.Faculty != nil && member.Faculty != *filter.Faculty {
+			continue
+		}
+		if filter.QuestID != nil && normalizeQuestID(member.QuestID) != normalizeQuestID(*filter.QuestID) {
 			continue
 		}
 		members = append(members, *member)

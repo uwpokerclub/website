@@ -9,9 +9,9 @@ import (
 
 type Participant struct {
 	ID           int32       `json:"id" gorm:"type:integer;primaryKey;autoIncrement"`
-	MembershipID *uuid.UUID  `json:"membershipId" gorm:"type:uuid;uniqueIndex:idx_membership_event"`
+	MembershipID *uuid.UUID  `json:"membershipId" gorm:"type:uuid;uniqueIndex:idx_membership_event,priority:1"`
 	Membership   *Membership `json:"membership,omitempty" gorm:"constraint:OnDelete:SET NULL,OnUpdate:CASCADE"`
-	EventID      int32       `json:"eventId" gorm:"type:integer;not null;uniqueIndex:idx_membership_event"`
+	EventID      int32       `json:"eventId" gorm:"type:integer;not null;uniqueIndex:idx_membership_event,priority:2;index:idx_participants_event_id,priority:1"`
 	Points       int32       `json:"points" gorm:"not null;default:0"`
 	SignedOutAt  *time.Time  `json:"signedOutAt"`
 } //@name Participant

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"api/internal/models"
+	"api/internal/services"
 	"api/internal/store"
 	"bytes"
 	"encoding/json"
@@ -54,44 +55,68 @@ func (r *dashboardLoaderTestSemesterRepository) List(*models.Pagination) ([]mode
 
 type dashboardLoaderTestDashboardRepository struct {
 	store.DashboardRepository
-	timeline  store.SignupTimeline
-	stats     map[uuid.UUID]store.MembershipStats
-	partial   *int64
-	asOfCalls int
+	timeline       store.SignupTimeline
+	stats          map[uuid.UUID]store.MembershipStats
+	partial        *int64
+	asOfCalls      int
+	asOfCutoffs    []time.Time
+	spotlightNows  []time.Time
+	engagementNows []time.Time
+	eventNows      []time.Time
+	averageNows    []time.Time
+	signupNows     []time.Time
+	spotlightErr   error
+	membershipErr  error
+	asOfErr        error
+	engagementErr  error
+	conversionErr  error
+	cohortErr      error
+	eventErr       error
+	averageErr     error
+	signupErr      error
 }
 
-func (r *dashboardLoaderTestDashboardRepository) Spotlight(uuid.UUID, time.Time) (*store.SpotlightEvent, error) {
-	return nil, nil
+func (r *dashboardLoaderTestDashboardRepository) Spotlight(_ uuid.UUID, now time.Time) (*store.SpotlightEvent, error) {
+	r.spotlightNows = append(r.spotlightNows, now)
+	return nil, r.spotlightErr
 }
 
 // Fall back to zeroes for the loader tests that do not exercise membership stats.
 func (r *dashboardLoaderTestDashboardRepository) MembershipStats(semesterID uuid.UUID) (store.MembershipStats, error) {
+	if r.membershipErr != nil {
+		return store.MembershipStats{}, r.membershipErr
+	}
 	if r.stats != nil {
 		return r.stats[semesterID], nil
 	}
 	return store.MembershipStats{}, nil
 }
-func (r *dashboardLoaderTestDashboardRepository) EngagementStats(uuid.UUID, time.Time) (store.EngagementStats, error) {
-	return store.EngagementStats{}, nil
+func (r *dashboardLoaderTestDashboardRepository) EngagementStats(_ uuid.UUID, now time.Time) (store.EngagementStats, error) {
+	r.engagementNows = append(r.engagementNows, now)
+	return store.EngagementStats{}, r.engagementErr
 }
 func (r *dashboardLoaderTestDashboardRepository) TrialConversionStats(uuid.UUID, uint8) (store.TrialConversionStats, error) {
-	return store.TrialConversionStats{}, nil
+	return store.TrialConversionStats{}, r.conversionErr
 }
 func (r *dashboardLoaderTestDashboardRepository) TrialConversionCohortStats(uuid.UUID) (store.TrialConversionCohortStats, error) {
-	return store.TrialConversionCohortStats{}, nil
+	return store.TrialConversionCohortStats{}, r.cohortErr
 }
-func (r *dashboardLoaderTestDashboardRepository) EventActivity(uuid.UUID, time.Time) (store.EventActivityStats, []store.EventSeriesPoint, error) {
-	return store.EventActivityStats{}, []store.EventSeriesPoint{}, nil
+func (r *dashboardLoaderTestDashboardRepository) EventActivity(_ uuid.UUID, now time.Time) (store.EventActivityStats, []store.EventSeriesPoint, error) {
+	r.eventNows = append(r.eventNows, now)
+	return store.EventActivityStats{}, []store.EventSeriesPoint{}, r.eventErr
 }
-func (r *dashboardLoaderTestDashboardRepository) AverageFieldSize(uuid.UUID, time.Time) (*float64, error) {
-	return nil, nil
+func (r *dashboardLoaderTestDashboardRepository) AverageFieldSize(_ uuid.UUID, now time.Time) (*float64, error) {
+	r.averageNows = append(r.averageNows, now)
+	return nil, r.averageErr
 }
-func (r *dashboardLoaderTestDashboardRepository) SignupTimeline(uuid.UUID, time.Time) (store.SignupTimeline, error) {
-	return r.timeline, nil
+func (r *dashboardLoaderTestDashboardRepository) SignupTimeline(_ uuid.UUID, now time.Time) (store.SignupTimeline, error) {
+	r.signupNows = append(r.signupNows, now)
+	return r.timeline, r.signupErr
 }
-func (r *dashboardLoaderTestDashboardRepository) MembershipTotalAsOf(uuid.UUID, time.Time) (*int64, error) {
+func (r *dashboardLoaderTestDashboardRepository) MembershipTotalAsOf(_ uuid.UUID, cutoff time.Time) (*int64, error) {
 	r.asOfCalls++
-	return r.partial, nil
+	r.asOfCutoffs = append(r.asOfCutoffs, cutoff)
+	return r.partial, r.asOfErr
 }
 
 func newDashboardLoaderTestController(timeline store.SignupTimeline) (*dashboardController, *dashboardLoaderTestSemesterRepository) {
@@ -102,6 +127,7 @@ func newDashboardLoaderTestController(timeline store.SignupTimeline) (*dashboard
 			semesters: semesters,
 			dashboard: &dashboardLoaderTestDashboardRepository{timeline: timeline},
 		},
+		now: func() time.Time { return time.Date(2026, time.January, 20, 12, 0, 0, 0, time.UTC) },
 	}, semesters
 }
 
@@ -113,21 +139,19 @@ func dashboardLoaderRequest(handler func(*gin.Context), semesterID string) *http
 	return recorder
 }
 
-func TestDashboardSemesterLookupFailurePolicies(t *testing.T) {
+func TestDashboardSemesterLookupFailuresAreSanitizedAndLogged(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	lookupErr := errors.New("injected semester lookup failure")
 	tests := []struct {
-		name     string
-		handler  func(*dashboardController, *gin.Context)
-		wantBody string
-		wantLog  string
+		name    string
+		handler func(*dashboardController, *gin.Context)
 	}{
-		{"spotlight", (*dashboardController).getSpotlight, lookupErr.Error(), ""},
-		{"memberships", (*dashboardController).getMembershipStats, lookupErr.Error(), ""},
-		{"engagement", (*dashboardController).getEngagementStats, lookupErr.Error(), ""},
-		{"conversion", (*dashboardController).getTrialConversion, lookupErr.Error(), ""},
-		{"events", (*dashboardController).getEventActivity, lookupErr.Error(), ""},
-		{"signups", (*dashboardController).getSignupTimeline, "unable to load signup timeline", "dashboard signup timeline semester lookup failed"},
+		{"spotlight", (*dashboardController).getSpotlight},
+		{"memberships", (*dashboardController).getMembershipStats},
+		{"engagement", (*dashboardController).getEngagementStats},
+		{"conversion", (*dashboardController).getTrialConversion},
+		{"events", (*dashboardController).getEventActivity},
+		{"signups", (*dashboardController).getSignupTimeline},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -140,15 +164,49 @@ func TestDashboardSemesterLookupFailurePolicies(t *testing.T) {
 
 			recorder := dashboardLoaderRequest(func(ctx *gin.Context) { test.handler(controller, ctx) }, semesters.semester.ID.String())
 			require.Equal(t, http.StatusInternalServerError, recorder.Code)
-			require.Contains(t, recorder.Body.String(), test.wantBody)
-			if test.wantLog != "" {
-				require.Contains(t, output.String(), test.wantLog)
-				require.Contains(t, output.String(), lookupErr.Error())
-			} else {
-				require.Empty(t, output.String())
-			}
+			require.Contains(t, recorder.Body.String(), "unable to load dashboard data")
+			require.NotContains(t, recorder.Body.String(), lookupErr.Error())
+			require.Contains(t, output.String(), "dashboard semester lookup failed")
+			require.Contains(t, output.String(), lookupErr.Error())
 			require.Equal(t, 1, semesters.findCalls)
 			require.Zero(t, semesters.listCalls)
+		})
+	}
+}
+
+func TestDashboardAggregateFailuresAreSanitizedAndLogged(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	queryErr := errors.New("database password and internal host")
+	tests := []struct {
+		name    string
+		handler func(*dashboardController, *gin.Context)
+		setErr  func(*dashboardLoaderTestDashboardRepository)
+	}{
+		{"spotlight", (*dashboardController).getSpotlight, func(repo *dashboardLoaderTestDashboardRepository) { repo.spotlightErr = queryErr }},
+		{"memberships", (*dashboardController).getMembershipStats, func(repo *dashboardLoaderTestDashboardRepository) { repo.membershipErr = queryErr }},
+		{"engagement", (*dashboardController).getEngagementStats, func(repo *dashboardLoaderTestDashboardRepository) { repo.engagementErr = queryErr }},
+		{"conversion", (*dashboardController).getTrialConversion, func(repo *dashboardLoaderTestDashboardRepository) { repo.conversionErr = queryErr }},
+		{"conversion cohort", (*dashboardController).getTrialConversion, func(repo *dashboardLoaderTestDashboardRepository) { repo.cohortErr = queryErr }},
+		{"events", (*dashboardController).getEventActivity, func(repo *dashboardLoaderTestDashboardRepository) { repo.eventErr = queryErr }},
+		{"signups", (*dashboardController).getSignupTimeline, func(repo *dashboardLoaderTestDashboardRepository) { repo.signupErr = queryErr }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			controller, semesters := newDashboardLoaderTestController(store.SignupTimeline{})
+			repo := controller.store.(dashboardLoaderTestStore).dashboard
+			test.setErr(repo)
+			var output bytes.Buffer
+			previousOutput := log.Writer()
+			log.SetOutput(&output)
+			t.Cleanup(func() { log.SetOutput(previousOutput) })
+
+			recorder := dashboardLoaderRequest(func(ctx *gin.Context) { test.handler(controller, ctx) }, semesters.semester.ID.String())
+
+			require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			require.Contains(t, recorder.Body.String(), "unable to load dashboard data")
+			require.NotContains(t, recorder.Body.String(), "database password")
+			require.NotContains(t, recorder.Body.String(), "internal host")
+			require.Contains(t, output.String(), queryErr.Error())
 		})
 	}
 }
@@ -207,7 +265,102 @@ func TestMembershipComparisonUsesInclusiveTorontoCompletionBoundary(t *testing.T
 	}
 }
 
-func TestDashboardComparisonListFailurePolicies(t *testing.T) {
+func TestDashboardHandlersUseOneClockInstantAtTorontoEndBoundary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	location, err := time.LoadLocation("America/Toronto")
+	require.NoError(t, err)
+
+	comparison := models.Semester{
+		ID:        uuid.New(),
+		Name:      "Prior Spring",
+		StartDate: time.Date(2025, time.March, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2025, time.April, 30, 0, 0, 0, 0, time.UTC),
+	}
+	target := models.Semester{
+		ID:        uuid.New(),
+		Name:      "Current Spring",
+		StartDate: time.Date(2026, time.March, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2026, time.March, 8, 0, 0, 0, 0, time.UTC),
+	}
+	date := "2026-03-08"
+	timeline := store.SignupTimeline{
+		Series:       []store.SignupTimelinePoint{{Date: date, Admin: 1}},
+		DataStartsAt: &date,
+		Total:        1,
+	}
+
+	for _, test := range []struct {
+		name string
+		now  time.Time
+	}{
+		{name: "last Toronto day across spring DST", now: time.Date(2026, time.March, 8, 23, 59, 59, 0, location)},
+		{name: "exclusive Toronto midnight after spring DST", now: time.Date(2026, time.March, 9, 0, 0, 0, 0, location)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			newController := func() (*dashboardController, *dashboardLoaderTestDashboardRepository) {
+				dashboard := &dashboardLoaderTestDashboardRepository{
+					timeline: timeline,
+					stats: map[uuid.UUID]store.MembershipStats{
+						target.ID:     {},
+						comparison.ID: {Total: 100},
+					},
+				}
+				semesters := &dashboardLoaderTestSemesterRepository{semester: target, semesters: []models.Semester{target, comparison}}
+				return &dashboardController{
+					store: dashboardLoaderTestStore{semesters: semesters, dashboard: dashboard},
+					now:   func() time.Time { return test.now },
+				}, dashboard
+			}
+			wantCutoff := services.ComparisonCutoff(target, comparison, test.now)
+
+			spotlight, spotlightRepo := newController()
+			recorder := dashboardLoaderRequest(spotlight.getSpotlight, target.ID.String())
+			require.Equal(t, http.StatusOK, recorder.Code)
+			require.Equal(t, []time.Time{test.now}, spotlightRepo.spotlightNows)
+
+			memberships, membershipRepo := newController()
+			recorder = dashboardLoaderRequest(memberships.getMembershipStats, target.ID.String())
+			require.Equal(t, http.StatusOK, recorder.Code)
+			if test.name == "last Toronto day across spring DST" {
+				require.Equal(t, []time.Time{wantCutoff}, membershipRepo.asOfCutoffs)
+			} else {
+				require.Empty(t, membershipRepo.asOfCutoffs, "the exact total is used at exclusive midnight")
+			}
+
+			engagement, engagementRepo := newController()
+			recorder = dashboardLoaderRequest(engagement.getEngagementStats, target.ID.String())
+			require.Equal(t, http.StatusOK, recorder.Code)
+			require.Equal(t, []time.Time{test.now, wantCutoff}, engagementRepo.engagementNows)
+
+			events, eventRepo := newController()
+			recorder = dashboardLoaderRequest(events.getEventActivity, target.ID.String())
+			require.Equal(t, http.StatusOK, recorder.Code)
+			require.Equal(t, []time.Time{test.now}, eventRepo.eventNows)
+			require.Equal(t, []time.Time{wantCutoff}, eventRepo.averageNows)
+
+			signups, signupRepo := newController()
+			recorder = dashboardLoaderRequest(signups.getSignupTimeline, target.ID.String())
+			require.Equal(t, http.StatusOK, recorder.Code)
+			require.Equal(t, test.now, signupRepo.signupNows[0])
+			require.Len(t, signupRepo.signupNows, 2, "the optional comparison loads its full dated range")
+		})
+	}
+}
+
+func TestSpotlightUsesTheInjectedClock(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	controller, semesters := newDashboardLoaderTestController(store.SignupTimeline{})
+	dashboard := controller.store.(dashboardLoaderTestStore).dashboard
+	want := time.Date(2026, time.June, 10, 18, 45, 0, 0, time.UTC)
+	controller.now = func() time.Time { return want }
+
+	recorder := dashboardLoaderRequest(controller.getSpotlight, semesters.semester.ID.String())
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Equal(t, []time.Time{want}, dashboard.spotlightNows)
+}
+
+func TestDashboardComparisonListFailuresAreSanitizedOrOptional(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	listErr := errors.New("injected semester list failure")
 	tests := []struct {
@@ -217,10 +370,10 @@ func TestDashboardComparisonListFailurePolicies(t *testing.T) {
 		wantBody string
 		wantLog  string
 	}{
-		{"memberships", (*dashboardController).getMembershipStats, http.StatusInternalServerError, listErr.Error(), ""},
-		{"engagement", (*dashboardController).getEngagementStats, http.StatusInternalServerError, listErr.Error(), ""},
-		{"conversion", (*dashboardController).getTrialConversion, http.StatusInternalServerError, listErr.Error(), ""},
-		{"events", (*dashboardController).getEventActivity, http.StatusInternalServerError, listErr.Error(), ""},
+		{"memberships", (*dashboardController).getMembershipStats, http.StatusInternalServerError, "unable to load dashboard data", "dashboard comparison semester lookup failed"},
+		{"engagement", (*dashboardController).getEngagementStats, http.StatusInternalServerError, "unable to load dashboard data", "dashboard comparison semester lookup failed"},
+		{"conversion", (*dashboardController).getTrialConversion, http.StatusInternalServerError, "unable to load dashboard data", "dashboard comparison semester lookup failed"},
+		{"events", (*dashboardController).getEventActivity, http.StatusInternalServerError, "unable to load dashboard data", "dashboard comparison semester lookup failed"},
 		{"signups", (*dashboardController).getSignupTimeline, http.StatusOK, `"comparison":null`, "dashboard signup comparison semester lookup failed"},
 	}
 	for _, test := range tests {
@@ -236,6 +389,7 @@ func TestDashboardComparisonListFailurePolicies(t *testing.T) {
 			recorder := dashboardLoaderRequest(func(ctx *gin.Context) { test.handler(controller, ctx) }, semesters.semester.ID.String())
 			require.Equal(t, test.wantCode, recorder.Code)
 			require.Contains(t, recorder.Body.String(), test.wantBody)
+			require.NotContains(t, recorder.Body.String(), listErr.Error())
 			if test.wantLog != "" {
 				require.Contains(t, output.String(), test.wantLog)
 				require.Contains(t, output.String(), listErr.Error())
@@ -298,8 +452,13 @@ func TestDashboardSignupLookupSanitizesInternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	controller, semesters := newDashboardLoaderTestController(store.SignupTimeline{})
 	semesters.findErr = errors.New("database password and host details")
+	var output bytes.Buffer
+	previousOutput := log.Writer()
+	log.SetOutput(&output)
+	t.Cleanup(func() { log.SetOutput(previousOutput) })
 	recorder := dashboardLoaderRequest(controller.getSignupTimeline, semesters.semester.ID.String())
 	require.Equal(t, http.StatusInternalServerError, recorder.Code)
-	require.Contains(t, recorder.Body.String(), "unable to load signup timeline")
+	require.Contains(t, recorder.Body.String(), "unable to load dashboard data")
 	require.NotContains(t, recorder.Body.String(), "database password")
+	require.Contains(t, output.String(), "database password and host details")
 }

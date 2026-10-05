@@ -19,17 +19,6 @@ type dashboardController struct {
 	now   func() time.Time
 }
 
-type dashboardLookupFailurePolicy uint8
-
-const (
-	dashboardLookupFailureRaw dashboardLookupFailurePolicy = iota
-	dashboardLookupFailureSignup
-)
-
-type dashboardSemesterLoad struct {
-	Semester models.Semester
-}
-
 type dashboardComparisonLoad struct {
 	Semester models.Semester
 	Ref      store.SemesterRef
@@ -37,7 +26,7 @@ type dashboardComparisonLoad struct {
 
 // NewDashboardController creates a new instance of dashboardController.
 func NewDashboardController(st store.Store) Controller {
-	return &dashboardController{store: st}
+	return &dashboardController{store: st, now: time.Now}
 }
 
 func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
@@ -50,37 +39,27 @@ func (c *dashboardController) LoadRoutes(router *gin.RouterGroup) {
 	group.GET("signups", middleware.UseAuthorization("semester.get"), c.getSignupTimeline)
 }
 
-func (c *dashboardController) loadDashboardSemester(
-	ctx *gin.Context,
-	lookupFailurePolicy dashboardLookupFailurePolicy,
-) (dashboardSemesterLoad, bool) {
+func (c *dashboardController) loadDashboardSemester(ctx *gin.Context) (models.Semester, bool) {
 	semesterID, err := validateSemesterID(ctx)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
-		return dashboardSemesterLoad{}, false
+		return models.Semester{}, false
 	}
 
 	semester, err := c.store.Semesters().FindByID(semesterID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
-			return dashboardSemesterLoad{}, false
+			return models.Semester{}, false
 		}
-		if lookupFailurePolicy == dashboardLookupFailureSignup {
-			log.Printf("dashboard signup timeline semester lookup failed (semester_id=%s): %v", semesterID, err)
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load signup timeline"))
-			return dashboardSemesterLoad{}, false
-		}
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-		return dashboardSemesterLoad{}, false
+		abortDashboardInternalError(ctx, "semester lookup", err)
+		return models.Semester{}, false
 	}
 
-	return dashboardSemesterLoad{Semester: semester}, true
+	return semester, true
 }
 
-func (c *dashboardController) loadDashboardComparison(
-	semester models.Semester,
-) (*dashboardComparisonLoad, error) {
+func (c *dashboardController) resolveDashboardComparison(semester models.Semester) (*dashboardComparisonLoad, error) {
 	semesters, _, err := c.store.Semesters().List(&models.Pagination{})
 	if err != nil {
 		return nil, err
@@ -93,6 +72,26 @@ func (c *dashboardController) loadDashboardComparison(
 		Semester: *comparison,
 		Ref:      store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
 	}, nil
+}
+
+// loadDashboardComparison is for routes where a comparison is required for the
+// response. Signup comparison uses the resolver directly because that overlay is
+// optional and must not abort an otherwise successful timeline response.
+func (c *dashboardController) loadDashboardComparison(
+	ctx *gin.Context,
+	semester models.Semester,
+) (*dashboardComparisonLoad, bool) {
+	comparison, err := c.resolveDashboardComparison(semester)
+	if err != nil {
+		abortDashboardInternalError(ctx, "comparison semester lookup", err)
+		return nil, false
+	}
+	return comparison, true
+}
+
+func abortDashboardInternalError(ctx *gin.Context, operation string, err error) {
+	log.Printf("dashboard %s failed (semester_id=%s): %v", operation, ctx.Param("semesterId"), err)
+	ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load dashboard data"))
 }
 
 // ComparisonTrialConversionStats pairs a resolved comparison semester with its
@@ -127,41 +126,38 @@ type TrialConversionResponse struct {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/dashboard/conversion [get]
 func (c *dashboardController) getTrialConversion(ctx *gin.Context) {
-	loaded, ok := c.loadDashboardSemester(ctx, dashboardLookupFailureRaw)
+	semester, ok := c.loadDashboardSemester(ctx)
 	if !ok {
 		return
 	}
-	semester := loaded.Semester
 	semesterID := semester.ID
+	comparison, ok := c.loadDashboardComparison(ctx, semester)
+	if !ok {
+		return
+	}
 
 	stats, err := c.store.Dashboard().TrialConversionStats(semesterID, semester.FreeTrialLimit)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		abortDashboardInternalError(ctx, "trial conversion query", err)
 		return
 	}
 
 	conversion, err := c.store.Dashboard().TrialConversionCohortStats(semesterID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		abortDashboardInternalError(ctx, "trial conversion cohort query", err)
 		return
 	}
 	response := TrialConversionResponse{Current: stats, Conversion: conversion, FreeTrialLimit: semester.FreeTrialLimit}
 
-	comparison, err := c.loadDashboardComparison(semester)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-		return
-	}
-
 	if comparison != nil {
 		comparisonStats, err := c.store.Dashboard().TrialConversionStats(comparison.Semester.ID, comparison.Semester.FreeTrialLimit)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			abortDashboardInternalError(ctx, "comparison trial conversion query", err)
 			return
 		}
 		comparisonConversion, err := c.store.Dashboard().TrialConversionCohortStats(comparison.Semester.ID)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			abortDashboardInternalError(ctx, "comparison trial conversion cohort query", err)
 			return
 		}
 		response.Comparison = &ComparisonTrialConversionStats{
@@ -190,15 +186,16 @@ func (c *dashboardController) getTrialConversion(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/dashboard/spotlight [get]
 func (c *dashboardController) getSpotlight(ctx *gin.Context) {
-	loaded, ok := c.loadDashboardSemester(ctx, dashboardLookupFailureRaw)
+	semester, ok := c.loadDashboardSemester(ctx)
 	if !ok {
 		return
 	}
-	semesterID := loaded.Semester.ID
+	semesterID := semester.ID
 
-	event, err := c.store.Dashboard().Spotlight(semesterID, time.Now())
+	now := c.now()
+	event, err := c.store.Dashboard().Spotlight(semesterID, now)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		abortDashboardInternalError(ctx, "spotlight query", err)
 		return
 	}
 
@@ -243,22 +240,21 @@ type MembershipStatsResponse struct {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/dashboard/memberships [get]
 func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
-	loaded, ok := c.loadDashboardSemester(ctx, dashboardLookupFailureRaw)
+	semester, ok := c.loadDashboardSemester(ctx)
 	if !ok {
 		return
 	}
-	semester := loaded.Semester
 	semesterID := semester.ID
 
-	comparison, err := c.loadDashboardComparison(semester)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+	comparison, ok := c.loadDashboardComparison(ctx, semester)
+	if !ok {
 		return
 	}
+	now := c.now()
 
 	current, err := c.store.Dashboard().MembershipStats(semesterID)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		abortDashboardInternalError(ctx, "membership stats query", err)
 		return
 	}
 
@@ -267,7 +263,7 @@ func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
 	if comparison != nil {
 		comparisonStats, err := c.store.Dashboard().MembershipStats(comparison.Semester.ID)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			abortDashboardInternalError(ctx, "comparison membership stats query", err)
 			return
 		}
 
@@ -276,10 +272,6 @@ func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
 		// partial comparison, only return a dated count when the store's reliability
 		// threshold is met. Once the comparison period is complete, its exact final
 		// total is known from MembershipStats and includes undated rows.
-		now := time.Now()
-		if c.now != nil {
-			now = c.now()
-		}
 		cutoff := services.ComparisonCutoff(semester, comparison.Semester, now)
 		var totalAsOf *int64
 		if services.IsComparisonComplete(semester, comparison.Semester, now) {
@@ -288,7 +280,7 @@ func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
 		} else {
 			totalAsOf, err = c.store.Dashboard().MembershipTotalAsOf(comparison.Semester.ID, cutoff)
 			if err != nil {
-				ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+				abortDashboardInternalError(ctx, "comparison membership cutoff query", err)
 				return
 			}
 		}
@@ -334,24 +326,22 @@ type EngagementStatsResponse struct {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/dashboard/engagement [get]
 func (c *dashboardController) getEngagementStats(ctx *gin.Context) {
-	loaded, ok := c.loadDashboardSemester(ctx, dashboardLookupFailureRaw)
+	semester, ok := c.loadDashboardSemester(ctx)
 	if !ok {
 		return
 	}
-	semester := loaded.Semester
 	semesterID := semester.ID
 
-	comparison, err := c.loadDashboardComparison(semester)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+	comparison, ok := c.loadDashboardComparison(ctx, semester)
+	if !ok {
 		return
 	}
 
-	now := time.Now()
+	now := c.now()
 
 	current, err := c.store.Dashboard().EngagementStats(semesterID, now)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		abortDashboardInternalError(ctx, "engagement stats query", err)
 		return
 	}
 
@@ -363,7 +353,7 @@ func (c *dashboardController) getEngagementStats(ctx *gin.Context) {
 		cutoff := services.ComparisonCutoff(semester, comparison.Semester, now)
 		comparisonStats, err := c.store.Dashboard().EngagementStats(comparison.Semester.ID, cutoff)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			abortDashboardInternalError(ctx, "comparison engagement stats query", err)
 			return
 		}
 		response.Comparison = &ComparisonEngagementStats{
@@ -433,25 +423,22 @@ type SignupTimelineResponse struct {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/dashboard/events [get]
 func (c *dashboardController) getEventActivity(ctx *gin.Context) {
-	loaded, ok := c.loadDashboardSemester(ctx, dashboardLookupFailureRaw)
+	semester, ok := c.loadDashboardSemester(ctx)
 	if !ok {
 		return
 	}
-	semester := loaded.Semester
 	semesterID := semester.ID
 
-	comparison, err := c.loadDashboardComparison(semester)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+	comparison, ok := c.loadDashboardComparison(ctx, semester)
+	if !ok {
 		return
 	}
 
-	now := time.Now()
+	now := c.now()
 
 	stats, series, err := c.store.Dashboard().EventActivity(semesterID, now)
 	if err != nil {
-		log.Printf("dashboard event activity query failed (semester_id=%s): %v", semesterID, err)
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load event activity"))
+		abortDashboardInternalError(ctx, "event activity query", err)
 		return
 	}
 
@@ -460,8 +447,7 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 		cutoff := services.ComparisonCutoff(semester, comparison.Semester, now)
 		comparisonAverage, err := c.store.Dashboard().AverageFieldSize(comparison.Semester.ID, cutoff)
 		if err != nil {
-			log.Printf("dashboard event comparison average query failed (semester_id=%s comparison_semester_id=%s): %v", semesterID, comparison.Semester.ID, err)
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load comparison event activity"))
+			abortDashboardInternalError(ctx, "comparison event average query", err)
 			return
 		}
 		response.Comparison = &ComparisonEventActivity{
@@ -488,29 +474,26 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /semesters/{semesterId}/dashboard/signups [get]
 func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
-	loaded, ok := c.loadDashboardSemester(ctx, dashboardLookupFailureSignup)
+	semester, ok := c.loadDashboardSemester(ctx)
 	if !ok {
 		return
 	}
-	semester := loaded.Semester
 	semesterID := semester.ID
 
-	now := time.Now()
+	now := c.now()
 	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, now)
 	if err != nil {
 		if errors.Is(err, store.ErrSignupTimelineRange) {
-			log.Printf("dashboard signup timeline range is invalid (semester_id=%s)", semesterID)
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load signup timeline"))
+			abortDashboardInternalError(ctx, "signup timeline range", err)
 			return
 		}
-		log.Printf("dashboard signup timeline query failed (semester_id=%s): %v", semesterID, err)
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load signup timeline"))
+		abortDashboardInternalError(ctx, "signup timeline query", err)
 		return
 	}
 
 	response := SignupTimelineResponse{SignupTimeline: timeline}
 	if len(timeline.Series) > 0 {
-		comparison, err := c.loadDashboardComparison(semester)
+		comparison, err := c.resolveDashboardComparison(semester)
 		if err != nil {
 			log.Printf("dashboard signup comparison semester lookup failed (semester_id=%s): %v", semesterID, err)
 		} else if comparison != nil {

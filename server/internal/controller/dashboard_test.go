@@ -1830,7 +1830,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 
 		w := get(t, semester.ID.String())
 		require.Equal(t, http.StatusInternalServerError, w.Code)
-		require.Contains(t, w.Body.String(), "unable to load signup timeline")
+		require.Contains(t, w.Body.String(), "unable to load dashboard data")
 		require.NotContains(t, w.Body.String(), "stored semester bounds exceed")
 	})
 

@@ -14,6 +14,7 @@ type Store interface {
 	AccountActivations() AccountActivationRepository
 	OfficerTransitions() OfficerTransitionRepository
 	EventClocks() EventClockRepository
+	Dashboard() DashboardRepository
 
 	BeginTx() (Store, error)
 	Commit() error

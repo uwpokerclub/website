@@ -1,0 +1,50 @@
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.headline,
+.line {
+  border-radius: var(--border-radius-sm, 0.25rem);
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-100, #f5f5f5) 25%,
+    var(--color-gray-200, #eeeeee) 37%,
+    var(--color-gray-100, #f5f5f5) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+.headline {
+  height: 1.5rem;
+  width: 40%;
+}
+
+.line {
+  height: 0.875rem;
+}
+
+.lineShort {
+  composes: line;
+  width: 60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .headline,
+  .line {
+    background: var(--color-gray-200, #eeeeee);
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}

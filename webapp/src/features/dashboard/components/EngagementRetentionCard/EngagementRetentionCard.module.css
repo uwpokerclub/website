@@ -1,0 +1,41 @@
+.container {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.lead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6875rem;
+  margin: 0;
+}
+
+.figure {
+  font-size: var(--card-figure-size, var(--font-size-4xl));
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.caption {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-700);
+}
+
+.tracks {
+  display: flex;
+  flex-direction: column;
+}
+
+.foot {
+  margin: 0;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-gray-200);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
+  line-height: 1.5;
+}

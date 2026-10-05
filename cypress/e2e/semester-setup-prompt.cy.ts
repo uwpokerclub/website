@@ -36,6 +36,7 @@ describe("Semester setup prompt", () => {
   beforeEach(() => {
     cy.resetDatabase();
     cy.clearAllSessionStorage();
+    cy.login("test_president", "password");
   });
 
   it("appears only when the president has no future semester", () => {

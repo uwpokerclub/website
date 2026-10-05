@@ -1,0 +1,66 @@
+.container {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.headline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5625rem;
+}
+
+.total {
+  font-size: var(--card-figure-size, var(--font-size-3xl));
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  line-height: 1.1;
+}
+
+.noComparisonNote {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-700);
+}
+
+.paceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: -0.375rem;
+}
+
+/*
+ * A full term's worth of memberships, with the comparison term's observed dated
+ * count at this point marked on it. The fill is the term so far.
+ */
+.paceTrack {
+  position: relative;
+  height: 0.5rem;
+  background: var(--color-background-tertiary);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+}
+
+.paceFill {
+  display: block;
+  height: 100%;
+  background: var(--dash-ord-2);
+  border-radius: var(--border-radius-full);
+}
+
+.paceMarker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gray-700);
+}
+
+.pace {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
+}

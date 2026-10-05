@@ -1,0 +1,33 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background);
+  border-radius: 0.75rem;
+  box-shadow:
+    inset 0 3px 0 var(--color-primary),
+    var(--shadow-sm);
+  padding: 1.25rem 1.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+}
+
+.action {
+  flex-shrink: 0;
+}
+
+.body {
+  flex: 1;
+}

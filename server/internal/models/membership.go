@@ -37,12 +37,33 @@ type Membership struct {
 	FreeTrialAvailable bool     `json:"freeTrialAvailable" gorm:"not null;default:true"`
 	Ranking            *Ranking `json:"ranking" gorm:"constraint:OnDelete:CASCADE,OnUpdate:CASCADE"`
 
-	// Pointer since pre-migration rows have no value and stay NULL (no backfill).
+	// CreatedAt means two different things either side of 2026-09-06, and code that
+	// reads it must tolerate both.
+	//
+	// From that date it is the row's insert time, set by GORM. Before it, the column
+	// did not exist, and 20261002013751_backfill_membership_created_at.sql derived a
+	// value from the member's first event - members are registered for the semester at
+	// their first event, so the two usually coincide. They diverge for a member who
+	// registered one night and first played on a later one, where the backfilled date
+	// is the later of the two.
+	//
+	// Still nil for members who never entered an event, roughly 2-5% of each term,
+	// since the backfill had nothing to derive from. Treat nil as "unknown", never as
+	// the start of the term.
+	//
 	// json:"-" is deliberate, not an oversight; don't expose it.
 	CreatedAt *time.Time `json:"-" gorm:"type:timestamp;index:idx_memberships_semester_created,priority:2"`
 
-	// Source is the channel this membership was created through. Nil pre-migration.
+	// Source is the channel this membership was created through. Nil before 2026-09-06
+	// and left nil by the backfill: Discord is under 1% of dated signups and cannot be
+	// distinguished historically, so filling "admin" would invent a clean all-admin
+	// past. Readers must treat nil as "unknown" rather than assuming either value.
 	Source *MembershipSource `json:"-" gorm:"type:text"`
+
+	// TrialStartedAt and ConvertedAt preserve the observed trial cohort and its
+	// first paid transition. They are internal analytics state, not API fields.
+	TrialStartedAt *time.Time `json:"-" gorm:"type:timestamp"`
+	ConvertedAt    *time.Time `json:"-" gorm:"type:timestamp"`
 } //@name Membership
 
 // EligibleForFreeTrial reports whether the free-trial limit applies to this

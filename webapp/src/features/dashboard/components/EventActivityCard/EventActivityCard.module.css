@@ -1,0 +1,115 @@
+.container {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5625rem;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.figure {
+  font-size: var(--card-figure-size, var(--font-size-3xl));
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  line-height: 1;
+}
+
+.caption {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-700);
+}
+
+.meter {
+  display: flex;
+  gap: 2px;
+  height: 0.625rem;
+}
+
+.meter i,
+.meter u {
+  display: block;
+  border-radius: var(--border-radius-full);
+}
+
+.meter i {
+  background: var(--dash-ord-3);
+}
+
+.meter u {
+  background: var(--dash-band);
+}
+
+.meta,
+.foot {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
+}
+
+.dataDetails { font-size: var(--font-size-xs); color: var(--color-gray-700); }
+.dataDetails summary { cursor: pointer; }
+.dataDetails table { border-collapse: collapse; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.dataDetails caption { text-align: left; font-weight: var(--font-weight-semibold); }
+.dataDetails th, .dataDetails td { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--color-gray-200); text-align: right; }
+.dataDetails th:first-child { text-align: left; }
+
+.chart {
+  margin-top: 0.5rem;
+}
+
+.averageKey {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.3rem 1rem;
+}
+
+.averageItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-700);
+  line-height: 1.4;
+}
+
+.averageItem span {
+  min-width: 0;
+}
+
+.currentAverageSwatch,
+.comparisonAverageSwatch {
+  flex: 0 0 1rem;
+  margin-top: 0.45rem;
+  border-top-width: 2px;
+  border-top-color: currentColor;
+}
+
+.currentAverageSwatch {
+  color: var(--dash-cat-4);
+  border-top-style: dashed;
+}
+
+.comparisonAverageSwatch {
+  color: var(--dash-cat-2);
+  border-top-style: dotted;
+}
+
+.foot {
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--color-gray-200);
+  line-height: 1.5;
+}
+
+@container (min-width: 32rem) {
+  .averageKey {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

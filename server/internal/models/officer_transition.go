@@ -14,11 +14,11 @@ const (
 // OfficerTransition records a proposed team; staging never changes roles.
 type OfficerTransition struct {
 	ID                    uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	InitiatedBy           string     `json:"initiatedBy" gorm:"not null"`
-	PresidentUsername     string     `json:"presidentUsername" gorm:"not null"`
-	VicePresidentUsername string     `json:"vicePresidentUsername" gorm:"not null"`
-	SecretaryUsername     string     `json:"secretaryUsername" gorm:"not null"`
-	TreasurerUsername     string     `json:"treasurerUsername" gorm:"not null"`
+	InitiatedBy           string     `json:"initiatedBy" gorm:"type:varchar;not null"`
+	PresidentUsername     string     `json:"presidentUsername" gorm:"type:varchar;not null"`
+	VicePresidentUsername string     `json:"vicePresidentUsername" gorm:"type:varchar;not null"`
+	SecretaryUsername     string     `json:"secretaryUsername" gorm:"type:varchar;not null"`
+	TreasurerUsername     string     `json:"treasurerUsername" gorm:"type:varchar;not null"`
 	Status                string     `json:"status" gorm:"size:20;not null;default:pending"`
 	CreatedAt             time.Time  `json:"createdAt" gorm:"type:timestamp;not null;default:LOCALTIMESTAMP"`
 	ResolvedAt            *time.Time `json:"resolvedAt" gorm:"type:timestamp"`

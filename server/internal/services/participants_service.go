@@ -64,7 +64,15 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 		return nil, e.Forbidden("Modification of a completed event is forbidden")
 	}
 
-	membership, err := svc.store.Memberships().FindByID(req.MembershipID)
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return nil, e.InternalServerError(err.Error())
+	}
+	defer tx.Rollback()
+
+	// Lock and reread inside the transaction shared with membership status updates.
+	// Using the event's semester here also rejects cross-semester membership entries.
+	membership, err := tx.Memberships().LockByIDAndSemesterID(req.MembershipID, event.SemesterID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, e.NotFound(err.Error())
@@ -72,35 +80,25 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 		return nil, e.InternalServerError(err.Error())
 	}
 
-	// FreeTrialLimit == 0 means the free-trial check is disabled for this semester. limit stays
-	// unused (and irrelevant) when the membership is paid or executive.
+	// FreeTrialLimit == 0 means the free-trial check is disabled for this semester.
 	var limit uint8
 	if membership.EligibleForFreeTrial() {
-		semester, err := svc.store.Semesters().FindByID(membership.SemesterID)
+		semester, err := tx.Semesters().FindByID(membership.SemesterID)
 		if err != nil {
 			return nil, e.InternalServerError(err.Error())
 		}
 		limit = semester.FreeTrialLimit
 
 		if limit > 0 {
-			attendance, err := svc.store.Entries().CountByMembershipID(req.MembershipID)
+			attendance, err := tx.Entries().CountByMembershipID(req.MembershipID)
 			if err != nil {
 				return nil, e.InternalServerError(err.Error())
 			}
-			// Recomputed live, not read from membership.FreeTrialAvailable: a stale cached
-			// flag (e.g. from before the limit was raised) must never block someone who is
-			// actually still under the current limit.
 			if attendance >= int64(limit) {
 				return nil, e.Forbidden("Membership has no free trial events remaining")
 			}
 		}
 	}
-
-	tx, err := svc.store.BeginTx()
-	if err != nil {
-		return nil, e.InternalServerError(err.Error())
-	}
-	defer tx.Rollback()
 
 	participant := models.Participant{
 		MembershipID: &req.MembershipID,
@@ -111,6 +109,16 @@ func (svc *participantsService) CreateParticipant(req *models.CreateParticipantR
 
 	if err := tx.Entries().Create(&participant); err != nil {
 		return nil, e.InternalServerError(err.Error())
+	}
+
+	// Persist the first actual entry made under trial eligibility. This is a
+	// historical cohort stamp and remains even if this entry is later deleted.
+	if membership.EligibleForFreeTrial() && limit > 0 && membership.TrialStartedAt == nil {
+		startedAt := time.Now().UTC()
+		if err := tx.Memberships().SetTrialStartedAtIfNull(membership.ID, startedAt); err != nil {
+			return nil, e.InternalServerError(err.Error())
+		}
+		membership.TrialStartedAt = &startedAt
 	}
 
 	// Sync the cached flag (used only by issue #54's UI) to match reality. This runs in

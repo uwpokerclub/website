@@ -62,3 +62,6 @@ docs/plans
 
 # Claude Code
 .claudeignore
+
+# Brainstorming mockups (visual companion)
+.superpowers/

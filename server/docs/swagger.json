@@ -800,6 +800,360 @@
                 }
             }
         },
+        "/semesters/{semesterId}/dashboard/conversion": {
+            "get": {
+                "description": "Get the distinct-player paid, executive, and free-trial status breakdown for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard trial conversion stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/TrialConversionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/dashboard/engagement": {
+            "get": {
+                "description": "Get distinct players, median events attended, played-once share, and the 10+ cohort size for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard engagement stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/EngagementStatsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/dashboard/events": {
+            "get": {
+                "description": "Get events run vs scheduled, total entries, average field size, and per-event attendance for a semester, plus the comparison semester and its average field size, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard event activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/EventActivityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/dashboard/memberships": {
+            "get": {
+                "description": "Get membership counts by paid/unpaid/discounted/executive and the new-vs-returning split for a semester, plus the same figures for the resolved comparison semester, or null when there is no comparable term",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard membership stats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/MembershipStatsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/dashboard/signups": {
+            "get": {
+                "description": "Get zero-filled daily membership creation counts by source and event dates, plus an optional prior same-season daily-total trend aligned by elapsed calendar day",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard signup timeline",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SignupTimelineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/dashboard/spotlight": {
+            "get": {
+                "description": "Get the live or next upcoming event for a semester, or null if neither exists",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get dashboard spotlight",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The live or next upcoming event, or null if neither exists",
+                        "schema": {
+                            "$ref": "#/definitions/SpotlightEvent"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/events": {
             "get": {
                 "description": "Retrieve a list of events for a specific semester",
@@ -3114,6 +3468,62 @@
                 }
             }
         },
+        "ComparisonEngagementStats": {
+            "type": "object",
+            "properties": {
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                },
+                "stats": {
+                    "$ref": "#/definitions/EngagementStats"
+                }
+            }
+        },
+        "ComparisonEventActivity": {
+            "type": "object",
+            "properties": {
+                "averageFieldSize": {
+                    "description": "AverageFieldSize is null when no events had ended by the comparison cutoff;\nzero means completed events existed but had no entries.",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                }
+            }
+        },
+        "ComparisonMembershipStats": {
+            "type": "object",
+            "properties": {
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                },
+                "stats": {
+                    "$ref": "#/definitions/MembershipStats"
+                },
+                "totalAsOf": {
+                    "description": "TotalAsOf is the comparison term's membership count at the same elapsed point\nthis term has reached, or its exact final total when the comparison period is\ncomplete. A partial count is the exact observed dated count, can omit undated\nmemberships, and is never scaled. It is null when the all-term dated share is\nbelow the repository's reliability threshold. Null means unknowable, never zero.",
+                    "type": "integer"
+                }
+            }
+        },
+        "ComparisonTrialConversionStats": {
+            "type": "object",
+            "properties": {
+                "conversion": {
+                    "$ref": "#/definitions/TrialConversionCohortStats"
+                },
+                "freeTrialLimit": {
+                    "type": "integer"
+                },
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                },
+                "stats": {
+                    "$ref": "#/definitions/TrialConversionStats"
+                }
+            }
+        },
         "CreateEntryResult": {
             "type": "object",
             "properties": {
@@ -3306,6 +3716,37 @@
                 }
             }
         },
+        "EngagementStats": {
+            "type": "object",
+            "properties": {
+                "medianEventsAttended": {
+                    "type": "number"
+                },
+                "playedOnceCount": {
+                    "type": "integer"
+                },
+                "playedOnceShare": {
+                    "type": "number"
+                },
+                "players": {
+                    "type": "integer"
+                },
+                "tenPlusCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "EngagementStatsResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonEngagementStats"
+                },
+                "current": {
+                    "$ref": "#/definitions/EngagementStats"
+                }
+            }
+        },
         "ErrorResponse": {
             "type": "object",
             "properties": {
@@ -3367,6 +3808,57 @@
                 },
                 "structureId": {
                     "type": "integer"
+                }
+            }
+        },
+        "EventActivityCurrent": {
+            "type": "object",
+            "properties": {
+                "averageFieldSize": {
+                    "type": "number"
+                },
+                "eventsRun": {
+                    "type": "integer"
+                },
+                "eventsScheduled": {
+                    "type": "integer"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/EventSeriesPoint"
+                    }
+                },
+                "totalEntries": {
+                    "type": "integer"
+                }
+            }
+        },
+        "EventActivityResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonEventActivity"
+                },
+                "current": {
+                    "$ref": "#/definitions/EventActivityCurrent"
+                }
+            }
+        },
+        "EventSeriesPoint": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "startDate": {
+                    "type": "string"
                 }
             }
         },
@@ -3503,6 +3995,43 @@
                 },
                 "userId": {
                     "type": "integer"
+                }
+            }
+        },
+        "MembershipStats": {
+            "type": "object",
+            "properties": {
+                "discounted": {
+                    "type": "integer"
+                },
+                "executive": {
+                    "type": "integer"
+                },
+                "new": {
+                    "type": "integer"
+                },
+                "paid": {
+                    "type": "integer"
+                },
+                "returning": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "unpaid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "MembershipStatsResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonMembershipStats"
+                },
+                "current": {
+                    "$ref": "#/definitions/MembershipStats"
                 }
             }
         },
@@ -3668,6 +4197,17 @@
                 }
             }
         },
+        "SemesterRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "SetClockLevelRequest": {
             "type": "object",
             "required": [
@@ -3677,6 +4217,100 @@
                 "index": {
                     "type": "integer",
                     "minimum": 0
+                }
+            }
+        },
+        "SignupTimelineComparison": {
+            "type": "object",
+            "properties": {
+                "dailyTotals": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SignupTimelineComparisonPoint"
+                    }
+                },
+                "semester": {
+                    "$ref": "#/definitions/SemesterRef"
+                }
+            }
+        },
+        "SignupTimelineComparisonPoint": {
+            "type": "object",
+            "properties": {
+                "elapsedDay": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "SignupTimelinePoint": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "discord": {
+                    "type": "integer"
+                },
+                "unknown": {
+                    "type": "integer"
+                }
+            }
+        },
+        "SignupTimelineResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/SignupTimelineComparison"
+                },
+                "dataStartsAt": {
+                    "type": "string"
+                },
+                "eventDates": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SignupTimelinePoint"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "SpotlightEvent": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "integer"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rebuys": {
+                    "type": "integer"
+                },
+                "startDate": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "integer"
                 }
             }
         },
@@ -3694,6 +4328,57 @@
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "TrialConversionCohortStats": {
+            "type": "object",
+            "properties": {
+                "denominator": {
+                    "type": "integer"
+                },
+                "numerator": {
+                    "type": "integer"
+                },
+                "rate": {
+                    "type": "number"
+                }
+            }
+        },
+        "TrialConversionResponse": {
+            "type": "object",
+            "properties": {
+                "comparison": {
+                    "$ref": "#/definitions/ComparisonTrialConversionStats"
+                },
+                "conversion": {
+                    "$ref": "#/definitions/TrialConversionCohortStats"
+                },
+                "current": {
+                    "$ref": "#/definitions/TrialConversionStats"
+                },
+                "freeTrialLimit": {
+                    "type": "integer"
+                }
+            }
+        },
+        "TrialConversionStats": {
+            "type": "object",
+            "properties": {
+                "executive": {
+                    "type": "integer"
+                },
+                "paid": {
+                    "type": "integer"
+                },
+                "players": {
+                    "type": "integer"
+                },
+                "trialOpen": {
+                    "type": "integer"
+                },
+                "trialSpent": {
+                    "type": "integer"
                 }
             }
         },

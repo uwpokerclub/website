@@ -1,0 +1,86 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.label {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-900);
+  flex: 1 1 7rem;
+  min-width: 0;
+}
+
+.value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  flex: 0 0 2.75rem;
+}
+
+.track {
+  position: relative;
+  flex: 1 1 4rem;
+  height: 0.4375rem;
+  background: var(--color-background-tertiary);
+  border-radius: var(--border-radius-full);
+  min-width: 3.75rem;
+}
+
+.band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--dash-band);
+  border-radius: var(--border-radius-full);
+}
+
+.mark {
+  position: absolute;
+  top: -0.25rem;
+  width: 3px;
+  height: 0.9375rem;
+  background: var(--dash-ord-3);
+  border-radius: 2px;
+}
+
+.previous {
+  position: absolute;
+  top: -0.0625rem;
+  width: 3px;
+  height: 0.5625rem;
+  background: var(--color-gray-400);
+  border-radius: 2px;
+}
+
+.verdict {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--border-radius-full);
+  background: var(--color-secondary-light);
+  color: var(--color-secondary-dark);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* In a narrow tile the track has nowhere useful to go; drop it and keep the words. */
+@container (max-width: 20rem) {
+  .track {
+    display: none;
+  }
+}

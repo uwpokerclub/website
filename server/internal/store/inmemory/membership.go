@@ -102,6 +102,12 @@ func (r *inMemoryMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semes
 	return *membership, nil
 }
 
+// LockByIDAndSemesterID rereads from the transaction snapshot. The in-memory
+// transaction owns that snapshot until commit; PostgreSQL provides row locking.
+func (r *inMemoryMembershipRepository) LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error) {
+	return r.FindByIDAndSemesterID(id, semesterID)
+}
+
 // List retrieves memberships matching filter, with a computed attendance count.
 // Unlike the Postgres implementation, the in-memory store has no cross-repository join
 // capability, so Attendance is always 0 here — this mirrors the existing accepted gap where
@@ -227,6 +233,32 @@ func (r *inMemoryMembershipRepository) SetFreeTrialAvailable(id uuid.UUID, avail
 
 	membership.FreeTrialAvailable = available
 
+	return nil
+}
+
+func (r *inMemoryMembershipRepository) SetTrialStartedAtIfNull(id uuid.UUID, at time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	membership, exists := r.memberships[id]
+	if !exists {
+		return nil
+	}
+	if membership.TrialStartedAt == nil && !membership.Paid && !membership.Executive {
+		membership.TrialStartedAt = &at
+	}
+	return nil
+}
+
+func (r *inMemoryMembershipRepository) SetConvertedAtIfNull(id uuid.UUID, at time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	membership, exists := r.memberships[id]
+	if !exists {
+		return nil
+	}
+	if membership.ConvertedAt == nil && membership.TrialStartedAt != nil {
+		membership.ConvertedAt = &at
+	}
 	return nil
 }
 

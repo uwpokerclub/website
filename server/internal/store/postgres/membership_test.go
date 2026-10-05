@@ -65,6 +65,20 @@ func TestMembershipRepository_FindByID_NotFound(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
+func TestMembershipRepository_ConditionalTrialTimestampsIgnoreMissingMembership(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	repo := postgres.NewMembershipRepository(container.GetDB())
+	at := time.Date(2026, time.October, 4, 12, 0, 0, 0, time.UTC)
+	require.NoError(t, repo.SetTrialStartedAtIfNull(uuid.New(), at))
+	require.NoError(t, repo.SetConvertedAtIfNull(uuid.New(), at))
+}
+
 func TestMembershipRepository_FindByIDAndSemesterID(t *testing.T) {
 	t.Parallel()
 

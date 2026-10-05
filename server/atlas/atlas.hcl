@@ -13,11 +13,13 @@ env "gorm" {
   src = data.external_schema.gorm.url
   url = getenv("DATABASE_URL")
   dev = "docker://postgres/17/dev?search_path=public"
-  # one_pending_transition is an intentional manual partial index; GORM cannot
-  # describe it, so exclude it from schema diffs to prevent a generated DROP.
-  exclude = ["officer_transitions.one_pending_transition"]
   migration {
     dir = "file://atlas/migrations"
+    # These objects are defined in released SQL but Atlas's GORM schema cannot
+    # describe them faithfully. The relationship copies logins.username's text
+    # type onto account_activations.username, although the released child column
+    # is unbounded varchar.
+    exclude = ["*.one_pending_transition", "account_activations.username"]
   }
   format {
     migrate {

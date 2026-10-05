@@ -17,10 +17,10 @@ type Event struct {
 	Name             string        `json:"name"`
 	Format           string        `json:"format"`
 	Notes            string        `json:"notes"`
-	SemesterID       uuid.UUID     `json:"semesterId"          gorm:"type:uuid"`
+	SemesterID       uuid.UUID     `json:"semesterId"          gorm:"type:uuid;index:idx_events_semester_state_start_date,priority:1"`
 	Semester         *Semester     `json:"semester,omitempty"`
-	StartDate        time.Time     `json:"startDate"           gorm:"not null;default:CURRENT_TIMESTAMP"`
-	State            uint8         `json:"state"               gorm:"default:0"`
+	StartDate        time.Time     `json:"startDate"           gorm:"not null;default:CURRENT_TIMESTAMP;index:idx_events_semester_state_start_date,priority:3"`
+	State            uint8         `json:"state"               gorm:"default:0;index:idx_events_semester_state_start_date,priority:2"`
 	StructureID      int32         `json:"structureId"         gorm:"type:integer;not null"`
 	Structure        *Structure    `json:"structure,omitempty" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Rebuys           uint8         `json:"rebuys"              gorm:"not null;default:0"`

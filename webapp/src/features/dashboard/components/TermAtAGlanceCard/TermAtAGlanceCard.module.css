@@ -33,8 +33,8 @@
 }
 
 /*
- * A full term's worth of memberships, with last year's position at this same point
- * marked on it. The fill is the term so far; the marker is the thing to beat.
+ * A full term's worth of memberships, with the comparison term's observed dated
+ * count at this point marked on it. The fill is the term so far.
  */
 .paceTrack {
   position: relative;

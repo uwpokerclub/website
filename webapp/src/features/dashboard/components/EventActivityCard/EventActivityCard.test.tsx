@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import "@testing-library/jest-dom";
+import type { EventActivityResponse } from "../../api/dashboardApi";
 import { useEventActivity } from "../../hooks/useDashboardQueries";
 import { EventActivityCard } from "./EventActivityCard";
 import { SAMPLE_TERM } from "../../fixtures/sampleTerm";
@@ -104,6 +105,41 @@ describe("EventActivityCard", () => {
     expect(data.comparison.averageFieldSize).toBeGreaterThan(
       Math.max(...data.current.series.map((point) => point.entries)),
     );
+  });
+
+  it("distinguishes no completed events from completed zero-entry events", () => {
+    const noCompletedEvents: EventActivityResponse = {
+      current: { eventsRun: 0, eventsScheduled: 1, totalEntries: 0, averageFieldSize: 0, series: [] },
+      comparison: { semester: { id: "fall-2025", name: "Fall 2025" }, averageFieldSize: null },
+    };
+    mocked.mockReturnValue({ isLoading: false, isError: false, data: noCompletedEvents, refetch: jest.fn() });
+    const { container, rerender } = renderCard();
+
+    expect(screen.getByText("No completed events yet.")).toBeInTheDocument();
+    expect(screen.getByText("Fall 2025: no completed events by this point.")).toBeInTheDocument();
+    expect(screen.queryByText(/Current average/)).not.toBeInTheDocument();
+    expect(container.querySelectorAll("[data-reference-y]")).toHaveLength(0);
+
+    const zeroEntryEvent: EventActivityResponse = {
+      current: {
+        eventsRun: 1,
+        eventsScheduled: 0,
+        totalEntries: 0,
+        averageFieldSize: 0,
+        series: [{ id: 1, name: "Week 1", startDate: "2026-09-12T23:00:00Z", entries: 0 }],
+      },
+      comparison: null,
+    };
+    mocked.mockReturnValue({ isLoading: false, isError: false, data: zeroEntryEvent, refetch: jest.fn() });
+    rerender(
+      <MemoryRouter>
+        <EventActivityCard semesterId="s1" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Current average: 0.0 players per completed event")).toBeInTheDocument();
+    expect(screen.queryByText("No completed events yet.")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("[data-reference-y]")).toHaveLength(1);
   });
 
   it("reserves a left gutter wide enough for integer count ticks in the existing chart", () => {

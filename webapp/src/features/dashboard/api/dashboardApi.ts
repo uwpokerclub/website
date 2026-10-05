@@ -16,9 +16,10 @@ export interface MembershipsDashboardResponse {
     semester: { id: string; name: string };
     stats: MembershipStats;
     /**
-     * The comparison term's membership count at the same elapsed point this term has
-     * reached, or null when that term has no dated memberships. Null means
-     * unknowable, never zero — see the backend's MembershipTotalAsOf.
+     * The observed dated-membership count in the comparison term at the same elapsed
+     * point this term has reached. It can omit undated memberships and is never scaled
+     * to estimate them. Null means the all-term dated share is below the reliability
+     * threshold (or the term has no memberships), not zero — see MembershipTotalAsOf.
      */
     totalAsOf: number | null;
   } | null;
@@ -74,7 +75,7 @@ export interface EventSeriesPoint {
 
 export interface EventActivityResponse {
   current: EventActivityStats & { series: EventSeriesPoint[] };
-  comparison: { semester: { id: string; name: string }; averageFieldSize: number } | null;
+  comparison: { semester: { id: string; name: string }; averageFieldSize: number | null } | null;
 }
 
 export interface SignupPoint {

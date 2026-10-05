@@ -61,7 +61,7 @@ describe("TermAtAGlanceCard", () => {
     expect(chip).toHaveTextContent("+120");
   });
 
-  it("shows pace against the final total when the prior term has no dated memberships", () => {
+  it("shows pace against the exact final total when the prior dated baseline is unavailable", () => {
     mockedUseMembershipsDashboard.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -116,7 +116,7 @@ describe("TermAtAGlanceCard", () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it("tracks progress toward a full term's worth, marking where last year stood", () => {
+  it("tracks progress and labels the comparison term's dated marker", () => {
     mockedUseMembershipsDashboard.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -129,6 +129,8 @@ describe("TermAtAGlanceCard", () => {
     // 967 of Fall 2025's final 891 — already past a full term's worth.
     expect(track).toHaveAccessibleName(/967 of 891/);
     expect(screen.getByText(/109% of Fall 2025's final 891/)).toBeInTheDocument();
+    expect(screen.getByText(/Marker: Fall 2025 had 847 dated memberships recorded by this point/)).toBeInTheDocument();
+    expect(screen.getByText(/Undated history may be missing; this count is not scaled/)).toBeInTheDocument();
     expect(screen.getByText(/day 19 of 86/)).toBeInTheDocument();
   });
 
@@ -158,7 +160,7 @@ describe("TermAtAGlanceCard", () => {
     expect(screen.queryByText(/% of Fall 2025's final 0/)).not.toBeInTheDocument();
   });
 
-  it("marks last year's position on the track only when that figure is known", () => {
+  it("marks the comparison term's position only when its dated count is known", () => {
     mockedUseMembershipsDashboard.mockReturnValue({
       isLoading: false,
       isError: false,

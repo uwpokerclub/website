@@ -49,7 +49,8 @@ function Body({ data }: { data: EventActivityResponse }) {
   const totalEvents = eventsRun + eventsScheduled;
   const average = Math.round(averageFieldSize * 10) / 10;
   const comparison = data.comparison;
-  const comparisonAverage = comparison ? Math.round(comparison.averageFieldSize * 10) / 10 : null;
+  const comparisonAverage =
+    comparison?.averageFieldSize == null ? null : Math.round(comparison.averageFieldSize * 10) / 10;
 
   return (
     <div className={styles.container}>
@@ -63,23 +64,30 @@ function Body({ data }: { data: EventActivityResponse }) {
         {eventsScheduled > 0 && <u style={{ flexGrow: eventsScheduled }} />}
       </div>
       <p className={styles.meta}>
-        {eventsScheduled} still scheduled · {totalEntries.toLocaleString("en-CA")} entries · average field {average}
+        {eventsScheduled} still scheduled · {totalEntries.toLocaleString("en-CA")} entries
+        {eventsRun > 0 && <> · average field {average}</>}
       </p>
 
       <div className={styles.averageKey} role="group" aria-label="Average field size reference lines">
-        <p className={styles.averageItem}>
-          <i className={styles.currentAverageSwatch} aria-hidden="true" />
-          <span>Current average: {average.toFixed(1)} players per completed event</span>
-        </p>
-        {comparison && comparisonAverage !== null && (
+        {eventsRun > 0 ? (
           <p className={styles.averageItem}>
-            <i className={styles.comparisonAverageSwatch} aria-hidden="true" />
-            <span>
-              {comparison.semester.name}: {comparisonAverage.toFixed(1)} players per completed event at the same
-              elapsed-term span
-            </span>
+            <i className={styles.currentAverageSwatch} aria-hidden="true" />
+            <span>Current average: {average.toFixed(1)} players per completed event</span>
           </p>
-        )}
+        ) : null}
+        {eventsRun === 0 && <p className={styles.averageItem}>No completed events yet.</p>}
+        {comparison &&
+          (comparisonAverage === null ? (
+            <p className={styles.averageItem}>{comparison.semester.name}: no completed events by this point.</p>
+          ) : (
+            <p className={styles.averageItem}>
+              <i className={styles.comparisonAverageSwatch} aria-hidden="true" />
+              <span>
+                {comparison.semester.name}: {comparisonAverage.toFixed(1)} players per completed event at the same
+                elapsed-term span
+              </span>
+            </p>
+          ))}
       </div>
 
       <div className={styles.chart}>
@@ -93,18 +101,26 @@ function Body({ data }: { data: EventActivityResponse }) {
               allowDecimals={false}
               domain={[
                 0,
-                Math.ceil(Math.max(average, comparisonAverage ?? 0, ...series.map((point) => point.entries))),
+                Math.ceil(
+                  Math.max(
+                    eventsRun > 0 ? average : 0,
+                    comparisonAverage ?? 0,
+                    ...series.map((point) => point.entries),
+                  ),
+                ),
               ]}
               tickFormatter={(value: number) => Math.round(value).toLocaleString("en-CA")}
             />
             <Tooltip {...TOOLTIP_STYLE} />
-            <ReferenceLine
-              y={average}
-              stroke={CHART_COLORS.slot4}
-              strokeDasharray="4 4"
-              strokeWidth={2}
-              ifOverflow="extendDomain"
-            />
+            {eventsRun > 0 && (
+              <ReferenceLine
+                y={average}
+                stroke={CHART_COLORS.slot4}
+                strokeDasharray="4 4"
+                strokeWidth={2}
+                ifOverflow="extendDomain"
+              />
+            )}
             {comparisonAverage !== null && comparison && (
               <ReferenceLine
                 y={comparisonAverage}

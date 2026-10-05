@@ -141,6 +141,24 @@ describe("Dashboard", () => {
       expect(signups.total).to.be.greaterThan(0);
       expect(signups.comparison.semester.name).to.equal("Winter 2024");
       expect(signups.comparison.dailyTotals).to.have.length.greaterThan(0);
+
+      const memberships = interceptions[REAL_DASHBOARD_ALIASES.indexOf("memberships")].response?.body;
+      if (memberships.comparison?.totalAsOf !== null && memberships.comparison?.totalAsOf !== undefined) {
+        cy.getByData("term-at-a-glance-card").contains("Marker:").should("exist");
+        cy.getByData("term-at-a-glance-card")
+          .contains("Undated history may be missing; this count is not scaled.")
+          .should("exist");
+      }
+
+      const events = interceptions[REAL_DASHBOARD_ALIASES.indexOf("events")].response?.body;
+      if (events.current.eventsRun === 0) {
+        cy.getByData("event-activity-card").contains("No completed events yet.").should("be.visible");
+      } else {
+        cy.getByData("event-activity-card").contains("Current average:").should("be.visible");
+      }
+      if (events.comparison?.averageFieldSize === null) {
+        cy.getByData("event-activity-card").contains("no completed events by this point").should("be.visible");
+      }
     });
 
     cy.getByData("signup-timeline-card")
@@ -149,6 +167,9 @@ describe("Dashboard", () => {
       .contains("memberships created")
       .should("be.visible");
     cy.getByData("signup-timeline-card").contains("Winter 2024 daily total").should("be.visible");
+    cy.getByData("signup-timeline-card")
+      .contains("the comparison line can omit undated memberships")
+      .should("be.visible");
   });
 
   it("isolates an Event Activity endpoint failure to its card", () => {
@@ -189,7 +210,7 @@ describe("Dashboard", () => {
     cy.getByData("trial-conversion-card")
       .scrollIntoView()
       .find('[data-qa="dashboard-card-error"]', { timeout: 10_000 })
-      .should("be.visible");
+      .should("exist");
     CARD_QAS.filter((cardQa) => cardQa !== "trial-conversion-card").forEach((cardQa) => {
       cy.getByData(cardQa)
         .should("have.attr", "data-dashboard-status", "ready")

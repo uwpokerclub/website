@@ -143,17 +143,25 @@ describe("SignupTimelineCard", () => {
     expect(document.querySelector("[data-comparison-line]")).not.toBeInTheDocument();
   });
 
-  it("treats an empty series as a fact about the term, not a wait", () => {
-    renderCardWithData({ series: [], eventDates: [], dataStartsAt: "2026-09-01", total: 0, comparison: null });
+  it("shows the real zero-filled empty shape when a started term has no dated signups", () => {
+    renderCardWithData({
+      series: [
+        { date: "2026-09-01", admin: 0, discord: 0, unknown: 0 },
+        { date: "2026-09-02", admin: 0, discord: 0, unknown: 0 },
+      ],
+      eventDates: [],
+      dataStartsAt: null,
+      total: 0,
+      comparison: null,
+    });
 
-    expect(screen.getByText(/No signups recorded for this term/)).toBeInTheDocument();
-    expect(screen.getByText(/Dated signups begin September 2026/)).toBeInTheDocument();
+    expect(screen.getByText("No signups recorded for this term.")).toBeInTheDocument();
   });
 
   it("keeps historical comparison visible when the current term has only zero-count days", () => {
     const zeroResponse: SignupsResponse = {
       total: 0,
-      dataStartsAt: "2026-09-01",
+      dataStartsAt: null,
       eventDates: [],
       series: [
         { date: "2026-09-01", admin: 0, discord: 0, unknown: 0 },

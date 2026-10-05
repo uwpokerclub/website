@@ -1,8 +1,10 @@
 /** @jest-environment jsdom */
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { Fragment } from "react";
 import type { ReactElement } from "react";
 import "@testing-library/jest-dom";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { SAMPLE_TERM } from "../fixtures/sampleTerm";
 import type { EventActivityResponse, SignupsResponse } from "../api/dashboardApi";
 import { useEventActivity, useSignups } from "../hooks/useDashboardQueries";
@@ -102,5 +104,25 @@ describe("dashboard chart SVG geometry", () => {
     expect(priorY).toBeLessThan(currentY);
     expect(priorY).toBeGreaterThanOrEqual(gridTop);
     expect(priorY).toBeLessThanOrEqual(gridBottom);
+  });
+
+  it("renders chart children wrapped in a React 19 fragment", async () => {
+    const { container } = render(
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={[{ name: "Week 1", entries: 7 }]}>
+          <Fragment>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Bar dataKey="entries" />
+          </Fragment>
+        </BarChart>
+      </ResponsiveContainer>,
+    );
+
+    await waitFor(() =>
+      expect(container.querySelectorAll(".recharts-bar-rectangle .recharts-rectangle")).toHaveLength(1),
+    );
+    expect(container.querySelector(".recharts-xAxis")).toBeInTheDocument();
+    expect(container.querySelector(".recharts-yAxis")).toBeInTheDocument();
   });
 });

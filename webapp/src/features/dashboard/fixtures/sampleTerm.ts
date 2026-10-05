@@ -25,7 +25,7 @@ export const SAMPLE_TERM = {
     comparison: {
       semester: FALL_2025,
       stats: { total: 891, paid: 654, unpaid: 182, discounted: 29, executive: 26, new: 498, returning: 393 },
-      // Fall 2025 had 847 by this point last year, so 967 is genuinely ahead.
+      // Fall 2025 had 847 dated memberships by this point, so 967 is ahead of the observed count.
       totalAsOf: 847,
     },
   } satisfies MembershipsDashboardResponse,

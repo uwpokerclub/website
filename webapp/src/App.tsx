@@ -6,6 +6,7 @@ import { Index } from "./pages/Index";
 import { Login } from "./pages/Login";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AuthProvider, RequireAuth, SemesterProvider } from "@/components";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const Admin = lazy(() => import("./pages/Admin").then(({ Admin: page }) => ({ default: page })));
 
@@ -24,7 +25,9 @@ function App() {
                 <RequireAuth>
                   <SemesterProvider>
                     <Suspense fallback={<LoadingScreen />}>
-                      <Admin />
+                      <ErrorBoundary recoveryAction={{ label: "Reload app", onClick: () => window.location.reload() }}>
+                        <Admin />
+                      </ErrorBoundary>
                     </Suspense>
                   </SemesterProvider>
                 </RequireAuth>

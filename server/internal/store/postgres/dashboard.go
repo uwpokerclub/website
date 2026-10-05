@@ -155,23 +155,10 @@ func (r *postgresDashboardRepository) TrialConversionCohortStats(semesterID uuid
 	err := r.db.Raw(`
 		SELECT
 			COUNT(*) FILTER (WHERE trial_started_at IS NOT NULL AND converted_at IS NOT NULL) AS numerator,
-			COUNT(*) FILTER (WHERE trial_started_at IS NOT NULL) AS denominator,
-			(
-				SELECT COUNT(DISTINCT m.id)
-				FROM memberships m
-				WHERE m.semester_id = ?
-				  AND m.trial_started_at IS NULL
-				  AND NOT m.executive
-				  AND EXISTS (
-					SELECT 1
-					FROM participants p
-					JOIN events e ON e.id = p.event_id
-					WHERE p.membership_id = m.id AND e.semester_id = m.semester_id
-				  )
-			) AS untracked_entrants
+			COUNT(*) FILTER (WHERE trial_started_at IS NOT NULL) AS denominator
 		FROM memberships
 		WHERE semester_id = ?
-	`, semesterID, semesterID).Scan(&stats).Error
+	`, semesterID).Scan(&stats).Error
 	if err != nil {
 		return store.TrialConversionCohortStats{}, err
 	}

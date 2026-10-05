@@ -4350,9 +4350,6 @@ const docTemplate = `{
                 },
                 "rate": {
                     "type": "number"
-                },
-                "untrackedEntrants": {
-                    "type": "integer"
                 }
             }
         },

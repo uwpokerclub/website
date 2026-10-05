@@ -115,13 +115,11 @@ type TrialConversionStats struct {
 
 // TrialConversionCohortStats reports conversions among memberships whose trial
 // start was observed. Rate is a nullable fraction in [0,1]; it is nil when no
-// starters are observed. UntrackedEntrants is contextual only and is not the
-// denominator: it can include upfront buyers and historical unknowns.
+// starters are observed.
 type TrialConversionCohortStats struct {
-	Numerator         int64    `json:"numerator"`
-	Denominator       int64    `json:"denominator"`
-	Rate              *float64 `json:"rate"`
-	UntrackedEntrants int64    `json:"untrackedEntrants"`
+	Numerator   int64    `json:"numerator"`
+	Denominator int64    `json:"denominator"`
+	Rate        *float64 `json:"rate"`
 } //@name TrialConversionCohortStats
 
 // DashboardRepository is the interface for the dashboard's read-only aggregate

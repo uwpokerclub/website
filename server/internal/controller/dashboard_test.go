@@ -1239,7 +1239,6 @@ func TestDashboardTrialConversion(t *testing.T) {
 		require.EqualValues(t, 1, body.Comparison.Conversion.Numerator)
 		require.EqualValues(t, 2, body.Comparison.Conversion.Denominator)
 		require.InDelta(t, 0.5, *body.Comparison.Conversion.Rate, 0.0001)
-		require.EqualValues(t, 2, body.Comparison.Conversion.UntrackedEntrants, "upfront buyer and historical unknown are context, not cohort members")
 	})
 
 	t.Run("returns 404 for an unknown semester and 400 for a malformed id", func(t *testing.T) {

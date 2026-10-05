@@ -124,7 +124,6 @@ describe("Dashboard", () => {
     visitDashboard().then((interceptions) => {
       const conversion = interceptions[REAL_DASHBOARD_ALIASES.indexOf("conversion")].response?.body;
       expect(conversion).to.have.property("conversion");
-      expect(conversion.conversion).to.have.property("untrackedEntrants");
     });
 
     cy.getByData("trial-conversion-card").scrollIntoView();
@@ -142,9 +141,6 @@ describe("Dashboard", () => {
     cy.getByData("trial-conversion-card")
       .contains("Earlier untracked trial and payment history is unavailable.")
       .should("be.visible");
-    cy.getByData("trial-conversion-card")
-      .contains(/\b\d+\s+untracked entrants?\b/i)
-      .should("not.exist");
   });
 
   it("loads seeded comparison and signup data from the real API", () => {

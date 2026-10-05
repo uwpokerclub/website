@@ -10,7 +10,7 @@ const mocked = useTrialConversion as jest.Mock;
 
 const conversion: ConversionResponse = {
   current: { players: 824, paid: 712, trialSpent: 78, trialOpen: 14, executive: 20 },
-  conversion: { numerator: 3, denominator: 4, rate: 0.75, untrackedEntrants: 5 },
+  conversion: { numerator: 3, denominator: 4, rate: 0.75 },
   freeTrialLimit: 4,
   comparison: null,
 };
@@ -69,7 +69,7 @@ describe("TrialConversionCard", () => {
       data: {
         ...conversion,
         current: { players: 0, paid: 0, trialSpent: 0, trialOpen: 0, executive: 0 },
-        conversion: { numerator: 0, denominator: 0, rate: null, untrackedEntrants: 0 },
+        conversion: { numerator: 0, denominator: 0, rate: null },
       },
       refetch: jest.fn(),
     });
@@ -105,7 +105,7 @@ describe("TrialConversionCard", () => {
           semester: { id: "fall-2025", name: "Fall 2025" },
           freeTrialLimit: 2,
           stats: { players: 10, paid: 4, trialSpent: 3, trialOpen: 2, executive: 1 },
-          conversion: { numerator: 2, denominator: 4, rate: 0.5, untrackedEntrants: 3 },
+          conversion: { numerator: 2, denominator: 4, rate: 0.5 },
         },
       },
     });
@@ -131,7 +131,7 @@ describe("TrialConversionCard", () => {
           semester: { id: "fall-2025", name: "Fall 2025" },
           freeTrialLimit: 0,
           stats: { players: 10, paid: 4, trialSpent: 5, trialOpen: 0, executive: 1 },
-          conversion: { numerator: 0, denominator: 0, rate: null, untrackedEntrants: 4 },
+          conversion: { numerator: 0, denominator: 0, rate: null },
         },
       },
     });

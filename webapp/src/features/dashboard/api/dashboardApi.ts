@@ -112,8 +112,6 @@ export interface TrialConversionCohortStats {
   denominator: number;
   /** Fraction in [0, 1], or null until at least one trial start is observed. */
   rate: number | null;
-  /** Entry-holding memberships without a trial stamp; includes upfront buyers and legacy unknowns. */
-  untrackedEntrants: number;
 }
 
 export interface ConversionResponse {

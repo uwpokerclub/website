@@ -4342,9 +4342,6 @@
                 },
                 "rate": {
                     "type": "number"
-                },
-                "untrackedEntrants": {
-                    "type": "integer"
                 }
             }
         },

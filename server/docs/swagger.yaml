@@ -40,7 +40,11 @@ definitions:
   ComparisonEventActivity:
     properties:
       averageFieldSize:
+        description: |-
+          AverageFieldSize is null when no events had ended by the comparison cutoff;
+          zero means completed events existed but had no entries.
         type: number
+        x-nullable: true
       semester:
         $ref: '#/definitions/SemesterRef'
     type: object
@@ -54,8 +58,9 @@ definitions:
         description: |-
           TotalAsOf is the comparison term's membership count at the same elapsed point
           this term has reached, or its exact final total when the comparison period is
-          complete. It is null when a partial historical count cannot be trusted because
-          too few memberships have dates. Null means unknowable, never zero.
+          complete. A partial count is the exact observed dated count, can omit undated
+          memberships, and is never scaled. It is null when the all-term dated share is
+          below the repository's reliability threshold. Null means unknowable, never zero.
         type: integer
     type: object
   ComparisonTrialConversionStats:

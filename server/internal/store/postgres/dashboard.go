@@ -218,10 +218,12 @@ func (r *postgresDashboardRepository) EventActivity(semesterID uuid.UUID, asOf t
 	return stats, series, nil
 }
 
-func (r *postgresDashboardRepository) AverageFieldSize(semesterID uuid.UUID, asOf time.Time) (float64, error) {
-	var average float64
+func (r *postgresDashboardRepository) AverageFieldSize(semesterID uuid.UUID, asOf time.Time) (*float64, error) {
+	var result struct {
+		Average *float64
+	}
 	err := r.db.Raw(`
-		SELECT COALESCE(AVG(event_entries.entries), 0)
+		SELECT AVG(event_entries.entries) AS average
 		FROM (
 			SELECT e.id, COUNT(p.id) AS entries
 			FROM events e
@@ -229,8 +231,8 @@ func (r *postgresDashboardRepository) AverageFieldSize(semesterID uuid.UUID, asO
 			WHERE e.semester_id = ? AND e.state = ? AND e.start_date <= ?
 			GROUP BY e.id
 		) AS event_entries
-	`, semesterID, models.EventStateEnded, asOf).Scan(&average).Error
-	return average, err
+	`, semesterID, models.EventStateEnded, asOf).Scan(&result).Error
+	return result.Average, err
 }
 
 // SignupTimeline implements store.DashboardRepository. Membership creation times
@@ -327,18 +329,26 @@ const minDatedShare = 0.8
 // Memberships predating the created_at migration carry NULL. The backfill recovers
 // most of them from first participation, but members who never entered an event keep
 // a NULL date and are invisible to this count — so it is reported only when the dated
-// rows are a large enough majority to stand in for the term. Completed comparisons
+// rows are a large enough majority to provide an observed partial count. Completed comparisons
 // bypass this method and use the exact total from MembershipStats, including undated
 // rows. Callers must treat nil as "unknowable", never as zero.
 func (r *postgresDashboardRepository) MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error) {
 	var counts struct {
 		Dated int64
 		Total int64
+		AsOf  int64
 	}
-	err := r.db.Model(&models.Membership{}).
-		Select("COUNT(*) FILTER (WHERE created_at IS NOT NULL) AS dated, COUNT(*) AS total").
-		Where("semester_id = ?", semesterID).
-		Scan(&counts).Error
+	err := r.db.Raw(`
+		SELECT
+			COUNT(*) FILTER (WHERE created_at IS NOT NULL) AS dated,
+			COUNT(*) AS total,
+			COUNT(*) FILTER (
+				WHERE created_at IS NOT NULL
+				  AND created_at <= (?::timestamptz AT TIME ZONE 'UTC')
+			) AS as_of
+		FROM memberships
+		WHERE semester_id = ?
+	`, asOf, semesterID).Scan(&counts).Error
 	if err != nil {
 		return nil, err
 	}
@@ -346,13 +356,5 @@ func (r *postgresDashboardRepository) MembershipTotalAsOf(semesterID uuid.UUID, 
 		return nil, nil
 	}
 
-	var total int64
-	err = r.db.Model(&models.Membership{}).
-		Where("semester_id = ? AND created_at IS NOT NULL AND created_at <= (?::timestamptz AT TIME ZONE 'UTC')", semesterID, asOf).
-		Count(&total).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &total, nil
+	return &counts.AsOf, nil
 }

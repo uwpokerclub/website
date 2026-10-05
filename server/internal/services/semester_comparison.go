@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var torontoCalendar, _ = time.LoadLocation("America/Toronto")
+
 // Season is a semester's season, derived from its start date's month rather than
 // its free-text name.
 type Season string
@@ -68,14 +70,15 @@ func ResolveComparisonSemester(target models.Semester, semesters []models.Semest
 // week, the first event — so day 14 is comparable to day 14 even when the two terms
 // differ in length.
 //
-// Once the target term has ended, or has run at least as long as the comparison term,
-// the comparison is its complete self and the returned cutoff clips nothing. It
-// deliberately does not clamp to the comparison term's end_date: an event is not
-// guaranteed to fall inside its semester's declared range, and clamping would
-// silently drop any that lie outside rather than counting a term that has finished.
+// Once the target's inclusive Toronto end date has passed, or it has run at least as
+// long as the comparison term, the comparison is its complete self and the returned
+// cutoff clips nothing. It deliberately does not clamp to the comparison term's
+// end_date: an event is not guaranteed to fall inside its semester's declared range,
+// and clamping would silently drop any that lie outside rather than counting a term
+// that has finished.
 func ComparisonCutoff(target, comparison models.Semester, now time.Time) time.Time {
 	start := comparison.StartDate.UTC()
-	if !now.UTC().Before(target.EndDate.UTC()) {
+	if !now.UTC().Before(inclusiveSemesterEndExclusive(target.EndDate)) {
 		return noCutoff
 	}
 
@@ -84,11 +87,20 @@ func ComparisonCutoff(target, comparison models.Semester, now time.Time) time.Ti
 		return start
 	}
 
-	if elapsed >= comparison.EndDate.UTC().Sub(start) {
+	if elapsed >= inclusiveSemesterEndExclusive(comparison.EndDate).Sub(start) {
 		return noCutoff
 	}
 
 	return start.Add(elapsed)
+}
+
+// inclusiveSemesterEndExclusive converts the UTC-encoded date-only semester end
+// into midnight Toronto time on the following calendar date. The stored UTC
+// midnight is a date label, not an instant in Toronto.
+func inclusiveSemesterEndExclusive(endDate time.Time) time.Time {
+	endDate = endDate.UTC()
+	nextDay := time.Date(endDate.Year(), endDate.Month(), endDate.Day()+1, 0, 0, 0, 0, torontoCalendar)
+	return nextDay.UTC()
 }
 
 // noCutoff is a cutoff far enough in the future to clip nothing, used when the

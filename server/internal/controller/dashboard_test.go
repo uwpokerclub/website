@@ -536,6 +536,39 @@ func TestDashboardMembershipStats(t *testing.T) {
 		require.EqualValues(t, 3, body.Comparison.Stats.Total)
 	})
 
+	t.Run("returns the observed dated count without extrapolating an in-progress baseline", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db := container.GetDB()
+		now := time.Now().UTC()
+		currentStart := now.AddDate(0, 0, -20)
+		comparisonStart := currentStart.AddDate(-1, 0, 0)
+		comparisonSemester, err := createDashboardTestSemester(db, "Prior", comparisonStart)
+		require.NoError(t, err)
+		currentSemester, err := createDashboardTestSemester(db, "Current", currentStart)
+		require.NoError(t, err)
+
+		for i := 0; i < 100; i++ {
+			user, err := testutils.CreateTestUser(db, nextUserID(), "Member", fmt.Sprintf("%d", i),
+				fmt.Sprintf("observed-%d@uwaterloo.ca", i), models.FacultyMath, fmt.Sprintf("observed-%d", i))
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, comparisonSemester.ID, true, false, false)
+			require.NoError(t, err)
+			createdAt := any(nil)
+			if i < 85 {
+				createdAt = comparisonStart.Add(time.Duration(i) * time.Hour)
+			}
+			require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
+		}
+
+		w := getMembershipStats(t, currentSemester.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.MembershipStatsResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison.TotalAsOf)
+		require.EqualValues(t, 85, *body.Comparison.TotalAsOf, "do not scale the 85 observed dated memberships to estimate 100")
+		require.EqualValues(t, 100, body.Comparison.Stats.Total)
+	})
+
 	t.Run("returns 404 for an unknown semester id", func(t *testing.T) {
 		w := getMembershipStats(t, "00000000-0000-0000-0000-000000000000")
 		require.Equal(t, http.StatusNotFound, w.Code)
@@ -1590,6 +1623,43 @@ func TestDashboardEventActivity(t *testing.T) {
 		require.Equal(t, 0.5, comparison["averageFieldSize"], "zero-entry ended events remain in the denominator")
 	})
 
+	t.Run("returns null when the comparison has no completed events", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		_, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		current, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+
+		w := get(t, current.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison)
+		require.Nil(t, body.Comparison.AverageFieldSize)
+		require.Contains(t, w.Body.String(), `"averageFieldSize":null`)
+	})
+
+	t.Run("keeps a true zero average for completed events with no entries", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		prior, err := createDashboardTestSemester(db, "Fall 2025", time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		current, err := createDashboardTestSemester(db, "Fall 2026", time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+		structure, err := testutils.CreateTestStructure(db, "Standard")
+		require.NoError(t, err)
+		_, err = createDashboardTestEvent(db, prior.ID, structure.ID, "Zero entries", models.EventStateEnded, prior.StartDate, 0)
+		require.NoError(t, err)
+
+		w := get(t, current.ID.String())
+		var body controller.EventActivityResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison)
+		require.NotNil(t, body.Comparison.AverageFieldSize)
+		require.Zero(t, *body.Comparison.AverageFieldSize)
+	})
+
 	t.Run("counts future-dated events as scheduled rather than clipping them away", func(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		db := container.GetDB()
@@ -1760,7 +1830,8 @@ func TestDashboardSignupTimeline(t *testing.T) {
 
 		w := get(t, semester.ID.String())
 		require.Equal(t, http.StatusInternalServerError, w.Code)
-		require.Contains(t, w.Body.String(), "stored semester bounds exceed the 366 inclusive calendar day signup timeline limit")
+		require.Contains(t, w.Body.String(), "unable to load signup timeline")
+		require.NotContains(t, w.Body.String(), "stored semester bounds exceed")
 	})
 
 	t.Run("uses the Toronto calendar date for the current bound", func(t *testing.T) {
@@ -1935,6 +2006,95 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 		require.Nil(t, body.Comparison)
 		require.Len(t, body.Series, 3)
+	})
+
+	t.Run("keeps the current timeline when a legacy comparison range is invalid", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		today := time.Now().In(toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-2, 0, 0, 0, 0, time.UTC)
+		current, err := createDashboardTestSemester(db, "Current", currentStart)
+		require.NoError(t, err)
+		priorStart := previousSameSeasonStart(currentStart)
+		prior, err := createDashboardTestSemester(db, "Prior invalid range", priorStart)
+		require.NoError(t, err)
+		require.NoError(t, db.Model(prior).Update("end_date", priorStart.AddDate(0, 0, 366)).Error)
+
+		w := get(t, current.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.SignupTimelineResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotEmpty(t, body.Series, "the current timeline remains available")
+		require.Nil(t, body.Comparison, "an invalid optional comparison is omitted")
+		require.NotContains(t, w.Body.String(), "stored semester bounds")
+	})
+
+	t.Run("withholds an overlay below the all-term dated-share threshold", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		useTorontoDatabaseTimezone(t, db)
+		today := time.Now().In(toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-2, 0, 0, 0, 0, time.UTC)
+		current, err := createDashboardTestSemester(db, "Current", currentStart)
+		require.NoError(t, err)
+		priorStart := previousSameSeasonStart(currentStart)
+		prior, err := createDashboardTestSemester(db, "Prior", priorStart)
+		require.NoError(t, err)
+
+		for i := 0; i < 10; i++ {
+			user, err := testutils.CreateTestUser(db, newUserID(), "Partial", fmt.Sprint(i),
+				fmt.Sprintf("partial-%d@uwaterloo.ca", i), models.FacultyMath, fmt.Sprintf("partial-%d", i))
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, prior.ID, true, false, false)
+			require.NoError(t, err)
+			var createdAt any
+			if i < 7 {
+				createdAt = priorStart.AddDate(0, 0, i).Add(16 * time.Hour)
+			}
+			require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
+		}
+
+		w := get(t, current.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.SignupTimelineResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.Nil(t, body.Comparison, "7 dated memberships out of 10 are below the all-term 80% threshold")
+		require.NotEmpty(t, body.Series)
+	})
+
+	t.Run("gates the overlay by all-term date coverage, not the visible span", func(t *testing.T) {
+		require.NoError(t, container.ResetDatabase(ctx))
+		db = container.GetDB()
+		useTorontoDatabaseTimezone(t, db)
+		today := time.Now().In(toronto)
+		currentStart := time.Date(today.Year(), today.Month(), today.Day()-2, 0, 0, 0, 0, time.UTC)
+		current, err := createDashboardTestSemester(db, "Current", currentStart)
+		require.NoError(t, err)
+		priorStart := previousSameSeasonStart(currentStart)
+		prior, err := createDashboardTestSemester(db, "Prior", priorStart)
+		require.NoError(t, err)
+
+		for i := 0; i < 10; i++ {
+			user, err := testutils.CreateTestUser(db, newUserID(), "Overlay", fmt.Sprint(i),
+				fmt.Sprintf("overlay-%d@uwaterloo.ca", i), models.FacultyMath, fmt.Sprintf("overlay-%d", i))
+			require.NoError(t, err)
+			membership, err := createDashboardTestMembership(db, user.ID, prior.ID, true, false, false)
+			require.NoError(t, err)
+			var createdAt any
+			if i < 8 {
+				createdAt = priorStart.AddDate(0, 0, 20).Add(16 * time.Hour)
+			}
+			require.NoError(t, db.Model(membership).Update("created_at", createdAt).Error)
+		}
+
+		w := get(t, current.ID.String())
+		require.Equal(t, http.StatusOK, w.Code)
+		var body controller.SignupTimelineResponse
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+		require.NotNil(t, body.Comparison, "8 dated memberships out of 10 pass the all-term 80% threshold")
+		require.Len(t, body.Comparison.DailyTotals, len(body.Series))
+		require.EqualValues(t, 0, body.Comparison.DailyTotals[0].Total, "the zero-filled comparison span remains present before later dated signups")
+		require.EqualValues(t, 0, body.Comparison.DailyTotals[1].Total)
 	})
 
 	t.Run("uses date-only semester bounds under a Toronto PostgreSQL session timezone", func(t *testing.T) {

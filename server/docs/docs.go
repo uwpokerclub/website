@@ -3491,7 +3491,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "averageFieldSize": {
-                    "type": "number"
+                    "description": "AverageFieldSize is null when no events had ended by the comparison cutoff;\nzero means completed events existed but had no entries.",
+                    "type": "number",
+                    "x-nullable": true
                 },
                 "semester": {
                     "$ref": "#/definitions/SemesterRef"
@@ -3508,7 +3510,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/MembershipStats"
                 },
                 "totalAsOf": {
-                    "description": "TotalAsOf is the comparison term's membership count at the same elapsed point\nthis term has reached, or its exact final total when the comparison period is\ncomplete. It is null when a partial historical count cannot be trusted because\ntoo few memberships have dates. Null means unknowable, never zero.",
+                    "description": "TotalAsOf is the comparison term's membership count at the same elapsed point\nthis term has reached, or its exact final total when the comparison period is\ncomplete. A partial count is the exact observed dated count, can omit undated\nmemberships, and is never scaled. It is null when the all-term dated share is\nbelow the repository's reliability threshold. Null means unknowable, never zero.",
                     "type": "integer"
                 }
             }

@@ -49,7 +49,8 @@ type MembershipStats struct {
 
 // EventActivityStats is the Event Activity card's scalar figures for a semester.
 // TotalEntries and AverageFieldSize cover ended events only. AverageFieldSize is
-// calculated in Go so a semester with no ended events never divides by zero.
+// zero when there are no ended events; EventsRun distinguishes that state from a
+// genuine zero-entry average.
 type EventActivityStats struct {
 	EventsRun        int64   `json:"eventsRun"`
 	EventsScheduled  int64   `json:"eventsScheduled"`
@@ -175,9 +176,10 @@ type DashboardRepository interface {
 	// asOf, since the events it counts are the future-dated ones.
 	EventActivity(semesterID uuid.UUID, asOf time.Time) (EventActivityStats, []EventSeriesPoint, error)
 
-	// AverageFieldSize returns the ended-event mean including events with zero entries.
-	// It is a narrow comparison query and does not compute the current card's other figures.
-	AverageFieldSize(semesterID uuid.UUID, asOf time.Time) (float64, error)
+	// AverageFieldSize returns the ended-event mean including events with zero entries,
+	// or nil when no events qualify. It is a narrow comparison query and does not compute
+	// the current card's other figures.
+	AverageFieldSize(semesterID uuid.UUID, asOf time.Time) (*float64, error)
 
 	// SignupTimeline returns a zero-filled daily calendar-date series from the
 	// semester start through the earlier of its end date and now's America/Toronto
@@ -188,8 +190,10 @@ type DashboardRepository interface {
 	SignupTimeline(semesterID uuid.UUID, now time.Time) (SignupTimeline, error)
 
 	// MembershipTotalAsOf returns how many of the semester's dated memberships had
-	// been created at or before asOf, or nil when the dated share is below the
-	// repository's reliability threshold. Callers must treat nil as "unknowable",
-	// never as zero. Completed comparisons use the exact MembershipStats.Total instead.
+	// been created at or before asOf, or nil when the all-term dated share is below
+	// the repository's reliability threshold. A returned count is the exact observed
+	// dated count and can omit undated memberships; it is never extrapolated. Callers must
+	// treat nil as "unknowable", never as zero. Completed comparisons use the exact
+	// MembershipStats.Total instead.
 	MembershipTotalAsOf(semesterID uuid.UUID, asOf time.Time) (*int64, error)
 }

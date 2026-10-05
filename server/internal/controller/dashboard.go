@@ -7,6 +7,7 @@ import (
 	"api/internal/services"
 	"api/internal/store"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -168,8 +169,9 @@ type ComparisonMembershipStats struct {
 
 	// TotalAsOf is the comparison term's membership count at the same elapsed point
 	// this term has reached, or its exact final total when the comparison period is
-	// complete. It is null when a partial historical count cannot be trusted because
-	// too few memberships have dates. Null means unknowable, never zero.
+	// complete. A partial count is the exact observed dated count, can omit undated
+	// memberships, and is never scaled. It is null when the all-term dated share is
+	// below the repository's reliability threshold. Null means unknowable, never zero.
 	TotalAsOf *int64 `json:"totalAsOf"`
 } //@name ComparisonMembershipStats
 
@@ -350,9 +352,13 @@ type EventActivityCurrent struct {
 } //@name EventActivityCurrent
 
 // ComparisonEventActivity is the comparison semester and its average field size.
+// AverageFieldSize is null when no events had ended by the comparison cutoff; zero
+// means completed events existed but had no entries.
 type ComparisonEventActivity struct {
-	Semester         store.SemesterRef `json:"semester"`
-	AverageFieldSize float64           `json:"averageFieldSize"`
+	Semester store.SemesterRef `json:"semester"`
+	// AverageFieldSize is null when no events had ended by the comparison cutoff;
+	// zero means completed events existed but had no entries.
+	AverageFieldSize *float64 `json:"averageFieldSize" extensions:"x-nullable"`
 } //@name ComparisonEventActivity
 
 // EventActivityResponse is the dashboard's Event Activity response.
@@ -423,7 +429,8 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 
 	stats, series, err := c.store.Dashboard().EventActivity(semesterID, now)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		log.Printf("dashboard event activity query failed (semester_id=%s): %v", semesterID, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load event activity"))
 		return
 	}
 
@@ -432,7 +439,8 @@ func (c *dashboardController) getEventActivity(ctx *gin.Context) {
 		cutoff := services.ComparisonCutoff(semester, *comparison, now)
 		comparisonAverage, err := c.store.Dashboard().AverageFieldSize(comparison.ID, cutoff)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+			log.Printf("dashboard event comparison average query failed (semester_id=%s comparison_semester_id=%s): %v", semesterID, comparison.ID, err)
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load comparison event activity"))
 			return
 		}
 		response.Comparison = &ComparisonEventActivity{
@@ -471,7 +479,8 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
 			return
 		}
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		log.Printf("dashboard signup timeline semester lookup failed (semester_id=%s): %v", semesterID, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load signup timeline"))
 		return
 	}
 
@@ -479,12 +488,12 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 	timeline, err := c.store.Dashboard().SignupTimeline(semesterID, now)
 	if err != nil {
 		if errors.Is(err, store.ErrSignupTimelineRange) {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(
-				"stored semester bounds exceed the 366 inclusive calendar day signup timeline limit",
-			))
+			log.Printf("dashboard signup timeline range is invalid (semester_id=%s)", semesterID)
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load signup timeline"))
 			return
 		}
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		log.Printf("dashboard signup timeline query failed (semester_id=%s): %v", semesterID, err)
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("unable to load signup timeline"))
 		return
 	}
 
@@ -492,23 +501,32 @@ func (c *dashboardController) getSignupTimeline(ctx *gin.Context) {
 	if len(timeline.Series) > 0 {
 		semesters, _, err := c.store.Semesters().List(&models.Pagination{})
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-			return
-		}
-		if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
+			log.Printf("dashboard signup comparison semester lookup failed (semester_id=%s): %v", semesterID, err)
+		} else if comparison := services.ResolveComparisonSemester(semester, semesters); comparison != nil {
 			// The repository's date-only series is the source of truth for both
 			// semester bounds; do not reinterpret a start timestamp in Toronto.
-			fullComparison, err := c.store.Dashboard().SignupTimeline(comparison.ID, time.Date(9999, 12, 31, 12, 0, 0, 0, time.UTC))
+			comparisonAsOf := time.Date(9999, 12, 31, 12, 0, 0, 0, time.UTC)
+			fullComparison, err := c.store.Dashboard().SignupTimeline(comparison.ID, comparisonAsOf)
 			if err != nil {
-				ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
-				return
-			}
-			if fullComparison.DataStartsAt != nil && len(fullComparison.Series) > 0 {
-				points, ok := signupComparisonDailyTotals(timeline.Series, fullComparison.Series)
-				if ok {
-					response.Comparison = &SignupTimelineComparison{
-						Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
-						DailyTotals: points,
+				if errors.Is(err, store.ErrSignupTimelineRange) {
+					log.Printf("dashboard signup comparison overlay unavailable: comparison range exceeds limit (semester_id=%s comparison_semester_id=%s)", semesterID, comparison.ID)
+				} else {
+					log.Printf("dashboard signup comparison timeline query failed (semester_id=%s comparison_semester_id=%s): %v", semesterID, comparison.ID, err)
+				}
+			} else if fullComparison.DataStartsAt != nil && len(fullComparison.Series) > 0 {
+				// Reuse MembershipTotalAsOf's all-term dated-share gate. The visible
+				// elapsed series cannot represent the denominator: it omits later and
+				// otherwise undated memberships.
+				datedTotal, err := c.store.Dashboard().MembershipTotalAsOf(comparison.ID, comparisonAsOf)
+				if err != nil {
+					log.Printf("dashboard signup comparison coverage query failed (semester_id=%s comparison_semester_id=%s): %v", semesterID, comparison.ID, err)
+				} else if datedTotal != nil {
+					points, ok := signupComparisonDailyTotals(timeline.Series, fullComparison.Series)
+					if ok {
+						response.Comparison = &SignupTimelineComparison{
+							Semester:    store.SemesterRef{ID: comparison.ID, Name: comparison.Name},
+							DailyTotals: points,
+						}
 					}
 				}
 			}

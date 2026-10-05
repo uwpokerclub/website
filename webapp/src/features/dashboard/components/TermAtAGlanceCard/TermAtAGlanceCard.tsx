@@ -106,7 +106,7 @@ function Comparison({
     <DeltaChip
       current={current}
       comparison={comparison.totalAsOf}
-      comparisonLabel={`dated memberships by this point in ${comparison.semester.name}`}
+      comparisonLabel={`memberships by this point in ${comparison.semester.name}`}
       sentiment="positive-is-good"
     />
   );
@@ -147,7 +147,7 @@ function PaceTrack({
     `— ${share}% of ${comparison.semester.name}'s final total` +
     (comparison.totalAsOf === null
       ? "."
-      : `, with ${comparison.totalAsOf.toLocaleString("en-CA")} dated memberships recorded by this point in ${comparison.semester.name}.`);
+      : `, with ${comparison.totalAsOf.toLocaleString("en-CA")} memberships recorded by this point in ${comparison.semester.name}.`);
 
   return (
     <div className={styles.paceBlock}>
@@ -163,8 +163,8 @@ function PaceTrack({
       </p>
       {comparison.totalAsOf !== null && (
         <p className={styles.pace}>
-          Marker: {comparison.semester.name} had {comparison.totalAsOf.toLocaleString("en-CA")} dated memberships
-          recorded by this point. Undated history may be missing; this count is not scaled.
+          Marker: {comparison.semester.name} had {comparison.totalAsOf.toLocaleString("en-CA")} memberships by this
+          point.
         </p>
       )}
     </div>

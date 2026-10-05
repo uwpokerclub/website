@@ -83,6 +83,19 @@ function visitDashboard(username = "e2e_user") {
   return waitForRealDashboardRequests();
 }
 
+function visitDashboardWithEventActivity(response: object) {
+  cy.resetDatabase();
+  cy.login("e2e_user", "password");
+  interceptRealDashboardRequests();
+  cy.intercept("GET", /\/api\/v2\/semesters\/[^/]+\/dashboard\/events$/, {
+    statusCode: 200,
+    body: response,
+  }).as("eventActivityState");
+  cy.visit("/admin/dashboard");
+  cy.wait("@eventActivityState").its("response.statusCode").should("equal", 200);
+  return waitForSiblingDashboardRequests("events");
+}
+
 function expectCardOrder(containerQa: string, cards: readonly string[]) {
   cy.getByData(containerQa)
     .children()
@@ -134,7 +147,7 @@ describe("Dashboard", () => {
       .should("not.exist");
   });
 
-  it("loads dated current and same-season comparison signups from the real API", () => {
+  it("loads seeded comparison and signup data from the real API", () => {
     visitDashboard().then((interceptions) => {
       const signups = interceptions[REAL_DASHBOARD_ALIASES.indexOf("signups")].response?.body;
       expect(signups.series).to.have.length.greaterThan(0);
@@ -143,22 +156,21 @@ describe("Dashboard", () => {
       expect(signups.comparison.dailyTotals).to.have.length.greaterThan(0);
 
       const memberships = interceptions[REAL_DASHBOARD_ALIASES.indexOf("memberships")].response?.body;
-      if (memberships.comparison?.totalAsOf !== null && memberships.comparison?.totalAsOf !== undefined) {
-        cy.getByData("term-at-a-glance-card").contains("Marker:").should("exist");
-        cy.getByData("term-at-a-glance-card")
-          .contains("Undated history may be missing; this count is not scaled.")
-          .should("exist");
-      }
+      expect(memberships.comparison.totalAsOf).to.equal(2);
+      expect(memberships.comparison.stats.total).to.equal(2);
+      cy.contains("Marker: Winter 2024 had 2 memberships by this point.")
+        .scrollIntoView()
+        .should("be.visible");
 
       const events = interceptions[REAL_DASHBOARD_ALIASES.indexOf("events")].response?.body;
-      if (events.current.eventsRun === 0) {
-        cy.getByData("event-activity-card").contains("No completed events yet.").should("be.visible");
-      } else {
-        cy.getByData("event-activity-card").contains("Current average:").should("be.visible");
-      }
-      if (events.comparison?.averageFieldSize === null) {
-        cy.getByData("event-activity-card").contains("no completed events by this point").should("be.visible");
-      }
+      expect(events.current.eventsRun).to.equal(1);
+      expect(events.comparison.averageFieldSize).to.equal(null);
+      cy.contains("Current average:")
+        .scrollIntoView()
+        .should("be.visible");
+      cy.contains("Winter 2024: no completed events by this point.")
+        .scrollIntoView()
+        .should("be.visible");
     });
 
     cy.getByData("signup-timeline-card")
@@ -170,6 +182,32 @@ describe("Dashboard", () => {
     cy.getByData("signup-timeline-card")
       .contains("the comparison line can omit undated memberships")
       .should("be.visible");
+  });
+
+  it("shows the no-completed-events state for a scheduled-only response", () => {
+    visitDashboardWithEventActivity({
+      current: { eventsRun: 0, eventsScheduled: 1, totalEntries: 0, averageFieldSize: 0, series: [] },
+      comparison: null,
+    });
+
+    cy.getByData("event-activity-card").contains("No completed events yet.").should("be.visible");
+    cy.getByData("event-activity-card").contains("Current average:").should("not.exist");
+  });
+
+  it("shows a zero average when a completed event has no entries", () => {
+    visitDashboardWithEventActivity({
+      current: {
+        eventsRun: 1,
+        eventsScheduled: 0,
+        totalEntries: 0,
+        averageFieldSize: 0,
+        series: [{ id: 99, name: "Empty completed event", startDate: "2025-01-12T19:00:00Z", entries: 0 }],
+      },
+      comparison: null,
+    });
+
+    cy.getByData("event-activity-card").contains("Current average: 0.0 players per completed event").should("be.visible");
+    cy.getByData("event-activity-card").contains("No completed events yet.").should("not.exist");
   });
 
   it("isolates an Event Activity endpoint failure to its card", () => {

@@ -16,9 +16,10 @@ export interface MembershipsDashboardResponse {
     semester: { id: string; name: string };
     stats: MembershipStats;
     /**
-     * The observed dated-membership count in the comparison term at the same elapsed
-     * point this term has reached. It can omit undated memberships and is never scaled
-     * to estimate them. Null means the all-term dated share is below the reliability
+     * For a partial comparison, the observed dated-membership count at the same
+     * elapsed point this term has reached; it can omit undated memberships and is never
+     * scaled. For a completed comparison, the exact final total including undated
+     * memberships. Null means the all-term dated share is below the reliability
      * threshold (or the term has no memberships), not zero — see MembershipTotalAsOf.
      */
     totalAsOf: number | null;

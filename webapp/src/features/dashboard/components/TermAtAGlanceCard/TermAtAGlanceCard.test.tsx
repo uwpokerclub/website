@@ -116,21 +116,24 @@ describe("TermAtAGlanceCard", () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it("tracks progress and labels the comparison term's dated marker", () => {
+  it("tracks progress and labels the comparison term's marker", () => {
     mockedUseMembershipsDashboard.mockReturnValue({
       isLoading: false,
       isError: false,
       data: SAMPLE_TERM.memberships,
       refetch: jest.fn(),
     });
-    render(<TermAtAGlanceCard semesterId="s1" />);
+    const { container } = render(<TermAtAGlanceCard semesterId="s1" />);
 
     const track = screen.getByRole("img", { name: /progress toward/i });
     // 967 of Fall 2025's final 891 — already past a full term's worth.
     expect(track).toHaveAccessibleName(/967 of 891/);
     expect(screen.getByText(/109% of Fall 2025's final 891/)).toBeInTheDocument();
-    expect(screen.getByText(/Marker: Fall 2025 had 847 dated memberships recorded by this point/)).toBeInTheDocument();
-    expect(screen.getByText(/Undated history may be missing; this count is not scaled/)).toBeInTheDocument();
+    expect(screen.getByText("Marker: Fall 2025 had 847 memberships by this point.")).toBeInTheDocument();
+    expect(track).toHaveAccessibleName(/847 memberships recorded by this point in Fall 2025/);
+    expect(container.querySelector('[data-qa="delta-chip"]')).toHaveTextContent(
+      "memberships by this point in Fall 2025",
+    );
     expect(screen.getByText(/day 19 of 86/)).toBeInTheDocument();
   });
 

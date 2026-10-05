@@ -4,6 +4,7 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -28,6 +29,7 @@ func (s dashboardLoaderTestStore) Dashboard() store.DashboardRepository { return
 type dashboardLoaderTestSemesterRepository struct {
 	store.SemesterRepository
 	semester  models.Semester
+	semesters []models.Semester
 	findErr   error
 	listErr   error
 	findCalls int
@@ -44,18 +46,29 @@ func (r *dashboardLoaderTestSemesterRepository) List(*models.Pagination) ([]mode
 	if r.listErr != nil {
 		return nil, 0, r.listErr
 	}
+	if r.semesters != nil {
+		return r.semesters, int64(len(r.semesters)), nil
+	}
 	return []models.Semester{r.semester}, 1, nil
 }
 
 type dashboardLoaderTestDashboardRepository struct {
 	store.DashboardRepository
-	timeline store.SignupTimeline
+	timeline  store.SignupTimeline
+	stats     map[uuid.UUID]store.MembershipStats
+	partial   *int64
+	asOfCalls int
 }
 
 func (r *dashboardLoaderTestDashboardRepository) Spotlight(uuid.UUID, time.Time) (*store.SpotlightEvent, error) {
 	return nil, nil
 }
-func (r *dashboardLoaderTestDashboardRepository) MembershipStats(uuid.UUID) (store.MembershipStats, error) {
+
+// Fall back to zeroes for the loader tests that do not exercise membership stats.
+func (r *dashboardLoaderTestDashboardRepository) MembershipStats(semesterID uuid.UUID) (store.MembershipStats, error) {
+	if r.stats != nil {
+		return r.stats[semesterID], nil
+	}
 	return store.MembershipStats{}, nil
 }
 func (r *dashboardLoaderTestDashboardRepository) EngagementStats(uuid.UUID, time.Time) (store.EngagementStats, error) {
@@ -77,7 +90,8 @@ func (r *dashboardLoaderTestDashboardRepository) SignupTimeline(uuid.UUID, time.
 	return r.timeline, nil
 }
 func (r *dashboardLoaderTestDashboardRepository) MembershipTotalAsOf(uuid.UUID, time.Time) (*int64, error) {
-	return nil, nil
+	r.asOfCalls++
+	return r.partial, nil
 }
 
 func newDashboardLoaderTestController(timeline store.SignupTimeline) (*dashboardController, *dashboardLoaderTestSemesterRepository) {
@@ -135,6 +149,60 @@ func TestDashboardSemesterLookupFailurePolicies(t *testing.T) {
 			}
 			require.Equal(t, 1, semesters.findCalls)
 			require.Zero(t, semesters.listCalls)
+		})
+	}
+}
+
+func TestMembershipComparisonUsesInclusiveTorontoCompletionBoundary(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	loc, err := time.LoadLocation("America/Toronto")
+	require.NoError(t, err)
+
+	for _, test := range []struct {
+		name    string
+		endDate time.Time
+	}{
+		{name: "last UTC date label", endDate: time.Date(2025, time.April, 30, 0, 0, 0, 0, time.UTC)},
+		{name: "DST transition", endDate: time.Date(2025, time.March, 8, 0, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			comparison := models.Semester{ID: uuid.New(), Name: "Prior", StartDate: time.Date(2025, time.January, 15, 0, 0, 0, 0, time.UTC), EndDate: test.endDate}
+			targetEnd := time.Date(test.endDate.Year()+1, test.endDate.Month(), test.endDate.Day(), 0, 0, 0, 0, time.UTC)
+			target := models.Semester{ID: uuid.New(), Name: "Current", StartDate: time.Date(2026, time.January, 15, 0, 0, 0, 0, time.UTC), EndDate: targetEnd}
+			partial := int64(85)
+			dashboard := &dashboardLoaderTestDashboardRepository{
+				stats: map[uuid.UUID]store.MembershipStats{
+					comparison.ID: {Total: 100},
+					target.ID:     {},
+				},
+				partial: &partial,
+			}
+			semesters := &dashboardLoaderTestSemesterRepository{semester: target, semesters: []models.Semester{comparison, target}}
+			now := time.Date(targetEnd.Year(), targetEnd.Month(), targetEnd.Day(), 23, 30, 0, 0, loc)
+			controller := &dashboardController{
+				store: dashboardLoaderTestStore{semesters: semesters, dashboard: dashboard},
+				now:   func() time.Time { return now },
+			}
+			request := func() MembershipStatsResponse {
+				recorder := dashboardLoaderRequest(controller.getMembershipStats, target.ID.String())
+				require.Equal(t, http.StatusOK, recorder.Code)
+				var response MembershipStatsResponse
+				require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+				return response
+			}
+
+			response := request()
+			require.NotNil(t, response.Comparison)
+			require.NotNil(t, response.Comparison.TotalAsOf)
+			require.EqualValues(t, 85, *response.Comparison.TotalAsOf, "the UTC date label is not the exclusive Toronto boundary")
+			require.Equal(t, 1, dashboard.asOfCalls)
+
+			now = time.Date(targetEnd.Year(), targetEnd.Month(), targetEnd.Day()+1, 0, 0, 0, 0, loc)
+			response = request()
+			require.NotNil(t, response.Comparison)
+			require.NotNil(t, response.Comparison.TotalAsOf)
+			require.EqualValues(t, 100, *response.Comparison.TotalAsOf, "completed comparisons include undated membership rows")
+			require.Equal(t, 1, dashboard.asOfCalls, "completed comparisons should use the exact aggregate")
 		})
 	}
 }

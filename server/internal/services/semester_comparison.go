@@ -78,7 +78,7 @@ func ResolveComparisonSemester(target models.Semester, semesters []models.Semest
 // that has finished.
 func ComparisonCutoff(target, comparison models.Semester, now time.Time) time.Time {
 	start := comparison.StartDate.UTC()
-	if !now.UTC().Before(inclusiveSemesterEndExclusive(target.EndDate)) {
+	if IsComparisonComplete(target, comparison, now) {
 		return noCutoff
 	}
 
@@ -92,6 +92,24 @@ func ComparisonCutoff(target, comparison models.Semester, now time.Time) time.Ti
 	}
 
 	return start.Add(elapsed)
+}
+
+// IsComparisonComplete reports whether the comparison term should use its exact
+// final totals rather than a partial as-of count. A comparison is complete once
+// the target's inclusive Toronto end date has passed or the target has progressed
+// at least as long as the comparison term.
+func IsComparisonComplete(target, comparison models.Semester, now time.Time) bool {
+	if !now.UTC().Before(inclusiveSemesterEndExclusive(target.EndDate)) {
+		return true
+	}
+
+	comparisonStart := comparison.StartDate.UTC()
+	comparisonDuration := inclusiveSemesterEndExclusive(comparison.EndDate).Sub(comparisonStart)
+	elapsed := now.UTC().Sub(target.StartDate.UTC())
+	if elapsed < 0 {
+		return false
+	}
+	return elapsed >= comparisonDuration
 }
 
 // inclusiveSemesterEndExclusive converts the UTC-encoded date-only semester end

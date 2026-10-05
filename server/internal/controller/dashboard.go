@@ -16,6 +16,7 @@ import (
 
 type dashboardController struct {
 	store store.Store
+	now   func() time.Time
 }
 
 type dashboardLookupFailurePolicy uint8
@@ -275,9 +276,13 @@ func (c *dashboardController) getMembershipStats(ctx *gin.Context) {
 		// partial comparison, only return a dated count when the store's reliability
 		// threshold is met. Once the comparison period is complete, its exact final
 		// total is known from MembershipStats and includes undated rows.
-		cutoff := services.ComparisonCutoff(semester, comparison.Semester, time.Now())
+		now := time.Now()
+		if c.now != nil {
+			now = c.now()
+		}
+		cutoff := services.ComparisonCutoff(semester, comparison.Semester, now)
 		var totalAsOf *int64
-		if !cutoff.Before(comparison.Semester.EndDate.UTC()) {
+		if services.IsComparisonComplete(semester, comparison.Semester, now) {
 			total := comparisonStats.Total
 			totalAsOf = &total
 		} else {

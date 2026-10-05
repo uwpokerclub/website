@@ -2,10 +2,24 @@ package services
 
 import (
 	"api/internal/models"
+	"fmt"
 	"time"
+	_ "time/tzdata"
 )
 
-var torontoCalendar, _ = time.LoadLocation("America/Toronto")
+var torontoCalendar = mustLoadTorontoCalendar()
+
+func mustLoadTorontoCalendar() *time.Location {
+	return mustLoadTorontoCalendarWith(time.LoadLocation)
+}
+
+func mustLoadTorontoCalendarWith(loadLocation func(string) (*time.Location, error)) *time.Location {
+	location, err := loadLocation("America/Toronto")
+	if err != nil {
+		panic(fmt.Errorf("load required America/Toronto timezone: %w", err))
+	}
+	return location
+}
 
 // Season is a semester's season, derived from its start date's month rather than
 // its free-text name.

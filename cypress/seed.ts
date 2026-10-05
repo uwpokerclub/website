@@ -394,6 +394,10 @@ export const LOGINS: Login[] = [
     role: "executive",
   },
   {
+    username: "dashboard_ops",
+    role: "executive",
+  },
+  {
     username: "hdrust0",
     role: "executive",
     linkedMember: {

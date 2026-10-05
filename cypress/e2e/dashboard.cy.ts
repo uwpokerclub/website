@@ -108,7 +108,11 @@ describe("Dashboard", () => {
   });
 
   it("renders real conversion data without the sample fallback", () => {
-    visitDashboard();
+    visitDashboard().then((interceptions) => {
+      const conversion = interceptions[REAL_DASHBOARD_ALIASES.indexOf("conversion")].response?.body;
+      expect(conversion).to.have.property("conversion");
+      expect(conversion.conversion).to.have.property("untrackedEntrants");
+    });
 
     cy.getByData("trial-conversion-card").scrollIntoView();
     cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
@@ -120,9 +124,14 @@ describe("Dashboard", () => {
     cy.getByData("trial-conversion-rate").contains("No tracked trial players yet").should("be.visible");
     cy.getByData("trial-conversion-card").contains("Conversion history unavailable").should("be.visible");
     cy.getByData("trial-conversion-card")
-      .contains("Only includes trials recorded since tracking began. Earlier trial and payment history is unavailable.")
+      .contains("Full-term observed trial cohort · paid status in the current historical snapshot")
       .should("be.visible");
-    cy.getByData("trial-conversion-card").contains(/untracked|observed-ever|purchase proxy/i).should("not.exist");
+    cy.getByData("trial-conversion-card")
+      .contains("Earlier untracked trial and payment history is unavailable.")
+      .should("be.visible");
+    cy.getByData("trial-conversion-card")
+      .contains(/\b\d+\s+untracked entrants?\b/i)
+      .should("not.exist");
   });
 
   it("loads dated current and same-season comparison signups from the real API", () => {

@@ -19,6 +19,12 @@
       "linkedMember": null
     },
     {
+      "username": "dashboard_ops",
+      "role": "executive",
+      "status": "active",
+      "linkedMember": null
+    },
+    {
       "username": "hdrust0",
       "role": "executive",
       "status": "active",
@@ -37,13 +43,15 @@
     {
       "username": "dashboard_records",
       "role": "secretary",
+      "status": "active",
       "linkedMember": null
     },
     {
       "username": "dashboard_leadership",
       "role": "president",
+      "status": "active",
       "linkedMember": null
     }
   ],
-  "total": 7
+  "total": 8
 }

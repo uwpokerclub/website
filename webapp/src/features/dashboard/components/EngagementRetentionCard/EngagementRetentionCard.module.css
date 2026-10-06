@@ -5,6 +5,17 @@
   gap: 0.875rem;
 }
 
+/*
+ * Stacked in a narrow tile. Given a full or two-thirds row, the headline and its
+ * distribution sit beside the range tracks instead of stretching thin across it.
+ */
+.columns,
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
 .lead {
   display: flex;
   align-items: baseline;
@@ -38,4 +49,13 @@
   font-size: var(--font-size-xs);
   color: var(--color-gray-700);
   line-height: 1.5;
+}
+
+@container (min-width: 44rem) {
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.875rem 2.5rem;
+    align-items: start;
+  }
 }

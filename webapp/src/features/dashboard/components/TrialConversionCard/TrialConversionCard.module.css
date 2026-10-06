@@ -5,6 +5,17 @@
   gap: 0.75rem;
 }
 
+/*
+ * Stacked in a narrow tile. Given a wide row, this term's snapshot and cohort rate
+ * sit beside the comparison term, which trades its top rule for a side one.
+ */
+.columns,
+.current {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .lead {
   margin: 0;
 }
@@ -71,4 +82,22 @@
 .comparisonContext,
 .noComparison {
   margin: 0;
+}
+
+@container (min-width: 34rem) {
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75rem 2.5rem;
+    align-items: start;
+  }
+
+  .columns > .comparison,
+  .columns > .noComparison {
+    padding-top: 0;
+    padding-left: 2.5rem;
+    margin-left: -1.25rem;
+    border-top: 0;
+    border-left: 1px solid var(--color-gray-200);
+  }
 }

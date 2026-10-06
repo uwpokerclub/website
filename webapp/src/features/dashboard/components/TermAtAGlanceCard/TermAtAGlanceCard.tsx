@@ -42,30 +42,36 @@ function TermAtAGlanceBody({ data }: { data: MembershipsDashboardResponse }) {
 
   return (
     <div className={styles.container}>
-      <div className={styles.headline}>
-        <span className={styles.total}>{current.total.toLocaleString("en-CA")}</span>
-        <Comparison current={current.total} comparison={comparison} />
+      <div className={styles.columns}>
+        <div className={styles.summary}>
+          <div className={styles.headline}>
+            <span className={styles.total}>{current.total.toLocaleString("en-CA")}</span>
+            <Comparison current={current.total} comparison={comparison} />
+          </div>
+
+          <PaceTrack current={current.total} comparison={comparison} />
+        </div>
+
+        <div className={styles.breakdown}>
+          <StatBar
+            ariaLabel="Memberships by payment status"
+            segments={[
+              { key: "paid", label: "paid", value: current.paid, color: "var(--dash-cat-1)" },
+              { key: "unpaid", label: "unpaid", value: current.unpaid, color: "var(--dash-cat-2)" },
+              { key: "discounted", label: "discounted", value: current.discounted, color: "var(--dash-cat-3)" },
+              { key: "executive", label: "exec", value: current.executive, color: "var(--dash-cat-4)" },
+            ]}
+          />
+
+          <StatBar
+            ariaLabel="Memberships by prior membership"
+            segments={[
+              { key: "new", label: "first-ever term", value: current.new, color: "var(--dash-ord-3)" },
+              { key: "returning", label: "returning", value: current.returning, color: "var(--dash-ord-1)" },
+            ]}
+          />
+        </div>
       </div>
-
-      <PaceTrack current={current.total} comparison={comparison} />
-
-      <StatBar
-        ariaLabel="Memberships by payment status"
-        segments={[
-          { key: "paid", label: "paid", value: current.paid, color: "var(--dash-cat-1)" },
-          { key: "unpaid", label: "unpaid", value: current.unpaid, color: "var(--dash-cat-2)" },
-          { key: "discounted", label: "discounted", value: current.discounted, color: "var(--dash-cat-3)" },
-          { key: "executive", label: "exec", value: current.executive, color: "var(--dash-cat-4)" },
-        ]}
-      />
-
-      <StatBar
-        ariaLabel="Memberships by prior membership"
-        segments={[
-          { key: "new", label: "first-ever term", value: current.new, color: "var(--dash-ord-3)" },
-          { key: "returning", label: "returning", value: current.returning, color: "var(--dash-ord-1)" },
-        ]}
-      />
     </div>
   );
 }

@@ -34,32 +34,36 @@ function Body({ data }: { data: ConversionResponse }) {
   // trial has no funnel, and four zeroes would read as a catastrophic one.
   return (
     <div className={styles.container}>
-      {freeTrialLimit === 0 ? (
-        <p className={styles.disabled}>Free trials were not offered this term.</p>
-      ) : current.players === 0 ? (
-        <p className={styles.disabled}>No current event entries to show in the status snapshot.</p>
-      ) : (
-        <>
-          <p className={styles.lead}>
-            <span className={styles.figure} data-testid="trial-conversion-figure">
-              {current.trialSpent.toLocaleString("en-CA")} {current.trialSpent === 1 ? "player" : "players"}
-            </span>
+      <div className={styles.columns}>
+        <div className={styles.current}>
+          {freeTrialLimit === 0 ? (
+            <p className={styles.disabled}>Free trials were not offered this term.</p>
+          ) : current.players === 0 ? (
+            <p className={styles.disabled}>No current event entries to show in the status snapshot.</p>
+          ) : (
+            <>
+              <p className={styles.lead}>
+                <span className={styles.figure} data-testid="trial-conversion-figure">
+                  {current.trialSpent.toLocaleString("en-CA")} {current.trialSpent === 1 ? "player" : "players"}
+                </span>
+              </p>
+              <p className={styles.caption}>
+                used all {freeTrialLimit} free {freeTrialLimit === 1 ? "entry" : "entries"} and{" "}
+                {current.trialSpent === 1 ? "is" : "are"} still unpaid
+              </p>
+
+              <StatBar ariaLabel="Players by membership status" segments={trialSegments(current)} />
+            </>
+          )}
+
+          <p className={styles.comparisonContext}>
+            Full-term observed trial cohort · paid status in the current historical snapshot
           </p>
-          <p className={styles.caption}>
-            used all {freeTrialLimit} free {freeTrialLimit === 1 ? "entry" : "entries"} and{" "}
-            {current.trialSpent === 1 ? "is" : "are"} still unpaid
-          </p>
+          <ConversionSummary conversion={conversion} noRateMessage="No tracked trial players yet" />
+        </div>
 
-          <StatBar ariaLabel="Players by membership status" segments={trialSegments(current)} />
-        </>
-      )}
-
-      <p className={styles.comparisonContext}>
-        Full-term observed trial cohort · paid status in the current historical snapshot
-      </p>
-      <ConversionSummary conversion={conversion} noRateMessage="No tracked trial players yet" />
-
-      <Comparison comparison={comparison} />
+        <Comparison comparison={comparison} />
+      </div>
 
       <p className={styles.foot}>
         Conversion uses all trials observed since tracking began, including players who later changed membership status.

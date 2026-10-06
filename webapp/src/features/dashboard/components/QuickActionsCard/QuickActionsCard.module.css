@@ -3,9 +3,13 @@
   container-type: inline-size;
 }
 
+/*
+ * As many destinations per row as fit, so a role with three links fills the row
+ * instead of leaving an empty slot, and a narrow tile falls back to one column.
+ */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
   gap: 0.5rem;
 }
 
@@ -25,10 +29,4 @@
 .action:hover,
 .action:focus-visible {
   border-color: var(--color-primary);
-}
-
-@container (max-width: 15rem) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
 }

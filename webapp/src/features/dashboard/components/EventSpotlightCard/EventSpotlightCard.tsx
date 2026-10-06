@@ -55,34 +55,40 @@ function Body({ event }: { event: SpotlightEvent }) {
 
   return (
     <div className={styles.container}>
-      <p className={styles.state} data-live={live || undefined}>
-        {live ? (
-          <>
-            <span className={styles.pulse} aria-hidden="true" />
-            Live · started {priorStartDate}
-            {start.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" })}
-          </>
-        ) : (
-          <>Scheduled · {start.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })}</>
-        )}
-      </p>
-      <h3 className={styles.name}>{event.name}</h3>
-      <p className={styles.format}>{event.format}</p>
-
-      <dl className={styles.stats}>
-        <div>
-          <dt>entries</dt>
-          <dd>{event.entries}</dd>
+      <div className={styles.columns}>
+        <div className={styles.identity}>
+          <p className={styles.state} data-live={live || undefined}>
+            {live ? (
+              <>
+                <span className={styles.pulse} aria-hidden="true" />
+                Live · started {priorStartDate}
+                {start.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" })}
+              </>
+            ) : (
+              <>Scheduled · {start.toLocaleDateString("en-CA", { weekday: "long", month: "short", day: "numeric" })}</>
+            )}
+          </p>
+          <h3 className={styles.name}>{event.name}</h3>
+          <p className={styles.format}>{event.format}</p>
         </div>
-        <div>
-          <dt>rebuys</dt>
-          <dd>{event.rebuys}</dd>
-        </div>
-      </dl>
 
-      <Link className={styles.cta} to={`/admin/events/${event.id}`}>
-        Open event
-      </Link>
+        <div className={styles.details}>
+          <dl className={styles.stats}>
+            <div>
+              <dt>entries</dt>
+              <dd>{event.entries}</dd>
+            </div>
+            <div>
+              <dt>rebuys</dt>
+              <dd>{event.rebuys}</dd>
+            </div>
+          </dl>
+
+          <Link className={styles.cta} to={`/admin/events/${event.id}`}>
+            Open event
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

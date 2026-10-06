@@ -1,5 +1,13 @@
 .container {
   container-type: inline-size;
+}
+
+/*
+ * Stacked in a narrow tile. Given a wide row, the event's name sits beside its counts
+ * and the button, so the card stays short instead of stretching a column of text.
+ */
+.columns,
+.identity {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -90,4 +98,17 @@
   font-weight: var(--font-weight-semibold);
   border-radius: var(--border-radius-md);
   text-decoration: none;
+}
+
+@container (min-width: 32rem) {
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 1rem 2rem;
+    align-items: center;
+  }
+
+  .stats {
+    margin-top: 0;
+  }
 }

@@ -72,51 +72,55 @@ function Body({
 
   return (
     <div className={styles.container}>
-      <p className={styles.lead}>
-        <span className={styles.figure}>{current.players.toLocaleString("en-CA")}</span>
-        <span className={styles.caption}>
-          {total
-            ? `of ${total.toLocaleString("en-CA")} members played at least one event`
-            : "members played at least one event"}
-        </span>
-      </p>
+      <div className={styles.columns}>
+        <div className={styles.summary}>
+          <p className={styles.lead}>
+            <span className={styles.figure}>{current.players.toLocaleString("en-CA")}</span>
+            <span className={styles.caption}>
+              {total
+                ? `of ${total.toLocaleString("en-CA")} members played at least one event`
+                : "members played at least one event"}
+            </span>
+          </p>
 
-      <StatBar
-        ariaLabel="Players by events attended"
-        segments={[
-          { key: "once", label: "played once", value: current.playedOnceCount, color: "var(--dash-ord-1)" },
-          { key: "some", label: "played 2–9", value: cameBack, color: "var(--dash-ord-2)" },
-          { key: "regular", label: "regulars, 10+", value: current.tenPlusCount, color: "var(--dash-ord-3)" },
-        ]}
-      />
+          <StatBar
+            ariaLabel="Players by events attended"
+            segments={[
+              { key: "once", label: "played once", value: current.playedOnceCount, color: "var(--dash-ord-1)" },
+              { key: "some", label: "played 2–9", value: cameBack, color: "var(--dash-ord-2)" },
+              { key: "regular", label: "regulars, 10+", value: current.tenPlusCount, color: "var(--dash-ord-3)" },
+            ]}
+          />
+        </div>
 
-      <div className={styles.tracks}>
-        <RangeTrack
-          label="Median events played"
-          value={current.medianEventsAttended}
-          display={`${current.medianEventsAttended}`}
-          min={MEDIAN_EVENTS_BAND.min}
-          max={MEDIAN_EVENTS_BAND.max}
-          bandLow={MEDIAN_EVENTS_BAND.low}
-          bandHigh={MEDIAN_EVENTS_BAND.high}
-          comparison={
-            comparison ? { value: comparison.stats.medianEventsAttended, label: comparison.semester.name } : undefined
-          }
-        />
-        <RangeTrack
-          label="Played exactly once"
-          value={playedOncePercent}
-          display={`${playedOncePercent}%`}
-          min={PLAYED_ONCE_BAND.min}
-          max={PLAYED_ONCE_BAND.max}
-          bandLow={PLAYED_ONCE_BAND.low}
-          bandHigh={PLAYED_ONCE_BAND.high}
-          comparison={
-            comparison
-              ? { value: Math.round(comparison.stats.playedOnceShare * 100), label: comparison.semester.name }
-              : undefined
-          }
-        />
+        <div className={styles.tracks}>
+          <RangeTrack
+            label="Median events played"
+            value={current.medianEventsAttended}
+            display={`${current.medianEventsAttended}`}
+            min={MEDIAN_EVENTS_BAND.min}
+            max={MEDIAN_EVENTS_BAND.max}
+            bandLow={MEDIAN_EVENTS_BAND.low}
+            bandHigh={MEDIAN_EVENTS_BAND.high}
+            comparison={
+              comparison ? { value: comparison.stats.medianEventsAttended, label: comparison.semester.name } : undefined
+            }
+          />
+          <RangeTrack
+            label="Played exactly once"
+            value={playedOncePercent}
+            display={`${playedOncePercent}%`}
+            min={PLAYED_ONCE_BAND.min}
+            max={PLAYED_ONCE_BAND.max}
+            bandLow={PLAYED_ONCE_BAND.low}
+            bandHigh={PLAYED_ONCE_BAND.high}
+            comparison={
+              comparison
+                ? { value: Math.round(comparison.stats.playedOnceShare * 100), label: comparison.semester.name }
+                : undefined
+            }
+          />
+        </div>
       </div>
 
       <p className={styles.foot}>

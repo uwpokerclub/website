@@ -54,7 +54,9 @@
 
 .dataDetails { font-size: var(--font-size-xs); color: var(--color-gray-700); }
 .dataDetails summary { cursor: pointer; }
-.dataDetails table { border-collapse: collapse; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.dataDetails table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tableScroll { margin-top: 0.5rem; max-width: 100%; overflow-x: auto; }
+.tableScroll:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .dataDetails caption { text-align: left; font-weight: var(--font-weight-semibold); }
 .dataDetails th, .dataDetails td { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--color-gray-200); text-align: right; }
 .dataDetails th:first-child { text-align: left; }

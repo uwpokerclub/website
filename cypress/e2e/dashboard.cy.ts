@@ -23,32 +23,46 @@ const REAL_DASHBOARD_ALIASES = [
 
 type RoleLayout = {
   username: string;
-  lead: (typeof CARD_QAS)[number];
-  wide: readonly (typeof CARD_QAS)[number][];
-  rail: readonly (typeof CARD_QAS)[number][];
+  /** Every card in the role's preset order, lead first — the grid's DOM and visual order. */
+  order: readonly (typeof CARD_QAS)[number][];
 };
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   Ops: {
     username: "dashboard_ops",
-    lead: "event-spotlight-card",
-    wide: ["event-activity-card", "engagement-retention-card", "signup-timeline-card"],
-    rail: ["quick-actions-card", "leaderboard-card", "term-at-a-glance-card", "trial-conversion-card"],
+    order: [
+      "event-spotlight-card",
+      "quick-actions-card",
+      "event-activity-card",
+      "leaderboard-card",
+      "term-at-a-glance-card",
+      "engagement-retention-card",
+      "signup-timeline-card",
+      "trial-conversion-card",
+    ],
   },
   Records: {
     username: "dashboard_records",
-    lead: "trial-conversion-card",
-    wide: ["signup-timeline-card", "event-activity-card", "engagement-retention-card"],
-    rail: ["term-at-a-glance-card", "event-spotlight-card", "leaderboard-card", "quick-actions-card"],
+    order: [
+      "trial-conversion-card",
+      "term-at-a-glance-card",
+      "signup-timeline-card",
+      "event-spotlight-card",
+      "event-activity-card",
+      "engagement-retention-card",
+      "leaderboard-card",
+      "quick-actions-card",
+    ],
   },
   Leadership: {
     username: "dashboard_leadership",
-    lead: "engagement-retention-card",
-    wide: ["event-activity-card", "signup-timeline-card"],
-    rail: [
+    order: [
+      "engagement-retention-card",
+      "event-activity-card",
       "term-at-a-glance-card",
       "trial-conversion-card",
       "event-spotlight-card",
+      "signup-timeline-card",
       "leaderboard-card",
       "quick-actions-card",
     ],
@@ -96,9 +110,9 @@ function visitDashboardWithEventActivity(response: object) {
   return waitForSiblingDashboardRequests("events");
 }
 
-function expectCardOrder(containerQa: string, cards: readonly string[]) {
-  cy.getByData(containerQa)
-    .children()
+function expectCardOrder(cards: readonly string[]) {
+  cy.getByData("dashboard-grid")
+    .find("section[data-qa]")
     .then(($cards) => {
       expect($cards.toArray().map((card) => card.getAttribute("data-qa"))).to.deep.equal(cards);
     });
@@ -113,9 +127,8 @@ describe("Dashboard", () => {
         CARD_QAS.forEach((cardQa) => cy.getByData(cardQa).should("have.length", 1));
         CARD_QAS.forEach((cardQa) => cy.getByData(cardQa).should("have.attr", "data-dashboard-status", "ready"));
         cy.getByData("trial-conversion-card").find('[data-qa="dashboard-card-error"]').should("not.exist");
-        cy.getByData("dashboard-lead").children().should("have.attr", "data-qa", layout.lead);
-        expectCardOrder("dashboard-wide-stack", layout.wide);
-        expectCardOrder("dashboard-rail-lane", layout.rail);
+        cy.getByData("dashboard-lead").children().should("have.attr", "data-qa", layout.order[0]);
+        expectCardOrder(layout.order);
       });
     });
   });
@@ -169,14 +182,17 @@ describe("Dashboard", () => {
         .should("be.visible");
     });
 
+    // Scroll to the caption itself: cards above can still settle after a scroll to the
+    // card's top, which would leave the caption just below the fold.
     cy.getByData("signup-timeline-card")
-      .scrollIntoView()
       .should("have.attr", "data-dashboard-status", "ready")
       .contains("memberships created")
+      .scrollIntoView()
       .should("be.visible");
-    cy.getByData("signup-timeline-card").contains("Winter 2024 daily total").should("be.visible");
+    cy.getByData("signup-timeline-card").contains("Winter 2024 daily total").scrollIntoView().should("be.visible");
     cy.getByData("signup-timeline-card")
       .contains("the comparison line can omit undated memberships")
+      .scrollIntoView()
       .should("be.visible");
   });
 
@@ -264,36 +280,6 @@ describe("Dashboard", () => {
     waitForRealDashboardRequests().then((interceptions) => {
       interceptions.forEach((interception) => {
         expect(interception.request.url).to.contain(`/semesters/${SWITCHED_SEMESTER_ID}/`);
-      });
-    });
-  });
-
-  context("responsive lanes", () => {
-    beforeEach(() => visitDashboard());
-
-    it("uses two lanes when the dashboard container is wide", () => {
-      cy.viewport(1440, 900);
-      cy.getByData("dashboard-wide-lane").then(($wide) => {
-        cy.getByData("dashboard-rail-lane").then(($rail) => {
-          const wide = $wide[0].getBoundingClientRect();
-          const rail = $rail[0].getBoundingClientRect();
-
-          expect(rail.left).to.be.greaterThan(wide.left);
-          expect(rail.top).to.equal(wide.top);
-        });
-      });
-    });
-
-    it("collapses to one lane when the dashboard container is narrow", () => {
-      cy.viewport(768, 900);
-      cy.getByData("dashboard-wide-lane").then(($wide) => {
-        cy.getByData("dashboard-rail-lane").then(($rail) => {
-          const wide = $wide[0].getBoundingClientRect();
-          const rail = $rail[0].getBoundingClientRect();
-
-          expect(rail.top).to.be.greaterThan(wide.bottom);
-          expect(rail.left).to.equal(wide.left);
-        });
       });
     });
   });

@@ -1,8 +1,10 @@
+import { useId } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { DashboardCard } from "../DashboardCard";
 import { CardActionLink } from "../CardActionLink";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useEventActivity } from "../../hooks/useDashboardQueries";
+import { ActiveTooltipContent } from "../../charts/ActiveTooltipContent";
 import { AXIS_PROPS, CHART_COLORS, GRID_PROPS, TOOLTIP_STYLE } from "../../charts/chartTheme";
 import type { EventActivityResponse } from "../../api/dashboardApi";
 import styles from "./EventActivityCard.module.css";
@@ -42,6 +44,7 @@ export function EventActivityCard({ semesterId }: Props) {
  * most misread form there is.
  */
 function Body({ data }: { data: EventActivityResponse }) {
+  const captionId = useId();
   const { eventsRun, eventsScheduled, totalEntries, averageFieldSize, series } = data.current;
 
   // The two counts are disjoint — ended and not-yet-ended — so the term's total is
@@ -90,7 +93,7 @@ function Body({ data }: { data: EventActivityResponse }) {
           ))}
       </div>
 
-      <div className={styles.chart}>
+      <div className={styles.chart} data-qa="event-activity-chart">
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid {...GRID_PROPS} />
@@ -111,7 +114,7 @@ function Body({ data }: { data: EventActivityResponse }) {
               ]}
               tickFormatter={(value: number) => Math.round(value).toLocaleString("en-CA")}
             />
-            <Tooltip {...TOOLTIP_STYLE} />
+            <Tooltip {...TOOLTIP_STYLE} content={ActiveTooltipContent} />
             {eventsRun > 0 && (
               <ReferenceLine
                 y={average}
@@ -143,25 +146,35 @@ function Body({ data }: { data: EventActivityResponse }) {
 
       <details className={styles.dataDetails}>
         <summary>View event entry data</summary>
-        <table>
-          <caption>Event entries for {data.current.series.length} events</caption>
-          <thead>
-            <tr>
-              <th scope="col">Event</th>
-              <th scope="col">Date</th>
-              <th scope="col">Entries</th>
-            </tr>
-          </thead>
-          <tbody>
-            {series.map((event) => (
-              <tr key={event.id}>
-                <th scope="row">{event.name}</th>
-                <td>{event.startDate}</td>
-                <td>{event.entries}</td>
+        {/* Wide tables scroll inside the card rather than widening it; the region is
+            focusable so the scroll is reachable from the keyboard. */}
+        <div
+          className={styles.tableScroll}
+          role="region"
+          aria-labelledby={captionId}
+          tabIndex={0}
+          data-qa="event-activity-table"
+        >
+          <table>
+            <caption id={captionId}>Event entries for {data.current.series.length} events</caption>
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                <th scope="col">Date</th>
+                <th scope="col">Entries</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {series.map((event) => (
+                <tr key={event.id}>
+                  <th scope="row">{event.name}</th>
+                  <td>{event.startDate}</td>
+                  <td>{event.entries}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </details>
 
       <p className={styles.foot}>

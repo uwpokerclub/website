@@ -57,10 +57,6 @@ function cardTitleOrder() {
   return screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
 }
 
-function titlesIn(testId: string) {
-  return Array.from(screen.getByTestId(testId).querySelectorAll("h2")).map((heading) => heading.textContent);
-}
-
 describe("Dashboard", () => {
   it("no longer renders the ComingSoon placeholder", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.EXECUTIVE }, hasPermission: () => true });
@@ -80,17 +76,19 @@ describe("Dashboard", () => {
     expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Engagement & retention");
   });
 
-  it("routes chart cards to the wide lane and stat cards to the rail, preset order intact", () => {
+  it("renders every card in one grid, in the role's preset order", () => {
     mockedUseAuth.mockReturnValue({ user: { role: ROLES.PRESIDENT }, hasPermission: () => true });
     mockedUseCurrentSemester.mockReturnValue({ currentSemester: semester });
 
     renderDashboard();
 
-    expect(titlesIn("dashboard-wide")).toEqual(["Event activity", "Signup timeline"]);
-    expect(titlesIn("dashboard-rail")).toEqual([
+    expect(cardTitleOrder()).toEqual([
+      "Engagement & retention",
+      "Event activity",
       "Memberships",
       "Trial conversion",
       "Event spotlight",
+      "Signup timeline",
       "Leaderboard",
       "Quick actions",
     ]);
@@ -164,12 +162,12 @@ describe("Dashboard", () => {
     expect(screen.getByTestId("dashboard-lead")).toHaveTextContent("Event spotlight");
     expect(cardTitleOrder()).toEqual([
       "Event spotlight",
-      "Event activity",
-      "Engagement & retention",
-      "Signup timeline",
       "Quick actions",
+      "Event activity",
       "Leaderboard",
       "Memberships",
+      "Engagement & retention",
+      "Signup timeline",
       "Trial conversion",
     ]);
   });

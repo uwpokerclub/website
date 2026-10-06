@@ -1,3 +1,4 @@
+import { useId } from "react";
 import {
   Area,
   ComposedChart,
@@ -14,6 +15,7 @@ import { DashboardCard } from "../DashboardCard";
 import { CardActionLink } from "../CardActionLink";
 import { CARD_TITLES } from "../../dashboardLayout";
 import { useSignups } from "../../hooks/useDashboardQueries";
+import { ActiveTooltipContent } from "../../charts/ActiveTooltipContent";
 import { AXIS_PROPS, CHART_COLORS, GRID_PROPS, TOOLTIP_STYLE } from "../../charts/chartTheme";
 import type { SignupsResponse } from "../../api/dashboardApi";
 import styles from "./SignupTimelineCard.module.css";
@@ -48,6 +50,7 @@ export function SignupTimelineCard({ semesterId }: Props) {
 }
 
 function Body({ data }: { data: SignupsResponse }) {
+  const captionId = useId();
   const busiest = data.series.reduce((max, point) => Math.max(max, point.admin + point.discord + point.unknown), 0);
   const comparisonByDay = new Map(data.comparison?.dailyTotals.map((point) => [point.elapsedDay, point.total]) ?? []);
   const firstDate = data.series[0]?.date;
@@ -74,7 +77,7 @@ function Body({ data }: { data: SignupsResponse }) {
         <span className={styles.caption}>memberships created, {busiest} on the busiest day</span>
       </p>
 
-      <div className={styles.chart}>
+      <div className={styles.chart} data-qa="signup-timeline-chart">
         <ResponsiveContainer width="100%" height={170}>
           <ComposedChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
             <CartesianGrid {...GRID_PROPS} />
@@ -85,7 +88,7 @@ function Body({ data }: { data: SignupsResponse }) {
               allowDecimals={false}
               tickFormatter={(value: number) => Math.round(value).toLocaleString("en-CA")}
             />
-            <Tooltip {...TOOLTIP_STYLE} />
+            <Tooltip {...TOOLTIP_STYLE} content={ActiveTooltipContent} />
             <Legend wrapperStyle={{ fontSize: 11, fontFamily: "Montserrat, sans-serif" }} />
             {/* The spikes are the event days; without them the series is unreadable. */}
             {[...eventDates].map((date) => (
@@ -142,34 +145,44 @@ function Body({ data }: { data: SignupsResponse }) {
 
       <details className={styles.dataDetails}>
         <summary>View daily signup data</summary>
-        <table>
-          <caption>
-            Daily memberships created by source
-            {data.comparison ? ` and ${data.comparison.semester.name} comparison` : ""}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">Admin</th>
-              <th scope="col">Discord</th>
-              <th scope="col">Unknown</th>
-              <th scope="col">Event day</th>
-              {data.comparison && <th scope="col">{data.comparison.semester.name}</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {chartData.map((point) => (
-              <tr key={point.date}>
-                <th scope="row">{point.date}</th>
-                <td>{point.admin}</td>
-                <td>{point.discord}</td>
-                <td>{point.unknown}</td>
-                <td>{eventDates.has(point.date) ? "Yes" : "No"}</td>
-                {data.comparison && <td>{point.comparisonTotal ?? "—"}</td>}
+        {/* Wide tables scroll inside the card rather than widening it; the region is
+            focusable so the scroll is reachable from the keyboard. */}
+        <div
+          className={styles.tableScroll}
+          role="region"
+          aria-labelledby={captionId}
+          tabIndex={0}
+          data-qa="signup-timeline-table"
+        >
+          <table>
+            <caption id={captionId}>
+              Daily memberships created by source
+              {data.comparison ? ` and ${data.comparison.semester.name} comparison` : ""}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Admin</th>
+                <th scope="col">Discord</th>
+                <th scope="col">Unknown</th>
+                <th scope="col">Event day</th>
+                {data.comparison && <th scope="col">{data.comparison.semester.name}</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {chartData.map((point) => (
+                <tr key={point.date}>
+                  <th scope="row">{point.date}</th>
+                  <td>{point.admin}</td>
+                  <td>{point.discord}</td>
+                  <td>{point.unknown}</td>
+                  <td>{eventDates.has(point.date) ? "Yes" : "No"}</td>
+                  {data.comparison && <td>{point.comparisonTotal ?? "—"}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </details>
 
       <p className={styles.foot}>

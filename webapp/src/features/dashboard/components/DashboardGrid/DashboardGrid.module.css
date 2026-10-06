@@ -1,7 +1,7 @@
 /*
  * Two elements, not one, and deliberately so: an element is never its own query
  * container. `.container` establishes the containment context and `.grid` — its
- * child — is what the @container rule below can actually match.
+ * child — is what the @container rules below can actually match.
  *
  * It is a container rather than a media query because the dashboard sits in a flex
  * lane beside the admin sidenav, so viewport width systematically overstates the
@@ -11,35 +11,50 @@
   container-type: inline-size;
 }
 
+/*
+ * One column on narrow screens; above that, twelve columns that every row fills
+ * exactly (see dashboardRows.ts). Cards keep their natural heights — their content
+ * differs too much for a shared row height to look anything but empty — so cells
+ * align to the top of their row.
+ */
 .grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
 }
 
-.wideLane,
-.rail,
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+/* min-width: 0 lets charts and long text shrink with the cell instead of widening it. */
+.cell {
   min-width: 0;
 }
 
 /*
- * Every card's lead figure is sized from --card-figure-size. Only this wrapper
+ * Every card's lead figure is sized from --card-figure-size. Only this cell
  * overrides it, so promotion to lead is a single cascade step and a card never needs
- * to know which lane it landed in.
+ * to know where it landed.
  */
 .lead {
   --card-figure-size: var(--font-size-5xl);
-
-  min-width: 0;
 }
 
-@container (min-width: 64rem) {
+@container (min-width: 36rem) {
   .grid {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .cell {
+    grid-column: span var(--dashboard-span-medium, 12);
+  }
+}
+
+/*
+ * 58rem rather than a round 60: at a 1280px viewport with the sidenav expanded the
+ * container is ~59–60rem depending on whether the page has a vertical scrollbar, and
+ * a threshold there flips the whole layout as content loads.
+ */
+@container (min-width: 58rem) {
+  .cell {
+    grid-column: span var(--dashboard-span-wide, 12);
   }
 }

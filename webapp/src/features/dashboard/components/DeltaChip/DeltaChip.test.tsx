@@ -134,7 +134,22 @@ describe("DeltaChip", () => {
   it("hides the visible text from assistive tech and exposes only the full sentence", () => {
     render(<DeltaChip current={142} comparison={100} comparisonLabel="Fall 2025" sentiment="positive-is-good" />);
 
-    const visible = screen.getByText("▲ +42 (+42%) vs Fall 2025");
-    expect(visible).toHaveAttribute("aria-hidden", "true");
+    const visible = screen.getByText("▲ +42 (+42%)").closest('[aria-hidden="true"]');
+    expect(visible).toHaveTextContent("▲ +42 (+42%) vs Fall 2025");
+  });
+
+  it("renders the change as its own element apart from the wrapping comparison label", () => {
+    render(
+      <DeltaChip
+        current={367}
+        comparison={595}
+        comparisonLabel="memberships by this point in Fall 2025"
+        sentiment="positive-is-good"
+      />,
+    );
+
+    const change = screen.getByText("▼ −228 (−38%)");
+    expect(change).toHaveTextContent(/^▼ −228 \(−38%\)$/);
+    expect(change.parentElement).toHaveTextContent("▼ −228 (−38%) vs memberships by this point in Fall 2025");
   });
 });

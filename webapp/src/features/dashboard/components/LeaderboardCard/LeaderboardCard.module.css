@@ -24,14 +24,14 @@
   flex-shrink: 0;
 }
 
+/* Long names wrap rather than truncate: a cut-off name can be the wrong person. */
 .name {
   font-size: var(--font-size-xs);
   color: var(--color-gray-900);
   flex: 1 1 5.5rem;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
 .bar {

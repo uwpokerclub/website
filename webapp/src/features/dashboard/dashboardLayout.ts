@@ -21,19 +21,30 @@ export const CARD_TITLES: Record<DashboardCardId, string> = {
   trialConversion: "Trial conversion",
 };
 
-export type CardLane = "wide" | "rail";
+/** Width in columns of the dashboard's 12-column grid. */
+export type ColumnSpan = 4 | 6 | 8 | 12;
 
-// Cards carrying a chart or a distribution need the wide lane; everything else reads
-// fine in the rail, and routing it there is what keeps the page gap-free at any width.
-export const CARD_LANES: Record<DashboardCardId, CardLane> = {
-  spotlight: "rail",
-  quickActions: "rail",
-  termAtAGlance: "rail",
-  signupTimeline: "wide",
-  eventActivity: "wide",
-  engagement: "wide",
-  leaderboard: "rail",
-  trialConversion: "rail",
+export type CardSize = {
+  /** The narrowest span the card's content still reads well at. */
+  min: ColumnSpan;
+  /** The span the card takes when its row has room. */
+  preferred: ColumnSpan;
+};
+
+// Charts need the width to show a series; the engagement distribution and its range
+// tracks read best wide but survive half a row. Trial conversion compares two terms
+// side by side when it has two thirds of a row, and stacks tall without it. Everything
+// else is a compact stat or a short list that a third of a row holds comfortably, and
+// that widens when its row has room to spare.
+export const CARD_SIZES: Record<DashboardCardId, CardSize> = {
+  spotlight: { min: 4, preferred: 4 },
+  quickActions: { min: 4, preferred: 4 },
+  termAtAGlance: { min: 4, preferred: 4 },
+  signupTimeline: { min: 8, preferred: 12 },
+  eventActivity: { min: 8, preferred: 8 },
+  engagement: { min: 6, preferred: 8 },
+  leaderboard: { min: 4, preferred: 4 },
+  trialConversion: { min: 4, preferred: 8 },
 };
 
 const OPS_LAYOUT: readonly DashboardCardId[] = [

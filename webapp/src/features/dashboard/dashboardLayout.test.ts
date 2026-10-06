@@ -1,4 +1,4 @@
-import { CARD_LANES, CARD_TITLES, resolveDashboardLayout } from "./dashboardLayout";
+import { CARD_SIZES, CARD_TITLES, resolveDashboardLayout } from "./dashboardLayout";
 import { ROLES } from "@/types/roles";
 
 describe("resolveDashboardLayout", () => {
@@ -76,12 +76,13 @@ describe("eight-card presets", () => {
     expect(resolveDashboardLayout(ROLES.TOURNAMENT_DIRECTOR)[0]).toBe("spotlight");
   });
 
-  it("routes only the charting cards to the wide lane", () => {
-    expect(CARD_LANES.signupTimeline).toBe("wide");
-    expect(CARD_LANES.eventActivity).toBe("wide");
-    expect(CARD_LANES.engagement).toBe("wide");
-    expect(CARD_LANES.leaderboard).toBe("rail");
-    expect(CARD_LANES.quickActions).toBe("rail");
+  it("asks for wide rows for the charting cards and the two-term conversion card", () => {
+    expect(CARD_SIZES.signupTimeline.min).toBe(8);
+    expect(CARD_SIZES.eventActivity.min).toBe(8);
+    expect(CARD_SIZES.engagement.preferred).toBe(8);
+    expect(CARD_SIZES.leaderboard).toEqual({ min: 4, preferred: 4 });
+    expect(CARD_SIZES.quickActions).toEqual({ min: 4, preferred: 4 });
+    expect(CARD_SIZES.trialConversion).toEqual({ min: 4, preferred: 8 });
     expect(CARD_TITLES.trialConversion).toBe("Trial conversion");
   });
 });

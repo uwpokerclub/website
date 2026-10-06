@@ -1,28 +1,42 @@
-import { ReactNode } from "react";
+import { CSSProperties, ReactNode } from "react";
+import type { PlacedCard } from "../../dashboardRows";
 import styles from "./DashboardGrid.module.css";
 
+export type DashboardGridItem = PlacedCard & { content: ReactNode };
+
 type DashboardGridProps = {
-  lead: ReactNode;
-  wide: ReactNode;
-  rail: ReactNode;
+  items: DashboardGridItem[];
   "data-qa"?: string;
 };
 
-export function DashboardGrid({ lead, wide, rail, "data-qa": dataQa }: DashboardGridProps) {
+/**
+ * One grid for every card, in the order given. Each cell carries its spans as custom
+ * properties and the stylesheet's container queries choose which applies, so the
+ * layout follows the room the dashboard actually has rather than the viewport.
+ */
+export function DashboardGrid({ items, "data-qa": dataQa }: DashboardGridProps) {
   return (
     <div className={styles.container} data-qa={dataQa}>
       <div className={styles.grid}>
-        <div className={styles.wideLane} data-qa="dashboard-wide-lane">
-          <div className={styles.lead} data-testid="dashboard-lead" data-qa="dashboard-lead">
-            {lead}
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={item.lead ? `${styles.cell} ${styles.lead}` : styles.cell}
+            style={
+              {
+                "--dashboard-span-medium": item.spans.medium,
+                "--dashboard-span-wide": item.spans.wide,
+              } as CSSProperties
+            }
+            data-qa={item.lead ? "dashboard-lead" : "dashboard-cell"}
+            data-testid={item.lead ? "dashboard-lead" : undefined}
+            data-card={item.id}
+            data-span-medium={item.spans.medium}
+            data-span-wide={item.spans.wide}
+          >
+            {item.content}
           </div>
-          <div className={styles.stack} data-testid="dashboard-wide" data-qa="dashboard-wide-stack">
-            {wide}
-          </div>
-        </div>
-        <div className={styles.rail} data-testid="dashboard-rail" data-qa="dashboard-rail-lane">
-          {rail}
-        </div>
+        ))}
       </div>
     </div>
   );

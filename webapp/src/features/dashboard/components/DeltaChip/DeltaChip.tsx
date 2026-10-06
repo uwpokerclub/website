@@ -98,11 +98,15 @@ export function DeltaChip({
   const tone = resolveTone(direction, sentiment);
   const visible = formatVisible(current, comparison, direction, mode);
   const ariaLabel = formatAriaLabel(current, comparison, direction, comparisonLabel, mode);
-  const visibleText = compact ? visible : `${visible} vs ${comparisonLabel}`;
 
+  // The change itself never breaks; the "vs" label wraps beneath it when the chip
+  // runs out of room, so a long term name cannot push the chip past its card.
   return (
     <span className={`${styles.chip} ${styles[tone]}`} data-qa="delta-chip" data-tone={tone}>
-      <span aria-hidden="true">{visibleText}</span>
+      <span aria-hidden="true">
+        <span className={styles.change}>{visible}</span>
+        {!compact && <> vs {comparisonLabel}</>}
+      </span>
       <span className={styles.srOnly}>{ariaLabel}</span>
     </span>
   );

@@ -21,33 +21,10 @@ func NewMembershipService(st store.Store) *membershipService {
 	}
 }
 
-// CreateMembership creates a membership in a transaction owned by this method.
-// ms.store must be a root store; callers composing work into an existing
-// transaction should call CreateMembershipInTx with that transaction.
-func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.CreateMembershipRequest, source models.MembershipSource) (*models.Membership, error) {
-	if err := validateCreateMembership(req); err != nil {
-		return nil, err
-	}
-
-	tx, err := ms.store.BeginTx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	membership, err := ms.CreateMembershipInTx(tx, semesterID, req, source)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return membership, nil
-}
-
-func validateCreateMembership(req *models.CreateMembershipRequest) error {
+// ValidateCreateMembershipRequest applies the create-only membership state
+// validation. Controllers can call it before beginning a transaction; the
+// service method also calls it so every caller gets the same validation.
+func ValidateCreateMembershipRequest(req *models.CreateMembershipRequest) error {
 	if !req.Paid && req.Discounted {
 		return errors.New("cannot create membership that is not paid and discounted")
 	}
@@ -59,12 +36,16 @@ func validateCreateMembership(req *models.CreateMembershipRequest) error {
 	return nil
 }
 
-// CreateMembershipInTx creates a membership and applies its budget effect using
-// the caller-owned transaction. It never begins, commits, or rolls back tx.
-func (ms *membershipService) CreateMembershipInTx(tx store.Store, semesterID uuid.UUID, req *models.CreateMembershipRequest, source models.MembershipSource) (*models.Membership, error) {
-	if err := validateCreateMembership(req); err != nil {
+// CreateMembership writes through the store supplied to NewMembershipService.
+// The store must be an active caller-owned transaction; the caller is
+// responsible for beginning, committing, or rolling it back.
+func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.CreateMembershipRequest, source models.MembershipSource) (*models.Membership, error) {
+	if err := ValidateCreateMembershipRequest(req); err != nil {
 		return nil, err
 	}
+
+	tx := ms.store
+	var err error
 
 	membership := models.Membership{
 		UserID:     req.UserID,
@@ -97,31 +78,13 @@ func (ms *membershipService) CreateMembershipInTx(tx store.Store, semesterID uui
 	return &membership, nil
 }
 
-// UpdateMembership updates a membership in a transaction owned by this method.
-// ms.store must be a root store; callers composing work into an existing
-// transaction should call UpdateMembershipInTx with that transaction.
+// UpdateMembership writes through the store supplied to NewMembershipService.
+// The store must be an active caller-owned transaction; the caller is
+// responsible for beginning, committing, or rolling it back.
 func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
-	tx, err := ms.store.BeginTx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
+	tx := ms.store
+	var err error
 
-	updated, err := ms.UpdateMembershipInTx(tx, id, semesterID, req)
-	if err != nil || updated == nil {
-		return updated, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return updated, nil
-}
-
-// UpdateMembershipInTx applies a membership update using the caller-owned
-// transaction. It never begins, commits, or rolls back tx.
-func (ms *membershipService) UpdateMembershipInTx(tx store.Store, id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
 	// Serialize status transitions with trial entry creation and use the locked
 	// row as the source of truth for both eligibility and budget deltas.
 	existingMembership, err := tx.Memberships().LockByIDAndSemesterID(id, semesterID)

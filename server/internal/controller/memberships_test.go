@@ -163,6 +163,10 @@ func TestCreateMembership(t *testing.T) {
 
 			// Seed test data
 			require.NoError(t, testutils.SeedAll(db))
+			var semesterBefore models.Semester
+			if tc.expectedStatus == http.StatusCreated {
+				require.NoError(t, db.First(&semesterBefore, "id = ?", tc.semesterID).Error)
+			}
 
 			// Setup authentication
 			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
@@ -198,9 +202,124 @@ func TestCreateMembership(t *testing.T) {
 				require.Equal(t, tc.requestBody["paid"], membership.Paid)
 				require.Equal(t, tc.requestBody["discounted"], membership.Discounted)
 				require.Equal(t, tc.requestBody["executive"] == true, membership.Executive)
+
+				var persisted models.Membership
+				require.NoError(t, db.First(&persisted, "id = ?", membership.ID).Error)
+				require.Equal(t, membership.UserID, persisted.UserID)
+				require.Equal(t, membership.Paid, persisted.Paid)
+				require.Equal(t, membership.Discounted, persisted.Discounted)
+				require.Equal(t, membership.Executive, persisted.Executive)
+
+				var semesterAfter models.Semester
+				require.NoError(t, db.First(&semesterAfter, "id = ?", tc.semesterID).Error)
+				expectedBudget := semesterBefore.CurrentBudget
+				if membership.Paid {
+					fee := semesterBefore.MembershipFee
+					if membership.Discounted {
+						fee = semesterBefore.MembershipDiscountFee
+					}
+					expectedBudget += float32(fee)
+				}
+				require.InDelta(t, expectedBudget, semesterAfter.CurrentBudget, 0.001)
 			}
 		})
 	}
+}
+
+func TestCreateMembershipRollsBackWhenBudgetUpdateFails(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+	apiServer := testutils.NewTestAPIServer(db)
+	semester := testutils.TEST_SEMESTERS[0]
+	user := testutils.TEST_USERS[3]
+	var semesterBefore models.Semester
+	require.NoError(t, db.First(&semesterBefore, "id = ?", semester.ID).Error)
+
+	require.NoError(t, db.Exec(`
+		CREATE FUNCTION reject_membership_budget_update() RETURNS trigger AS $$
+		BEGIN
+			RAISE EXCEPTION 'forced membership budget update failure';
+		END;
+		$$ LANGUAGE plpgsql;
+	`).Error)
+	require.NoError(t, db.Exec(`
+		CREATE TRIGGER reject_membership_budget_update
+		BEFORE UPDATE OF current_budget ON semesters
+		FOR EACH ROW EXECUTE FUNCTION reject_membership_budget_update();
+	`).Error)
+
+	sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+	require.NoError(t, err)
+	req, err := testutils.MakeJSONRequest("POST", fmt.Sprintf("/api/v2/semesters/%s/memberships", semester.ID), map[string]any{
+		"userId": user.ID,
+		"paid":   true,
+	})
+	require.NoError(t, err)
+	testutils.SetAuthCookie(req, sessionID)
+	w := httptest.NewRecorder()
+	apiServer.ServeHTTP(w, req)
+	require.Equal(t, http.StatusInternalServerError, w.Code, "Response: %s", w.Body.String())
+
+	var membershipCount int64
+	require.NoError(t, db.Model(&models.Membership{}).Where("user_id = ? AND semester_id = ?", user.ID, semester.ID).Count(&membershipCount).Error)
+	require.Zero(t, membershipCount, "failed budget credit must roll back the inserted membership")
+	var semesterAfter models.Semester
+	require.NoError(t, db.First(&semesterAfter, "id = ?", semester.ID).Error)
+	require.Equal(t, semesterBefore.CurrentBudget, semesterAfter.CurrentBudget, "failed create must not change the semester budget")
+}
+
+func TestUpdateMembershipRollsBackWhenMembershipUpdateFails(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	require.NoError(t, testutils.SeedAll(db))
+	apiServer := testutils.NewTestAPIServer(db)
+	membership := testutils.TEST_MEMBERSHIPS[2]
+	require.NoError(t, db.Model(&models.Membership{}).Where("id = ?", membership.ID).Update("paid", false).Error)
+	var semesterBefore models.Semester
+	require.NoError(t, db.First(&semesterBefore, "id = ?", membership.SemesterID).Error)
+
+	require.NoError(t, db.Exec(`
+		CREATE FUNCTION reject_paid_membership_update_from_controller() RETURNS trigger AS $$
+		BEGIN
+			IF NEW.paid AND NOT OLD.paid THEN
+				RAISE EXCEPTION 'forced paid membership update failure';
+			END IF;
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql;
+	`).Error)
+	require.NoError(t, db.Exec(`
+		CREATE TRIGGER reject_paid_membership_update_from_controller
+		BEFORE UPDATE OF paid ON memberships
+		FOR EACH ROW EXECUTE FUNCTION reject_paid_membership_update_from_controller();
+	`).Error)
+
+	sessionID, err := testutils.CreateTestSession(db, "testuser", authorization.ROLE_TOURNAMENT_DIRECTOR.ToString())
+	require.NoError(t, err)
+	req, err := testutils.MakeJSONRequest("PATCH", fmt.Sprintf("/api/v2/semesters/%s/memberships/%s", membership.SemesterID, membership.ID), map[string]any{"paid": true})
+	require.NoError(t, err)
+	testutils.SetAuthCookie(req, sessionID)
+	w := httptest.NewRecorder()
+	apiServer.ServeHTTP(w, req)
+	require.Equal(t, http.StatusInternalServerError, w.Code, "Response: %s", w.Body.String())
+
+	var stored models.Membership
+	require.NoError(t, db.First(&stored, "id = ?", membership.ID).Error)
+	require.False(t, stored.Paid)
+	var semesterAfter models.Semester
+	require.NoError(t, db.First(&semesterAfter, "id = ?", membership.SemesterID).Error)
+	require.Equal(t, semesterBefore.CurrentBudget, semesterAfter.CurrentBudget, "failed update must roll back the budget adjustment")
 }
 
 func TestListMemberships(t *testing.T) {
@@ -387,7 +506,7 @@ func TestListMemberships(t *testing.T) {
 			expectedTotal:  2,
 		},
 		{
-			name: "filter by executive status",
+			name:           "filter by executive status",
 			userRole:       authorization.ROLE_BOT.ToString(),
 			semesterID:     testutils.TEST_SEMESTERS[3].ID.String(),
 			queryParams:    "?executive=true",

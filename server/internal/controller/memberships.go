@@ -99,7 +99,19 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(c.store)
+	if err := services.ValidateCreateMembershipRequest(&req); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+
+	tx, err := c.store.BeginTx()
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+	defer tx.Rollback()
+
+	svc := services.NewMembershipService(tx)
 	membership, err := svc.CreateMembership(semesterID, &req, membershipSourceFromContext(ctx))
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
@@ -126,6 +138,15 @@ func (c *membershipsController) createMembership(ctx *gin.Context) {
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),
 		)
+		return
+	}
+
+	if membership == nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError("membership creation returned no result"))
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
 
@@ -300,7 +321,14 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 		return
 	}
 
-	svc := services.NewMembershipService(c.store)
+	tx, err := c.store.BeginTx()
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		return
+	}
+	defer tx.Rollback()
+
+	svc := services.NewMembershipService(tx)
 	membership, err := svc.UpdateMembership(membershipID, semesterID, &req)
 	if err != nil {
 		if apiErr, ok := err.(apierrors.APIErrorResponse); ok {
@@ -335,6 +363,11 @@ func (c *membershipsController) updateMembership(ctx *gin.Context) {
 			http.StatusNotFound,
 			apierrors.NotFound("Membership with ID '"+membershipID.String()+"' not found"),
 		)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
 

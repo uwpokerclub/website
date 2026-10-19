@@ -29,9 +29,7 @@ func TestMembershipService_CreateMembership_InvalidState(t *testing.T) {
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
-	_, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	_, err := createMembershipInTestTx(t, st, semester.ID, &models.CreateMembershipRequest{
 		UserID:     1,
 		Paid:       false,
 		Discounted: true,
@@ -48,10 +46,8 @@ func TestMembershipService_UpdateMembership_NotFound(t *testing.T) {
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
 	paid := true
-	membership, err := svc.UpdateMembership(uuid.New(), semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	membership, err := updateMembershipInTestTx(t, st, uuid.New(), semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 	require.Nil(t, membership)
 }
@@ -62,9 +58,7 @@ func TestMembershipService_CreateMembership_Paid(t *testing.T) {
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
-	created, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	created, err := createMembershipInTestTx(t, st, semester.ID, &models.CreateMembershipRequest{
 		UserID: 1,
 		Paid:   true,
 	}, models.MembershipSourceAdmin)
@@ -83,9 +77,7 @@ func TestMembershipService_CreateMembership_PaidDiscounted(t *testing.T) {
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
-	_, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	_, err := createMembershipInTestTx(t, st, semester.ID, &models.CreateMembershipRequest{
 		UserID:     1,
 		Paid:       true,
 		Discounted: true,
@@ -103,9 +95,7 @@ func TestMembershipService_CreateMembership_Unpaid(t *testing.T) {
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
-	_, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	_, err := createMembershipInTestTx(t, st, semester.ID, &models.CreateMembershipRequest{
 		UserID: 1,
 		Paid:   false,
 	}, models.MembershipSourceAdmin)
@@ -125,10 +115,8 @@ func TestMembershipService_UpdateMembership_MarkPaid(t *testing.T) {
 
 	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: false}
 	require.NoError(t, st.Memberships().Create(membership))
-
-	svc := NewMembershipService(st)
 	paid := true
-	_, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	_, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 
 	found, err := st.Semesters().FindByID(semester.ID)
@@ -188,9 +176,7 @@ func TestMembershipService_UpdateMembership_InvalidState(t *testing.T) {
 
 			before, err := st.Semesters().FindByID(semester.ID)
 			require.NoError(t, err)
-
-			svc := NewMembershipService(st)
-			updated, err := svc.UpdateMembership(membership.ID, semester.ID, tc.req)
+			updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, tc.req)
 
 			require.Error(t, err)
 			require.Nil(t, updated)
@@ -225,10 +211,8 @@ func TestMembershipService_UpdateMembership_MarkPaid_ResetsStaleFreeTrialFlag(t 
 	trialStartedAt := time.Date(2026, 9, 10, 20, 0, 0, 0, time.UTC)
 	require.NoError(t, st.Memberships().SetTrialStartedAtIfNull(membership.ID, trialStartedAt))
 	require.NoError(t, st.Memberships().SetFreeTrialAvailable(membership.ID, false))
-
-	svc := NewMembershipService(st)
 	paid := true
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 	require.True(t, updated.FreeTrialAvailable, "marking a membership paid should reset a stale exhausted-trial flag")
 
@@ -240,10 +224,10 @@ func TestMembershipService_UpdateMembership_MarkPaid_ResetsStaleFreeTrialFlag(t 
 	firstConversion := *stored.ConvertedAt
 
 	paid = false
-	_, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	_, err = updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 	paid = true
-	_, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	_, err = updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 	stored, err = st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
 	require.NoError(t, err)
@@ -260,21 +244,19 @@ func TestMembershipService_UpdateMembership_ExecutiveCompPreservesTrialWithoutCo
 	require.NoError(t, st.Memberships().Create(membership))
 	startedAt := time.Date(2026, 9, 12, 20, 0, 0, 0, time.UTC)
 	require.NoError(t, st.Memberships().SetTrialStartedAtIfNull(membership.ID, startedAt))
-
-	svc := NewMembershipService(st)
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
 	require.NoError(t, err)
 	require.True(t, updated.Executive)
 	require.Nil(t, updated.ConvertedAt, "becoming an executive is a comp, not a paid conversion")
 	require.Equal(t, startedAt, *updated.TrialStartedAt, "comp transitions preserve the observed trial cohort")
 
-	updated, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
+	updated, err = updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
 	require.NoError(t, err)
 	require.False(t, updated.Executive)
 	require.Equal(t, startedAt, *updated.TrialStartedAt)
 	require.Nil(t, updated.ConvertedAt)
 
-	updated, err = svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: boolPtr(true)})
+	updated, err = updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: boolPtr(true)})
 	require.NoError(t, err)
 	require.NotNil(t, updated.ConvertedAt)
 	require.Equal(t, startedAt, *updated.TrialStartedAt)
@@ -296,10 +278,8 @@ func TestMembershipService_UpdateMembership_UnmarkPaid_RecomputesFreeTrialFlag(t
 	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: true}
 	require.NoError(t, st.Memberships().Create(membership))
 	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
-
-	svc := NewMembershipService(st)
 	paid := false
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 	require.False(t, updated.FreeTrialAvailable, "unpaying a membership already at its attendance limit should recompute the flag as exhausted")
 
@@ -324,10 +304,8 @@ func TestMembershipService_UpdateMembership_UnmarkPaid_ExecutiveFreeTrialFlagUnt
 	membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Paid: true, Executive: true}
 	require.NoError(t, st.Memberships().Create(membership))
 	require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
-
-	svc := NewMembershipService(st)
 	paid := false
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: &paid})
 	require.NoError(t, err)
 	require.True(t, updated.FreeTrialAvailable, "unpaying an executive membership must not recompute the free-trial flag")
 
@@ -362,7 +340,7 @@ func (s *membershipLifecycleSpy) Rollback() error {
 	return s.Store.Rollback()
 }
 
-func TestMembershipService_InTxMethodsLeaveTransactionOwnershipToCaller(t *testing.T) {
+func TestMembershipService_UsesCallerTransactionWithoutManagingLifecycle(t *testing.T) {
 	t.Parallel()
 
 	st := inmemory.NewStore()
@@ -373,9 +351,9 @@ func TestMembershipService_InTxMethodsLeaveTransactionOwnershipToCaller(t *testi
 	tx, err := rootSpy.BeginTx()
 	require.NoError(t, err)
 	txSpy := &membershipLifecycleSpy{Store: tx}
-	svc := NewMembershipService(rootSpy)
+	svc := NewMembershipService(txSpy)
 
-	created, err := svc.CreateMembershipInTx(txSpy, semester.ID, &models.CreateMembershipRequest{UserID: 1, Paid: true}, models.MembershipSourceAdmin)
+	created, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{UserID: 1, Paid: true}, models.MembershipSourceAdmin)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 	require.Equal(t, 1, rootSpy.beginTxCalls, "the injected method must not open another root transaction")
@@ -386,9 +364,9 @@ func TestMembershipService_InTxMethodsLeaveTransactionOwnershipToCaller(t *testi
 	require.Zero(t, txSpy.rollbackCalls)
 
 	// Validation errors and not-found results must leave the transaction usable.
-	_, err = svc.CreateMembershipInTx(txSpy, semester.ID, &models.CreateMembershipRequest{UserID: 2, Discounted: true}, models.MembershipSourceAdmin)
+	_, err = svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{UserID: 2, Discounted: true}, models.MembershipSourceAdmin)
 	require.Error(t, err)
-	missing, err := svc.UpdateMembershipInTx(txSpy, uuid.New(), semester.ID, &models.UpdateMembershipRequest{Paid: boolPtr(true)})
+	missing, err := svc.UpdateMembership(uuid.New(), semester.ID, &models.UpdateMembershipRequest{Paid: boolPtr(true)})
 	require.NoError(t, err)
 	require.Nil(t, missing)
 	_, err = txSpy.Semesters().FindByID(semester.ID)
@@ -396,9 +374,6 @@ func TestMembershipService_InTxMethodsLeaveTransactionOwnershipToCaller(t *testi
 	require.Zero(t, txSpy.beginTxCalls)
 	require.Zero(t, txSpy.commitCalls)
 	require.Zero(t, txSpy.rollbackCalls)
-	_, err = svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{UserID: 2, Discounted: true}, models.MembershipSourceAdmin)
-	require.Error(t, err)
-	require.Equal(t, 1, rootSpy.beginTxCalls, "standalone create validation must remain before BeginTx")
 
 	require.NoError(t, txSpy.Commit())
 	require.Equal(t, 1, txSpy.commitCalls)
@@ -412,15 +387,45 @@ func mustFindSemesterBudget(t *testing.T, st store.Store, semesterID uuid.UUID) 
 	return semester.CurrentBudget
 }
 
+func createMembershipInTestTx(t *testing.T, root store.Store, semesterID uuid.UUID, req *models.CreateMembershipRequest, source models.MembershipSource) (*models.Membership, error) {
+	t.Helper()
+	tx, err := root.BeginTx()
+	require.NoError(t, err)
+	defer tx.Rollback()
+
+	membership, err := NewMembershipService(tx).CreateMembership(semesterID, req, source)
+	if err != nil || membership == nil {
+		return membership, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return membership, nil
+}
+
+func updateMembershipInTestTx(t *testing.T, root store.Store, id, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
+	t.Helper()
+	tx, err := root.BeginTx()
+	require.NoError(t, err)
+	defer tx.Rollback()
+
+	membership, err := NewMembershipService(tx).UpdateMembership(id, semesterID, req)
+	if err != nil || membership == nil {
+		return membership, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return membership, nil
+}
+
 func TestMembershipService_CreateMembership_Executive(t *testing.T) {
 	t.Parallel()
 
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
-	membership, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	membership, err := createMembershipInTestTx(t, st, semester.ID, &models.CreateMembershipRequest{
 		UserID:    1,
 		Executive: true,
 	}, models.MembershipSourceAdmin)
@@ -456,9 +461,7 @@ func TestMembershipService_CreateMembership_ExecutiveCannotBePaid(t *testing.T) 
 			st := inmemory.NewStore()
 			semester := newTestSemesterForMembership()
 			require.NoError(t, st.Semesters().Create(semester))
-
-			svc := NewMembershipService(st)
-			membership, err := svc.CreateMembership(semester.ID, tc.req, models.MembershipSourceAdmin)
+			membership, err := createMembershipInTestTx(t, st, semester.ID, tc.req, models.MembershipSourceAdmin)
 			require.Nil(t, membership)
 			require.ErrorIs(t, err, ErrExecutiveCannotBePaid)
 		})
@@ -477,9 +480,7 @@ func TestMembershipService_UpdateMembership_PaidToExecutive_ReversesFullFee(t *t
 
 	before, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
-
-	svc := NewMembershipService(st)
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
 	require.NoError(t, err)
 	require.True(t, updated.Executive)
 	require.False(t, updated.Paid)
@@ -506,9 +507,7 @@ func TestMembershipService_UpdateMembership_DiscountedToExecutive_ReversesDiscou
 
 	before, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
-
-	svc := NewMembershipService(st)
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(true)})
 	require.NoError(t, err)
 	require.True(t, updated.Executive)
 	require.False(t, updated.Paid)
@@ -535,9 +534,7 @@ func TestMembershipService_UpdateMembership_ExecutiveToNotExecutive_LeavesUnpaid
 
 	before, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
-
-	svc := NewMembershipService(st)
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
 	require.NoError(t, err)
 	require.False(t, updated.Executive)
 	require.False(t, updated.Paid)
@@ -563,9 +560,7 @@ func TestMembershipService_UpdateMembership_ExecutiveAndPaidInSameRequest_Reject
 
 	before, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
-
-	svc := NewMembershipService(st)
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{
 		Executive: boolPtr(true),
 		Paid:      boolPtr(true),
 	})
@@ -594,9 +589,7 @@ func TestMembershipService_UpdateMembership_PaidOnAlreadyExecutive_Rejected(t *t
 
 	before, err := st.Semesters().FindByID(semester.ID)
 	require.NoError(t, err)
-
-	svc := NewMembershipService(st)
-	updated, err := svc.UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{
+	updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{
 		Paid: boolPtr(true),
 	})
 	require.Nil(t, updated)
@@ -618,9 +611,7 @@ func TestMembershipService_CreateMembership_PersistsSource(t *testing.T) {
 	st := inmemory.NewStore()
 	semester := newTestSemesterForMembership()
 	require.NoError(t, st.Semesters().Create(semester))
-
-	svc := NewMembershipService(st)
-	membership, err := svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{
+	membership, err := createMembershipInTestTx(t, st, semester.ID, &models.CreateMembershipRequest{
 		UserID: 1,
 		Paid:   true,
 	}, models.MembershipSourceDiscord)

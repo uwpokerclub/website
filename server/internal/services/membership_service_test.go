@@ -6,6 +6,7 @@ import (
 
 	"api/internal/errors"
 	"api/internal/models"
+	"api/internal/store"
 	"api/internal/store/inmemory"
 
 	"github.com/google/uuid"
@@ -197,7 +198,7 @@ func TestMembershipService_UpdateMembership_InvalidState(t *testing.T) {
 			require.False(t, isAPIError)
 			require.Equal(t, "cannot set membership to not paid and discounted", err.Error())
 
-			// The guard runs before the transaction opens, so nothing should move.
+			// Rejected merged states must not change the persisted membership or budget.
 			after, err := st.Semesters().FindByID(semester.ID)
 			require.NoError(t, err)
 			require.InDelta(t, before.CurrentBudget, after.CurrentBudget, 0.001)
@@ -337,6 +338,78 @@ func TestMembershipService_UpdateMembership_UnmarkPaid_ExecutiveFreeTrialFlagUnt
 
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+type membershipLifecycleSpy struct {
+	store.Store
+	beginTxCalls  int
+	commitCalls   int
+	rollbackCalls int
+}
+
+func (s *membershipLifecycleSpy) BeginTx() (store.Store, error) {
+	s.beginTxCalls++
+	return s.Store.BeginTx()
+}
+
+func (s *membershipLifecycleSpy) Commit() error {
+	s.commitCalls++
+	return s.Store.Commit()
+}
+
+func (s *membershipLifecycleSpy) Rollback() error {
+	s.rollbackCalls++
+	return s.Store.Rollback()
+}
+
+func TestMembershipService_InTxMethodsLeaveTransactionOwnershipToCaller(t *testing.T) {
+	t.Parallel()
+
+	st := inmemory.NewStore()
+	semester := newTestSemesterForMembership()
+	require.NoError(t, st.Semesters().Create(semester))
+
+	rootSpy := &membershipLifecycleSpy{Store: st}
+	tx, err := rootSpy.BeginTx()
+	require.NoError(t, err)
+	txSpy := &membershipLifecycleSpy{Store: tx}
+	svc := NewMembershipService(rootSpy)
+
+	created, err := svc.CreateMembershipInTx(txSpy, semester.ID, &models.CreateMembershipRequest{UserID: 1, Paid: true}, models.MembershipSourceAdmin)
+	require.NoError(t, err)
+	require.NotNil(t, created)
+	require.Equal(t, 1, rootSpy.beginTxCalls, "the injected method must not open another root transaction")
+	require.Zero(t, rootSpy.commitCalls)
+	require.Zero(t, rootSpy.rollbackCalls)
+	require.Zero(t, txSpy.beginTxCalls)
+	require.Zero(t, txSpy.commitCalls)
+	require.Zero(t, txSpy.rollbackCalls)
+
+	// Validation errors and not-found results must leave the transaction usable.
+	_, err = svc.CreateMembershipInTx(txSpy, semester.ID, &models.CreateMembershipRequest{UserID: 2, Discounted: true}, models.MembershipSourceAdmin)
+	require.Error(t, err)
+	missing, err := svc.UpdateMembershipInTx(txSpy, uuid.New(), semester.ID, &models.UpdateMembershipRequest{Paid: boolPtr(true)})
+	require.NoError(t, err)
+	require.Nil(t, missing)
+	_, err = txSpy.Semesters().FindByID(semester.ID)
+	require.NoError(t, err)
+	require.Zero(t, txSpy.beginTxCalls)
+	require.Zero(t, txSpy.commitCalls)
+	require.Zero(t, txSpy.rollbackCalls)
+	_, err = svc.CreateMembership(semester.ID, &models.CreateMembershipRequest{UserID: 2, Discounted: true}, models.MembershipSourceAdmin)
+	require.Error(t, err)
+	require.Equal(t, 1, rootSpy.beginTxCalls, "standalone create validation must remain before BeginTx")
+
+	require.NoError(t, txSpy.Commit())
+	require.Equal(t, 1, txSpy.commitCalls)
+	require.InDelta(t, float32(110), mustFindSemesterBudget(t, st, semester.ID), 0.001)
+}
+
+func mustFindSemesterBudget(t *testing.T, st store.Store, semesterID uuid.UUID) float32 {
+	t.Helper()
+	semester, err := st.Semesters().FindByID(semesterID)
+	require.NoError(t, err)
+	return semester.CurrentBudget
 }
 
 func TestMembershipService_CreateMembership_Executive(t *testing.T) {

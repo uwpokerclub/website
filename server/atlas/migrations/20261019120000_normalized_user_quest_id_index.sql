@@ -1,0 +1,14 @@
+-- Rollout gate: before applying this migration in production, run the following
+-- query using an approved read-only connection. Any returned rows block rollout:
+-- manually review and correct those records through the approved data process,
+-- then rerun the query. This migration never deduplicates or rewrites user rows.
+--
+-- SELECT lower(btrim(quest_id)) AS normalized, count(*), array_agg(id)
+-- FROM users
+-- WHERE btrim(quest_id) <> ''
+-- GROUP BY 1
+-- HAVING count(*) > 1;
+--
+-- Do not apply while the preflight returns rows. The index creation below will
+-- fail if normalized duplicates remain, leaving the existing rows unchanged.
+CREATE UNIQUE INDEX users_quest_id_unique ON users (lower(btrim(quest_id))) WHERE btrim(quest_id) <> '';

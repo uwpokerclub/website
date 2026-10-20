@@ -46,7 +46,7 @@ func TestCreateMember(t *testing.T) {
 				"lastName":  "Doe",
 				"email":     "john.doe@uwaterloo.ca",
 				"faculty":   "Math",
-				"questId":   "jdoe",
+				"questId":   "created-jdoe",
 			},
 			expectedStatus: http.StatusCreated,
 			expectError:    false,

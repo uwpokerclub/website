@@ -1733,7 +1733,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NoError(t, err)
 
 		addMembership := func(source *models.MembershipSource, createdAt *time.Time) {
-			user, err := testutils.CreateTestUser(db, newUserID(), "Signup", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "signup")
+			user, err := testutils.CreateTestUser(db, newUserID(), "Signup", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "signup-"+uuid.NewString())
 			require.NoError(t, err)
 			membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
 			require.NoError(t, err)
@@ -1789,7 +1789,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		semester, err := createDashboardTestSemester(db, "Current", day)
 		require.NoError(t, err)
 		for _, source := range []*models.MembershipSource{nil, func() *models.MembershipSource { value := models.MembershipSource("future"); return &value }()} {
-			user, err := testutils.CreateTestUser(db, newUserID(), "Unknown", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "unknown")
+			user, err := testutils.CreateTestUser(db, newUserID(), "Unknown", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "unknown-"+uuid.NewString())
 			require.NoError(t, err)
 			membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
 			require.NoError(t, err)
@@ -1880,7 +1880,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 			// 23:30 EST on Nov 2 is stored as this UTC wall-clock on Nov 3.
 			time.Date(2025, time.November, 3, 4, 30, 0, 0, time.UTC),
 		} {
-			user, err := testutils.CreateTestUser(db, newUserID(), "Late", fmt.Sprint(i), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "late")
+			user, err := testutils.CreateTestUser(db, newUserID(), "Late", fmt.Sprint(i), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "late-"+uuid.NewString())
 			require.NoError(t, err)
 			membership, err := createDashboardTestMembership(db, user.ID, semester.ID, true, false, false)
 			require.NoError(t, err)
@@ -1939,7 +1939,7 @@ func TestDashboardSignupTimeline(t *testing.T) {
 		require.NoError(t, db.Model(comparison).Update("end_date", comparisonEnd).Error)
 
 		addDated := func(semesterID uuid.UUID, createdAt *time.Time, source *models.MembershipSource) {
-			user, err := testutils.CreateTestUser(db, newUserID(), "Comparison", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "comparison")
+			user, err := testutils.CreateTestUser(db, newUserID(), "Comparison", uuid.NewString(), uuid.NewString()+"@uwaterloo.ca", models.FacultyMath, "comparison-"+uuid.NewString())
 			require.NoError(t, err)
 			membership, err := createDashboardTestMembership(db, user.ID, semesterID, true, false, false)
 			require.NoError(t, err)

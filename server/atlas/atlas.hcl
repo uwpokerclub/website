@@ -19,7 +19,9 @@ env "gorm" {
     # describe them faithfully. The relationship copies logins.username's text
     # type onto account_activations.username, although the released child column
     # is unbounded varchar.
-    exclude = ["*.one_pending_transition", "account_activations.username"]
+    # GORM also cannot describe users_quest_id_unique's partial expression index;
+    # it is created by manual SQL and must be excluded to prevent generated drops.
+    exclude = ["*.one_pending_transition", "account_activations.username", "*.users_quest_id_unique"]
   }
   format {
     migrate {

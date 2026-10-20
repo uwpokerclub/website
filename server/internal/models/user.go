@@ -17,6 +17,8 @@ type User struct {
 	LastName  string    `json:"lastName" binding:"required"`
 	Email     string    `json:"email" binding:"required"`
 	Faculty   string    `json:"faculty" binding:"oneof=AHS Arts Engineering Environment Math Science"`
+	// QuestID's normalized uniqueness is enforced by the manual users_quest_id_unique
+	// expression index in Atlas migrations; GORM tags cannot describe that partial index.
 	QuestID   string    `json:"questId"`
 	CreatedAt time.Time `json:"createdAt" gorm:"type:timestamp;not null;default:LOCALTIMESTAMP"`
 } //@name Member

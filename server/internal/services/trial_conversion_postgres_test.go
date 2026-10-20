@@ -10,9 +10,11 @@ import (
 	apierrors "api/internal/errors"
 	"api/internal/models"
 	"api/internal/services"
+	"api/internal/store"
 	"api/internal/store/postgres"
 	"api/internal/testutils"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
@@ -166,11 +168,7 @@ func TestMembershipService_UpdateMembershipSerializesAfterTrialStartAndPreserves
 	}
 	result := make(chan updateResult, 1)
 	go func() {
-		updated, err := services.NewMembershipService(baseStore).UpdateMembership(
-			membership.ID,
-			semester.ID,
-			&models.UpdateMembershipRequest{Paid: trialBoolPtr(true), Discounted: trialBoolPtr(true)},
-		)
+		updated, err := updateMembershipWithTransaction(baseStore, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: trialBoolPtr(true), Discounted: trialBoolPtr(true)})
 		result <- updateResult{membership: updated, err: err}
 	}()
 
@@ -197,9 +195,9 @@ func TestMembershipService_UpdateMembershipSerializesAfterTrialStartAndPreserves
 	require.NoError(t, err)
 	firstConvertedAt := *stored.ConvertedAt
 
-	_, err = services.NewMembershipService(baseStore).UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: trialBoolPtr(false), Discounted: trialBoolPtr(false)})
+	_, err = updateMembershipWithTransaction(baseStore, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: trialBoolPtr(false), Discounted: trialBoolPtr(false)})
 	require.NoError(t, err)
-	updated, err = services.NewMembershipService(baseStore).UpdateMembership(membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: trialBoolPtr(true)})
+	updated, err = updateMembershipWithTransaction(baseStore, membership.ID, semester.ID, &models.UpdateMembershipRequest{Paid: trialBoolPtr(true)})
 	require.NoError(t, err)
 	require.Equal(t, firstConvertedAt, *updated.ConvertedAt, "paid reversals must not replace the first conversion timestamp")
 }
@@ -229,12 +227,16 @@ func TestMembershipService_UpdateMembershipRollbackKeepsConversionAndBudgetAtomi
 	`).Error)
 
 	initialBudget := semester.CurrentBudget
-	_, err := services.NewMembershipService(postgres.NewStore(db)).UpdateMembership(
+	rootStore := postgres.NewStore(db)
+	tx, err := rootStore.BeginTx()
+	require.NoError(t, err)
+	_, err = services.NewMembershipService(tx).UpdateMembership(
 		membership.ID,
 		semester.ID,
 		&models.UpdateMembershipRequest{Paid: trialBoolPtr(true)},
 	)
 	require.Error(t, err)
+	require.NoError(t, tx.Rollback(), "the caller must roll back the failed update transaction")
 
 	stored, err := postgres.NewStore(db).Memberships().FindByID(membership.ID)
 	require.NoError(t, err)
@@ -248,3 +250,20 @@ func TestMembershipService_UpdateMembershipRollbackKeepsConversionAndBudgetAtomi
 }
 
 func trialBoolPtr(value bool) *bool { return &value }
+
+func updateMembershipWithTransaction(root store.Store, id, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
+	tx, err := root.BeginTx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	updated, err := services.NewMembershipService(tx).UpdateMembership(id, semesterID, req)
+	if err != nil || updated == nil {
+		return updated, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return updated, nil
+}

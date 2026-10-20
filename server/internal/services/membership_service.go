@@ -21,20 +21,31 @@ func NewMembershipService(st store.Store) *membershipService {
 	}
 }
 
-func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.CreateMembershipRequest, source models.MembershipSource) (*models.Membership, error) {
+// ValidateCreateMembershipRequest applies the create-only membership state
+// validation. Controllers can call it before beginning a transaction; the
+// service method also calls it so every caller gets the same validation.
+func ValidateCreateMembershipRequest(req *models.CreateMembershipRequest) error {
 	if !req.Paid && req.Discounted {
-		return nil, errors.New("cannot create membership that is not paid and discounted")
+		return errors.New("cannot create membership that is not paid and discounted")
 	}
 
 	if req.Executive && (req.Paid || req.Discounted) {
-		return nil, ErrExecutiveCannotBePaid
+		return ErrExecutiveCannotBePaid
 	}
 
-	tx, err := ms.store.BeginTx()
-	if err != nil {
+	return nil
+}
+
+// CreateMembership writes through the store supplied to NewMembershipService.
+// The store must be an active caller-owned transaction; the caller is
+// responsible for beginning, committing, or rolling it back.
+func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.CreateMembershipRequest, source models.MembershipSource) (*models.Membership, error) {
+	if err := ValidateCreateMembershipRequest(req); err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+
+	tx := ms.store
+	var err error
 
 	membership := models.Membership{
 		UserID:     req.UserID,
@@ -64,19 +75,15 @@ func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
 	return &membership, nil
 }
 
+// UpdateMembership writes through the store supplied to NewMembershipService.
+// The store must be an active caller-owned transaction; the caller is
+// responsible for beginning, committing, or rolling it back.
 func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID, req *models.UpdateMembershipRequest) (*models.Membership, error) {
-	tx, err := ms.store.BeginTx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
+	tx := ms.store
+	var err error
 
 	// Serialize status transitions with trial entry creation and use the locked
 	// row as the source of truth for both eligibility and budget deltas.
@@ -199,10 +206,6 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 	// row lock.
 	responseMembership, err := tx.Memberships().FindByIDAndSemesterID(id, semesterID)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 

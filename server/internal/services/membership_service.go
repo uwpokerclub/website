@@ -3,6 +3,7 @@ package services
 import (
 	"api/internal/models"
 	"api/internal/store"
+	"api/internal/utils"
 	"errors"
 	"time"
 
@@ -96,7 +97,7 @@ func (ms *membershipService) EnsureExecutiveMembership(userID uint64, semesterID
 			return nil, err
 		}
 	} else {
-		if _, err := ms.UpdateMembership(existing.ID, semesterID, &models.UpdateMembershipRequest{Executive: boolPointer(true)}); err != nil {
+		if _, err := ms.UpdateMembership(existing.ID, semesterID, &models.UpdateMembershipRequest{Executive: utils.BoolToPtr(true)}); err != nil {
 			return nil, err
 		}
 	}
@@ -109,10 +110,6 @@ func (ms *membershipService) EnsureExecutiveMembership(userID uint64, semesterID
 		return nil, err
 	}
 	return &result, nil
-}
-
-func boolPointer(value bool) *bool {
-	return &value
 }
 
 // UpdateMembership writes through the store supplied to NewMembershipService.

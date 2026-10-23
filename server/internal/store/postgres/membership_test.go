@@ -110,6 +110,36 @@ func TestMembershipRepository_FindByIDAndSemesterID(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
+func TestMembershipRepository_FindByUserAndSemester(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+
+	db := container.GetDB()
+	user, err := testutils.CreateTestUser(db, 20261101, "Membership", "Lookup", "lookup@example.com", "Math", "lookup")
+	require.NoError(t, err)
+	semesterA, err := testutils.CreateTestSemester(db, "Lookup A")
+	require.NoError(t, err)
+	semesterB, err := testutils.CreateTestSemester(db, "Lookup B")
+	require.NoError(t, err)
+	repo := postgres.NewMembershipRepository(db)
+
+	membership, err := testutils.CreateTestMembership(db, user.ID, semesterA.ID)
+	require.NoError(t, err)
+	found, err := repo.FindByUserAndSemester(user.ID, semesterA.ID)
+	require.NoError(t, err)
+	require.Equal(t, membership.ID, found.ID)
+	require.NotNil(t, found.User)
+	require.NotNil(t, found.Semester)
+	_, err = repo.FindByUserAndSemester(user.ID, semesterB.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	_, err = repo.FindByUserAndSemester(user.ID+1, semesterA.ID)
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
 func TestMembershipRepository_FindByID_Preloads(t *testing.T) {
 	t.Parallel()
 

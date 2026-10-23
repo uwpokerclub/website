@@ -4,7 +4,6 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
-	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -187,23 +186,4 @@ func (r *postgresLoginRepository) FindByUsernameWithMember(username string) (mod
 	}
 
 	return toLoginWithMember(row), nil
-}
-
-func (r *postgresLoginRepository) FindByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error) {
-	var logins []models.ExecutiveTeamLogin
-	values := make([]string, 0, len(usernames))
-	for _, username := range usernames {
-		if strings.TrimSpace(username) != "" {
-			values = append(values, strings.ToLower(strings.TrimSpace(username)))
-		}
-	}
-	if len(values) == 0 {
-		return logins, nil
-	}
-	err := r.db.Model(&models.Login{}).
-		Select("username, role, status AS account_status").
-		Where("lower(btrim(username)) IN ?", values).
-		Order("username ASC").
-		Find(&logins).Error
-	return logins, err
 }

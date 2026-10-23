@@ -3,7 +3,6 @@ package controller
 import (
 	"api/internal/middleware"
 	"api/internal/models"
-	"api/internal/services"
 	"api/internal/store"
 	"errors"
 	"net/http"
@@ -24,7 +23,7 @@ func (c *executiveTeamController) LoadRoutes(router *gin.RouterGroup) {
 }
 
 // getExecutiveTeam returns the selected semester's executive memberships
-// together with currently eligible executive login accounts.
+// together with matching login details when an account exists.
 //
 // @Summary Get executive team roster
 // @Description Return executive memberships for a semester with matching account details when available
@@ -52,13 +51,13 @@ func (c *executiveTeamController) getExecutiveTeam(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
-	response, err := services.GetExecutiveTeam(c.store, semesterID)
+	members, err := c.store.Memberships().ListExecutiveTeam(semesterID)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
 		return
 	}
-	if response.Members == nil {
-		response.Members = make([]models.ExecutiveTeamMember, 0)
+	if members == nil {
+		members = make([]models.ExecutiveTeamMember, 0)
 	}
-	ctx.JSON(http.StatusOK, response)
+	ctx.JSON(http.StatusOK, models.ExecutiveTeamResponse{Members: members})
 }

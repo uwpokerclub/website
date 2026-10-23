@@ -41,8 +41,4 @@ type LoginRepository interface {
 	// FindByUsernameWithMember retrieves a single login with its linked member information.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	FindByUsernameWithMember(username string) (models.LoginWithMember, error)
-
-	// FindByNormalizedUsernames returns logins whose normalized username matches
-	// one of the supplied member Quest IDs. It does not filter role or status.
-	FindByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error)
 }

@@ -28,15 +28,20 @@ type InMemoryStore struct {
 var _ store.Store = (*InMemoryStore)(nil)
 
 func NewStore() store.Store {
+	members := newMemberRepository()
+	logins := newLoginRepository()
+	memberships := newMembershipRepository()
+	memberships.members = members
+	memberships.logins = logins
 	return &InMemoryStore{
 		semesters:          newSemesterRepository(),
-		members:            newMemberRepository(),
-		memberships:        newMembershipRepository(),
+		members:            members,
+		memberships:        memberships,
 		structures:         newStructureRepository(),
 		events:             newEventRepository(),
 		entries:            newEntryRepository(),
 		rankings:           newRankingRepository(),
-		logins:             newLoginRepository(),
+		logins:             logins,
 		sessions:           newSessionRepository(),
 		accountActivations: newAccountActivationRepository(),
 		officerTransitions: newOfficerTransitionRepository(),
@@ -152,6 +157,10 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	}
 	if s.logins != nil {
 		tx.logins = s.logins.clone()
+	}
+	if tx.memberships != nil {
+		tx.memberships.members = tx.members
+		tx.memberships.logins = tx.logins
 	}
 	if s.sessions != nil {
 		tx.sessions = s.sessions.clone()

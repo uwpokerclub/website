@@ -10,10 +10,10 @@ type ExecutiveTeamLogin struct {
 
 // ExecutiveTeamMember is one deduplicated person in a semester's roster.
 type ExecutiveTeamMember struct {
-	MemberID               *uint64 `json:"memberId"`
-	FirstName              *string `json:"firstName"`
-	LastName               *string `json:"lastName"`
-	QuestID                *string `json:"questId"`
+	MemberID               uint64  `json:"memberId"`
+	FirstName              string  `json:"firstName"`
+	LastName               string  `json:"lastName"`
+	QuestID                string  `json:"questId"`
 	Username               *string `json:"username"`
 	Role                   *string `json:"role"`
 	AccountStatus          *string `json:"accountStatus"`

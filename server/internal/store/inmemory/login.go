@@ -203,7 +203,7 @@ func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (mod
 	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
 }
 
-func (r *inMemoryLoginRepository) FindByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error) {
+func (r *inMemoryLoginRepository) findByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	wanted := map[string]struct{}{}

@@ -1,7 +1,8 @@
-package services
+package inmemory_test
 
 import (
 	"api/internal/models"
+	"api/internal/store"
 	"api/internal/store/inmemory"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetExecutiveTeamUsesMembershipsAndEnrichesAccounts(t *testing.T) {
+func TestListExecutiveTeamUsesMembershipsAndEnrichesAccounts(t *testing.T) {
 	st := inmemory.NewStore()
 	semesterID := uuid.New()
 	people := []models.User{
@@ -35,17 +36,17 @@ func TestGetExecutiveTeamUsesMembershipsAndEnrichesAccounts(t *testing.T) {
 		require.NoError(t, st.Logins().Create(&copy))
 	}
 
-	response, err := GetExecutiveTeam(st, semesterID)
+	response, err := st.Memberships().ListExecutiveTeam(semesterID)
 	require.NoError(t, err)
-	require.Len(t, response.Members, 5)
+	require.Len(t, response, 5)
 	byQuestID := map[string]models.ExecutiveTeamMember{}
-	for _, member := range response.Members {
-		byQuestID[*member.QuestID] = member
+	for _, member := range response {
+		byQuestID[member.QuestID] = member
 		require.True(t, member.HasExecutiveMembership)
 	}
 
 	active := byQuestID["Quest-A"]
-	require.Equal(t, uint64(1), *active.MemberID)
+	require.Equal(t, uint64(1), active.MemberID)
 	require.Equal(t, " quest-a ", *active.Username)
 	require.Equal(t, "president", *active.Role)
 	require.Equal(t, models.LoginStatusActive, *active.AccountStatus)
@@ -77,7 +78,7 @@ func TestGetExecutiveTeamUsesMembershipsAndEnrichesAccounts(t *testing.T) {
 	require.NotContains(t, byQuestID, "unmatched")
 }
 
-func TestGetExecutiveTeamScopesMembershipsToRequestedSemester(t *testing.T) {
+func TestListExecutiveTeamScopesMembershipsToRequestedSemester(t *testing.T) {
 	st := inmemory.NewStore()
 	firstSemesterID, secondSemesterID := uuid.New(), uuid.New()
 	users := []models.User{
@@ -90,20 +91,20 @@ func TestGetExecutiveTeamScopesMembershipsToRequestedSemester(t *testing.T) {
 	require.NoError(t, st.Memberships().Create(&models.Membership{UserID: users[0].ID, SemesterID: firstSemesterID, Executive: true}))
 	require.NoError(t, st.Memberships().Create(&models.Membership{UserID: users[1].ID, SemesterID: secondSemesterID, Executive: true}))
 
-	first, err := GetExecutiveTeam(st, firstSemesterID)
+	first, err := st.Memberships().ListExecutiveTeam(firstSemesterID)
 	require.NoError(t, err)
-	require.Len(t, first.Members, 1)
-	require.Equal(t, users[0].ID, *first.Members[0].MemberID)
-	require.True(t, first.Members[0].HasExecutiveMembership)
+	require.Len(t, first, 1)
+	require.Equal(t, users[0].ID, first[0].MemberID)
+	require.True(t, first[0].HasExecutiveMembership)
 
-	second, err := GetExecutiveTeam(st, secondSemesterID)
+	second, err := st.Memberships().ListExecutiveTeam(secondSemesterID)
 	require.NoError(t, err)
-	require.Len(t, second.Members, 1)
-	require.Equal(t, users[1].ID, *second.Members[0].MemberID)
-	require.True(t, second.Members[0].HasExecutiveMembership)
+	require.Len(t, second, 1)
+	require.Equal(t, users[1].ID, second[0].MemberID)
+	require.True(t, second[0].HasExecutiveMembership)
 }
 
-func TestGetExecutiveTeamRejectsMultipleNormalizedLogins(t *testing.T) {
+func TestListExecutiveTeamRejectsMultipleNormalizedLogins(t *testing.T) {
 	st := inmemory.NewStore()
 	semesterID := uuid.New()
 	user := models.User{ID: 20, FirstName: "Quest", LastName: "Member", QuestID: "quest-id"}
@@ -116,17 +117,17 @@ func TestGetExecutiveTeamRejectsMultipleNormalizedLogins(t *testing.T) {
 		copy := login
 		require.NoError(t, st.Logins().Create(&copy))
 	}
-	_, err := GetExecutiveTeam(st, semesterID)
-	require.ErrorIs(t, err, ErrDuplicateExecutiveTeamLoginIdentity)
+	_, err := st.Memberships().ListExecutiveTeam(semesterID)
+	require.ErrorIs(t, err, store.ErrDuplicateExecutiveTeamLoginIdentity)
 }
 
-func TestGetExecutiveTeamDoesNotReturnLoginOnlyRows(t *testing.T) {
+func TestListExecutiveTeamDoesNotReturnLoginOnlyRows(t *testing.T) {
 	st := inmemory.NewStore()
 	login := models.Login{Username: "login-only", Password: "secret", Role: "executive", Status: models.LoginStatusActive}
 	require.NoError(t, st.Logins().Create(&login))
 
-	response, err := GetExecutiveTeam(st, uuid.New())
+	response, err := st.Memberships().ListExecutiveTeam(uuid.New())
 	require.NoError(t, err)
-	require.NotNil(t, response.Members)
-	require.Empty(t, response.Members)
+	require.NotNil(t, response)
+	require.Empty(t, response)
 }

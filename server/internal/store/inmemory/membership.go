@@ -16,6 +16,8 @@ import (
 type inMemoryMembershipRepository struct {
 	mu          sync.RWMutex
 	memberships map[uuid.UUID]*models.Membership
+	members     *inMemoryMemberRepository
+	logins      *inMemoryLoginRepository
 }
 
 var _ store.MembershipRepository = (*inMemoryMembershipRepository)(nil)
@@ -113,6 +115,77 @@ func (r *inMemoryMembershipRepository) FindByUserAndSemester(userID uint64, seme
 	}
 
 	return models.Membership{}, store.ErrNotFound
+}
+
+func (r *inMemoryMembershipRepository) ListExecutiveTeam(semesterID uuid.UUID) ([]models.ExecutiveTeamMember, error) {
+	if r.members == nil || r.logins == nil {
+		return nil, store.ErrNotImplemented
+	}
+
+	r.mu.RLock()
+	memberIDs := make([]uint64, 0)
+	for _, membership := range r.memberships {
+		if membership.SemesterID == semesterID && membership.Executive {
+			memberIDs = append(memberIDs, membership.UserID)
+		}
+	}
+	r.mu.RUnlock()
+
+	users, err := r.members.FindByIDs(memberIDs)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]models.ExecutiveTeamMember, 0, len(users))
+	questIDs := make([]string, 0, len(users))
+	for _, user := range users {
+		rows = append(rows, models.ExecutiveTeamMember{
+			MemberID: user.ID, FirstName: user.FirstName, LastName: user.LastName,
+			QuestID: user.QuestID, HasExecutiveMembership: true,
+		})
+		questIDs = append(questIDs, user.QuestID)
+	}
+
+	logins, err := r.logins.findByNormalizedUsernames(questIDs)
+	if err != nil {
+		return nil, err
+	}
+	rowsByQuestID := make(map[string][]int, len(rows))
+	for i := range rows {
+		if key := normalizeQuestID(rows[i].QuestID); key != "" {
+			rowsByQuestID[key] = append(rowsByQuestID[key], i)
+		}
+	}
+	for _, login := range logins {
+		indices, matches := rowsByQuestID[normalizeQuestID(login.Username)]
+		if !matches {
+			continue
+		}
+		for _, index := range indices {
+			if rows[index].HasLogin {
+				return nil, store.ErrDuplicateExecutiveTeamLoginIdentity
+			}
+			rows[index].Username = &login.Username
+			rows[index].Role = &login.Role
+			rows[index].AccountStatus = &login.AccountStatus
+			rows[index].HasLogin = true
+			rows[index].ActivationOutstanding = login.AccountStatus == models.LoginStatusPendingActivation
+		}
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		a, b := rows[i], rows[j]
+		if a.LastName != b.LastName {
+			return a.LastName < b.LastName
+		}
+		if a.FirstName != b.FirstName {
+			return a.FirstName < b.FirstName
+		}
+		if a.QuestID != b.QuestID {
+			return a.QuestID < b.QuestID
+		}
+		return a.MemberID < b.MemberID
+	})
+	return rows, nil
 }
 
 // LockByIDAndSemesterID rereads from the transaction snapshot. The in-memory

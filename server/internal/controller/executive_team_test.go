@@ -85,10 +85,16 @@ func TestGetExecutiveTeamRoster(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 	require.Len(t, response.Members, 111)
 	byQuestID := map[string]models.ExecutiveTeamMember{}
-	for _, member := range response.Members {
-		byQuestID[*member.QuestID] = member
+	for i, member := range response.Members {
+		byQuestID[member.QuestID] = member
+		if i > 0 {
+			previous := response.Members[i-1]
+			previousKey := fmt.Sprintf("%s\x00%s\x00%s\x00%020d", previous.LastName, previous.FirstName, previous.QuestID, previous.MemberID)
+			currentKey := fmt.Sprintf("%s\x00%s\x00%s\x00%020d", member.LastName, member.FirstName, member.QuestID, member.MemberID)
+			require.LessOrEqual(t, previousKey, currentKey, "SQL roster ordering must be deterministic")
+		}
 	}
-	require.Equal(t, users[0].ID, *byQuestID["Quest-A"].MemberID, "normalized username must link to the user and dedupe membership")
+	require.Equal(t, users[0].ID, byQuestID["Quest-A"].MemberID, "normalized username must link to the user and dedupe membership")
 	require.True(t, byQuestID["Quest-A"].HasExecutiveMembership)
 	require.True(t, byQuestID["Quest-A"].HasLogin)
 	require.Equal(t, " quest-a ", *byQuestID["Quest-A"].Username)

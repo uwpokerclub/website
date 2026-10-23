@@ -42,6 +42,7 @@ type LoginRepository interface {
 	// Returns store.ErrNotFound if no login exists for the given username.
 	FindByUsernameWithMember(username string) (models.LoginWithMember, error)
 
-	// ListExecutiveTeamCandidates returns eligible current executive logins only.
-	ListExecutiveTeamCandidates() ([]models.ExecutiveTeamLogin, error)
+	// FindByNormalizedUsernames returns logins whose normalized username matches
+	// one of the supplied member Quest IDs. It does not filter role or status.
+	FindByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error)
 }

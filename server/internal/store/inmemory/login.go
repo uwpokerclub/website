@@ -203,13 +203,18 @@ func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (mod
 	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
 }
 
-func (r *inMemoryLoginRepository) ListExecutiveTeamCandidates() ([]models.ExecutiveTeamLogin, error) {
+func (r *inMemoryLoginRepository) FindByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	wanted := map[string]struct{}{}
+	for _, username := range usernames {
+		if normalized := strings.ToLower(strings.TrimSpace(username)); normalized != "" {
+			wanted[normalized] = struct{}{}
+		}
+	}
 	var logins []models.ExecutiveTeamLogin
-	ladder := map[string]bool{"executive": true, "tournament_director": true, "secretary": true, "treasurer": true, "vice_president": true, "president": true}
 	for _, login := range r.logins {
-		if ladder[login.Role] && (login.Status == models.LoginStatusActive || login.Status == models.LoginStatusPendingActivation) {
+		if _, matches := wanted[strings.ToLower(strings.TrimSpace(login.Username))]; matches {
 			logins = append(logins, models.ExecutiveTeamLogin{Username: login.Username, Role: login.Role, AccountStatus: login.Status})
 		}
 	}

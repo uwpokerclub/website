@@ -4,7 +4,6 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
-	"strings"
 
 	"gorm.io/gorm"
 )
@@ -36,27 +35,12 @@ func (r *postgresMemberRepository) FindByID(id uint64) (models.User, error) {
 	return member, nil
 }
 
-func (r *postgresMemberRepository) FindByIDsOrQuestIDs(ids []uint64, questIDs []string) ([]models.User, error) {
+func (r *postgresMemberRepository) FindByIDs(ids []uint64) ([]models.User, error) {
 	var members []models.User
-	values := make([]string, 0, len(questIDs))
-	for _, questID := range questIDs {
-		if strings.TrimSpace(questID) != "" {
-			values = append(values, strings.ToLower(strings.TrimSpace(questID)))
-		}
-	}
-	if len(ids) == 0 && len(values) == 0 {
+	if len(ids) == 0 {
 		return members, nil
 	}
-	query := r.db.Model(&models.User{})
-	switch {
-	case len(ids) > 0 && len(values) > 0:
-		query = query.Where("id IN ? OR lower(btrim(quest_id)) IN ?", ids, values)
-	case len(ids) > 0:
-		query = query.Where("id IN ?", ids)
-	default:
-		query = query.Where("lower(btrim(quest_id)) IN ?", values)
-	}
-	err := query.Find(&members).Error
+	err := r.db.Where("id IN ?", ids).Find(&members).Error
 	return members, err
 }
 

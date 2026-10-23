@@ -1,6 +1,6 @@
 package models
 
-// ExecutiveTeamLogin is the public-safe subset of a current eligible login.
+// ExecutiveTeamLogin is the public-safe account information attached to a roster member.
 // It deliberately excludes credentials, sessions, activations, and transition data.
 type ExecutiveTeamLogin struct {
 	Username      string `json:"username"`

@@ -9,26 +9,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetExecutiveTeamUnionAndAccountFiltering(t *testing.T) {
+func TestGetExecutiveTeamUsesMembershipsAndEnrichesAccounts(t *testing.T) {
 	st := inmemory.NewStore()
 	semesterID := uuid.New()
 	people := []models.User{
-		{ID: 1, FirstName: "Alex", LastName: "Same", QuestID: "Quest-A"},
-		{ID: 2, FirstName: "Blair", LastName: "Member", QuestID: "quest-b"},
-		{ID: 3, FirstName: "Casey", LastName: "Member", QuestID: "quest-c"},
+		{ID: 1, FirstName: "Alex", LastName: "Able", QuestID: "Quest-A"},
+		{ID: 2, FirstName: "Blair", LastName: "Baker", QuestID: "quest-b"},
+		{ID: 3, FirstName: "Casey", LastName: "Clark", QuestID: "quest-c"},
+		{ID: 4, FirstName: "Drew", LastName: "Dale", QuestID: "quest-d"},
+		{ID: 5, FirstName: "Evan", LastName: "Empty", QuestID: "quest-e"},
 	}
 	for i := range people {
 		require.NoError(t, st.Members().Create(&people[i]))
-	}
-	for _, userID := range []uint64{1, 2, 3} {
-		require.NoError(t, st.Memberships().Create(&models.Membership{UserID: userID, SemesterID: semesterID, Executive: true}))
+		require.NoError(t, st.Memberships().Create(&models.Membership{UserID: people[i].ID, SemesterID: semesterID, Executive: true}))
 	}
 	for _, login := range []models.Login{
-		{Username: " quest-a ", Password: "not-returned", Role: "president", Status: models.LoginStatusPendingActivation},
+		{Username: " quest-a ", Password: "not-returned", Role: "president", Status: models.LoginStatusActive},
 		{Username: "QUEST-B", Password: "not-returned", Role: "executive", Status: models.LoginStatusDisabled},
 		{Username: "quest-c", Password: "not-returned", Role: "webmaster", Status: models.LoginStatusActive},
-		{Username: "unmatched", Password: "not-returned", Role: "secretary", Status: models.LoginStatusActive},
-		{Username: "bot-login", Password: "not-returned", Role: "bot", Status: models.LoginStatusActive},
+		{Username: "quest-d", Password: "not-returned", Role: "bot", Status: models.LoginStatusPendingActivation},
+		{Username: "login-only", Password: "not-returned", Role: "secretary", Status: models.LoginStatusActive},
+		{Username: "unmatched", Password: "not-returned", Role: "executive", Status: models.LoginStatusPendingActivation},
 	} {
 		copy := login
 		require.NoError(t, st.Logins().Create(&copy))
@@ -36,36 +37,44 @@ func TestGetExecutiveTeamUnionAndAccountFiltering(t *testing.T) {
 
 	response, err := GetExecutiveTeam(st, semesterID)
 	require.NoError(t, err)
-	require.Len(t, response.Members, 4)
+	require.Len(t, response.Members, 5)
 	byQuestID := map[string]models.ExecutiveTeamMember{}
 	for _, member := range response.Members {
 		byQuestID[*member.QuestID] = member
+		require.True(t, member.HasExecutiveMembership)
 	}
 
-	linked := byQuestID["Quest-A"]
-	require.Equal(t, uint64(1), *linked.MemberID)
-	require.Equal(t, " quest-a ", *linked.Username)
-	require.Equal(t, "president", *linked.Role)
-	require.Equal(t, models.LoginStatusPendingActivation, *linked.AccountStatus)
-	require.True(t, linked.ActivationOutstanding)
-	require.True(t, linked.HasLogin)
-	require.True(t, linked.HasExecutiveMembership)
+	active := byQuestID["Quest-A"]
+	require.Equal(t, uint64(1), *active.MemberID)
+	require.Equal(t, " quest-a ", *active.Username)
+	require.Equal(t, "president", *active.Role)
+	require.Equal(t, models.LoginStatusActive, *active.AccountStatus)
+	require.True(t, active.HasLogin)
+	require.False(t, active.ActivationOutstanding)
 
-	for _, questID := range []string{"quest-b", "quest-c"} {
+	disabled := byQuestID["quest-b"]
+	require.True(t, disabled.HasLogin)
+	require.Equal(t, "executive", *disabled.Role)
+	require.Equal(t, models.LoginStatusDisabled, *disabled.AccountStatus)
+	require.False(t, disabled.ActivationOutstanding)
+
+	for questID, role := range map[string]string{"quest-c": "webmaster", "quest-d": "bot"} {
 		member := byQuestID[questID]
-		require.False(t, member.HasLogin, questID)
-		require.True(t, member.HasExecutiveMembership, questID)
-		require.False(t, member.ActivationOutstanding, questID)
-		require.Nil(t, member.Username, questID)
-		require.Nil(t, member.Role, questID)
-		require.Nil(t, member.AccountStatus, questID)
+		require.True(t, member.HasLogin, questID)
+		require.Equal(t, role, *member.Role, questID)
 	}
-	unmatched := byQuestID["unmatched"]
-	require.Nil(t, unmatched.MemberID)
-	require.Nil(t, unmatched.FirstName)
-	require.True(t, unmatched.HasLogin)
-	require.False(t, unmatched.HasExecutiveMembership)
+	pending := byQuestID["quest-d"]
+	require.Equal(t, models.LoginStatusPendingActivation, *pending.AccountStatus)
+	require.True(t, pending.ActivationOutstanding)
 
+	withoutAccount := byQuestID["quest-e"]
+	require.False(t, withoutAccount.HasLogin)
+	require.Nil(t, withoutAccount.Username)
+	require.Nil(t, withoutAccount.Role)
+	require.Nil(t, withoutAccount.AccountStatus)
+	require.False(t, withoutAccount.ActivationOutstanding)
+	require.NotContains(t, byQuestID, "login-only")
+	require.NotContains(t, byQuestID, "unmatched")
 }
 
 func TestGetExecutiveTeamScopesMembershipsToRequestedSemester(t *testing.T) {
@@ -94,12 +103,30 @@ func TestGetExecutiveTeamScopesMembershipsToRequestedSemester(t *testing.T) {
 	require.True(t, second.Members[0].HasExecutiveMembership)
 }
 
-func TestGetExecutiveTeamRejectsNormalizedDuplicateEligibleLogins(t *testing.T) {
+func TestGetExecutiveTeamRejectsMultipleNormalizedLogins(t *testing.T) {
 	st := inmemory.NewStore()
-	for _, username := range []string{"Quest-ID", " quest-id "} {
-		login := models.Login{Username: username, Password: "secret", Role: "executive", Status: models.LoginStatusActive}
-		require.NoError(t, st.Logins().Create(&login))
+	semesterID := uuid.New()
+	user := models.User{ID: 20, FirstName: "Quest", LastName: "Member", QuestID: "quest-id"}
+	require.NoError(t, st.Members().Create(&user))
+	require.NoError(t, st.Memberships().Create(&models.Membership{UserID: user.ID, SemesterID: semesterID, Executive: true}))
+	for _, login := range []models.Login{
+		{Username: "Quest-ID", Password: "secret", Role: "executive", Status: models.LoginStatusActive},
+		{Username: " quest-id ", Password: "secret", Role: "webmaster", Status: models.LoginStatusDisabled},
+	} {
+		copy := login
+		require.NoError(t, st.Logins().Create(&copy))
 	}
-	_, err := GetExecutiveTeam(st, uuid.New())
+	_, err := GetExecutiveTeam(st, semesterID)
 	require.ErrorIs(t, err, ErrDuplicateExecutiveTeamLoginIdentity)
+}
+
+func TestGetExecutiveTeamDoesNotReturnLoginOnlyRows(t *testing.T) {
+	st := inmemory.NewStore()
+	login := models.Login{Username: "login-only", Password: "secret", Role: "executive", Status: models.LoginStatusActive}
+	require.NoError(t, st.Logins().Create(&login))
+
+	response, err := GetExecutiveTeam(st, uuid.New())
+	require.NoError(t, err)
+	require.NotNil(t, response.Members)
+	require.Empty(t, response.Members)
 }

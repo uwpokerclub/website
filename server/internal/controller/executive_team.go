@@ -27,7 +27,7 @@ func (c *executiveTeamController) LoadRoutes(router *gin.RouterGroup) {
 // together with currently eligible executive login accounts.
 //
 // @Summary Get executive team roster
-// @Description Return executive memberships for a semester unioned with current eligible executive logins
+// @Description Return executive memberships for a semester with matching account details when available
 // @Tags Executive Team
 // @Produce json
 // @Param semesterId path string true "Semester ID"

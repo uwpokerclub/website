@@ -34,7 +34,9 @@ func TestGetExecutiveTeamRoster(t *testing.T) {
 		{ID: 71002, FirstName: "Blair", LastName: "Baker", QuestID: "quest-b"},
 		{ID: 71003, FirstName: "Casey", LastName: "Clark", QuestID: "quest-c"},
 		{ID: 71004, FirstName: "Drew", LastName: "Dale", QuestID: "quest-d"},
-		{ID: 71005, FirstName: "Noah", LastName: "Nonexec", QuestID: "quest-not-exec"},
+		{ID: 71005, FirstName: "Evan", LastName: "Pending", QuestID: "quest-e"},
+		{ID: 71006, FirstName: "Fran", LastName: "NoLogin", QuestID: "quest-f"},
+		{ID: 71007, FirstName: "Noah", LastName: "Nonexec", QuestID: "quest-not-exec"},
 	}
 	for i := range users {
 		require.NoError(t, db.Create(&users[i]).Error)
@@ -44,7 +46,9 @@ func TestGetExecutiveTeamRoster(t *testing.T) {
 		{UserID: users[1].ID, SemesterID: semesterID, Executive: true},
 		{UserID: users[2].ID, SemesterID: semesterID, Executive: true},
 		{UserID: users[3].ID, SemesterID: semesterID, Executive: true},
-		{UserID: users[4].ID, SemesterID: semesterID, Executive: false},
+		{UserID: users[4].ID, SemesterID: semesterID, Executive: true},
+		{UserID: users[5].ID, SemesterID: semesterID, Executive: true},
+		{UserID: users[6].ID, SemesterID: semesterID, Executive: false},
 	}
 	require.NoError(t, db.Create(&memberships).Error)
 	logins := []models.Login{
@@ -52,6 +56,7 @@ func TestGetExecutiveTeamRoster(t *testing.T) {
 		{Username: "quest-b", Password: "private-hash", Role: "secretary", Status: models.LoginStatusDisabled},
 		{Username: "quest-c", Password: "private-hash", Role: "webmaster", Status: models.LoginStatusActive},
 		{Username: "quest-d", Password: "private-hash", Role: "bot", Status: models.LoginStatusActive},
+		{Username: "quest-e", Password: "private-hash", Role: "treasurer", Status: models.LoginStatusPendingActivation},
 		{Username: "login-only", Password: "private-hash", Role: "executive", Status: models.LoginStatusActive},
 		{Username: "unmatched-pending", Password: "private-hash", Role: "treasurer", Status: models.LoginStatusPendingActivation},
 		{Username: "not-exec", Password: "private-hash", Role: "tournament_director", Status: models.LoginStatusActive},
@@ -78,7 +83,7 @@ func TestGetExecutiveTeamRoster(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	var response models.ExecutiveTeamResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
-	require.Len(t, response.Members, 112)
+	require.Len(t, response.Members, 111)
 	byQuestID := map[string]models.ExecutiveTeamMember{}
 	for _, member := range response.Members {
 		byQuestID[*member.QuestID] = member
@@ -87,17 +92,29 @@ func TestGetExecutiveTeamRoster(t *testing.T) {
 	require.True(t, byQuestID["Quest-A"].HasExecutiveMembership)
 	require.True(t, byQuestID["Quest-A"].HasLogin)
 	require.Equal(t, " quest-a ", *byQuestID["Quest-A"].Username)
-	require.True(t, byQuestID["quest-b"].HasExecutiveMembership, "disabled login must not hide a real executive membership")
-	require.False(t, byQuestID["quest-b"].HasLogin)
-	require.True(t, byQuestID["quest-c"].HasExecutiveMembership, "webmaster login is excluded but membership remains")
-	require.False(t, byQuestID["quest-c"].HasLogin)
-	require.True(t, byQuestID["quest-d"].HasExecutiveMembership, "bot login is excluded but membership remains")
-	require.False(t, byQuestID["quest-d"].HasLogin)
-	require.True(t, byQuestID["unmatched-pending"].ActivationOutstanding)
-	require.Nil(t, byQuestID["unmatched-pending"].MemberID)
-	require.False(t, byQuestID["login-only"].HasExecutiveMembership)
+	require.True(t, byQuestID["quest-b"].HasExecutiveMembership)
+	require.True(t, byQuestID["quest-b"].HasLogin)
+	require.Equal(t, models.LoginStatusDisabled, *byQuestID["quest-b"].AccountStatus)
+	require.Equal(t, "secretary", *byQuestID["quest-b"].Role)
+	require.True(t, byQuestID["quest-c"].HasExecutiveMembership)
+	require.True(t, byQuestID["quest-c"].HasLogin)
+	require.Equal(t, "webmaster", *byQuestID["quest-c"].Role)
+	require.True(t, byQuestID["quest-d"].HasExecutiveMembership)
+	require.True(t, byQuestID["quest-d"].HasLogin)
+	require.Equal(t, "bot", *byQuestID["quest-d"].Role)
+	require.True(t, byQuestID["quest-e"].HasExecutiveMembership)
+	require.True(t, byQuestID["quest-e"].ActivationOutstanding)
+	require.True(t, byQuestID["quest-e"].HasLogin)
+	require.True(t, byQuestID["quest-f"].HasExecutiveMembership)
+	require.False(t, byQuestID["quest-f"].HasLogin)
+	require.Nil(t, byQuestID["quest-f"].Username)
+	require.Nil(t, byQuestID["quest-f"].Role)
+	require.Nil(t, byQuestID["quest-f"].AccountStatus)
+	require.False(t, byQuestID["quest-f"].ActivationOutstanding)
+	require.NotContains(t, byQuestID, "login-only")
+	require.NotContains(t, byQuestID, "unmatched-pending")
 	require.NotContains(t, w.Body.String(), "private-hash")
-	require.True(t, byQuestID["not-exec"].HasLogin, "tournament director is an executive ladder role for roster inclusion")
+	require.NotContains(t, byQuestID, "not-exec")
 }
 
 func TestGetExecutiveTeamEmptyAndErrors(t *testing.T) {

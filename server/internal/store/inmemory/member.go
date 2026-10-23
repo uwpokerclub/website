@@ -70,25 +70,16 @@ func (r *inMemoryMemberRepository) FindByID(id uint64) (models.User, error) {
 	return *member, nil
 }
 
-func (r *inMemoryMemberRepository) FindByIDsOrQuestIDs(ids []uint64, questIDs []string) ([]models.User, error) {
+func (r *inMemoryMemberRepository) FindByIDs(ids []uint64) ([]models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	wantedIDs := make(map[uint64]struct{}, len(ids))
+	wanted := make(map[uint64]struct{}, len(ids))
 	for _, id := range ids {
-		wantedIDs[id] = struct{}{}
+		wanted[id] = struct{}{}
 	}
-	wantedQuestIDs := make(map[string]struct{}, len(questIDs))
-	for _, questID := range questIDs {
-		if normalized := normalizeQuestID(questID); normalized != "" {
-			wantedQuestIDs[normalized] = struct{}{}
-		}
-	}
-	result := make([]models.User, 0, len(wantedIDs)+len(wantedQuestIDs))
+	result := make([]models.User, 0, len(wanted))
 	for id, member := range r.members {
-		_, byID := wantedIDs[id]
-		normalized := normalizeQuestID(member.QuestID)
-		_, byQuestID := wantedQuestIDs[normalized]
-		if byID || (normalized != "" && byQuestID) {
+		if _, ok := wanted[id]; ok {
 			result = append(result, *member)
 		}
 	}

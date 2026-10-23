@@ -70,6 +70,23 @@ func (r *inMemoryMemberRepository) FindByID(id uint64) (models.User, error) {
 	return *member, nil
 }
 
+func (r *inMemoryMemberRepository) FindByIDs(ids []uint64) ([]models.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	wanted := make(map[uint64]struct{}, len(ids))
+	for _, id := range ids {
+		wanted[id] = struct{}{}
+	}
+	result := make([]models.User, 0, len(wanted))
+	for id, member := range r.members {
+		if _, ok := wanted[id]; ok {
+			result = append(result, *member)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
+	return result, nil
+}
+
 func (r *inMemoryMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

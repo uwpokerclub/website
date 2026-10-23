@@ -140,6 +140,29 @@ func TestMembershipRepository_FindByUserAndSemester(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
+func TestMembershipRepository_ListExecutiveTeamRejectsDuplicateNormalizedLogins(t *testing.T) {
+	ctx := context.Background()
+	container, err := testutils.NewPostgresContainer(ctx, testutils.PostgresConfig{})
+	require.NoError(t, err)
+	defer container.Close(ctx)
+	db := container.GetDB()
+	repo := postgres.NewMembershipRepository(db)
+
+	semester, err := testutils.CreateTestSemester(db, "Duplicate executive login")
+	require.NoError(t, err)
+	user, err := testutils.CreateTestUser(db, 20000412, "Casey", "Roster", "casey@example.com", "Math", "quest-id")
+	require.NoError(t, err)
+	require.NoError(t, repo.Create(&models.Membership{UserID: user.ID, SemesterID: semester.ID, Executive: true}))
+	logins := []models.Login{
+		{Username: "Quest-ID", Password: "hash", Role: "executive", Status: models.LoginStatusActive},
+		{Username: " quest-id ", Password: "hash", Role: "webmaster", Status: models.LoginStatusDisabled},
+	}
+	require.NoError(t, db.Create(&logins).Error)
+
+	_, err = repo.ListExecutiveTeam(semester.ID)
+	require.ErrorIs(t, err, store.ErrDuplicateExecutiveTeamLoginIdentity)
+}
+
 func TestMembershipRepository_FindByID_Preloads(t *testing.T) {
 	t.Parallel()
 

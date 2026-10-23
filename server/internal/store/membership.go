@@ -24,6 +24,10 @@ type MembershipRepository interface {
 	// preload associations to the extent supported by their store.
 	FindByUserAndSemester(userID uint64, semesterID uuid.UUID) (models.Membership, error)
 
+	// ListExecutiveTeam returns semester executive memberships with member identity and
+	// optional matching login details, ordered by member name and identity.
+	ListExecutiveTeam(semesterID uuid.UUID) ([]models.ExecutiveTeamMember, error)
+
 	// LockByIDAndSemesterID rereads and locks a membership inside the caller's transaction.
 	LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error)
 

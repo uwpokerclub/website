@@ -35,6 +35,15 @@ func (r *postgresMemberRepository) FindByID(id uint64) (models.User, error) {
 	return member, nil
 }
 
+func (r *postgresMemberRepository) FindByIDs(ids []uint64) ([]models.User, error) {
+	var members []models.User
+	if len(ids) == 0 {
+		return members, nil
+	}
+	err := r.db.Where("id IN ?", ids).Find(&members).Error
+	return members, err
+}
+
 func (r *postgresMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
 	var members []models.User
 	err := r.db.Where("LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", questID).Find(&members).Error

@@ -73,6 +73,39 @@ func (r *postgresMembershipRepository) FindByUserAndSemester(userID uint64, seme
 	return membership, nil
 }
 
+func (r *postgresMembershipRepository) ListExecutiveTeam(semesterID uuid.UUID) ([]models.ExecutiveTeamMember, error) {
+	var members []models.ExecutiveTeamMember
+	err := r.db.Table("memberships").
+		Select(`users.id AS member_id, users.first_name, users.last_name, users.quest_id,
+			logins.username, logins.role, logins.status AS account_status,
+			(logins.username IS NOT NULL) AS has_login,
+			COALESCE(logins.status = ?, false) AS activation_outstanding,
+			true AS has_executive_membership`, models.LoginStatusPendingActivation).
+		Joins("JOIN users ON users.id = memberships.user_id").
+		Joins("LEFT JOIN logins ON btrim(users.quest_id) <> '' AND lower(btrim(logins.username)) = lower(btrim(users.quest_id))").
+		Where("memberships.semester_id = ? AND memberships.executive = ?", semesterID, true).
+		Order("users.last_name ASC").
+		Order("users.first_name ASC").
+		Order("users.quest_id ASC").
+		Order("users.id ASC").
+		Scan(&members).Error
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[uint64]struct{}, len(members))
+	for _, member := range members {
+		if _, exists := seen[member.MemberID]; exists {
+			return nil, store.ErrDuplicateExecutiveTeamLoginIdentity
+		}
+		seen[member.MemberID] = struct{}{}
+	}
+	if members == nil {
+		members = make([]models.ExecutiveTeamMember, 0)
+	}
+	return members, nil
+}
+
 func (r *postgresMembershipRepository) LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error) {
 	var membership models.Membership
 	err := r.db.Clauses(clause.Locking{Strength: "NO KEY UPDATE"}).

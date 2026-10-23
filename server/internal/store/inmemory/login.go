@@ -202,3 +202,22 @@ func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (mod
 
 	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
 }
+
+func (r *inMemoryLoginRepository) findByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	wanted := map[string]struct{}{}
+	for _, username := range usernames {
+		if normalized := strings.ToLower(strings.TrimSpace(username)); normalized != "" {
+			wanted[normalized] = struct{}{}
+		}
+	}
+	var logins []models.ExecutiveTeamLogin
+	for _, login := range r.logins {
+		if _, matches := wanted[strings.ToLower(strings.TrimSpace(login.Username))]; matches {
+			logins = append(logins, models.ExecutiveTeamLogin{Username: login.Username, Role: login.Role, AccountStatus: login.Status})
+		}
+	}
+	sort.Slice(logins, func(i, j int) bool { return logins[i].Username < logins[j].Username })
+	return logins, nil
+}

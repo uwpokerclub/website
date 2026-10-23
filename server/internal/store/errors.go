@@ -10,6 +10,7 @@ var ErrConflict = errors.New("conflict")
 var ErrTransactionConflict = errors.New("transaction conflict")
 
 var ErrAlreadyExists = errors.New("record already exists")
+var ErrDuplicateExecutiveTeamLoginIdentity = errors.New("multiple logins resolve to the same executive-team member")
 
 // ErrSignupTimelineRange indicates stored semester bounds exceed the maximum
 // zero-filled signup timeline size and were rejected rather than truncated.

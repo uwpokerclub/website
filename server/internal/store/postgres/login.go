@@ -187,3 +187,14 @@ func (r *postgresLoginRepository) FindByUsernameWithMember(username string) (mod
 
 	return toLoginWithMember(row), nil
 }
+
+func (r *postgresLoginRepository) ListExecutiveTeamCandidates() ([]models.ExecutiveTeamLogin, error) {
+	var logins []models.ExecutiveTeamLogin
+	err := r.db.Model(&models.Login{}).
+		Select("username, role, status AS account_status").
+		Where("role IN ?", []string{"executive", "tournament_director", "secretary", "treasurer", "vice_president", "president"}).
+		Where("status IN ?", []string{models.LoginStatusActive, models.LoginStatusPendingActivation}).
+		Order("username ASC").
+		Find(&logins).Error
+	return logins, err
+}

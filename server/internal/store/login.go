@@ -41,4 +41,7 @@ type LoginRepository interface {
 	// FindByUsernameWithMember retrieves a single login with its linked member information.
 	// Returns store.ErrNotFound if no login exists for the given username.
 	FindByUsernameWithMember(username string) (models.LoginWithMember, error)
+
+	// ListExecutiveTeamCandidates returns eligible current executive logins only.
+	ListExecutiveTeamCandidates() ([]models.ExecutiveTeamLogin, error)
 }

@@ -202,3 +202,17 @@ func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (mod
 
 	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
 }
+
+func (r *inMemoryLoginRepository) ListExecutiveTeamCandidates() ([]models.ExecutiveTeamLogin, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var logins []models.ExecutiveTeamLogin
+	ladder := map[string]bool{"executive": true, "tournament_director": true, "secretary": true, "treasurer": true, "vice_president": true, "president": true}
+	for _, login := range r.logins {
+		if ladder[login.Role] && (login.Status == models.LoginStatusActive || login.Status == models.LoginStatusPendingActivation) {
+			logins = append(logins, models.ExecutiveTeamLogin{Username: login.Username, Role: login.Role, AccountStatus: login.Status})
+		}
+	}
+	sort.Slice(logins, func(i, j int) bool { return logins[i].Username < logins[j].Username })
+	return logins, nil
+}

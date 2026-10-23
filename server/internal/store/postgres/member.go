@@ -36,36 +36,33 @@ func (r *postgresMemberRepository) FindByID(id uint64) (models.User, error) {
 	return member, nil
 }
 
-func (r *postgresMemberRepository) FindByIDs(ids []uint64) ([]models.User, error) {
+func (r *postgresMemberRepository) FindByIDsOrQuestIDs(ids []uint64, questIDs []string) ([]models.User, error) {
 	var members []models.User
-	if len(ids) == 0 {
-		return members, nil
-	}
-	err := r.db.Where("id IN ?", ids).Find(&members).Error
-	return members, err
-}
-
-func (r *postgresMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
-	var members []models.User
-	err := r.db.Where("LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", questID).Find(&members).Error
-	return members, err
-}
-
-func (r *postgresMemberRepository) FindByQuestIDs(questIDs []string) ([]models.User, error) {
-	var members []models.User
-	if len(questIDs) == 0 {
-		return members, nil
-	}
 	values := make([]string, 0, len(questIDs))
 	for _, questID := range questIDs {
 		if strings.TrimSpace(questID) != "" {
 			values = append(values, strings.ToLower(strings.TrimSpace(questID)))
 		}
 	}
-	if len(values) == 0 {
+	if len(ids) == 0 && len(values) == 0 {
 		return members, nil
 	}
-	err := r.db.Where("lower(btrim(quest_id)) IN ?", values).Find(&members).Error
+	query := r.db.Model(&models.User{})
+	switch {
+	case len(ids) > 0 && len(values) > 0:
+		query = query.Where("id IN ? OR lower(btrim(quest_id)) IN ?", ids, values)
+	case len(ids) > 0:
+		query = query.Where("id IN ?", ids)
+	default:
+		query = query.Where("lower(btrim(quest_id)) IN ?", values)
+	}
+	err := query.Find(&members).Error
+	return members, err
+}
+
+func (r *postgresMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
+	var members []models.User
+	err := r.db.Where("LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", questID).Find(&members).Error
 	return members, err
 }
 

@@ -20,7 +20,7 @@ func NewExecutiveTeamController(st store.Store) Controller {
 
 func (c *executiveTeamController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/executive-team", middleware.UseAuthentication(c.store))
-	group.GET("", middleware.UseAuthorization("executive_team.get"), c.getExecutiveTeam)
+	group.GET("", middleware.UseAuthorization("executive-team.get"), c.getExecutiveTeam)
 }
 
 // getExecutiveTeam returns the selected semester's executive memberships

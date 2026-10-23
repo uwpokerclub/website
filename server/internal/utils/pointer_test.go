@@ -26,3 +26,23 @@ func TestUint64ToPtr(t *testing.T) {
 		t.Fatalf("Uint64ToPtr(%d) = %v, want pointer to %d", value, got, value)
 	}
 }
+
+func TestStringPtrValue(t *testing.T) {
+	if got := StringPtrValue(nil); got != "" {
+		t.Fatalf("StringPtrValue(nil) = %q, want empty string", got)
+	}
+	value := "roster"
+	if got := StringPtrValue(&value); got != value {
+		t.Fatalf("StringPtrValue(&value) = %q, want %q", got, value)
+	}
+}
+
+func TestUint64PtrValue(t *testing.T) {
+	if got := Uint64PtrValue(nil); got != 0 {
+		t.Fatalf("Uint64PtrValue(nil) = %d, want 0", got)
+	}
+	value := uint64(412)
+	if got := Uint64PtrValue(&value); got != value {
+		t.Fatalf("Uint64PtrValue(&value) = %d, want %d", got, value)
+	}
+}

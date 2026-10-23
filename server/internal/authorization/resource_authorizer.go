@@ -27,5 +27,5 @@ var DefaultAuthorizerMap = ResourceAuthorizerMap{
 		"clock":       NewClockAuthorizer(),
 	}),
 	"officer-transition": NewTransitionAuthorizer(),
-	"executive_team":     NewExecutiveTeamAuthorizer(),
+	"executive-team":     NewExecutiveTeamAuthorizer(),
 }

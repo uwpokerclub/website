@@ -3,6 +3,7 @@ package services
 import (
 	"api/internal/models"
 	"api/internal/store"
+	"api/internal/utils"
 	"errors"
 	"fmt"
 	"sort"
@@ -31,7 +32,7 @@ func GetExecutiveTeam(st store.Store, semesterID uuid.UUID) (models.ExecutiveTea
 	}
 	membershipFilter := &models.ListMembershipsFilter{
 		SemesterID: &semesterID,
-		Executive:  boolPointer(true),
+		Executive:  utils.BoolToPtr(true),
 		Pagination: models.Pagination{},
 	}
 	memberships, _, err := st.Memberships().List(membershipFilter)
@@ -111,17 +112,17 @@ func GetExecutiveTeam(st store.Store, semesterID uuid.UUID) (models.ExecutiveTea
 	for _, person := range people {
 		row := models.ExecutiveTeamMember{HasLogin: person.login != nil, HasExecutiveMembership: person.membership}
 		if person.member != nil {
-			row.MemberID = uint64Pointer(person.member.ID)
-			row.FirstName = stringPointer(person.member.FirstName)
-			row.LastName = stringPointer(person.member.LastName)
-			row.QuestID = stringPointer(person.member.QuestID)
+			row.MemberID = utils.Uint64ToPtr(person.member.ID)
+			row.FirstName = utils.StringToPtr(person.member.FirstName)
+			row.LastName = utils.StringToPtr(person.member.LastName)
+			row.QuestID = utils.StringToPtr(person.member.QuestID)
 		} else if person.login != nil {
-			row.QuestID = stringPointer(person.login.Username)
+			row.QuestID = utils.StringToPtr(person.login.Username)
 		}
 		if person.login != nil {
-			row.Username = stringPointer(person.login.Username)
-			row.Role = stringPointer(person.login.Role)
-			row.AccountStatus = stringPointer(person.login.AccountStatus)
+			row.Username = utils.StringToPtr(person.login.Username)
+			row.Role = utils.StringToPtr(person.login.Role)
+			row.AccountStatus = utils.StringToPtr(person.login.AccountStatus)
 			row.ActivationOutstanding = person.login.AccountStatus == models.LoginStatusPendingActivation
 		}
 		response.Members = append(response.Members, row)
@@ -145,9 +146,6 @@ func GetExecutiveTeam(st store.Store, semesterID uuid.UUID) (models.ExecutiveTea
 	return response, nil
 }
 
-func boolPointer(value bool) *bool       { return &value }
-func uint64Pointer(value uint64) *uint64 { return &value }
-func stringPointer(value string) *string { return &value }
 func stringValue(value *string) string {
 	if value == nil {
 		return ""

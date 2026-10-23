@@ -56,7 +56,7 @@ func (r *inMemoryMembershipRepository) Create(membership *models.Membership) err
 
 	for _, m := range r.memberships {
 		if m.UserID == membership.UserID && m.SemesterID == membership.SemesterID {
-			return fmt.Errorf("membership for user %d in semester %s already exists", membership.UserID, membership.SemesterID)
+			return store.ErrAlreadyExists
 		}
 	}
 
@@ -100,6 +100,19 @@ func (r *inMemoryMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semes
 	}
 
 	return *membership, nil
+}
+
+func (r *inMemoryMembershipRepository) FindByUserAndSemester(userID uint64, semesterID uuid.UUID) (models.Membership, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, membership := range r.memberships {
+		if membership.UserID == userID && membership.SemesterID == semesterID {
+			return *membership, nil
+		}
+	}
+
+	return models.Membership{}, store.ErrNotFound
 }
 
 // LockByIDAndSemesterID rereads from the transaction snapshot. The in-memory

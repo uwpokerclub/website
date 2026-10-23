@@ -53,7 +53,25 @@ func TestMembershipRepository_Create_DuplicateUserSemester(t *testing.T) {
 	require.NoError(t, repo.Create(&models.Membership{UserID: 1, SemesterID: semesterID}))
 
 	err := repo.Create(&models.Membership{UserID: 1, SemesterID: semesterID})
-	require.Error(t, err)
+	require.ErrorIs(t, err, store.ErrAlreadyExists)
+}
+
+func TestMembershipRepository_FindByUserAndSemester(t *testing.T) {
+	t.Parallel()
+
+	repo := newMembershipRepository()
+	semesterA := uuid.New()
+	semesterB := uuid.New()
+	membership := &models.Membership{UserID: 1, SemesterID: semesterA}
+	require.NoError(t, repo.Create(membership))
+
+	found, err := repo.FindByUserAndSemester(1, semesterA)
+	require.NoError(t, err)
+	require.Equal(t, membership.ID, found.ID)
+	_, err = repo.FindByUserAndSemester(1, semesterB)
+	require.ErrorIs(t, err, store.ErrNotFound)
+	_, err = repo.FindByUserAndSemester(2, semesterA)
+	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
 func TestMembershipRepository_FindByID_NotFound(t *testing.T) {

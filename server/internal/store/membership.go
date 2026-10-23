@@ -20,6 +20,10 @@ type MembershipRepository interface {
 	// specific semester, preloaded with its User and Semester.
 	FindByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error)
 
+	// FindByUserAndSemester retrieves a membership by its user and semester. Implementations
+	// preload associations to the extent supported by their store.
+	FindByUserAndSemester(userID uint64, semesterID uuid.UUID) (models.Membership, error)
+
 	// LockByIDAndSemesterID rereads and locks a membership inside the caller's transaction.
 	LockByIDAndSemesterID(id uuid.UUID, semesterID uuid.UUID) (models.Membership, error)
 

@@ -22,7 +22,17 @@ func NewMembershipRepository(db *gorm.DB) store.MembershipRepository {
 }
 
 func (r *postgresMembershipRepository) Create(membership *models.Membership) error {
-	return r.db.Create(membership).Error
+	result := r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "semester_id"}},
+		DoNothing: true,
+	}).Create(membership)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return store.ErrAlreadyExists
+	}
+	return nil
 }
 
 func (r *postgresMembershipRepository) FindByID(id uuid.UUID) (models.Membership, error) {
@@ -48,6 +58,18 @@ func (r *postgresMembershipRepository) FindByIDAndSemesterID(id uuid.UUID, semes
 		return models.Membership{}, err
 	}
 
+	return membership, nil
+}
+
+func (r *postgresMembershipRepository) FindByUserAndSemester(userID uint64, semesterID uuid.UUID) (models.Membership, error) {
+	var membership models.Membership
+	if err := (models.Membership{}).Preload(r.db).
+		First(&membership, "memberships.user_id = ? AND memberships.semester_id = ?", userID, semesterID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Membership{}, store.ErrNotFound
+		}
+		return models.Membership{}, err
+	}
 	return membership, nil
 }
 

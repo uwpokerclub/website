@@ -3,6 +3,7 @@ package services
 import (
 	"api/internal/models"
 	"api/internal/store"
+	"api/internal/utils"
 	"errors"
 	"time"
 
@@ -76,6 +77,39 @@ func (ms *membershipService) CreateMembership(semesterID uuid.UUID, req *models.
 	}
 
 	return &membership, nil
+}
+
+// EnsureExecutiveMembership creates an executive membership when the user is not
+// registered for the semester, or promotes the existing membership. The caller
+// owns the transaction supplied to NewMembershipService.
+func (ms *membershipService) EnsureExecutiveMembership(userID uint64, semesterID uuid.UUID, source models.MembershipSource) (*models.Membership, error) {
+	existing, err := ms.store.Memberships().FindByUserAndSemester(userID, semesterID)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return nil, err
+	}
+
+	if errors.Is(err, store.ErrNotFound) {
+		_, err = ms.CreateMembership(semesterID, &models.CreateMembershipRequest{
+			UserID:    userID,
+			Executive: true,
+		}, source)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if _, err := ms.UpdateMembership(existing.ID, semesterID, &models.UpdateMembershipRequest{Executive: utils.BoolToPtr(true)}); err != nil {
+			return nil, err
+		}
+	}
+
+	// Use the same lookup for both paths so Postgres returns the same associations
+	// for a newly created membership and a promoted one. In-memory stores return
+	// only associations they can represent locally.
+	result, err := ms.store.Memberships().FindByUserAndSemester(userID, semesterID)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // UpdateMembership writes through the store supplied to NewMembershipService.

@@ -28,8 +28,11 @@ func TestAccountActivations(t *testing.T) {
 		require.NoError(t, container.ResetDatabase(ctx))
 		require.NoError(t, db.Create(&models.User{ID: 1, FirstName: "Ada", LastName: "Lovelace", Email: "ada@example.com", Faculty: models.FacultyMath, QuestID: "questid"}).Error)
 		require.NoError(t, db.Create(&models.Login{Username: "questid", Password: "pending", Role: "executive", Status: models.LoginStatusPendingActivation}).Error)
-		token, err := services.NewAccountActivationService(postgres.NewStore(db)).Create("questid")
+		tx, err := postgres.NewStore(db).BeginTx()
 		require.NoError(t, err)
+		token, err := services.NewAccountActivationService(tx).Create("questid")
+		require.NoError(t, err)
+		require.NoError(t, tx.Commit())
 		return token
 	}
 
@@ -69,11 +72,16 @@ func TestAccountActivations(t *testing.T) {
 
 	t.Run("new activation invalidates a previous token", func(t *testing.T) {
 		seed(t)
-		svc := services.NewAccountActivationService(postgres.NewStore(db))
-		first, err := svc.Create("questid")
+		tx, err := postgres.NewStore(db).BeginTx()
 		require.NoError(t, err)
-		second, err := svc.Create("questid")
+		first, err := services.NewAccountActivationService(tx).Create("questid")
 		require.NoError(t, err)
+		require.NoError(t, tx.Commit())
+		tx, err = postgres.NewStore(db).BeginTx()
+		require.NoError(t, err)
+		second, err := services.NewAccountActivationService(tx).Create("questid")
+		require.NoError(t, err)
+		require.NoError(t, tx.Commit())
 
 		verify := func(token string) int {
 			req, err := testutils.MakeJSONRequest(http.MethodPost, "/api/v2/activations/verify", map[string]string{"token": token})

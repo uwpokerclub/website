@@ -119,6 +119,19 @@ func (r *postgresMembershipRepository) LockByIDAndSemesterID(id uuid.UUID, semes
 	return membership, nil
 }
 
+func (r *postgresMembershipRepository) FindByUserAndSemesterForUpdate(userID uint64, semesterID uuid.UUID) (models.Membership, error) {
+	var membership models.Membership
+	err := r.db.Clauses(clause.Locking{Strength: "NO KEY UPDATE"}).
+		Where("user_id = ? AND semester_id = ?", userID, semesterID).First(&membership).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Membership{}, store.ErrNotFound
+		}
+		return models.Membership{}, err
+	}
+	return membership, nil
+}
+
 func (r *postgresMembershipRepository) applyJoinedFilterClauses(query *gorm.DB, filter *models.ListMembershipsFilter) *gorm.DB {
 	if filter.Search != "" {
 		pattern := "%" + eventNameLikeReplacer.Replace(filter.Search) + "%"

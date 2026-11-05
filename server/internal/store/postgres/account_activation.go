@@ -27,6 +27,10 @@ func (r *postgresAccountActivationRepository) DeleteUnusedByUsername(username st
 	return r.db.Where("username = ? AND used_at IS NULL", username).Delete(&models.AccountActivation{}).Error
 }
 
+func (r *postgresAccountActivationRepository) DeleteAllUnusedByUsername(username string) error {
+	return r.db.Where("LOWER(BTRIM(username)) = LOWER(BTRIM(?)) AND used_at IS NULL", username).Delete(&models.AccountActivation{}).Error
+}
+
 func (r *postgresAccountActivationRepository) DeleteByTransition(id uuid.UUID) error {
 	return r.db.Where("transition_id = ?", id).Delete(&models.AccountActivation{}).Error
 }

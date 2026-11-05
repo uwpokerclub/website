@@ -99,6 +99,11 @@ func (r *inMemoryMemberRepository) FindByQuestID(questID string) ([]models.User,
 	return result, nil
 }
 
+// FindByQuestIDForUpdate has no row-locking semantics in the in-memory store.
+func (r *inMemoryMemberRepository) FindByQuestIDForUpdate(questID string) ([]models.User, error) {
+	return r.FindByQuestID(questID)
+}
+
 func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

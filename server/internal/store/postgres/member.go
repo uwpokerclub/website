@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type postgresMemberRepository struct {
@@ -47,6 +48,14 @@ func (r *postgresMemberRepository) FindByIDs(ids []uint64) ([]models.User, error
 func (r *postgresMemberRepository) FindByQuestID(questID string) ([]models.User, error) {
 	var members []models.User
 	err := r.db.Where("LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", questID).Find(&members).Error
+	return members, err
+}
+
+func (r *postgresMemberRepository) FindByQuestIDForUpdate(questID string) ([]models.User, error) {
+	var members []models.User
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("BTRIM(quest_id) <> '' AND LOWER(BTRIM(quest_id)) = LOWER(BTRIM(?))", questID).
+		Order("id ASC").Find(&members).Error
 	return members, err
 }
 

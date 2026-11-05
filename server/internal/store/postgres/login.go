@@ -4,6 +4,7 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"errors"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -20,7 +21,12 @@ func NewLoginRepository(db *gorm.DB) store.LoginRepository {
 }
 
 func (r *postgresLoginRepository) Create(login *models.Login) error {
-	return r.db.Create(login).Error
+	err := r.db.Create(login).Error
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return store.ErrAlreadyExists
+	}
+	return err
 }
 
 func (r *postgresLoginRepository) FindByUsername(username string) (models.Login, error) {
@@ -29,6 +35,18 @@ func (r *postgresLoginRepository) FindByUsername(username string) (models.Login,
 
 func (r *postgresLoginRepository) FindByUsernameForUpdate(username string) (models.Login, error) {
 	return r.findByUsername(username, true)
+}
+
+func (r *postgresLoginRepository) FindByNormalizedUsernameForUpdate(username string) ([]models.Login, error) {
+	var logins []models.Login
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("LOWER(BTRIM(username)) = LOWER(BTRIM(?))", username).
+		Order("username ASC").Find(&logins).Error
+	return logins, err
+}
+
+func (r *postgresLoginRepository) LockNormalizedUsername(username string) error {
+	return r.db.Exec("SELECT pg_advisory_xact_lock(hashtextextended(LOWER(BTRIM(?)), 0))", username).Error
 }
 
 func (r *postgresLoginRepository) findByUsername(username string, forUpdate bool) (models.Login, error) {
@@ -174,7 +192,7 @@ func (r *postgresLoginRepository) FindByUsernameWithMember(username string) (mod
 
 	err := r.db.Table("logins").
 		Select("logins.username, logins.role, logins.status, users.id as user_id, users.first_name, users.last_name").
-		Joins("LEFT JOIN users ON logins.username = users.quest_id").
+		Joins("LEFT JOIN users ON BTRIM(logins.username) <> '' AND LOWER(BTRIM(logins.username)) = LOWER(BTRIM(users.quest_id))").
 		Where("logins.username = ?", username).
 		Scan(&row).Error
 	if err != nil {

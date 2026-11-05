@@ -36,13 +36,37 @@ func (svc *loginService) CreateLogin(username string, password string, role stri
 		return fmt.Errorf("hash password: %w", err)
 	}
 
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return fmt.Errorf("begin login creation: %w", err)
+	}
+	defer tx.Rollback()
+	if err := tx.Logins().LockNormalizedUsername(username); err != nil {
+		return fmt.Errorf("lock login identity: %w", err)
+	}
+	matching, err := tx.Logins().FindByNormalizedUsernameForUpdate(username)
+	if err != nil {
+		return fmt.Errorf("find normalized login: %w", err)
+	}
+	if len(matching) > 0 {
+		return store.ErrConflict
+	}
 	login := models.Login{
 		Username: username,
 		Password: string(hash),
 		Role:     role,
 	}
 
-	return svc.store.Logins().Create(&login)
+	if err := tx.Logins().Create(&login); err != nil {
+		if errors.Is(err, store.ErrAlreadyExists) {
+			return store.ErrConflict
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateLogin updates a login's password, role, and/or status. At least one field must be provided.

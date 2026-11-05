@@ -9,6 +9,7 @@ import (
 type AccountActivationRepository interface {
 	Create(activation *models.AccountActivation) error
 	DeleteUnusedByUsername(username string) error
+	DeleteAllUnusedByUsername(username string) error
 	DeleteByTransition(id uuid.UUID) error
 	ActivationProgress(id uuid.UUID) (map[string]bool, error)
 	FindValid(tokenHash []byte) (models.AccountActivation, error)

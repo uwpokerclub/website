@@ -25,6 +25,7 @@ func NewAccountActivationService(st store.Store) *accountActivationService {
 }
 
 // Create mints a 32-byte base64url token and persists only its SHA-256 hash.
+// The injected store must be a caller-owned transaction; the caller commits it.
 func (svc *accountActivationService) Create(username string) (string, error) {
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
@@ -33,19 +34,11 @@ func (svc *accountActivationService) Create(username string) (string, error) {
 	token := base64.RawURLEncoding.EncodeToString(raw)
 	hash := sha256.Sum256([]byte(token))
 	activation := models.AccountActivation{TokenHash: hash[:], Username: username, ExpiresAt: time.Now().UTC().Add(14 * 24 * time.Hour)}
-	tx, err := svc.store.BeginTx()
-	if err != nil {
-		return "", fmt.Errorf("begin activation transaction: %w", err)
-	}
-	defer tx.Rollback()
-	if err := tx.AccountActivations().DeleteUnusedByUsername(username); err != nil {
+	if err := svc.store.AccountActivations().DeleteUnusedByUsername(username); err != nil {
 		return "", fmt.Errorf("revoke prior activations: %w", err)
 	}
-	if err := tx.AccountActivations().Create(&activation); err != nil {
+	if err := svc.store.AccountActivations().Create(&activation); err != nil {
 		return "", fmt.Errorf("create activation: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return "", fmt.Errorf("commit activation transaction: %w", err)
 	}
 	return token, nil
 }

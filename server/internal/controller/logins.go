@@ -130,6 +130,10 @@ func (c *loginsController) createLogin(ctx *gin.Context) {
 	svc := services.NewLoginService(c.store)
 	err := svc.CreateLogin(req.Username, req.Password, req.Role)
 	if err != nil {
+		if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrAlreadyExists) {
+			ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(err.Error()))
+			return
+		}
 		ctx.AbortWithStatusJSON(
 			http.StatusInternalServerError,
 			apierrors.InternalServerError(err.Error()),

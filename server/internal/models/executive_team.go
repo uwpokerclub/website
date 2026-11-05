@@ -27,3 +27,16 @@ type ExecutiveTeamMember struct {
 type ExecutiveTeamResponse struct {
 	Members []ExecutiveTeamMember `json:"members"`
 } //@name ExecutiveTeamResponse
+
+type AddExecutiveTeamMemberRequest struct {
+	QuestID string `json:"questId" binding:"required"`
+	Role    string `json:"role" binding:"required"`
+}
+
+type AddExecutiveTeamMemberResponse struct {
+	MemberID        uint64  `json:"memberId"`
+	Username        string  `json:"username"`
+	Role            string  `json:"role"`
+	AccountStatus   string  `json:"accountStatus"`
+	ActivationToken *string `json:"activationToken,omitempty"`
+} //@name AddExecutiveTeamMemberResponse

@@ -36,13 +36,24 @@ func (svc *loginService) CreateLogin(username string, password string, role stri
 		return fmt.Errorf("hash password: %w", err)
 	}
 
+	if _, err := svc.store.Logins().FindByUsername(username); err == nil {
+		return store.ErrConflict
+	} else if !errors.Is(err, store.ErrNotFound) {
+		return fmt.Errorf("find login: %w", err)
+	}
 	login := models.Login{
 		Username: username,
 		Password: string(hash),
 		Role:     role,
 	}
 
-	return svc.store.Logins().Create(&login)
+	if err := svc.store.Logins().Create(&login); err != nil {
+		if errors.Is(err, store.ErrAlreadyExists) {
+			return store.ErrConflict
+		}
+		return err
+	}
+	return nil
 }
 
 // UpdateLogin updates a login's password, role, and/or status. At least one field must be provided.

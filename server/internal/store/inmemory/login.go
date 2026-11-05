@@ -3,7 +3,6 @@ package inmemory
 import (
 	"api/internal/models"
 	"api/internal/store"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -45,7 +44,7 @@ func (r *inMemoryLoginRepository) Create(login *models.Login) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.logins[login.Username]; exists {
-		return fmt.Errorf("login with username %q already exists", login.Username)
+		return store.ErrAlreadyExists
 	}
 	if login.Status == "" {
 		login.Status = models.LoginStatusActive

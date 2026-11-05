@@ -3,6 +3,7 @@ package controller
 import (
 	"api/internal/middleware"
 	"api/internal/models"
+	"api/internal/services"
 	"api/internal/store"
 	"errors"
 	"net/http"
@@ -20,6 +21,38 @@ func NewExecutiveTeamController(st store.Store) Controller {
 func (c *executiveTeamController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/executive-team", middleware.UseAuthentication(c.store))
 	group.GET("", middleware.UseAuthorization("executive-team.get"), c.getExecutiveTeam)
+	group.POST("", middleware.UseAuthorization("executive-team.create"), c.addExecutiveTeamMember)
+}
+
+func (c *executiveTeamController) addExecutiveTeamMember(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+	var req models.AddExecutiveTeamMemberRequest
+	if !BindJSON(ctx, &req) {
+		return
+	}
+	response, err := services.NewExecutiveTeamService(c.store).AddMember(semesterID, req.QuestID, req.Role)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrExecutiveTeamInvalidIdentity):
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamInvalidRole), errors.Is(err, services.ErrExecutiveTeamProtectedLogin):
+			ctx.AbortWithStatusJSON(http.StatusForbidden, apierrors.Forbidden(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamMemberNotFound), errors.Is(err, services.ErrExecutiveTeamSemesterNotFound):
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamMemberAmbiguous), errors.Is(err, services.ErrExecutiveTeamIdentityConflict),
+			errors.Is(err, services.ErrExecutiveTeamStagedLogin), errors.Is(err, services.ErrExecutiveTeamAlreadyMember),
+			errors.Is(err, store.ErrConflict), errors.Is(err, store.ErrAlreadyExists):
+			ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(err.Error()))
+		default:
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		}
+		return
+	}
+	ctx.JSON(http.StatusCreated, response)
 }
 
 // getExecutiveTeam returns the selected semester's executive memberships

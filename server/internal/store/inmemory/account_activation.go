@@ -4,6 +4,7 @@ import (
 	"api/internal/models"
 	"api/internal/store"
 	"encoding/hex"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +47,17 @@ func (r *inMemoryAccountActivationRepository) DeleteUnusedByUsername(username st
 	for key, activation := range r.activations {
 		if activation.Username == username && activation.UsedAt == nil {
 			delete(r.activations, key)
+		}
+	}
+	return nil
+}
+
+func (r *inMemoryAccountActivationRepository) DeleteAllUnusedByUsername(username string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for hash, activation := range r.activations {
+		if strings.EqualFold(strings.TrimSpace(activation.Username), strings.TrimSpace(username)) && activation.UsedAt == nil {
+			delete(r.activations, hash)
 		}
 	}
 	return nil

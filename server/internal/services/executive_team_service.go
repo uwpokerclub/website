@@ -51,141 +51,16 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Semesters().FindByID(semesterID); err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamSemesterNotFound
-		}
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find semester: %w", err)
-	}
-
-	members, err := tx.Members().FindByQuestID(questID)
+	member, login, hasLogin, err := resolveExecutiveAddTarget(tx, semesterID, questID)
 	if err != nil {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find member: %w", err)
+		return models.AddExecutiveTeamMemberResponse{}, err
 	}
-	if len(members) == 0 {
-		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamMemberNotFound
-	}
-	if len(members) != 1 {
-		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamMemberAmbiguous
-	}
-	member := members[0]
-	normalizedQuestID := normalizeExecutiveIdentity(member.QuestID)
-	if normalizedQuestID == "" || normalizedQuestID != normalizeExecutiveIdentity(questID) {
-		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamIdentityConflict
-	}
-	login, loginErr := tx.Logins().FindByUsername(member.QuestID)
-	hasLogin := loginErr == nil
-	if loginErr != nil && !errors.Is(loginErr, store.ErrNotFound) {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find login: %w", loginErr)
-	}
-	if hasLogin {
-		if login.StagedTransitionID != nil {
-			return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamStagedLogin
-		}
-		if login.Role != authorization.ROLE_EXECUTIVE.ToString() && login.Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
-			return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamProtectedLogin
-		}
-	}
-
-	existingMembership, err := tx.Memberships().FindByUserAndSemester(member.ID, semesterID)
-	if err != nil && !errors.Is(err, store.ErrNotFound) {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find membership: %w", err)
-	}
-	if err == nil && existingMembership.Executive {
-		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamAlreadyMember
-	}
-
-	username := member.QuestID
-	status := models.LoginStatusPendingActivation
-	var token *string
-	if !hasLogin {
-		password, err := unusablePasswordHash()
-		if err != nil {
-			return models.AddExecutiveTeamMemberResponse{}, err
-		}
-		login := models.Login{Username: username, Password: password, Role: role, Status: models.LoginStatusPendingActivation}
-		if err := tx.Logins().Create(&login); err != nil {
-			if errors.Is(err, store.ErrAlreadyExists) || errors.Is(err, store.ErrConflict) {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login was created concurrently", store.ErrConflict)
-			}
-			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("create login: %w", err)
-		}
-		activationToken, err := NewAccountActivationService(tx).Create(login.Username)
-		if err != nil {
-			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("create activation: %w", err)
-		}
-		token = utils.StringToPtr(activationToken)
-	} else {
-		username = login.Username
-		status = login.Status
-		switch login.Status {
-		case models.LoginStatusActive:
-			updates := map[string]any{"role": role}
-			if login.Role != role {
-				if err := tx.Sessions().DeleteByUsername(username); err != nil {
-					return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("delete changed-role sessions: %w", err)
-				}
-			}
-			if err := tx.Logins().Update(username, updates); err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("update login role: %w", err)
-			}
-			if err := tx.AccountActivations().DeleteAllUnusedByUsername(username); err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("revoke stale activations: %w", err)
-			}
-		case models.LoginStatusDisabled:
-			if err := tx.Sessions().DeleteByUsername(username); err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("delete disabled-login sessions: %w", err)
-			}
-			if err := tx.Logins().Update(username, map[string]any{"role": role, "status": models.LoginStatusActive}); err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("reactivate login: %w", err)
-			}
-			if err := tx.AccountActivations().DeleteAllUnusedByUsername(username); err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("revoke stale activations: %w", err)
-			}
-			status = models.LoginStatusActive
-		case models.LoginStatusPendingActivation:
-			if login.Role != role {
-				if err := tx.Sessions().DeleteByUsername(username); err != nil {
-					return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("delete changed-role sessions: %w", err)
-				}
-			}
-			if err := tx.Logins().Update(username, map[string]any{"role": role}); err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("update pending login role: %w", err)
-			}
-			activationToken, err := NewAccountActivationService(tx).Create(username)
-			if err != nil {
-				return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("rotate activation: %w", err)
-			}
-			token = utils.StringToPtr(activationToken)
-		default:
-			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("unsupported login status %q", login.Status)
-		}
-	}
-
-	// Recheck the exact login identity after account changes and before creating
-	// the executive membership.
-	confirmed, err := tx.Logins().FindByUsername(member.QuestID)
+	username, status, token, err := prepareExecutiveLogin(tx, member, login, hasLogin, role)
 	if err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login changed during add", store.ErrConflict)
-		}
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("recheck login identity: %w", err)
+		return models.AddExecutiveTeamMemberResponse{}, err
 	}
-	if confirmed.Username != username {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login identity changed during add", store.ErrConflict)
-	}
-	if confirmed.StagedTransitionID != nil {
-		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamStagedLogin
-	}
-	if confirmed.Role != role {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login role changed during add", store.ErrConflict)
-	}
-	confirmedMembers, err := tx.Members().FindByQuestID(questID)
-	if err != nil {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("recheck member identity: %w", err)
-	}
-	if len(confirmedMembers) != 1 || confirmedMembers[0].ID != member.ID || normalizeExecutiveIdentity(confirmedMembers[0].QuestID) != normalizedQuestID {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: member identity changed during add", store.ErrConflict)
+	if err := recheckExecutiveAddIdentity(tx, member, questID, username, role); err != nil {
+		return models.AddExecutiveTeamMemberResponse{}, err
 	}
 
 	if _, err := NewMembershipService(tx).EnsureExecutiveMembership(member.ID, semesterID, models.MembershipSourceAdmin); err != nil {
@@ -202,6 +77,155 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("commit executive team add: %w", err)
 	}
 	return models.AddExecutiveTeamMemberResponse{MemberID: member.ID, Username: username, Role: role, AccountStatus: status, ActivationToken: token}, nil
+}
+
+func resolveExecutiveAddTarget(tx store.Store, semesterID uuid.UUID, questID string) (models.User, models.Login, bool, error) {
+	if _, err := tx.Semesters().FindByID(semesterID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return models.User{}, models.Login{}, false, ErrExecutiveTeamSemesterNotFound
+		}
+		return models.User{}, models.Login{}, false, fmt.Errorf("find semester: %w", err)
+	}
+
+	members, err := tx.Members().FindByQuestID(questID)
+	if err != nil {
+		return models.User{}, models.Login{}, false, fmt.Errorf("find member: %w", err)
+	}
+	if len(members) == 0 {
+		return models.User{}, models.Login{}, false, ErrExecutiveTeamMemberNotFound
+	}
+	if len(members) != 1 {
+		return models.User{}, models.Login{}, false, ErrExecutiveTeamMemberAmbiguous
+	}
+	member := members[0]
+	if normalizedQuestID := normalizeExecutiveIdentity(member.QuestID); normalizedQuestID == "" || normalizedQuestID != normalizeExecutiveIdentity(questID) {
+		return models.User{}, models.Login{}, false, ErrExecutiveTeamIdentityConflict
+	}
+
+	login, err := tx.Logins().FindByUsername(member.QuestID)
+	hasLogin := err == nil
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return models.User{}, models.Login{}, false, fmt.Errorf("find login: %w", err)
+	}
+	if hasLogin {
+		if login.StagedTransitionID != nil {
+			return models.User{}, models.Login{}, false, ErrExecutiveTeamStagedLogin
+		}
+		if login.Role != authorization.ROLE_EXECUTIVE.ToString() && login.Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
+			return models.User{}, models.Login{}, false, ErrExecutiveTeamProtectedLogin
+		}
+	}
+
+	membership, err := tx.Memberships().FindByUserAndSemester(member.ID, semesterID)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return models.User{}, models.Login{}, false, fmt.Errorf("find membership: %w", err)
+	}
+	if err == nil && membership.Executive {
+		return models.User{}, models.Login{}, false, ErrExecutiveTeamAlreadyMember
+	}
+
+	return member, login, hasLogin, nil
+}
+
+func prepareExecutiveLogin(tx store.Store, member models.User, login models.Login, hasLogin bool, role string) (string, string, *string, error) {
+	if !hasLogin {
+		password, err := unusablePasswordHash()
+		if err != nil {
+			return "", "", nil, err
+		}
+		login = models.Login{Username: member.QuestID, Password: password, Role: role, Status: models.LoginStatusPendingActivation}
+		if err := tx.Logins().Create(&login); err != nil {
+			if errors.Is(err, store.ErrAlreadyExists) || errors.Is(err, store.ErrConflict) {
+				return "", "", nil, fmt.Errorf("%w: login was created concurrently", store.ErrConflict)
+			}
+			return "", "", nil, fmt.Errorf("create login: %w", err)
+		}
+		token, err := NewAccountActivationService(tx).Create(login.Username)
+		if err != nil {
+			return "", "", nil, fmt.Errorf("create activation: %w", err)
+		}
+		return login.Username, login.Status, utils.StringToPtr(token), nil
+	}
+
+	status, token, err := updateExecutiveLogin(tx, login, role)
+	if err != nil {
+		return "", "", nil, err
+	}
+	return login.Username, status, token, nil
+}
+
+func updateExecutiveLogin(tx store.Store, login models.Login, role string) (string, *string, error) {
+	username := login.Username
+	updates := map[string]any{"role": role}
+	status := login.Status
+	switch login.Status {
+	case models.LoginStatusActive:
+		if login.Role != role {
+			if err := tx.Sessions().DeleteByUsername(username); err != nil {
+				return "", nil, fmt.Errorf("delete changed-role sessions: %w", err)
+			}
+		}
+		if err := tx.AccountActivations().DeleteAllUnusedByUsername(username); err != nil {
+			return "", nil, fmt.Errorf("revoke stale activations: %w", err)
+		}
+	case models.LoginStatusDisabled:
+		if err := tx.Sessions().DeleteByUsername(username); err != nil {
+			return "", nil, fmt.Errorf("delete disabled-login sessions: %w", err)
+		}
+		updates["status"] = models.LoginStatusActive
+		status = models.LoginStatusActive
+		if err := tx.AccountActivations().DeleteAllUnusedByUsername(username); err != nil {
+			return "", nil, fmt.Errorf("revoke stale activations: %w", err)
+		}
+	case models.LoginStatusPendingActivation:
+		if login.Role != role {
+			if err := tx.Sessions().DeleteByUsername(username); err != nil {
+				return "", nil, fmt.Errorf("delete changed-role sessions: %w", err)
+			}
+		}
+	default:
+		return "", nil, fmt.Errorf("unsupported login status %q", login.Status)
+	}
+
+	if err := tx.Logins().Update(username, updates); err != nil {
+		return "", nil, fmt.Errorf("update login: %w", err)
+	}
+	if login.Status != models.LoginStatusPendingActivation {
+		return status, nil, nil
+	}
+	token, err := NewAccountActivationService(tx).Create(username)
+	if err != nil {
+		return "", nil, fmt.Errorf("rotate activation: %w", err)
+	}
+	return status, utils.StringToPtr(token), nil
+}
+
+func recheckExecutiveAddIdentity(tx store.Store, member models.User, questID, username, role string) error {
+	confirmed, err := tx.Logins().FindByUsername(member.QuestID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return fmt.Errorf("%w: login changed during add", store.ErrConflict)
+		}
+		return fmt.Errorf("recheck login identity: %w", err)
+	}
+	if confirmed.Username != username {
+		return fmt.Errorf("%w: login identity changed during add", store.ErrConflict)
+	}
+	if confirmed.StagedTransitionID != nil {
+		return ErrExecutiveTeamStagedLogin
+	}
+	if confirmed.Role != role {
+		return fmt.Errorf("%w: login role changed during add", store.ErrConflict)
+	}
+
+	confirmedMembers, err := tx.Members().FindByQuestID(questID)
+	if err != nil {
+		return fmt.Errorf("recheck member identity: %w", err)
+	}
+	if len(confirmedMembers) != 1 || confirmedMembers[0].ID != member.ID || normalizeExecutiveIdentity(confirmedMembers[0].QuestID) != normalizeExecutiveIdentity(member.QuestID) {
+		return fmt.Errorf("%w: member identity changed during add", store.ErrConflict)
+	}
+	return nil
 }
 
 func normalizeExecutiveIdentity(value string) string {

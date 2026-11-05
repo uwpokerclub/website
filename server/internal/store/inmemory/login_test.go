@@ -169,3 +169,24 @@ func TestLoginRepository_FindByUsernameWithMember(t *testing.T) {
 	_, err = repo.FindByUsernameWithMember("nobody")
 	require.ErrorIs(t, err, store.ErrNotFound)
 }
+
+func TestLoginRepository_FindByUsernameWithMemberUsesExactQuestID(t *testing.T) {
+	t.Parallel()
+
+	members := newMemberRepository()
+	repo := newLoginRepository()
+	repo.members = members
+	require.NoError(t, members.Create(&models.User{ID: 10, QuestID: "ExactUser", FirstName: "Exact", LastName: "Match"}))
+	require.NoError(t, members.Create(&models.User{ID: 11, QuestID: "other-user", FirstName: "Other", LastName: "Member"}))
+	require.NoError(t, repo.Create(&models.Login{Username: "ExactUser", Password: "hash", Role: "executive"}))
+	require.NoError(t, repo.Create(&models.Login{Username: "other-user ", Password: "hash", Role: "executive"}))
+
+	found, err := repo.FindByUsernameWithMember("ExactUser")
+	require.NoError(t, err)
+	require.NotNil(t, found.LinkedMember)
+	require.Equal(t, uint64(10), found.LinkedMember.ID)
+
+	found, err = repo.FindByUsernameWithMember("other-user ")
+	require.NoError(t, err)
+	require.Nil(t, found.LinkedMember)
+}

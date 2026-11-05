@@ -180,7 +180,7 @@ func (r *postgresLoginRepository) FindByUsernameWithMember(username string) (mod
 
 	err := r.db.Table("logins").
 		Select("logins.username, logins.role, logins.status, users.id as user_id, users.first_name, users.last_name").
-		Joins("LEFT JOIN users ON BTRIM(logins.username) <> '' AND LOWER(BTRIM(logins.username)) = LOWER(BTRIM(users.quest_id))").
+		Joins("LEFT JOIN users ON logins.username = users.quest_id").
 		Where("logins.username = ?", username).
 		Scan(&row).Error
 	if err != nil {

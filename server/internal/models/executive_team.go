@@ -33,6 +33,10 @@ type AddExecutiveTeamMemberRequest struct {
 	Role    string `json:"role" binding:"required"`
 }
 
+type ChangeExecutiveTeamRoleRequest struct {
+	Role string `json:"role" binding:"required"`
+}
+
 type AddExecutiveTeamMemberResponse struct {
 	MemberID        uint64  `json:"memberId"`
 	Username        string  `json:"username"`

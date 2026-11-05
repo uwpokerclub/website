@@ -3,7 +3,6 @@ package inmemory
 import (
 	"api/internal/models"
 	"api/internal/store"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -45,7 +44,7 @@ func (r *inMemoryLoginRepository) Create(login *models.Login) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.logins[login.Username]; exists {
-		return fmt.Errorf("login with username %q already exists", login.Username)
+		return store.ErrAlreadyExists
 	}
 	if login.Status == "" {
 		login.Status = models.LoginStatusActive
@@ -72,24 +71,6 @@ func (r *inMemoryLoginRepository) FindByUsername(username string) (models.Login,
 func (r *inMemoryLoginRepository) FindByUsernameForUpdate(username string) (models.Login, error) {
 	return r.FindByUsername(username)
 }
-
-// FindByNormalizedUsernameForUpdate has no row-locking semantics in the in-memory store.
-func (r *inMemoryLoginRepository) FindByNormalizedUsernameForUpdate(username string) ([]models.Login, error) {
-	wanted := strings.ToLower(strings.TrimSpace(username))
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	var matches []models.Login
-	for _, login := range r.logins {
-		if strings.ToLower(strings.TrimSpace(login.Username)) == wanted {
-			matches = append(matches, *login)
-		}
-	}
-	sort.Slice(matches, func(i, j int) bool { return matches[i].Username < matches[j].Username })
-	return matches, nil
-}
-
-// LockNormalizedUsername has no row-locking semantics in the in-memory store.
-func (r *inMemoryLoginRepository) LockNormalizedUsername(string) error { return nil }
 
 func (r *inMemoryLoginRepository) Update(username string, values map[string]any) error {
 	r.mu.Lock()

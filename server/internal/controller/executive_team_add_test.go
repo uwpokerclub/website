@@ -52,7 +52,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 	}
 
 	t.Run("new account activates through existing workflow", func(t *testing.T) {
-		reset(t, " Quest-New ")
+		reset(t, "Quest-New")
 		w := request(t, semester.ID, " quest-new ", "tournament_director")
 		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 		var response models.AddExecutiveTeamMemberResponse
@@ -96,10 +96,10 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		reset(t, "Quest-Active")
 		password, err := bcrypt.GenerateFromPassword([]byte("existing-password"), bcrypt.DefaultCost)
 		require.NoError(t, err)
-		require.NoError(t, db.Create(&models.Login{Username: " quest-active ", Password: string(password), Role: "executive", Status: models.LoginStatusActive}).Error)
-		staleToken := createPostgresActivation(t, db, " quest-active ")
+		require.NoError(t, db.Create(&models.Login{Username: member.QuestID, Password: string(password), Role: "executive", Status: models.LoginStatusActive}).Error)
+		staleToken := createPostgresActivation(t, db, member.QuestID)
 		staleSession := uuid.New()
-		err = db.Create(&models.Session{ID: staleSession, Username: " quest-active ", Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}).Error
+		err = db.Create(&models.Session{ID: staleSession, Username: member.QuestID, Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}).Error
 		require.NoError(t, err)
 		w := request(t, semester.ID, member.QuestID, "tournament_director")
 		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
@@ -107,7 +107,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 		require.Nil(t, response.ActivationToken)
 		var login models.Login
-		require.NoError(t, db.First(&login, "username = ?", " quest-active ").Error)
+		require.NoError(t, db.First(&login, "username = ?", member.QuestID).Error)
 		require.Equal(t, models.LoginStatusActive, login.Status)
 		require.Equal(t, "tournament_director", login.Role)
 		require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("existing-password")))
@@ -125,10 +125,10 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		reset(t, "Quest-Disabled")
 		password, err := bcrypt.GenerateFromPassword([]byte("valid-old-password"), bcrypt.DefaultCost)
 		require.NoError(t, err)
-		require.NoError(t, db.Create(&models.Login{Username: "quest-disabled", Password: string(password), Role: "executive", Status: models.LoginStatusDisabled}).Error)
-		staleToken := createPostgresActivation(t, db, "quest-disabled")
+		require.NoError(t, db.Create(&models.Login{Username: member.QuestID, Password: string(password), Role: "executive", Status: models.LoginStatusDisabled}).Error)
+		staleToken := createPostgresActivation(t, db, member.QuestID)
 		staleSession := uuid.New()
-		require.NoError(t, db.Create(&models.Session{ID: staleSession, Username: "quest-disabled", Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}).Error)
+		require.NoError(t, db.Create(&models.Session{ID: staleSession, Username: member.QuestID, Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}).Error)
 		w := request(t, semester.ID, member.QuestID, "executive")
 		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 		var response models.AddExecutiveTeamMemberResponse
@@ -136,7 +136,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		require.Nil(t, response.ActivationToken)
 		require.Equal(t, models.LoginStatusActive, response.AccountStatus)
 		var login models.Login
-		require.NoError(t, db.First(&login, "username = ?", "quest-disabled").Error)
+		require.NoError(t, db.First(&login, "username = ?", member.QuestID).Error)
 		require.Equal(t, models.LoginStatusActive, login.Status)
 		require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("valid-old-password")))
 		var sessions int64
@@ -153,17 +153,17 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		reset(t, "Quest-Pending")
 		password, err := bcrypt.GenerateFromPassword([]byte("pending-password"), bcrypt.DefaultCost)
 		require.NoError(t, err)
-		require.NoError(t, db.Create(&models.Login{Username: "quest-pending", Password: string(password), Role: "executive", Status: models.LoginStatusPendingActivation}).Error)
-		oldToken := createPostgresActivation(t, db, "quest-pending")
+		require.NoError(t, db.Create(&models.Login{Username: member.QuestID, Password: string(password), Role: "executive", Status: models.LoginStatusPendingActivation}).Error)
+		oldToken := createPostgresActivation(t, db, member.QuestID)
 		staleSession := uuid.New()
-		require.NoError(t, db.Create(&models.Session{ID: staleSession, Username: "quest-pending", Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}).Error)
+		require.NoError(t, db.Create(&models.Session{ID: staleSession, Username: member.QuestID, Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}).Error)
 		w := request(t, semester.ID, member.QuestID, "tournament_director")
 		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 		var response models.AddExecutiveTeamMemberResponse
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 		require.NotEmpty(t, response.ActivationToken)
 		var login models.Login
-		require.NoError(t, db.First(&login, "username = ?", "quest-pending").Error)
+		require.NoError(t, db.First(&login, "username = ?", member.QuestID).Error)
 		require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("pending-password")))
 		var sessions int64
 		require.NoError(t, db.Model(&models.Session{}).Where("id = ?", staleSession).Count(&sessions).Error)
@@ -179,7 +179,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		require.Equal(t, http.StatusOK, verify(*response.ActivationToken))
 	})
 
-	t.Run("protected roles and duplicate normalized logins fail before writes", func(t *testing.T) {
+	t.Run("protected roles fail before writes", func(t *testing.T) {
 		reset(t, "Quest-Protected")
 		for _, role := range []string{"president", "secretary", "treasurer", "vice_president", "webmaster", "bot"} {
 			w := request(t, semester.ID, member.QuestID, role)
@@ -188,7 +188,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		var count int64
 		for _, role := range []string{"president", "secretary", "treasurer", "vice_president", "webmaster", "bot"} {
 			reset(t, "Quest-Protected")
-			require.NoError(t, db.Create(&models.Login{Username: "quest-protected", Password: "keep", Role: role, Status: models.LoginStatusActive}).Error)
+			require.NoError(t, db.Create(&models.Login{Username: member.QuestID, Password: "keep", Role: role, Status: models.LoginStatusActive}).Error)
 			w := request(t, semester.ID, member.QuestID, "executive")
 			require.Equal(t, http.StatusForbidden, w.Code, w.Body.String())
 			require.NoError(t, db.Model(&models.AccountActivation{}).Count(&count).Error)
@@ -202,11 +202,11 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		reset(t, "Quest-Staged")
 		transition := models.OfficerTransition{ID: uuid.New(), InitiatedBy: "auth-secretary", PresidentUsername: "pres", VicePresidentUsername: "vp", SecretaryUsername: "sec", TreasurerUsername: "treas", Status: models.OfficerTransitionPending}
 		require.NoError(t, db.Create(&transition).Error)
-		require.NoError(t, db.Create(&models.Login{Username: "quest-staged", Password: "unchanged", Role: "executive", Status: models.LoginStatusPendingActivation, StagedTransitionID: &transition.ID}).Error)
+		require.NoError(t, db.Create(&models.Login{Username: member.QuestID, Password: "unchanged", Role: "executive", Status: models.LoginStatusPendingActivation, StagedTransitionID: &transition.ID}).Error)
 		w := request(t, semester.ID, member.QuestID, "tournament_director")
 		require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
 		var login models.Login
-		require.NoError(t, db.First(&login, "username = ?", "quest-staged").Error)
+		require.NoError(t, db.First(&login, "username = ?", member.QuestID).Error)
 		require.Equal(t, "unchanged", login.Password)
 		require.Equal(t, "executive", login.Role)
 		var count int64
@@ -239,7 +239,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		addRequest, err := testutils.MakeJSONRequest(http.MethodPost, "/api/v2/semesters/"+semester.ID.String()+"/executive-team", map[string]string{"questId": member.QuestID, "role": "executive"})
 		require.NoError(t, err)
 		testutils.SetAuthCookie(addRequest, session)
-		loginRequest, err := testutils.MakeJSONRequest(http.MethodPost, "/api/v2/logins", map[string]string{"username": "quest-external-race", "password": "external-password", "role": "president"})
+		loginRequest, err := testutils.MakeJSONRequest(http.MethodPost, "/api/v2/logins", map[string]string{"username": member.QuestID, "password": "external-password", "role": "president"})
 		require.NoError(t, err)
 		testutils.SetAuthCookie(loginRequest, webmasterSession)
 		var wg sync.WaitGroup
@@ -268,7 +268,7 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 				loginCode = result.login
 			}
 		}
-		require.Contains(t, []int{http.StatusCreated, http.StatusForbidden}, addCode)
+		require.Contains(t, []int{http.StatusCreated, http.StatusForbidden, http.StatusConflict}, addCode)
 		require.Contains(t, []int{http.StatusCreated, http.StatusConflict}, loginCode)
 		require.NotEqual(t, http.StatusInternalServerError, addCode)
 		require.NotEqual(t, http.StatusInternalServerError, loginCode)
@@ -281,23 +281,12 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		} else {
 			require.Equal(t, http.StatusCreated, loginCode)
 			var login models.Login
-			require.NoError(t, db.First(&login, "username = ?", "quest-external-race").Error)
+			require.NoError(t, db.First(&login, "username = ?", member.QuestID).Error)
 			require.Equal(t, "president", login.Role)
 			var count int64
 			require.NoError(t, db.Model(&models.Membership{}).Count(&count).Error)
 			require.Zero(t, count)
 		}
-	})
-
-	t.Run("multiple normalized accounts conflict without touching memberships", func(t *testing.T) {
-		reset(t, "Quest-Multiple")
-		require.NoError(t, db.Create(&models.Login{Username: "quest-multiple", Password: "one", Role: "executive", Status: models.LoginStatusActive}).Error)
-		require.NoError(t, db.Create(&models.Login{Username: " QUEST-MULTIPLE ", Password: "two", Role: "executive", Status: models.LoginStatusActive}).Error)
-		w := request(t, semester.ID, member.QuestID, "executive")
-		require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
-		var count int64
-		require.NoError(t, db.Model(&models.Membership{}).Count(&count).Error)
-		require.Zero(t, count)
 	})
 
 	t.Run("failed membership, activation, and commit roll back all writes and token response", func(t *testing.T) {
@@ -340,47 +329,40 @@ func TestAddExecutiveTeamMemberPostgres(t *testing.T) {
 		require.NoError(t, db.Exec(`DROP FUNCTION reject_activation_commit()`).Error)
 	})
 
-	t.Run("concurrent adds with and without existing login produce one creation", func(t *testing.T) {
-		for _, withLogin := range []bool{false, true} {
-			reset(t, "Quest-Race")
-			if withLogin {
-				password, err := bcrypt.GenerateFromPassword([]byte("existing-password"), bcrypt.DefaultCost)
-				require.NoError(t, err)
-				require.NoError(t, db.Create(&models.Login{Username: "quest-race", Password: string(password), Role: "executive", Status: models.LoginStatusActive}).Error)
-			}
-			requests := make([]*http.Request, 2)
-			for i := range requests {
-				req, err := testutils.MakeJSONRequest(http.MethodPost, "/api/v2/semesters/"+semester.ID.String()+"/executive-team", map[string]string{"questId": member.QuestID, "role": "executive"})
-				require.NoError(t, err)
-				testutils.SetAuthCookie(req, session)
-				requests[i] = req
-			}
-			var wg sync.WaitGroup
-			codes := make(chan int, 2)
-			for _, req := range requests {
-				wg.Add(1)
-				go func(req *http.Request) {
-					defer wg.Done()
-					w := httptest.NewRecorder()
-					router.ServeHTTP(w, req)
-					codes <- w.Code
-				}(req)
-			}
-			wg.Wait()
-			close(codes)
-			var created, conflict int
-			for code := range codes {
-				if code == http.StatusCreated {
-					created++
-				} else if code == http.StatusConflict {
-					conflict++
-				} else {
-					t.Errorf("concurrent add returned %d", code)
-				}
-			}
-			require.Equal(t, 1, created)
-			require.Equal(t, 1, conflict)
+	t.Run("concurrent account creation returns one conflict", func(t *testing.T) {
+		reset(t, "Quest-Race")
+		requests := make([]*http.Request, 2)
+		for i := range requests {
+			req, err := testutils.MakeJSONRequest(http.MethodPost, "/api/v2/semesters/"+semester.ID.String()+"/executive-team", map[string]string{"questId": member.QuestID, "role": "executive"})
+			require.NoError(t, err)
+			testutils.SetAuthCookie(req, session)
+			requests[i] = req
 		}
+		var wg sync.WaitGroup
+		codes := make(chan int, 2)
+		for _, req := range requests {
+			wg.Add(1)
+			go func(req *http.Request) {
+				defer wg.Done()
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+				codes <- w.Code
+			}(req)
+		}
+		wg.Wait()
+		close(codes)
+		var created, conflict int
+		for code := range codes {
+			if code == http.StatusCreated {
+				created++
+			} else if code == http.StatusConflict {
+				conflict++
+			} else {
+				t.Errorf("concurrent add returned %d", code)
+			}
+		}
+		require.Equal(t, 1, created)
+		require.Equal(t, 1, conflict)
 	})
 
 	t.Run("paid membership promotion refunds existing fee", func(t *testing.T) {

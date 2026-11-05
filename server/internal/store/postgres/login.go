@@ -37,18 +37,6 @@ func (r *postgresLoginRepository) FindByUsernameForUpdate(username string) (mode
 	return r.findByUsername(username, true)
 }
 
-func (r *postgresLoginRepository) FindByNormalizedUsernameForUpdate(username string) ([]models.Login, error) {
-	var logins []models.Login
-	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("LOWER(BTRIM(username)) = LOWER(BTRIM(?))", username).
-		Order("username ASC").Find(&logins).Error
-	return logins, err
-}
-
-func (r *postgresLoginRepository) LockNormalizedUsername(username string) error {
-	return r.db.Exec("SELECT pg_advisory_xact_lock(hashtextextended(LOWER(BTRIM(?)), 0))", username).Error
-}
-
 func (r *postgresLoginRepository) findByUsername(username string, forUpdate bool) (models.Login, error) {
 	var login models.Login
 

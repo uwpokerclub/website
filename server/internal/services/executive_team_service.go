@@ -58,9 +58,7 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find semester: %w", err)
 	}
 
-	// Locking the member row serializes adds for this identity even when the
-	// account or semester membership row does not exist yet.
-	members, err := tx.Members().FindByQuestIDForUpdate(questID)
+	members, err := tx.Members().FindByQuestID(questID)
 	if err != nil {
 		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find member: %w", err)
 	}
@@ -75,41 +73,32 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 	if normalizedQuestID == "" || normalizedQuestID != normalizeExecutiveIdentity(questID) {
 		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamIdentityConflict
 	}
-	if err := tx.Logins().LockNormalizedUsername(member.QuestID); err != nil {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("lock normalized login identity: %w", err)
+	login, loginErr := tx.Logins().FindByUsername(member.QuestID)
+	hasLogin := loginErr == nil
+	if loginErr != nil && !errors.Is(loginErr, store.ErrNotFound) {
+		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find login: %w", loginErr)
 	}
-
-	logins, err := tx.Logins().FindByNormalizedUsernameForUpdate(member.QuestID)
-	if err != nil {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find login: %w", err)
-	}
-	if len(logins) > 1 {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: multiple normalized login accounts", store.ErrConflict)
-	}
-	if len(logins) == 1 && normalizeExecutiveIdentity(logins[0].Username) != normalizedQuestID {
-		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamIdentityConflict
-	}
-	if len(logins) == 1 {
-		if logins[0].StagedTransitionID != nil {
+	if hasLogin {
+		if login.StagedTransitionID != nil {
 			return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamStagedLogin
 		}
-		if logins[0].Role != authorization.ROLE_EXECUTIVE.ToString() && logins[0].Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
+		if login.Role != authorization.ROLE_EXECUTIVE.ToString() && login.Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
 			return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamProtectedLogin
 		}
 	}
 
-	existingMembership, err := tx.Memberships().FindByUserAndSemesterForUpdate(member.ID, semesterID)
+	existingMembership, err := tx.Memberships().FindByUserAndSemester(member.ID, semesterID)
 	if err != nil && !errors.Is(err, store.ErrNotFound) {
-		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("lock membership: %w", err)
+		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("find membership: %w", err)
 	}
 	if err == nil && existingMembership.Executive {
 		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamAlreadyMember
 	}
 
-	username := strings.TrimSpace(member.QuestID)
+	username := member.QuestID
 	status := models.LoginStatusPendingActivation
 	var token *string
-	if len(logins) == 0 {
+	if !hasLogin {
 		password, err := unusablePasswordHash()
 		if err != nil {
 			return models.AddExecutiveTeamMemberResponse{}, err
@@ -121,14 +110,12 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 			}
 			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("create login: %w", err)
 		}
-		logins = []models.Login{login}
 		activationToken, err := NewAccountActivationService(tx).Create(login.Username)
 		if err != nil {
 			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("create activation: %w", err)
 		}
 		token = utils.StringToPtr(activationToken)
 	} else {
-		login := logins[0]
 		username = login.Username
 		status = login.Status
 		switch login.Status {
@@ -175,20 +162,30 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 		}
 	}
 
-	// Recheck after the locks and account write. This catches a conflicting
-	// normalized login that appeared during the absent-row create path.
-	confirmed, err := tx.Logins().FindByNormalizedUsernameForUpdate(member.QuestID)
+	// Recheck the exact login identity after account changes and before creating
+	// the executive membership.
+	confirmed, err := tx.Logins().FindByUsername(member.QuestID)
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login changed during add", store.ErrConflict)
+		}
 		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("recheck login identity: %w", err)
 	}
-	if len(confirmed) != 1 || confirmed[0].Username != username || normalizeExecutiveIdentity(confirmed[0].Username) != normalizedQuestID {
+	if confirmed.Username != username {
 		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login identity changed during add", store.ErrConflict)
 	}
-	if confirmed[0].StagedTransitionID != nil {
+	if confirmed.StagedTransitionID != nil {
 		return models.AddExecutiveTeamMemberResponse{}, ErrExecutiveTeamStagedLogin
 	}
-	if confirmed[0].Role != role {
+	if confirmed.Role != role {
 		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: login role changed during add", store.ErrConflict)
+	}
+	confirmedMembers, err := tx.Members().FindByQuestID(questID)
+	if err != nil {
+		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("recheck member identity: %w", err)
+	}
+	if len(confirmedMembers) != 1 || confirmedMembers[0].ID != member.ID || normalizeExecutiveIdentity(confirmedMembers[0].QuestID) != normalizedQuestID {
+		return models.AddExecutiveTeamMemberResponse{}, fmt.Errorf("%w: member identity changed during add", store.ErrConflict)
 	}
 
 	if _, err := NewMembershipService(tx).EnsureExecutiveMembership(member.ID, semesterID, models.MembershipSourceAdmin); err != nil {

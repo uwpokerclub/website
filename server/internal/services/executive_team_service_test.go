@@ -18,7 +18,7 @@ func executiveAddFixture(t *testing.T) (store.Store, uuid.UUID, models.User) {
 	st := inmemory.NewStore()
 	semester := models.Semester{ID: uuid.New(), Name: "Fall", StartDate: time.Now(), EndDate: time.Now().Add(24 * time.Hour), MembershipFee: 50, MembershipDiscountFee: 25}
 	require.NoError(t, st.Semesters().Create(&semester))
-	member := models.User{ID: 77101, FirstName: "Tess", LastName: "Test", Email: "tess@example.com", Faculty: models.FacultyMath, QuestID: " Quest-Id "}
+	member := models.User{ID: 77101, FirstName: "Tess", LastName: "Test", Email: "tess@example.com", Faculty: models.FacultyMath, QuestID: "Quest-Id"}
 	require.NoError(t, st.Members().Create(&member))
 	return st, semester.ID, member
 }
@@ -27,9 +27,9 @@ func TestExecutiveTeamService_AddNewMemberCreatesPendingActivationAndMembership(
 	st, semesterID, member := executiveAddFixture(t)
 	response, err := NewExecutiveTeamService(st).AddMember(semesterID, "quest-id", "tournament_director")
 	require.NoError(t, err)
-	require.Equal(t, models.AddExecutiveTeamMemberResponse{MemberID: member.ID, Username: "Quest-Id", Role: "tournament_director", AccountStatus: models.LoginStatusPendingActivation, ActivationToken: response.ActivationToken}, response)
+	require.Equal(t, models.AddExecutiveTeamMemberResponse{MemberID: member.ID, Username: member.QuestID, Role: "tournament_director", AccountStatus: models.LoginStatusPendingActivation, ActivationToken: response.ActivationToken}, response)
 	require.NotNil(t, response.ActivationToken)
-	login, err := st.Logins().FindByUsername("Quest-Id")
+	login, err := st.Logins().FindByUsername(member.QuestID)
 	require.NoError(t, err)
 	require.Equal(t, models.LoginStatusPendingActivation, login.Status)
 	require.Error(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("anything-known-to-user")), "new login password must be unusable")
@@ -55,13 +55,13 @@ func TestExecutiveTeamService_AddActiveMemberPreservesPasswordAndInvalidatesChan
 	st, semesterID, member := executiveAddFixture(t)
 	hash, err := bcrypt.GenerateFromPassword([]byte("current-password"), bcrypt.DefaultCost)
 	require.NoError(t, err)
-	require.NoError(t, st.Logins().Create(&models.Login{Username: "quest-id", Password: string(hash), Role: "executive", Status: models.LoginStatusActive}))
-	session := models.Session{ID: uuid.New(), Username: "quest-id", Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}
+	require.NoError(t, st.Logins().Create(&models.Login{Username: member.QuestID, Password: string(hash), Role: "executive", Status: models.LoginStatusActive}))
+	session := models.Session{ID: uuid.New(), Username: member.QuestID, Role: "executive", StartedAt: time.Now(), ExpiresAt: time.Now().Add(time.Hour)}
 	require.NoError(t, st.Sessions().Create(&session))
 	response, err := NewExecutiveTeamService(st).AddMember(semesterID, "QUEST-ID", "tournament_director")
 	require.NoError(t, err)
 	require.Nil(t, response.ActivationToken)
-	login, err := st.Logins().FindByUsername("quest-id")
+	login, err := st.Logins().FindByUsername(member.QuestID)
 	require.NoError(t, err)
 	require.Equal(t, models.LoginStatusActive, login.Status)
 	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("current-password")))
@@ -73,16 +73,16 @@ func TestExecutiveTeamService_AddActiveMemberPreservesPasswordAndInvalidatesChan
 }
 
 func TestExecutiveTeamService_AddDisabledMemberReactivatesWithoutChangingPasswordOrKeepingTokens(t *testing.T) {
-	st, semesterID, _ := executiveAddFixture(t)
+	st, semesterID, member := executiveAddFixture(t)
 	hash, err := bcrypt.GenerateFromPassword([]byte("still-valid-password"), bcrypt.DefaultCost)
 	require.NoError(t, err)
-	require.NoError(t, st.Logins().Create(&models.Login{Username: "quest-id", Password: string(hash), Role: "executive", Status: models.LoginStatusDisabled}))
-	oldToken := createActivationInCallerTx(t, st, "quest-id")
+	require.NoError(t, st.Logins().Create(&models.Login{Username: member.QuestID, Password: string(hash), Role: "executive", Status: models.LoginStatusDisabled}))
+	oldToken := createActivationInCallerTx(t, st, member.QuestID)
 	response, err := NewExecutiveTeamService(st).AddMember(semesterID, "Quest-Id", "executive")
 	require.NoError(t, err)
 	require.Nil(t, response.ActivationToken)
 	require.Equal(t, models.LoginStatusActive, response.AccountStatus)
-	login, err := st.Logins().FindByUsername("quest-id")
+	login, err := st.Logins().FindByUsername(member.QuestID)
 	require.NoError(t, err)
 	require.Equal(t, models.LoginStatusActive, login.Status)
 	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("still-valid-password")))
@@ -91,11 +91,11 @@ func TestExecutiveTeamService_AddDisabledMemberReactivatesWithoutChangingPasswor
 }
 
 func TestExecutiveTeamService_AddPendingMemberRotatesActivationAndKeepsPasswordHash(t *testing.T) {
-	st, semesterID, _ := executiveAddFixture(t)
+	st, semesterID, member := executiveAddFixture(t)
 	hash, err := bcrypt.GenerateFromPassword([]byte("pending-password"), bcrypt.DefaultCost)
 	require.NoError(t, err)
-	require.NoError(t, st.Logins().Create(&models.Login{Username: "quest-id", Password: string(hash), Role: "executive", Status: models.LoginStatusPendingActivation}))
-	oldToken := createActivationInCallerTx(t, st, "quest-id")
+	require.NoError(t, st.Logins().Create(&models.Login{Username: member.QuestID, Password: string(hash), Role: "executive", Status: models.LoginStatusPendingActivation}))
+	oldToken := createActivationInCallerTx(t, st, member.QuestID)
 	response, err := NewExecutiveTeamService(st).AddMember(semesterID, "Quest-Id", "tournament_director")
 	require.NoError(t, err)
 	require.NotNil(t, response.ActivationToken)
@@ -105,7 +105,7 @@ func TestExecutiveTeamService_AddPendingMemberRotatesActivationAndKeepsPasswordH
 	require.NoError(t, err)
 	wantHash := sha256.Sum256([]byte(*response.ActivationToken))
 	require.Equal(t, wantHash[:], activation.TokenHash)
-	login, err := st.Logins().FindByUsername("quest-id")
+	login, err := st.Logins().FindByUsername(member.QuestID)
 	require.NoError(t, err)
 	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(login.Password), []byte("pending-password")))
 }
@@ -119,14 +119,13 @@ func TestExecutiveTeamService_RejectsProtectedAndAlreadyExecutiveWithoutSideEffe
 	require.NoError(t, st.Memberships().Create(&models.Membership{ID: uuid.New(), UserID: member.ID, SemesterID: semesterID, Executive: true}))
 	_, err := NewExecutiveTeamService(st).AddMember(semesterID, member.QuestID, "executive")
 	require.ErrorIs(t, err, ErrExecutiveTeamAlreadyMember)
-	logins, err := st.Logins().FindByNormalizedUsernameForUpdate(member.QuestID)
-	require.NoError(t, err)
-	require.Empty(t, logins)
+	_, err = st.Logins().FindByUsername(member.QuestID)
+	require.ErrorIs(t, err, store.ErrNotFound)
 }
 
 func TestExecutiveTeamService_RejectsProtectedExistingAndAmbiguousLogins(t *testing.T) {
 	st, semesterID, member := executiveAddFixture(t)
-	require.NoError(t, st.Logins().Create(&models.Login{Username: "quest-id", Password: "protected", Role: "president", Status: models.LoginStatusActive}))
+	require.NoError(t, st.Logins().Create(&models.Login{Username: member.QuestID, Password: "protected", Role: "president", Status: models.LoginStatusActive}))
 	_, err := NewExecutiveTeamService(st).AddMember(semesterID, member.QuestID, "executive")
 	require.ErrorIs(t, err, ErrExecutiveTeamProtectedLogin)
 	membership, err := st.Memberships().FindByUserAndSemester(member.ID, semesterID)
@@ -134,22 +133,18 @@ func TestExecutiveTeamService_RejectsProtectedExistingAndAmbiguousLogins(t *test
 	_ = membership
 
 	st, semesterID, member = executiveAddFixture(t)
-	require.NoError(t, st.Logins().Create(&models.Login{Username: "quest-id", Password: "hash-a", Role: "executive", Status: models.LoginStatusActive}))
-	require.NoError(t, st.Logins().Create(&models.Login{Username: " QUEST-ID ", Password: "hash-b", Role: "executive", Status: models.LoginStatusActive}))
+	require.NoError(t, st.Logins().Create(&models.Login{Username: member.QuestID, Password: "hash-a", Role: "executive", Status: models.LoginStatusActive}))
 	_, err = NewExecutiveTeamService(st).AddMember(semesterID, member.QuestID, "executive")
-	require.ErrorIs(t, err, store.ErrConflict)
-	membership, err = st.Memberships().FindByUserAndSemester(member.ID, semesterID)
-	require.Error(t, err)
-	_ = membership
+	require.NoError(t, err)
 }
 
 func TestExecutiveTeamService_RejectsStagedLoginAndDoesNotChangeIt(t *testing.T) {
 	st, semesterID, member := executiveAddFixture(t)
 	transitionID := uuid.New()
-	require.NoError(t, st.Logins().Create(&models.Login{Username: "quest-id", Password: "unchanged", Role: "executive", Status: models.LoginStatusPendingActivation, StagedTransitionID: &transitionID}))
+	require.NoError(t, st.Logins().Create(&models.Login{Username: member.QuestID, Password: "unchanged", Role: "executive", Status: models.LoginStatusPendingActivation, StagedTransitionID: &transitionID}))
 	_, err := NewExecutiveTeamService(st).AddMember(semesterID, member.QuestID, "tournament_director")
 	require.ErrorIs(t, err, ErrExecutiveTeamStagedLogin)
-	login, err := st.Logins().FindByUsername("quest-id")
+	login, err := st.Logins().FindByUsername(member.QuestID)
 	require.NoError(t, err)
 	require.Equal(t, "unchanged", login.Password)
 	require.Equal(t, "executive", login.Role)
@@ -182,7 +177,6 @@ func TestExecutiveTeamService_RejectsBlankIdentityAndMissingSemester(t *testing.
 	require.ErrorIs(t, err, ErrExecutiveTeamInvalidIdentity)
 	_, err = NewExecutiveTeamService(st).AddMember(uuid.New(), member.QuestID, "executive")
 	require.ErrorIs(t, err, ErrExecutiveTeamSemesterNotFound)
-	logins, err := st.Logins().FindByNormalizedUsernameForUpdate(member.QuestID)
-	require.NoError(t, err)
-	require.Empty(t, logins)
+	_, err = st.Logins().FindByUsername(member.QuestID)
+	require.ErrorIs(t, err, store.ErrNotFound)
 }

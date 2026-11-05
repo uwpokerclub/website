@@ -23,7 +23,6 @@ type MembershipRepository interface {
 	// FindByUserAndSemester retrieves a membership by its user and semester. Implementations
 	// preload associations to the extent supported by their store.
 	FindByUserAndSemester(userID uint64, semesterID uuid.UUID) (models.Membership, error)
-	FindByUserAndSemesterForUpdate(userID uint64, semesterID uuid.UUID) (models.Membership, error)
 
 	// ListExecutiveTeam returns semester executive memberships with member identity and
 	// optional matching login details, ordered by member name and identity.

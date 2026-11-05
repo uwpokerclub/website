@@ -117,11 +117,6 @@ func (r *inMemoryMembershipRepository) FindByUserAndSemester(userID uint64, seme
 	return models.Membership{}, store.ErrNotFound
 }
 
-// FindByUserAndSemesterForUpdate has no row-locking semantics in the in-memory store.
-func (r *inMemoryMembershipRepository) FindByUserAndSemesterForUpdate(userID uint64, semesterID uuid.UUID) (models.Membership, error) {
-	return r.FindByUserAndSemester(userID, semesterID)
-}
-
 func (r *inMemoryMembershipRepository) ListExecutiveTeam(semesterID uuid.UUID) ([]models.ExecutiveTeamMember, error) {
 	if r.members == nil || r.logins == nil {
 		return nil, store.ErrNotImplemented

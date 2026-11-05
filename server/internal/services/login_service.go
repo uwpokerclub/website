@@ -36,20 +36,10 @@ func (svc *loginService) CreateLogin(username string, password string, role stri
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	tx, err := svc.store.BeginTx()
-	if err != nil {
-		return fmt.Errorf("begin login creation: %w", err)
-	}
-	defer tx.Rollback()
-	if err := tx.Logins().LockNormalizedUsername(username); err != nil {
-		return fmt.Errorf("lock login identity: %w", err)
-	}
-	matching, err := tx.Logins().FindByNormalizedUsernameForUpdate(username)
-	if err != nil {
-		return fmt.Errorf("find normalized login: %w", err)
-	}
-	if len(matching) > 0 {
+	if _, err := svc.store.Logins().FindByUsername(username); err == nil {
 		return store.ErrConflict
+	} else if !errors.Is(err, store.ErrNotFound) {
+		return fmt.Errorf("find login: %w", err)
 	}
 	login := models.Login{
 		Username: username,
@@ -57,13 +47,10 @@ func (svc *loginService) CreateLogin(username string, password string, role stri
 		Role:     role,
 	}
 
-	if err := tx.Logins().Create(&login); err != nil {
+	if err := svc.store.Logins().Create(&login); err != nil {
 		if errors.Is(err, store.ErrAlreadyExists) {
 			return store.ErrConflict
 		}
-		return err
-	}
-	if err := tx.Commit(); err != nil {
 		return err
 	}
 	return nil

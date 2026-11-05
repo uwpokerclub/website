@@ -79,6 +79,8 @@ func (svc *executiveTeamService) AddMember(semesterID uuid.UUID, questID, role s
 	return models.AddExecutiveTeamMemberResponse{MemberID: member.ID, Username: username, Role: role, AccountStatus: status, ActivationToken: token}, nil
 }
 
+// resolveExecutiveAddTarget validates the semester, member, login, and membership
+// before any account or membership changes are made.
 func resolveExecutiveAddTarget(tx store.Store, semesterID uuid.UUID, questID string) (models.User, models.Login, bool, error) {
 	if _, err := tx.Semesters().FindByID(semesterID); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
@@ -127,6 +129,8 @@ func resolveExecutiveAddTarget(tx store.Store, semesterID uuid.UUID, questID str
 	return member, login, hasLogin, nil
 }
 
+// prepareExecutiveLogin creates a pending login or applies the requested role to
+// an existing executive login, returning its status and any activation token.
 func prepareExecutiveLogin(tx store.Store, member models.User, login models.Login, hasLogin bool, role string) (string, string, *string, error) {
 	if !hasLogin {
 		password, err := unusablePasswordHash()
@@ -154,6 +158,8 @@ func prepareExecutiveLogin(tx store.Store, member models.User, login models.Logi
 	return login.Username, status, token, nil
 }
 
+// updateExecutiveLogin applies role-specific session and activation changes for
+// an existing executive login while preserving its password.
 func updateExecutiveLogin(tx store.Store, login models.Login, role string) (string, *string, error) {
 	username := login.Username
 	updates := map[string]any{"role": role}
@@ -200,6 +206,8 @@ func updateExecutiveLogin(tx store.Store, login models.Login, role string) (stri
 	return status, utils.StringToPtr(token), nil
 }
 
+// recheckExecutiveAddIdentity confirms the login and member still identify the
+// same target before the executive membership is ensured.
 func recheckExecutiveAddIdentity(tx store.Store, member models.User, questID, username, role string) error {
 	confirmed, err := tx.Logins().FindByUsername(member.QuestID)
 	if err != nil {

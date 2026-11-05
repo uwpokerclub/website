@@ -30,6 +30,7 @@ var _ store.Store = (*InMemoryStore)(nil)
 func NewStore() store.Store {
 	members := newMemberRepository()
 	logins := newLoginRepository()
+	logins.members = members
 	memberships := newMembershipRepository()
 	memberships.members = members
 	memberships.logins = logins
@@ -157,6 +158,9 @@ func (s *InMemoryStore) BeginTx() (store.Store, error) {
 	}
 	if s.logins != nil {
 		tx.logins = s.logins.clone()
+	}
+	if tx.logins != nil {
+		tx.logins.members = tx.members
 	}
 	if tx.memberships != nil {
 		tx.memberships.members = tx.members

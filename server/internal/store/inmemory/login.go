@@ -9,8 +9,9 @@ import (
 )
 
 type inMemoryLoginRepository struct {
-	mu     sync.RWMutex
-	logins map[string]*models.Login
+	mu      sync.RWMutex
+	logins  map[string]*models.Login
+	members *inMemoryMemberRepository
 }
 
 var _ store.LoginRepository = (*inMemoryLoginRepository)(nil)
@@ -30,7 +31,8 @@ func (r *inMemoryLoginRepository) clone() *inMemoryLoginRepository {
 	defer r.mu.RUnlock()
 
 	c := &inMemoryLoginRepository{
-		logins: make(map[string]*models.Login, len(r.logins)),
+		logins:  make(map[string]*models.Login, len(r.logins)),
+		members: r.members,
 	}
 	for username, l := range r.logins {
 		lc := *l
@@ -192,14 +194,29 @@ func (r *inMemoryLoginRepository) List(pagination *models.Pagination, search str
 
 func (r *inMemoryLoginRepository) FindByUsernameWithMember(username string) (models.LoginWithMember, error) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	login, exists := r.logins[username]
+	var result models.LoginWithMember
+	loginUsername := ""
+	if exists {
+		result = models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}
+		loginUsername = login.Username
+	}
+	r.mu.RUnlock()
 	if !exists {
 		return models.LoginWithMember{}, store.ErrNotFound
 	}
-
-	return models.LoginWithMember{Username: login.Username, Role: login.Role, Status: login.Status}, nil
+	if r.members == nil {
+		return result, nil
+	}
+	r.members.mu.RLock()
+	defer r.members.mu.RUnlock()
+	for _, member := range r.members.members {
+		if member.QuestID == loginUsername {
+			result.LinkedMember = &models.LinkedMemberInfo{ID: member.ID, FirstName: member.FirstName, LastName: member.LastName}
+			break
+		}
+	}
+	return result, nil
 }
 
 func (r *inMemoryLoginRepository) findByNormalizedUsernames(usernames []string) ([]models.ExecutiveTeamLogin, error) {

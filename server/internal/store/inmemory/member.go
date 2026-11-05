@@ -99,17 +99,6 @@ func (r *inMemoryMemberRepository) FindByQuestID(questID string) ([]models.User,
 	return result, nil
 }
 
-func (r *inMemoryMemberRepository) FindByQuestIDExact(questID string) (models.User, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	for _, member := range r.members {
-		if member.QuestID == questID {
-			return *member, nil
-		}
-	}
-	return models.User{}, store.ErrNotFound
-}
-
 func (r *inMemoryMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

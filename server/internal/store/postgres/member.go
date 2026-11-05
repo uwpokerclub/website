@@ -50,17 +50,6 @@ func (r *postgresMemberRepository) FindByQuestID(questID string) ([]models.User,
 	return members, err
 }
 
-func (r *postgresMemberRepository) FindByQuestIDExact(questID string) (models.User, error) {
-	var member models.User
-	if err := r.db.Where("quest_id = ?", questID).First(&member).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return models.User{}, store.ErrNotFound
-		}
-		return models.User{}, err
-	}
-	return member, nil
-}
-
 func (r *postgresMemberRepository) List(filter *models.ListUsersFilter, pagination *models.Pagination) ([]models.User, int64, error) {
 	var members []models.User
 	var total int64

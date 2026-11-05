@@ -207,10 +207,12 @@ func TestLoginRepository_FindByUsernameWithMember(t *testing.T) {
 
 	db := container.GetDB()
 	require.NoError(t, db.Create(&models.User{ID: 20260011, FirstName: "Ada", LastName: "Lovelace", Email: "ada@example.com", Faculty: "Math", QuestID: "alovelace"}).Error)
+	require.NoError(t, db.Create(&models.User{ID: 20260012, FirstName: "Case", LastName: "Mismatch", Email: "case@example.com", Faculty: "Math", QuestID: "ExactUser"}).Error)
 
 	repo := postgres.NewLoginRepository(db)
 	require.NoError(t, repo.Create(&models.Login{Username: "alovelace", Password: "hash", Role: "executive"}))
 	require.NoError(t, repo.Create(&models.Login{Username: "unlinked", Password: "hash", Role: "bot"}))
+	require.NoError(t, repo.Create(&models.Login{Username: "exactuser", Password: "hash", Role: "bot"}))
 
 	found, err := repo.FindByUsernameWithMember("alovelace")
 	require.NoError(t, err)
@@ -218,6 +220,10 @@ func TestLoginRepository_FindByUsernameWithMember(t *testing.T) {
 	require.Equal(t, "Ada", found.LinkedMember.FirstName)
 
 	found, err = repo.FindByUsernameWithMember("unlinked")
+	require.NoError(t, err)
+	require.Nil(t, found.LinkedMember)
+
+	found, err = repo.FindByUsernameWithMember("exactuser")
 	require.NoError(t, err)
 	require.Nil(t, found.LinkedMember)
 

@@ -61,14 +61,14 @@ func (svc *executiveTeamService) ChangeRole(semesterID uuid.UUID, username, role
 	if login.StagedTransitionID != nil {
 		return ErrExecutiveTeamStagedLogin
 	}
-	member, err := tx.Members().FindByQuestIDExact(username)
+	linkedLogin, err := tx.Logins().FindByUsernameWithMember(username)
 	if err != nil {
-		return fmt.Errorf("find member: %w", err)
+		return fmt.Errorf("find login member: %w", err)
 	}
-	if member.QuestID != username {
+	if linkedLogin.Username != username || linkedLogin.LinkedMember == nil {
 		return store.ErrNotFound
 	}
-	membership, err := tx.Memberships().FindByUserAndSemester(member.ID, semesterID)
+	membership, err := tx.Memberships().FindByUserAndSemester(linkedLogin.LinkedMember.ID, semesterID)
 	if err != nil {
 		return fmt.Errorf("find executive membership: %w", err)
 	}

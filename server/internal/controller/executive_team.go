@@ -22,6 +22,37 @@ func (c *executiveTeamController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/executive-team", middleware.UseAuthentication(c.store))
 	group.GET("", middleware.UseAuthorization("executive-team.get"), c.getExecutiveTeam)
 	group.POST("", middleware.UseAuthorization("executive-team.create"), c.addExecutiveTeamMember)
+	group.PATCH("/:username", middleware.UseAuthorization("executive-team.update"), c.changeExecutiveTeamRole)
+}
+
+func (c *executiveTeamController) changeExecutiveTeamRole(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+	var req models.ChangeExecutiveTeamRoleRequest
+	if !BindJSON(ctx, &req) {
+		return
+	}
+	if ctx.Param("username") == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest("username is required"))
+		return
+	}
+	if err := services.NewExecutiveTeamService(c.store).ChangeRole(semesterID, ctx.Param("username"), req.Role); err != nil {
+		switch {
+		case errors.Is(err, services.ErrExecutiveTeamInvalidRole), errors.Is(err, services.ErrExecutiveTeamProtectedLogin):
+			ctx.AbortWithStatusJSON(http.StatusForbidden, apierrors.Forbidden(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamStagedLogin):
+			ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamSemesterNotFound), errors.Is(err, store.ErrNotFound):
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+		default:
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		}
+		return
+	}
+	ctx.Status(http.StatusNoContent)
 }
 
 func (c *executiveTeamController) addExecutiveTeamMember(ctx *gin.Context) {

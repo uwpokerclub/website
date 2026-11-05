@@ -9,7 +9,7 @@ func TestExecutiveTeamAuthorizer(t *testing.T) {
 		"secretary": true, "treasurer": true, "vice_president": true,
 		"president": true, "webmaster": true, "unknown": false,
 	} {
-		for _, action := range []string{"get", "create"} {
+		for _, action := range []string{"get", "create", "update"} {
 			if got := a.IsAuthorized(role, action); got != allowed {
 				t.Errorf("IsAuthorized(%q, %s) = %v, want %v", role, action, got, allowed)
 			}
@@ -18,10 +18,13 @@ func TestExecutiveTeamAuthorizer(t *testing.T) {
 	if a.IsAuthorized("president", "list") {
 		t.Fatal("unsupported action was authorized")
 	}
-	for role, allowed := range map[string]bool{"secretary": true, "president": true, "executive": false, "bot": false} {
+	for role, allowed := range map[string]bool{"secretary": true, "president": true, "executive": false, "tournament_director": false, "bot": false} {
 		permissions := a.GetPermissions(role)
 		if permissions["create"] != allowed {
 			t.Errorf("GetPermissions(%q).create = %v, want %v", role, permissions["create"], allowed)
+		}
+		if permissions["update"] != allowed {
+			t.Errorf("GetPermissions(%q).update = %v, want %v", role, permissions["update"], allowed)
 		}
 	}
 }

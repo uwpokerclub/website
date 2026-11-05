@@ -33,6 +33,66 @@ func NewExecutiveTeamService(st store.Store) *executiveTeamService {
 	return &executiveTeamService{store: st}
 }
 
+// ChangeRole updates an existing executive login role and invalidates its sessions atomically.
+func (svc *executiveTeamService) ChangeRole(semesterID uuid.UUID, username, role string) error {
+	if role != authorization.ROLE_EXECUTIVE.ToString() && role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
+		return ErrExecutiveTeamInvalidRole
+	}
+
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return fmt.Errorf("begin executive role change: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Semesters().FindByID(semesterID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return ErrExecutiveTeamSemesterNotFound
+		}
+		return fmt.Errorf("find semester: %w", err)
+	}
+	login, err := tx.Logins().FindByUsername(username)
+	if err != nil {
+		return fmt.Errorf("find login: %w", err)
+	}
+	if login.Username != username {
+		return store.ErrNotFound
+	}
+	if login.StagedTransitionID != nil {
+		return ErrExecutiveTeamStagedLogin
+	}
+	member, err := tx.Members().FindByQuestIDExact(username)
+	if err != nil {
+		return fmt.Errorf("find member: %w", err)
+	}
+	if member.QuestID != username {
+		return store.ErrNotFound
+	}
+	membership, err := tx.Memberships().FindByUserAndSemester(member.ID, semesterID)
+	if err != nil {
+		return fmt.Errorf("find executive membership: %w", err)
+	}
+	if !membership.Executive {
+		return store.ErrNotFound
+	}
+	if login.Role != authorization.ROLE_EXECUTIVE.ToString() && login.Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
+		return ErrExecutiveTeamProtectedLogin
+	}
+	if login.Role == role {
+		return nil
+	}
+	if err := tx.Logins().Update(username, map[string]any{"role": role}); err != nil {
+		return fmt.Errorf("update executive login role: %w", err)
+	}
+	if err := tx.Sessions().DeleteByUsername(username); err != nil {
+		return fmt.Errorf("delete executive login sessions: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit executive role change: %w", err)
+	}
+	return nil
+}
+
 // AddMember creates or updates the account and ensures its semester executive
 // membership in one transaction. A raw activation token is returned only after
 // that transaction commits successfully.

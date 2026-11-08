@@ -43,7 +43,7 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
         )}
       </FormField>
 
-      <FormField label="Quest ID" htmlFor="member.questId">
+      <FormField label="Quest ID" htmlFor="member.questId" error={errors.member?.questId?.message}>
         {(props) => (
           <Input
             {...props}
@@ -51,6 +51,7 @@ export function EditMemberForm({ studentId }: EditMemberFormProps) {
             data-qa="input-questId"
             type="text"
             placeholder="e.g., asmahood"
+            error={!!errors.member?.questId}
             fullWidth
           />
         )}

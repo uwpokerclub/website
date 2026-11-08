@@ -46,7 +46,7 @@ func TestCreateMember(t *testing.T) {
 				"lastName":  "Doe",
 				"email":     "john.doe@uwaterloo.ca",
 				"faculty":   "Math",
-				"questId":   "created-jdoe",
+				"questId":   "  CreatedJdoe42  ",
 			},
 			expectedStatus: http.StatusCreated,
 			expectError:    false,
@@ -77,6 +77,61 @@ func TestCreateMember(t *testing.T) {
 			expectedStatus:       http.StatusBadRequest,
 			expectError:          true,
 			expectedErrorMessage: "Key: 'CreateUserRequest.Faculty' Error:Field validation for 'Faculty' failed on the 'oneof' tag",
+		},
+		{
+			name:     "optional empty Quest ID",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody: map[string]any{
+				"id":        uint64(12345681),
+				"firstName": "Empty",
+				"lastName":  "Quest",
+				"email":     "empty.quest@uwaterloo.ca",
+				"faculty":   "Math",
+				"questId":   "   ",
+			},
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:     "omitted optional Quest ID",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody: map[string]any{
+				"id":        uint64(12345684),
+				"firstName": "Omitted",
+				"lastName":  "Quest",
+				"email":     "omitted.quest@uwaterloo.ca",
+				"faculty":   "Math",
+			},
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:     "reject Quest ID punctuation",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody: map[string]any{
+				"id":        uint64(12345682),
+				"firstName": "Invalid",
+				"lastName":  "Quest",
+				"email":     "invalid.quest@uwaterloo.ca",
+				"faculty":   "Math",
+				"questId":   "bad.id",
+			},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "Quest ID must contain only letters and numbers",
+		},
+		{
+			name:     "reject interior Quest ID whitespace",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			requestBody: map[string]any{
+				"id":        uint64(12345683),
+				"firstName": "Invalid",
+				"lastName":  "Whitespace",
+				"email":     "invalid.whitespace@uwaterloo.ca",
+				"faculty":   "Math",
+				"questId":   "bad id",
+			},
+			expectedStatus:       http.StatusBadRequest,
+			expectError:          true,
+			expectedErrorMessage: "Quest ID must contain only letters and numbers",
 		},
 	}
 
@@ -117,6 +172,15 @@ func TestCreateMember(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &user)
 				require.NoError(t, err)
 				require.Equal(t, tc.requestBody["email"], user.Email)
+				if _, provided := tc.requestBody["questId"]; provided && tc.name == "successful creation" {
+					require.Equal(t, "createdjdoe42", user.QuestID)
+				}
+				if tc.name == "optional empty Quest ID" {
+					require.Empty(t, user.QuestID)
+				}
+				if tc.name == "omitted optional Quest ID" {
+					require.Empty(t, user.QuestID)
+				}
 			}
 		})
 	}
@@ -356,6 +420,7 @@ func TestUpdateMember(t *testing.T) {
 		userRole       string
 		memberID       string
 		requestBody    map[string]any
+		legacyQuestID  string
 		expectedStatus int
 		expectError    bool
 	}{
@@ -378,6 +443,56 @@ func TestUpdateMember(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			expectError:    false,
+		},
+		{
+			name:     "TD can normalize Quest ID",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			memberID: fmt.Sprint(testUserID),
+			requestBody: map[string]any{
+				"questId": "  NewQuest42  ",
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:     "empty Quest ID is a no-op",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			memberID: fmt.Sprint(testUserID),
+			requestBody: map[string]any{
+				"questId": "   ",
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:          "unchanged legacy Quest ID is preserved while other fields update",
+			userRole:      authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			memberID:      fmt.Sprint(testUserID),
+			legacyQuestID: " Legacy.ID ",
+			requestBody: map[string]any{
+				"questId":  " Legacy.ID ",
+				"lastName": "Updated Legacy Member",
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:     "invalid Quest ID leaves other fields unchanged",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			memberID: fmt.Sprint(testUserID),
+			requestBody: map[string]any{
+				"questId":  "bad-id",
+				"lastName": "Must Not Save",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+		},
+		{
+			name:     "interior whitespace in Quest ID is invalid",
+			userRole: authorization.ROLE_TOURNAMENT_DIRECTOR.ToString(),
+			memberID: fmt.Sprint(testUserID),
+			requestBody: map[string]any{
+				"questId": "bad id",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
 		},
 		{
 			name:           "member not found",
@@ -406,6 +521,9 @@ func TestUpdateMember(t *testing.T) {
 
 			// Seed test data
 			require.NoError(t, testutils.SeedAll(db))
+			if tc.legacyQuestID != "" {
+				require.NoError(t, db.Model(&models.User{}).Where("id = ?", testUserID).Update("quest_id", tc.legacyQuestID).Error)
+			}
 
 			// Setup authentication
 			sessionID, err := testutils.CreateTestSession(db, "testuser", tc.userRole)
@@ -434,6 +552,26 @@ func TestUpdateMember(t *testing.T) {
 				if firstName, ok := tc.requestBody["firstName"]; ok {
 					require.Equal(t, firstName, user.FirstName)
 				}
+				if questID, ok := tc.requestBody["questId"].(string); ok {
+					expectedQuestID := models.NormalizeQuestID(questID)
+					if questID == tc.legacyQuestID {
+						expectedQuestID = tc.legacyQuestID
+					}
+					if expectedQuestID == "" {
+						expectedQuestID = "jdoe"
+					}
+					require.Equal(t, expectedQuestID, user.QuestID)
+				} else if user.ID == testUserID {
+					require.Equal(t, "jdoe", user.QuestID)
+				}
+				if lastName, ok := tc.requestBody["lastName"]; ok {
+					require.Equal(t, lastName, user.LastName)
+				}
+			} else if tc.name == "invalid Quest ID leaves other fields unchanged" {
+				var user models.User
+				require.NoError(t, db.First(&user, testUserID).Error)
+				require.Equal(t, "jdoe", user.QuestID)
+				require.NotEqual(t, "Must Not Save", user.LastName)
 			}
 		})
 	}

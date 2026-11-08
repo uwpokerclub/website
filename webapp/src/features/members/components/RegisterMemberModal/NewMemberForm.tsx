@@ -38,7 +38,7 @@ export function NewMemberForm() {
         )}
       </FormField>
 
-      <FormField label="Quest ID" htmlFor="newMember.questId">
+      <FormField label="Quest ID" htmlFor="newMember.questId" error={errors.newMember?.questId?.message}>
         {(props) => (
           <Input
             {...props}
@@ -46,6 +46,7 @@ export function NewMemberForm() {
             data-qa="input-questId"
             type="text"
             placeholder="e.g., asmahood"
+            error={!!errors.newMember?.questId}
             fullWidth
           />
         )}

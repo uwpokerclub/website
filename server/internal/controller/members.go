@@ -76,7 +76,11 @@ func (c *membersController) createMember(ctx *gin.Context) {
 		LastName:  req.LastName,
 		Email:     req.Email,
 		Faculty:   req.Faculty,
-		QuestID:   req.QuestID,
+		QuestID:   models.NormalizeQuestID(req.QuestID),
+	}
+	if member.QuestID != "" && !models.ValidateQuestID(member.QuestID) {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest("Quest ID must contain only letters and numbers"))
+		return
 	}
 
 	if err := c.store.Members().Create(&member); err != nil {
@@ -266,8 +270,15 @@ func (c *membersController) updateMember(ctx *gin.Context) {
 	if req.Faculty != "" {
 		member.Faculty = req.Faculty
 	}
-	if req.QuestID != "" {
-		member.QuestID = req.QuestID
+	if req.QuestID != "" && req.QuestID != member.QuestID {
+		normalizedQuestID := models.NormalizeQuestID(req.QuestID)
+		if normalizedQuestID != "" {
+			if !models.ValidateQuestID(normalizedQuestID) {
+				ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest("Quest ID must contain only letters and numbers"))
+				return
+			}
+			member.QuestID = normalizedQuestID
+		}
 	}
 
 	if err := tx.Members().Update(&member); err != nil {

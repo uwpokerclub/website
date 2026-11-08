@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/apiClient";
 import { User } from "@/types/user";
 import { Membership } from "@/types/membership";
 import type { CreateMemberFormData } from "../validation/registrationSchema";
+import { normalizeQuestIdInput } from "../validation/registrationSchema";
 
 /**
  * Determines the search parameter type based on query format
@@ -40,7 +41,7 @@ export async function createMember(memberData: CreateMemberFormData): Promise<Us
     lastName: memberData.lastName,
     email: memberData.email,
     faculty: memberData.faculty || "",
-    questId: memberData.questId || "",
+    questId: normalizeQuestIdInput(memberData.questId),
   };
 
   return apiClient<User>("v2/members", { method: "POST", body: payload });

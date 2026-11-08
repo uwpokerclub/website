@@ -7,7 +7,12 @@ import { useAuth } from "@/hooks";
 import { EditMemberForm } from "./EditMemberForm";
 import { MembershipConfig } from "../RegisterMemberModal/MembershipConfig";
 import { DeleteMemberModal } from "../DeleteMemberModal";
-import { editMemberMembershipSchema, type EditMemberMembershipFormData } from "../../validation/registrationSchema";
+import {
+  editMemberMembershipSchema,
+  isValidQuestId,
+  normalizeQuestIdInput,
+  type EditMemberMembershipFormData,
+} from "../../validation/registrationSchema";
 import { useUpdateMember, useUpdateMembership } from "../../hooks/useMemberQueries";
 import type { Membership } from "@/types";
 import styles from "./EditMemberModal.module.css";
@@ -88,6 +93,18 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
 
     setSubmitError(null);
 
+    const submittedQuestId = data.member.questId ?? "";
+    const originalQuestId = membership.user.questId ?? "";
+    const questIdWasUnchanged = submittedQuestId === originalQuestId;
+    const normalizedQuestId = normalizeQuestIdInput(submittedQuestId);
+    if (!questIdWasUnchanged && !isValidQuestId(normalizedQuestId)) {
+      form.setError("member.questId", {
+        type: "validate",
+        message: "Quest ID must contain only letters and numbers",
+      });
+      return;
+    }
+
     try {
       await Promise.all([
         updateMemberMutation.mutateAsync({
@@ -98,7 +115,7 @@ export function EditMemberModal({ isOpen, membership, onClose, onSuccess }: Edit
             lastName: data.member.lastName,
             email: data.member.email,
             faculty: data.member.faculty,
-            questId: data.member.questId || "",
+            questId: questIdWasUnchanged ? originalQuestId : normalizedQuestId,
           },
         }),
         updateMembershipMutation.mutateAsync({

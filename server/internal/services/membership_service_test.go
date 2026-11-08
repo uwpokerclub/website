@@ -548,6 +548,36 @@ func TestMembershipService_UpdateMembership_ExecutiveToNotExecutive_LeavesUnpaid
 	require.False(t, stored.Executive, "the write must actually persist, not just appear on the returned struct")
 }
 
+func TestMembershipService_UpdateMembership_ExecutiveToNotExecutive_ResyncsTrialAndResponse(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		priorEntries  int
+		wantAvailable bool
+	}{{"under limit", 0, true}, {"at limit", 1, false}, {"over limit", 2, false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			st := inmemory.NewStore()
+			semester := newTestSemesterForMembership()
+			semester.FreeTrialLimit = 1
+			require.NoError(t, st.Semesters().Create(semester))
+			membership := &models.Membership{UserID: 1, SemesterID: semester.ID, Executive: true, FreeTrialAvailable: true}
+			require.NoError(t, st.Memberships().Create(membership))
+			for i := 0; i < tc.priorEntries; i++ {
+				event := &models.Event{Name: "Weekly", State: models.EventStateStarted}
+				require.NoError(t, st.Events().Create(event))
+				require.NoError(t, st.Entries().Create(&models.Participant{MembershipID: &membership.ID, EventID: event.ID}))
+			}
+
+			updated, err := updateMembershipInTestTx(t, st, membership.ID, semester.ID, &models.UpdateMembershipRequest{Executive: boolPtr(false)})
+			require.NoError(t, err)
+			require.False(t, updated.Executive)
+			require.Equal(t, tc.wantAvailable, updated.FreeTrialAvailable, "returned membership must reflect the resync")
+			stored, err := st.Memberships().FindByIDAndSemesterID(membership.ID, semester.ID)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantAvailable, stored.FreeTrialAvailable)
+		})
+	}
+}
+
 func TestMembershipService_UpdateMembership_ExecutiveAndPaidInSameRequest_Rejected(t *testing.T) {
 	t.Parallel()
 

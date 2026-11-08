@@ -1,0 +1,160 @@
+.roster {
+  width: 100%;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--color-gray-200, #e0e0e0);
+  vertical-align: top;
+}
+
+.table thead th {
+  background: var(--color-gray-100, #f5f5f5);
+  color: var(--color-gray-900, #212121);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+.table tbody th {
+  min-width: 10rem;
+  font-weight: 600;
+}
+
+.table tbody tr:nth-child(even) {
+  background: var(--color-gray-50, #fafafa);
+}
+
+.status {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-gray-100, #f5f5f5);
+  color: var(--color-gray-900, #212121);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.active {
+  background: var(--color-success-light, #e6f4ea);
+  color: var(--color-success-dark, #155724);
+}
+
+.pending_activation {
+  background: var(--color-warning-light, #fffbeb);
+  color: var(--color-warning-dark, #7c4a03);
+}
+
+.disabled {
+  background: var(--color-danger-light, #fee2e2);
+  color: var(--color-danger-dark, #a50e0e);
+}
+
+.noAccount {
+  background: var(--color-gray-100, #f5f5f5);
+  color: var(--color-gray-700, #555);
+}
+
+.guidance {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--color-text-secondary, #666);
+  font-size: 0.8rem;
+}
+
+.activationAction {
+  display: grid;
+  min-width: 13rem;
+  gap: 0.45rem;
+}
+
+.activationLink {
+  width: 100%;
+  min-width: 12rem;
+  padding: 0.45rem;
+  border: 1px solid var(--color-gray-300, #ccc);
+  border-radius: 4px;
+  color: var(--color-gray-900, #212121);
+  font: inherit;
+}
+
+.actionButton {
+  justify-self: start;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--color-gray-400, #bbb);
+  border-radius: 4px;
+  background: var(--color-background, #fff);
+  color: var(--color-gray-900, #212121);
+  font: inherit;
+  cursor: pointer;
+}
+
+.actionButton:hover:not(:disabled) {
+  background: var(--color-gray-100, #f5f5f5);
+}
+
+.actionButton:focus-visible,
+.activationLink:focus-visible {
+  outline: 2px solid var(--color-primary, #f4b80f);
+  outline-offset: 2px;
+}
+
+.actionButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.actionError {
+  margin: 0;
+  color: var(--color-danger-dark, #a50e0e);
+  font-size: 0.8rem;
+}
+
+.readOnlyNotice {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--color-warning, #b7791f);
+  background: var(--color-warning-light, #fffbeb);
+}
+
+.message {
+  margin: 0;
+  padding: 1.25rem;
+  color: var(--color-text-secondary, #666);
+  text-align: center;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 700px) {
+  .table th,
+  .table td {
+    padding: 0.7rem;
+  }
+
+  .activationAction {
+    min-width: 12rem;
+  }
+}

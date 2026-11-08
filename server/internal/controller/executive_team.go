@@ -22,8 +22,53 @@ func (c *executiveTeamController) LoadRoutes(router *gin.RouterGroup) {
 	group := router.Group("semesters/:semesterId/executive-team", middleware.UseAuthentication(c.store))
 	group.GET("", middleware.UseAuthorization("executive-team.get"), c.getExecutiveTeam)
 	group.POST("", middleware.UseAuthorization("executive-team.create"), c.addExecutiveTeamMember)
+	group.POST("/:username/activation-link", middleware.UseAuthorization("executive-team.reissue"), c.createActivationLink)
 	group.PATCH("/:username", middleware.UseAuthorization("executive-team.update"), c.changeExecutiveTeamRole)
 	group.DELETE("/:username", middleware.UseAuthorization("executive-team.delete"), c.removeExecutiveTeamMember)
+}
+
+// createActivationLink replaces the pending executive member's activation link.
+//
+// @Summary Generate a replacement executive account activation link
+// @Description Replace an unused activation link for a pending, non-protected account on the selected semester's executive team
+// @Tags Executive Team
+// @Produce json
+// @Param semesterId path string true "Semester ID"
+// @Param username path string true "Login username"
+// @Success 201 {object} ExecutiveTeamActivationLinkResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /semesters/{semesterId}/executive-team/{username}/activation-link [post]
+func (c *executiveTeamController) createActivationLink(ctx *gin.Context) {
+	semesterID, err := validateSemesterID(ctx)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest(err.Error()))
+		return
+	}
+	username := ctx.Param("username")
+	if username == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, apierrors.InvalidRequest("username is required"))
+		return
+	}
+	token, err := services.NewExecutiveTeamService(c.store).CreateActivationLink(semesterID, username)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrExecutiveTeamProtectedLogin):
+			ctx.AbortWithStatusJSON(http.StatusForbidden, apierrors.Forbidden(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamStagedLogin), errors.Is(err, services.ErrExecutiveTeamActivationNotPending):
+			ctx.AbortWithStatusJSON(http.StatusConflict, apierrors.Conflict(err.Error()))
+		case errors.Is(err, services.ErrExecutiveTeamSemesterNotFound), errors.Is(err, store.ErrNotFound):
+			ctx.AbortWithStatusJSON(http.StatusNotFound, apierrors.NotFound(err.Error()))
+		default:
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, apierrors.InternalServerError(err.Error()))
+		}
+		return
+	}
+	ctx.JSON(http.StatusCreated, models.ExecutiveTeamActivationLinkResponse{ActivationToken: token})
 }
 
 // removeExecutiveTeamMember removes a member from the selected semester's executive team.

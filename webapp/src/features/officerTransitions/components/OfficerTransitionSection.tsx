@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@uwpokerclub/components";
-import { ComingSoon } from "@/components";
 import { useAuth } from "@/hooks";
 import { StageOfficerTransitionModal } from "./StageOfficerTransitionModal";
 import { TransitionReceipt } from "./TransitionReceipt";
 import { PendingTransitionBanner } from "./PendingTransitionBanner";
 import { officerTransitionKeys, useCurrentOfficerTransition } from "../hooks/useOfficerTransitionQueries";
 import type { StageOfficerTransitionResponse } from "../types";
+import { ExecutiveTeamRoster } from "@/features/executiveTeam";
 import styles from "./OfficerTransition.module.css";
 
 export function OfficerTransitionSection() {
@@ -52,9 +52,9 @@ export function OfficerTransitionSection() {
         <section className={styles.executiveTeamSection} aria-labelledby="executive-team-heading">
           <header className={styles.featureHeader}>
             <h2 id="executive-team-heading">Executive team</h2>
-            <p>Manage the current executive roster and their responsibilities.</p>
+            <p>View the executive roster for the selected semester.</p>
           </header>
-          <ComingSoon headingLevel="h3" />
+          <ExecutiveTeamRoster />
         </section>
       </div>
 

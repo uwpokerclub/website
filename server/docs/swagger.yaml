@@ -310,6 +310,41 @@ definitions:
       startDate:
         type: string
     type: object
+  ExecutiveTeamActivationLinkResponse:
+    properties:
+      activationToken:
+        type: string
+    type: object
+  ExecutiveTeamMember:
+    properties:
+      accountStatus:
+        type: string
+      activationOutstanding:
+        type: boolean
+      firstName:
+        type: string
+      hasExecutiveMembership:
+        type: boolean
+      hasLogin:
+        type: boolean
+      lastName:
+        type: string
+      memberId:
+        type: integer
+      questId:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  ExecutiveTeamResponse:
+    properties:
+      members:
+        items:
+          $ref: '#/definitions/ExecutiveTeamMember'
+        type: array
+    type: object
   GetRankingResponse:
     properties:
       points:
@@ -371,6 +406,9 @@ definitions:
       lastName:
         type: string
       questId:
+        description: |-
+          QuestID's normalized uniqueness is enforced by the manual users_quest_id_unique
+          expression index in Atlas migrations; GORM tags cannot describe that partial index.
         type: string
     required:
     - email
@@ -2413,6 +2451,140 @@ paths:
       summary: Restart Event
       tags:
       - Events
+  /semesters/{semesterId}/executive-team:
+    get:
+      description: Return executive memberships for a semester with matching account
+        details when available
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ExecutiveTeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get executive team roster
+      tags:
+      - Executive Team
+  /semesters/{semesterId}/executive-team/{username}:
+    delete:
+      description: Disable the linked login and clear the selected semester's executive
+        membership
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Login username
+        in: path
+        name: username
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Remove executive team member
+      tags:
+      - Executive Team
+  /semesters/{semesterId}/executive-team/{username}/activation-link:
+    post:
+      description: Replace an unused activation link for a pending, non-protected
+        account on the selected semester's executive team
+      parameters:
+      - description: Semester ID
+        in: path
+        name: semesterId
+        required: true
+        type: string
+      - description: Login username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ExecutiveTeamActivationLinkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Generate a replacement executive account activation link
+      tags:
+      - Executive Team
   /semesters/{semesterId}/memberships:
     get:
       consumes:

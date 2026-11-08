@@ -16,21 +16,83 @@ import (
 )
 
 var (
-	ErrExecutiveTeamInvalidRole      = errors.New("role is not grantable for executive team additions")
-	ErrExecutiveTeamInvalidIdentity  = errors.New("quest ID is required")
-	ErrExecutiveTeamMemberNotFound   = errors.New("member not found")
-	ErrExecutiveTeamMemberAmbiguous  = errors.New("quest ID resolves to multiple members")
-	ErrExecutiveTeamIdentityConflict = errors.New("member and login identities do not match")
-	ErrExecutiveTeamProtectedLogin   = errors.New("login role cannot be modified through executive team management")
-	ErrExecutiveTeamStagedLogin      = errors.New("staged officer-transition login cannot be changed")
-	ErrExecutiveTeamAlreadyMember    = errors.New("member is already on the executive team")
-	ErrExecutiveTeamSemesterNotFound = errors.New("semester not found")
+	ErrExecutiveTeamInvalidRole          = errors.New("role is not grantable for executive team additions")
+	ErrExecutiveTeamInvalidIdentity      = errors.New("quest ID is required")
+	ErrExecutiveTeamMemberNotFound       = errors.New("member not found")
+	ErrExecutiveTeamMemberAmbiguous      = errors.New("quest ID resolves to multiple members")
+	ErrExecutiveTeamIdentityConflict     = errors.New("member and login identities do not match")
+	ErrExecutiveTeamProtectedLogin       = errors.New("login role cannot be modified through executive team management")
+	ErrExecutiveTeamStagedLogin          = errors.New("staged officer-transition login cannot be changed")
+	ErrExecutiveTeamAlreadyMember        = errors.New("member is already on the executive team")
+	ErrExecutiveTeamSemesterNotFound     = errors.New("semester not found")
+	ErrExecutiveTeamActivationNotPending = errors.New("account is not pending activation")
 )
 
 type executiveTeamService struct{ store store.Store }
 
 func NewExecutiveTeamService(st store.Store) *executiveTeamService {
 	return &executiveTeamService{store: st}
+}
+
+// CreateActivationLink replaces the unused activation token for a pending,
+// non-protected executive login linked to an executive member in this semester.
+func (svc *executiveTeamService) CreateActivationLink(semesterID uuid.UUID, username string) (string, error) {
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return "", fmt.Errorf("begin executive activation link replacement: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Semesters().FindByID(semesterID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return "", ErrExecutiveTeamSemesterNotFound
+		}
+		return "", fmt.Errorf("find semester: %w", err)
+	}
+	login, err := tx.Logins().FindByUsername(username)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return "", store.ErrNotFound
+		}
+		return "", fmt.Errorf("find login: %w", err)
+	}
+	if login.StagedTransitionID != nil {
+		return "", ErrExecutiveTeamStagedLogin
+	}
+	linkedLogin, err := tx.Logins().FindByUsernameWithMember(username)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return "", store.ErrNotFound
+		}
+		return "", fmt.Errorf("find linked member: %w", err)
+	}
+	if linkedLogin.Username != username || linkedLogin.LinkedMember == nil || linkedLogin.LinkedMember.ID == 0 {
+		return "", store.ErrNotFound
+	}
+	membership, err := tx.Memberships().FindByUserAndSemester(linkedLogin.LinkedMember.ID, semesterID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return "", store.ErrNotFound
+		}
+		return "", fmt.Errorf("find executive membership: %w", err)
+	}
+	if !membership.Executive {
+		return "", store.ErrNotFound
+	}
+	if login.Role != authorization.ROLE_EXECUTIVE.ToString() && login.Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
+		return "", ErrExecutiveTeamProtectedLogin
+	}
+	if login.Status != models.LoginStatusPendingActivation {
+		return "", ErrExecutiveTeamActivationNotPending
+	}
+	token, err := NewAccountActivationService(tx).Create(username)
+	if err != nil {
+		return "", fmt.Errorf("replace executive activation link: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return "", fmt.Errorf("commit executive activation link replacement: %w", err)
+	}
+	return token, nil
 }
 
 // ChangeRole updates an existing executive login role and invalidates its sessions atomically.

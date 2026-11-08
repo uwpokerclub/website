@@ -1,4 +1,10 @@
-import { createMemberSchema, editMemberSchema, isValidQuestId, normalizeQuestIdInput } from "./registrationSchema";
+import {
+  createMemberSchema,
+  editMemberSchema,
+  executiveAddMemberSchema,
+  isValidQuestId,
+  normalizeQuestIdInput,
+} from "./registrationSchema";
 
 const createMember = {
   id: "12345678",
@@ -24,6 +30,12 @@ describe("Quest ID validation", () => {
     expect(createMemberSchema.safeParse(createMember).success).toBe(true);
     expect(createMemberSchema.safeParse({ ...createMember, questId: "" }).success).toBe(true);
     expect(createMemberSchema.safeParse({ ...createMember, questId: "   " }).success).toBe(true);
+  });
+
+  it("requires and normalizes a valid Quest ID for executive additions only", () => {
+    expect(executiveAddMemberSchema.safeParse(createMember).success).toBe(false);
+    expect(executiveAddMemberSchema.safeParse({ ...createMember, questId: " NewID7 " }).success).toBe(true);
+    expect(createMemberSchema.safeParse(createMember).success).toBe(true);
   });
 
   it("allows legacy values through edit form validation while checking changed input separately", () => {

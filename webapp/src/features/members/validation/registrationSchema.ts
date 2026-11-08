@@ -42,6 +42,17 @@ export const createMemberSchema = z.object({
   faculty: facultySchema,
 });
 
+export const executiveAddMemberSchema = createMemberSchema.extend({
+  questId: z
+    .string()
+    .min(1, "Quest ID is required")
+    .refine((value) => isValidQuestId(normalizeQuestIdInput(value)), "Quest ID must contain only letters and numbers"),
+});
+
+export type ExecutiveAddMemberFormData = z.infer<typeof executiveAddMemberSchema>;
+export const executiveAddMemberFormSchema = z.object({ newMember: executiveAddMemberSchema });
+export type ExecutiveAddMemberFormValues = z.infer<typeof executiveAddMemberFormSchema>;
+
 export type CreateMemberFormData = z.infer<typeof createMemberSchema>;
 
 // Schema for membership configuration

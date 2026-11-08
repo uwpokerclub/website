@@ -124,6 +124,54 @@ describe("Executive team roster", () => {
       .should((value) => expect(value).to.match(new RegExp(`^${Cypress.config().baseUrl}/activate#token=`)));
   });
 
+  it("adds a new executive, copies the activation link, activates the account, and shows the active roster", () => {
+    const semester = { ...firstSemester, endDate: "2099-12-31T00:00:00Z" };
+    cy.intercept("GET", "/api/v2/semesters", { log: false, body: { data: [semester], total: 1 } }).as("addFlowSemester");
+    cy.intercept("GET", `/api/v2/semesters/${SEMESTER.id}/executive-team`).as("addFlowRoster");
+
+    const activationClipboardWrite = cy.stub().as("activationClipboardWrite");
+    cy.visit("/admin/executive", {
+      onBeforeLoad(window) {
+        Object.defineProperty(window.navigator, "clipboard", {
+          configurable: true,
+          value: { writeText: activationClipboardWrite },
+        });
+      },
+    });
+    cy.wait("@addFlowSemester");
+    cy.wait("@addFlowRoster");
+    cy.getByData("executive-team-add-member").click();
+    cy.getByData("executive-add-create-mode").click();
+    cy.getByData("input-studentId").type("99000418");
+    cy.getByData("input-questId").type(" Issue418Flow ");
+    cy.getByData("input-firstName").type("Issue");
+    cy.getByData("input-lastName").type("Flow");
+    cy.getByData("input-email").type("issue418.flow@example.com");
+    cy.getByData("select-faculty").select("Math");
+    cy.getByData("executive-add-role").select("executive");
+    cy.getByData("executive-add-review").click();
+    cy.getByData("executive-add-confirmation").should("contain", "Issue Flow").and("contain", "issue418flow").and("contain", semester.name);
+    cy.getByData("executive-add-confirm").click();
+
+    cy.getByData("executive-add-activation-link").invoke({ log: false }, "val").should((value) => {
+      expect(String(value)).to.match(new RegExp(`^${Cypress.config().baseUrl}/activate#token=`));
+    });
+    cy.getByData("executive-add-copy-link").click();
+    cy.get("@activationClipboardWrite").should("have.been.calledOnce");
+    cy.getByData("executive-add-activation-link").invoke({ log: false }, "val").then((link) => {
+      cy.visit(String(link), { log: false });
+    });
+
+    cy.getByData("activation-heading").should("contain", "Set your password");
+    cy.getByData("activation-password").type("correct horse");
+    cy.getByData("activation-confirm-password").type("correct horse");
+    cy.getByData("activation-submit").click();
+    cy.location("pathname").should("eq", "/admin/dashboard");
+    cy.login("test_president", "password");
+    cy.visit("/admin/executive");
+    cy.getByData("executive-team-roster").should("contain", "Issue Flow").and("contain", "Active");
+  });
+
   it("changes roster with the global semester selector and never keeps the previous rows", () => {
     cy.intercept("GET", "/api/v2/semesters", {
       log: false,

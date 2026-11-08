@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@uwpokerclub/components";
 import { QueryErrorState } from "@/components";
 import { useAuth, useCurrentSemester } from "@/hooks";
 import { useSemesters } from "@/features/semesters/hooks/useSemesterQueries";
 import { createExecutiveTeamActivationLink } from "../api/executiveTeamApi";
+import { AddExecutiveMemberModal } from "./AddExecutiveMemberModal";
 import { useExecutiveTeam } from "../hooks/useExecutiveTeamQueries";
 import type { ExecutiveTeamMember } from "../types";
 import { semesterRosterStatus } from "../utils/semesterRosterStatus";
@@ -103,12 +104,22 @@ function ActivationLinkAction({ semesterId, member }: { semesterId: string; memb
 }
 
 export function ExecutiveTeamRoster() {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addModalSemesterId, setAddModalSemesterId] = useState<string | null>(null);
   const { currentSemester, loading: semesterLoading } = useCurrentSemester();
   const semesters = useSemesters();
   const { hasPermission } = useAuth();
   const canView = hasPermission("get", "executive-team");
+  const canCreate = hasPermission("create", "executive-team");
   const roster = useExecutiveTeam(currentSemester?.id, canView);
   const today = new Date();
+
+  useEffect(() => {
+    if (isAddModalOpen && currentSemester?.id !== addModalSemesterId) {
+      setIsAddModalOpen(false);
+      setAddModalSemesterId(null);
+    }
+  }, [addModalSemesterId, currentSemester?.id, isAddModalOpen]);
 
   if (semesterLoading || semesters.isLoading || (canView && currentSemester && roster.isPending)) {
     return (
@@ -163,6 +174,21 @@ export function ExecutiveTeamRoster() {
 
   return (
     <div className={styles.roster} data-qa="executive-team-roster">
+      {canCreate && !isReadOnly && (
+        <div className={styles.rosterActions}>
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={() => {
+              setAddModalSemesterId(currentSemester.id);
+              setIsAddModalOpen(true);
+            }}
+            data-qa="executive-team-add-member"
+          >
+            Add team member
+          </button>
+        </div>
+      )}
       {dateStatus === "past" && (
         <p className={styles.readOnlyNotice} data-qa="executive-team-read-only">
           Past semester — this roster is read-only.
@@ -240,6 +266,16 @@ export function ExecutiveTeamRoster() {
             </tbody>
           </table>
         </div>
+      )}
+      {canCreate && !isReadOnly && isAddModalOpen && (
+        <AddExecutiveMemberModal
+          isOpen={isAddModalOpen}
+          semester={currentSemester}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setAddModalSemesterId(null);
+          }}
+        />
       )}
     </div>
   );

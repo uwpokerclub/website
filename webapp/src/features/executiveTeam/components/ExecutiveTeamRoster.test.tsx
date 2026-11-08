@@ -11,6 +11,7 @@ jest.mock("@/hooks", () => ({
 jest.mock("@/features/semesters/hooks/useSemesterQueries", () => ({ useSemesters: jest.fn() }));
 jest.mock("../hooks/useExecutiveTeamQueries", () => ({ useExecutiveTeam: jest.fn() }));
 jest.mock("../api/executiveTeamApi", () => ({ createExecutiveTeamActivationLink: jest.fn() }));
+jest.mock("@/lib/apiClient", () => ({ apiClient: jest.fn(), ApiError: class ApiError extends Error {} }));
 jest.mock("@/components", () => ({
   QueryErrorState: ({
     title,
@@ -258,5 +259,27 @@ describe("ExecutiveTeamRoster", () => {
 
     expect(useExecutiveTeam).toHaveBeenCalledWith(semester.id, false);
     expect(screen.getByText(/do not have permission/i)).toBeInTheDocument();
+  });
+
+  it("offers add only when create permission is present and semester dates are writable", () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      hasPermission: (action: string) => action === "get" || action === "create",
+    });
+    const currentView = render(<ExecutiveTeamRoster />);
+    expect(screen.getByRole("button", { name: "Add team member" })).toBeInTheDocument();
+    currentView.unmount();
+
+    (useCurrentSemester as jest.Mock).mockReturnValue({
+      currentSemester: { ...semester, endDate: "2020-01-01" },
+      loading: false,
+    });
+    const pastView = render(<ExecutiveTeamRoster />);
+    expect(screen.queryByRole("button", { name: "Add team member" })).not.toBeInTheDocument();
+    pastView.unmount();
+
+    (useAuth as jest.Mock).mockReturnValue({ hasPermission: (action: string) => action === "get" });
+    (useCurrentSemester as jest.Mock).mockReturnValue({ currentSemester: semester, loading: false });
+    render(<ExecutiveTeamRoster />);
+    expect(screen.queryByRole("button", { name: "Add team member" })).not.toBeInTheDocument();
   });
 });

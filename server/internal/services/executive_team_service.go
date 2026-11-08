@@ -21,7 +21,7 @@ var (
 	ErrExecutiveTeamMemberNotFound   = errors.New("member not found")
 	ErrExecutiveTeamMemberAmbiguous  = errors.New("quest ID resolves to multiple members")
 	ErrExecutiveTeamIdentityConflict = errors.New("member and login identities do not match")
-	ErrExecutiveTeamProtectedLogin   = errors.New("login role cannot be granted through executive team additions")
+	ErrExecutiveTeamProtectedLogin   = errors.New("login role cannot be modified through executive team management")
 	ErrExecutiveTeamStagedLogin      = errors.New("staged officer-transition login cannot be changed")
 	ErrExecutiveTeamAlreadyMember    = errors.New("member is already on the executive team")
 	ErrExecutiveTeamSemesterNotFound = errors.New("semester not found")
@@ -89,6 +89,65 @@ func (svc *executiveTeamService) ChangeRole(semesterID uuid.UUID, username, role
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit executive role change: %w", err)
+	}
+	return nil
+}
+
+// RemoveMember disables the executive login and clears its membership for the
+// selected semester in one caller-owned transaction. The login role is retained
+// for history; its disabled status prevents further access.
+func (svc *executiveTeamService) RemoveMember(semesterID uuid.UUID, username string) error {
+	tx, err := svc.store.BeginTx()
+	if err != nil {
+		return fmt.Errorf("begin executive team removal: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Semesters().FindByID(semesterID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return ErrExecutiveTeamSemesterNotFound
+		}
+		return fmt.Errorf("find semester: %w", err)
+	}
+	login, err := tx.Logins().FindByUsername(username)
+	if err != nil {
+		return fmt.Errorf("find login: %w", err)
+	}
+	if login.Username != username {
+		return store.ErrNotFound
+	}
+	if login.StagedTransitionID != nil {
+		return ErrExecutiveTeamStagedLogin
+	}
+	linkedLogin, err := tx.Logins().FindByUsernameWithMember(username)
+	if err != nil {
+		return fmt.Errorf("find login member: %w", err)
+	}
+	if linkedLogin.Username != username || linkedLogin.LinkedMember == nil {
+		return store.ErrNotFound
+	}
+	membership, err := tx.Memberships().FindByUserAndSemester(linkedLogin.LinkedMember.ID, semesterID)
+	if err != nil {
+		return fmt.Errorf("find executive membership: %w", err)
+	}
+	if !membership.Executive {
+		return store.ErrNotFound
+	}
+	if login.Role != authorization.ROLE_EXECUTIVE.ToString() && login.Role != authorization.ROLE_TOURNAMENT_DIRECTOR.ToString() {
+		return ErrExecutiveTeamProtectedLogin
+	}
+
+	if err := tx.Logins().Update(username, map[string]any{"status": models.LoginStatusDisabled}); err != nil {
+		return fmt.Errorf("disable executive login: %w", err)
+	}
+	if err := tx.Sessions().DeleteByUsername(username); err != nil {
+		return fmt.Errorf("delete executive login sessions: %w", err)
+	}
+	if _, err := NewMembershipService(tx).UpdateMembership(membership.ID, semesterID, &models.UpdateMembershipRequest{Executive: utils.BoolToPtr(false)}); err != nil {
+		return fmt.Errorf("clear executive membership: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit executive team removal: %w", err)
 	}
 	return nil
 }

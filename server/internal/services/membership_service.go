@@ -158,6 +158,7 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 
 	originalPaid := existingMembership.Paid
 	originalDiscounted := existingMembership.Discounted
+	originalExecutive := existingMembership.Executive
 
 	semester, err := tx.Semesters().FindByID(existingMembership.SemesterID)
 	if err != nil {
@@ -215,18 +216,22 @@ func (ms *membershipService) UpdateMembership(id uuid.UUID, semesterID uuid.UUID
 				}
 				existingMembership.FreeTrialAvailable = true
 			}
-		} else if existingMembership.EligibleForFreeTrial() && semester.FreeTrialLimit > 0 {
-			attendance, err := tx.Entries().CountByMembershipID(existingMembership.ID)
-			if err != nil {
+		}
+	}
+
+	// Recompute when an unpaid member becomes trial-eligible, including when
+	// executive status is cleared without changing paid status.
+	if !finalPaid && (originalPaid != finalPaid || (originalExecutive && !finalExecutive)) && existingMembership.EligibleForFreeTrial() && semester.FreeTrialLimit > 0 {
+		attendance, err := tx.Entries().CountByMembershipID(existingMembership.ID)
+		if err != nil {
+			return nil, err
+		}
+		stillAvailable := attendance < int64(semester.FreeTrialLimit)
+		if stillAvailable != existingMembership.FreeTrialAvailable {
+			if err := tx.Memberships().SetFreeTrialAvailable(existingMembership.ID, stillAvailable); err != nil {
 				return nil, err
 			}
-			stillAvailable := attendance < int64(semester.FreeTrialLimit)
-			if stillAvailable != existingMembership.FreeTrialAvailable {
-				if err := tx.Memberships().SetFreeTrialAvailable(existingMembership.ID, stillAvailable); err != nil {
-					return nil, err
-				}
-				existingMembership.FreeTrialAvailable = stillAvailable
-			}
+			existingMembership.FreeTrialAvailable = stillAvailable
 		}
 	}
 

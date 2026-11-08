@@ -2457,6 +2457,203 @@ const docTemplate = `{
                 }
             }
         },
+        "/semesters/{semesterId}/executive-team": {
+            "get": {
+                "description": "Return executive memberships for a semester with matching account details when available",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Executive Team"
+                ],
+                "summary": "Get executive team roster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ExecutiveTeamResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/executive-team/{username}": {
+            "delete": {
+                "description": "Disable the linked login and clear the selected semester's executive membership",
+                "tags": [
+                    "Executive Team"
+                ],
+                "summary": "Remove executive team member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Login username",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/semesters/{semesterId}/executive-team/{username}/activation-link": {
+            "post": {
+                "description": "Replace an unused activation link for a pending, non-protected account on the selected semester's executive team",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Executive Team"
+                ],
+                "summary": "Generate a replacement executive account activation link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Semester ID",
+                        "name": "semesterId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Login username",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ExecutiveTeamActivationLinkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/semesters/{semesterId}/memberships": {
             "get": {
                 "description": "Retrieve a list of all Memberships with extended information including email",
@@ -3870,6 +4067,60 @@ const docTemplate = `{
                 }
             }
         },
+        "ExecutiveTeamActivationLinkResponse": {
+            "type": "object",
+            "properties": {
+                "activationToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "ExecutiveTeamMember": {
+            "type": "object",
+            "properties": {
+                "accountStatus": {
+                    "type": "string"
+                },
+                "activationOutstanding": {
+                    "type": "boolean"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "hasExecutiveMembership": {
+                    "type": "boolean"
+                },
+                "hasLogin": {
+                    "type": "boolean"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "memberId": {
+                    "type": "integer"
+                },
+                "questId": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "ExecutiveTeamResponse": {
+            "type": "object",
+            "properties": {
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExecutiveTeamMember"
+                    }
+                }
+            }
+        },
         "GetRankingResponse": {
             "type": "object",
             "properties": {
@@ -3966,6 +4217,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "questId": {
+                    "description": "QuestID's normalized uniqueness is enforced by the manual users_quest_id_unique\nexpression index in Atlas migrations; GORM tags cannot describe that partial index.",
                     "type": "string"
                 }
             }

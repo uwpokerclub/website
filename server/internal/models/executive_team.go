@@ -44,3 +44,7 @@ type AddExecutiveTeamMemberResponse struct {
 	AccountStatus   string  `json:"accountStatus"`
 	ActivationToken *string `json:"activationToken,omitempty"`
 } //@name AddExecutiveTeamMemberResponse
+
+type ExecutiveTeamActivationLinkResponse struct {
+	ActivationToken string `json:"activationToken"`
+} //@name ExecutiveTeamActivationLinkResponse

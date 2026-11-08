@@ -51,6 +51,13 @@ export interface PermissionList {
   };
   structure: Pick<Permissions, "create" | "get" | "list" | "edit">;
   "officer-transition": Pick<Permissions, "create" | "get" | "cancel" | "reissue">;
+  "executive-team": {
+    create: boolean;
+    get: boolean;
+    update: boolean;
+    delete: boolean;
+    reissue: boolean;
+  };
 }
 
 export type Resources = keyof PermissionList;

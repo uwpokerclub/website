@@ -138,7 +138,12 @@ export function AddExecutiveMemberModal({ isOpen, semester, onClose }: AddExecut
 
   const reviewExisting = () => {
     if (!selectedMember || membershipQuery.isFetching || membershipQuery.isError) return;
-    if (!selectedMember.questId && !isValidQuestId(normalizeQuestIdInput(questIdInput))) {
+    const normalizedQuestId = normalizeQuestIdInput(questIdInput);
+    if (!selectedMember.questId && !normalizedQuestId) {
+      setSubmitError("Quest ID is required.");
+      return;
+    }
+    if (!selectedMember.questId && !isValidQuestId(normalizedQuestId)) {
       setSubmitError("Quest ID must contain only letters and numbers.");
       return;
     }
@@ -290,12 +295,7 @@ export function AddExecutiveMemberModal({ isOpen, semester, onClose }: AddExecut
               {mode === "search" ? (
                 <Button
                   onClick={reviewExisting}
-                  disabled={
-                    !selectedMember ||
-                    membershipQuery.isFetching ||
-                    membershipQuery.isError ||
-                    (!selectedMember.questId && !normalizeQuestIdInput(questIdInput))
-                  }
+                  disabled={!selectedMember || membershipQuery.isFetching || membershipQuery.isError}
                   data-qa="executive-add-review"
                 >
                   {membershipQuery.isFetching ? "Checking membership…" : "Review addition"}

@@ -34,8 +34,11 @@ describe("Quest ID validation", () => {
 
   it("requires and normalizes a valid Quest ID for executive additions only", () => {
     expect(executiveAddMemberSchema.safeParse(createMember).success).toBe(false);
+    expect(executiveAddMemberSchema.safeParse({ ...createMember, questId: "   " }).success).toBe(false);
+    expect(executiveAddMemberSchema.safeParse({ ...createMember, questId: "\t\n " }).success).toBe(false);
     expect(executiveAddMemberSchema.safeParse({ ...createMember, questId: " NewID7 " }).success).toBe(true);
     expect(createMemberSchema.safeParse(createMember).success).toBe(true);
+    expect(createMemberSchema.safeParse({ ...createMember, questId: "   " }).success).toBe(true);
   });
 
   it("allows legacy values through edit form validation while checking changed input separately", () => {

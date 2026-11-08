@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type React from "react";
@@ -245,6 +245,35 @@ describe("AddExecutiveMemberModal", () => {
     await user.type(getQa("executive-add-quest-id"), "grace.hopper");
     await user.click(getQa("executive-add-review"));
     expect(screen.getByRole("alert")).toHaveTextContent("letters and numbers");
+    expect(updateMember).not.toHaveBeenCalled();
+    expect(addExecutiveTeamMember).not.toHaveBeenCalled();
+  });
+
+  it.each(["   ", "\t\n "])("blocks a whitespace-only QuestID for a new member before any write", async (questId) => {
+    const { user } = setup();
+    await user.click(getQa("executive-add-create-mode"));
+    await user.type(getQa("new-id"), "52");
+    fireEvent.change(getQa("new-quest-id"), { target: { value: questId } });
+    await user.type(getQa("new-first-name"), "Ada");
+    await user.type(getQa("new-last-name"), "Lovelace");
+    await user.type(getQa("new-email"), "ada@example.com");
+    await user.type(getQa("new-faculty"), "Math");
+    await user.click(getQa("executive-add-review"));
+
+    expect(document.querySelector('[data-qa="executive-add-confirmation"]')).not.toBeInTheDocument();
+    expect(createMember).not.toHaveBeenCalled();
+    expect(addExecutiveTeamMember).not.toHaveBeenCalled();
+  });
+
+  it("blocks whitespace-only QuestID for an existing member in reviewExisting", async () => {
+    const { user } = setup();
+    await user.click(getQa("select-member-missing-quest-id"));
+    await waitForQa("executive-add-membership-loaded");
+    fireEvent.change(getQa("executive-add-quest-id"), { target: { value: " \t " } });
+    await user.click(getQa("executive-add-review"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Quest ID is required");
+    expect(document.querySelector('[data-qa="executive-add-confirmation"]')).not.toBeInTheDocument();
     expect(updateMember).not.toHaveBeenCalled();
     expect(addExecutiveTeamMember).not.toHaveBeenCalled();
   });

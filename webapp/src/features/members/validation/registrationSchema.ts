@@ -45,7 +45,7 @@ export const createMemberSchema = z.object({
 export const executiveAddMemberSchema = createMemberSchema.extend({
   questId: z
     .string()
-    .min(1, "Quest ID is required")
+    .refine((value) => normalizeQuestIdInput(value).length > 0, "Quest ID is required")
     .refine((value) => isValidQuestId(normalizeQuestIdInput(value)), "Quest ID must contain only letters and numbers"),
 });
 

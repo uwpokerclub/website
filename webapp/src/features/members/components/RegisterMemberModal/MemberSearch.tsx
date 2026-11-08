@@ -9,6 +9,9 @@ export interface SelectedMemberData {
   id: string;
   firstName: string;
   lastName: string;
+  email?: string;
+  faculty?: string;
+  questId?: string;
 }
 
 export interface MemberSearchProps {
@@ -24,6 +27,7 @@ export interface MemberSearchProps {
    * External error message (e.g., from form validation)
    */
   error?: string;
+  includeIdentityDetails?: boolean;
 }
 
 /**
@@ -32,7 +36,12 @@ export interface MemberSearchProps {
  * Uses Combobox from component library with async search support.
  * Searches by name, email, or student ID.
  */
-export function MemberSearch({ onSelect, value, error: externalError }: MemberSearchProps) {
+export function MemberSearch({
+  onSelect,
+  value,
+  error: externalError,
+  includeIdentityDetails = false,
+}: MemberSearchProps) {
   const { searchMembers, isSearching, error: searchError, clearError } = useMemberSearch();
   const [options, setOptions] = useState<ComboboxOption[]>([]);
   const [memberDataMap, setMemberDataMap] = useState<Map<string, SelectedMemberData>>(new Map());
@@ -45,7 +54,9 @@ export function MemberSearch({ onSelect, value, error: externalError }: MemberSe
       setOptions(
         results.map((result: MemberSearchOption) => ({
           value: result.value,
-          label: result.label,
+          label: includeIdentityDetails
+            ? `${result.data.firstName} ${result.data.lastName} (${result.data.questId || "Quest ID missing"} · ${result.data.faculty || "Faculty unavailable"})`
+            : result.label,
         })),
       );
       // Store member data for lookup when selected
@@ -55,11 +66,14 @@ export function MemberSearch({ onSelect, value, error: externalError }: MemberSe
           id: result.value,
           firstName: result.data.firstName,
           lastName: result.data.lastName,
+          email: result.data.email,
+          faculty: result.data.faculty,
+          questId: result.data.questId,
         });
       });
       setMemberDataMap(dataMap);
     },
-    [searchMembers, clearError],
+    [searchMembers, clearError, includeIdentityDetails],
   );
 
   const handleChange = useCallback(

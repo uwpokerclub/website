@@ -16,7 +16,7 @@ const facultyOptions = FACULTY_VALUES.map((faculty) => ({
  * Uses react-hook-form context for form state management.
  * Must be wrapped in a FormProvider.
  */
-export function NewMemberForm() {
+export function NewMemberForm({ requiredQuestId = false }: { requiredQuestId?: boolean }) {
   const {
     register,
     formState: { errors },
@@ -38,7 +38,12 @@ export function NewMemberForm() {
         )}
       </FormField>
 
-      <FormField label="Quest ID" htmlFor="newMember.questId" error={errors.newMember?.questId?.message}>
+      <FormField
+        label="Quest ID"
+        htmlFor="newMember.questId"
+        required={requiredQuestId}
+        error={errors.newMember?.questId?.message}
+      >
         {(props) => (
           <Input
             {...props}
